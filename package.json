@@ -1,0 +1,35 @@
+{
+  "name": "maeum-melody",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "generate:harmony": "node scripts/generate-harmony-data.mjs",
+    "prepare:soundfonts": "node scripts/download-soundfonts.mjs",
+    "dev": "vite",
+    "build": "tsc --noEmit -p tsconfig.app.json && vite build",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@breezystack/lamejs": "^1.2.7",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
+    "lucide-react": "^0.468.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "smplr": "^1.0.0",
+    "vexflow": "^5.0.0",
+    "webaudiofontplayer": "^1.0.3"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.10",
+    "@types/react-dom": "^19.1.7",
+    "@vitejs/plugin-react": "^5.0.4",
+    "jsdom": "^27.0.0",
+    "playwright-core": "^1.61.1",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.7",
+    "vitest": "^3.2.4"
+  }
+}
