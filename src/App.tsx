@@ -121,6 +121,7 @@ type PlaybackSegment = Readonly<{ measureIndex: number; start: number; end: numb
 type PlaybackNoteSegment = Readonly<{ measureIndex: number; noteId: string; start: number; end: number }>;
 
 const PREVIEW_INSTRUMENT_LIMIT = 15;
+const QR_RENDER_LIMIT = 2900;
 const QUICK_PREVIEW_INSTRUMENTS = INSTRUMENTS.slice(0, PREVIEW_INSTRUMENT_LIMIT);
 const MORE_PREVIEW_INSTRUMENTS = INSTRUMENTS.slice(PREVIEW_INSTRUMENT_LIMIT);
 
@@ -367,6 +368,7 @@ export default function App() {
   const selectedAccompanimentStyle = findAccompanimentStyle(accompanimentStyleId);
   const activeEnsemblePresetId = ENSEMBLE_PRESETS.find((preset) =>
     sameInstrumentOrder(preset.instrumentIds, accompanimentInstrumentIds))?.id ?? null;
+  const canRenderMobileRecordingQr = mobileRecordingUrl.length > 0 && mobileRecordingUrl.length <= QR_RENDER_LIMIT;
 
   const activeMeasure = measures[activeIndex];
   const lyrics = measures.map((measure) => lyricText(measure.notes));
@@ -2442,11 +2444,17 @@ export default function App() {
               )}
               {mobileRecordingUrl && (
                 <div className="mobile-record-qr" data-testid="mobile-recording-qr">
-                  <QRCodeSVG value={mobileRecordingUrl} size={118} marginSize={2}
-                    title="스마트폰 녹음 링크 QR 코드" />
+                  {canRenderMobileRecordingQr ? (
+                    <QRCodeSVG value={mobileRecordingUrl} size={118} marginSize={2} level="L"
+                      title="스마트폰 녹음 링크 QR 코드" />
+                  ) : (
+                    <div className="mobile-record-qr-fallback"><QrCode size={38} /></div>
+                  )}
                   <div>
-                    <strong>스마트폰 카메라로 스캔</strong>
-                    <p>폰에서는 작곡 도구 대신 녹음 버튼과 저장 화면만 열립니다.</p>
+                    <strong>{canRenderMobileRecordingQr ? "스마트폰 카메라로 스캔" : "링크를 복사해서 열기"}</strong>
+                    <p>{canRenderMobileRecordingQr
+                      ? "폰에서는 작곡 도구 대신 녹음 버튼과 저장 화면만 열립니다."
+                      : "곡 정보가 길어서 QR 대신 위 공유 주소를 스마트폰으로 보내 주세요."}</p>
                   </div>
                 </div>
               )}
