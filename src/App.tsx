@@ -121,7 +121,7 @@ type PlaybackSegment = Readonly<{ measureIndex: number; start: number; end: numb
 type PlaybackNoteSegment = Readonly<{ measureIndex: number; noteId: string; start: number; end: number }>;
 
 const PREVIEW_INSTRUMENT_LIMIT = 15;
-const QR_RENDER_LIMIT = 2900;
+const QR_RENDER_LIMIT = 2400;
 const QUICK_PREVIEW_INSTRUMENTS = INSTRUMENTS.slice(0, PREVIEW_INSTRUMENT_LIMIT);
 const MORE_PREVIEW_INSTRUMENTS = INSTRUMENTS.slice(PREVIEW_INSTRUMENT_LIMIT);
 
@@ -2445,7 +2445,8 @@ export default function App() {
               {mobileRecordingUrl && (
                 <div className="mobile-record-qr" data-testid="mobile-recording-qr">
                   {canRenderMobileRecordingQr ? (
-                    <QRCodeSVG value={mobileRecordingUrl} size={118} marginSize={2} level="L"
+                    <QRCodeSVG value={mobileRecordingUrl} size={320} marginSize={4} level="L" boostLevel={false}
+                      bgColor="#ffffff" fgColor="#111111" shapeRendering="crispEdges"
                       title="스마트폰 녹음 링크 QR 코드" />
                   ) : (
                     <div className="mobile-record-qr-fallback"><QrCode size={38} /></div>

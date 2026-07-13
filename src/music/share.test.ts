@@ -28,9 +28,29 @@ const sample: SharedComposition = {
   }))
 };
 
+function normalizeTransientIds(composition: SharedComposition | null): unknown {
+  if (!composition) return composition;
+  const normalized = {
+    ...composition,
+    measures: composition.measures.map((measure) => {
+      const beamGroups = new Map<string, number>();
+      return {
+        ...measure,
+        notes: measure.notes.map(({ id: _id, beamGroup, ...note }) => {
+          if (beamGroup && !beamGroups.has(beamGroup)) beamGroups.set(beamGroup, beamGroups.size);
+          return { ...note, beamGroup: beamGroup ? beamGroups.get(beamGroup) : undefined };
+        }),
+        effects: measure.effects?.map(({ id: _id, ...effect }) => effect)
+      };
+    })
+  };
+  return JSON.parse(JSON.stringify(normalized));
+}
+
 describe("공유 링크", () => {
   it("한글과 악보를 손실 없이 저장하고 복원한다", () => {
-    expect(decodeSharedComposition(encodeSharedComposition(sample))).toEqual(sample);
+    expect(normalizeTransientIds(decodeSharedComposition(encodeSharedComposition(sample))))
+      .toEqual(normalizeTransientIds(sample));
   });
 
   it("공유 주소에 곡 데이터를 넣는다", () => {

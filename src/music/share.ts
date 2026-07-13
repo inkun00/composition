@@ -43,11 +43,32 @@ function fromBase64Url(value: string): string {
   return new TextDecoder().decode(Uint8Array.from(binary, (char) => char.charCodeAt(0)));
 }
 
-type CompactNote = [string, number | null, number, number, boolean?, string?, boolean?, boolean?, number?, string?];
-type CompactEffect = [string, string, number];
+type CompactNoteV1 = [string, number | null, number, number, boolean?, string?, boolean?, boolean?, number?, string?];
+type CompactEffectV1 = [string, string, number];
+type CompactMeasureV1 = [string, CompactNoteV1[], CompactEffectV1[]?];
+type CompactCompositionV1 = [
+  1,
+  string,
+  string | undefined,
+  string,
+  string,
+  string,
+  number,
+  2 | 4 | 8,
+  8 | 12 | 16,
+  string,
+  string | undefined,
+  readonly string[] | undefined,
+  number | undefined,
+  readonly string[],
+  CompactMeasureV1[]
+];
+
+type CompactNote = [number | null, number, number, boolean?, number?, boolean?, boolean?, number?, string?];
+type CompactEffect = [string, number];
 type CompactMeasure = [string, CompactNote[], CompactEffect[]?];
 type CompactComposition = [
-  1,
+  2,
   string,
   string | undefined,
   string,
@@ -75,7 +96,7 @@ function optional<T>(value: T | null | undefined): T | undefined {
 
 function compactComposition(composition: SharedComposition): CompactComposition {
   return [
-    1,
+    2,
     composition.title,
     composition.description || undefined,
     composition.creator,
@@ -89,26 +110,88 @@ function compactComposition(composition: SharedComposition): CompactComposition 
     composition.accompanimentInstrumentIds,
     composition.bpm,
     composition.lyrics,
-    composition.measures.map((measure) => trimTrailingEmpty([
-      measure.candidateName,
-      measure.notes.map((note) => trimTrailingEmpty([
-        note.id,
-        note.pitch,
-        note.duration.numerator,
-        note.duration.denominator,
-        note.dotted,
-        note.beamGroup,
-        note.beamBreak,
-        note.linkToNext,
-        note.restY,
-        note.lyric
-      ]) as CompactNote),
-      measure.effects?.map((effect) => [effect.id, effect.effectId, effect.offsetBeats] as CompactEffect)
-    ]) as CompactMeasure)
+    composition.measures.map((measure) => {
+      const beamGroups = new Map<string, number>();
+      const notes = measure.notes.map((note) => {
+        let beamGroup: number | undefined;
+        if (note.beamGroup) {
+          if (!beamGroups.has(note.beamGroup)) beamGroups.set(note.beamGroup, beamGroups.size);
+          beamGroup = beamGroups.get(note.beamGroup);
+        }
+        return trimTrailingEmpty([
+          note.pitch,
+          note.duration.numerator,
+          note.duration.denominator,
+          note.dotted,
+          beamGroup,
+          note.beamBreak,
+          note.linkToNext,
+          note.restY,
+          note.lyric
+        ]) as CompactNote;
+      });
+      return trimTrailingEmpty([
+        measure.candidateName,
+        notes,
+        measure.effects?.map((effect) => [effect.effectId, effect.offsetBeats] as CompactEffect)
+      ]) as CompactMeasure;
+    })
   ];
 }
 
 function expandCompactComposition(compact: CompactComposition): SharedComposition {
+  const expanded: SharedComposition = {
+    version: 1,
+    title: compact[1],
+    description: optional(compact[2]),
+    creator: compact[3],
+    originalCreator: compact[4],
+    presetId: compact[5],
+    meter: { beats: compact[6], beatUnit: compact[7] },
+    songLength: compact[8],
+    instrumentId: compact[9],
+    accompanimentStyleId: optional(compact[10]) as AccompanimentStyleId | undefined,
+    accompanimentInstrumentIds: optional(compact[11]) as readonly InstrumentId[] | undefined,
+    bpm: optional(compact[12]),
+    lyrics: compact[13],
+    measures: compact[14].map((measure, measureIndex) => ({
+      candidateName: measure[0],
+      notes: measure[1].map((note, noteIndex) => ({
+        id: `shared-${measureIndex}-${noteIndex}`,
+        pitch: note[0],
+        duration: { numerator: note[1], denominator: note[2] },
+        dotted: optional(note[3]),
+        beamGroup: note[4] === null || note[4] === undefined ? undefined : `shared-beam-${measureIndex}-${note[4]}`,
+        beamBreak: optional(note[5]),
+        linkToNext: optional(note[6]),
+        restY: optional(note[7]),
+        lyric: optional(note[8])
+      })),
+      effects: measure[2]?.map((effect, effectIndex) => ({
+        id: `shared-effect-${measureIndex}-${effectIndex}`,
+        effectId: effect[0],
+        offsetBeats: effect[1]
+      }))
+    }))
+  };
+  return JSON.parse(JSON.stringify(expanded)) as SharedComposition;
+}
+
+function isCompactComposition(value: unknown): value is CompactComposition {
+  return Array.isArray(value) && value[0] === 2 && typeof value[1] === "string" &&
+    typeof value[3] === "string" && typeof value[4] === "string" && typeof value[5] === "string" &&
+    Number.isInteger(value[6]) && [2, 4, 8].includes(value[7]) && [8, 12, 16].includes(value[8]) &&
+    typeof value[9] === "string" && Array.isArray(value[13]) && Array.isArray(value[14]);
+}
+
+function isCompactCompositionV1(value: unknown): value is CompactCompositionV1 {
+  return Array.isArray(value) && value[0] === 1 && typeof value[1] === "string" &&
+    typeof value[3] === "string" && typeof value[4] === "string" && typeof value[5] === "string" &&
+    Number.isInteger(value[6]) && [2, 4, 8].includes(value[7]) && [8, 12, 16].includes(value[8]) &&
+    typeof value[9] === "string" && Array.isArray(value[13]) && Array.isArray(value[14]);
+}
+
+function expandCompactCompositionV1(compact: CompactCompositionV1): SharedComposition {
   const expanded: SharedComposition = {
     version: 1,
     title: compact[1],
@@ -140,13 +223,6 @@ function expandCompactComposition(compact: CompactComposition): SharedCompositio
     }))
   };
   return JSON.parse(JSON.stringify(expanded)) as SharedComposition;
-}
-
-function isCompactComposition(value: unknown): value is CompactComposition {
-  return Array.isArray(value) && value[0] === 1 && typeof value[1] === "string" &&
-    typeof value[3] === "string" && typeof value[4] === "string" && typeof value[5] === "string" &&
-    Number.isInteger(value[6]) && [2, 4, 8].includes(value[7]) && [8, 12, 16].includes(value[8]) &&
-    typeof value[9] === "string" && Array.isArray(value[13]) && Array.isArray(value[14]);
 }
 
 function isSharedComposition(value: unknown): value is SharedComposition {
@@ -207,6 +283,10 @@ export function decodeSharedComposition(value: string): SharedComposition | null
       const parsed: unknown = JSON.parse(compactJson);
       if (isCompactComposition(parsed)) {
         const expanded = expandCompactComposition(parsed);
+        return isSharedComposition(expanded) ? expanded : null;
+      }
+      if (isCompactCompositionV1(parsed)) {
+        const expanded = expandCompactCompositionV1(parsed);
         return isSharedComposition(expanded) ? expanded : null;
       }
     }

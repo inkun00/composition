@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { compressToEncodedURIComponent } from "lz-string";
 import { decodeSharedComposition, encodeSharedComposition, type SharedComposition } from "./share";
 
 const compactSample: SharedComposition = {
@@ -35,16 +36,68 @@ function legacyEncode(composition: SharedComposition): string {
   return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
 }
 
+function compactV1Encode(composition: SharedComposition): string {
+  return compressToEncodedURIComponent(JSON.stringify([
+    1,
+    composition.title,
+    composition.description,
+    composition.creator,
+    composition.originalCreator,
+    composition.presetId,
+    composition.meter.beats,
+    composition.meter.beatUnit,
+    composition.songLength,
+    composition.instrumentId,
+    composition.accompanimentStyleId,
+    composition.accompanimentInstrumentIds,
+    composition.bpm,
+    composition.lyrics,
+    composition.measures.map((measure) => [
+      measure.candidateName,
+      measure.notes.map((note) => [
+        note.id, note.pitch, note.duration.numerator, note.duration.denominator, note.dotted,
+        note.beamGroup, note.beamBreak, note.linkToNext, note.restY, note.lyric
+      ]),
+      measure.effects?.map((effect) => [effect.id, effect.effectId, effect.offsetBeats])
+    ])
+  ]));
+}
+
+function normalizeTransientIds(composition: SharedComposition | null): unknown {
+  if (!composition) return composition;
+  const normalized = {
+    ...composition,
+    measures: composition.measures.map((measure) => {
+      const beamGroups = new Map<string, number>();
+      return {
+        ...measure,
+        notes: measure.notes.map(({ id: _id, beamGroup, ...note }) => {
+          if (beamGroup && !beamGroups.has(beamGroup)) beamGroups.set(beamGroup, beamGroups.size);
+          return { ...note, beamGroup: beamGroup ? beamGroups.get(beamGroup) : undefined };
+        }),
+        effects: measure.effects?.map(({ id: _id, ...effect }) => effect)
+      };
+    })
+  };
+  return JSON.parse(JSON.stringify(normalized));
+}
+
 describe("compact share encoding", () => {
   it("round-trips compact compressed share data", () => {
-    expect(decodeSharedComposition(encodeSharedComposition(compactSample))).toEqual(compactSample);
+    expect(normalizeTransientIds(decodeSharedComposition(encodeSharedComposition(compactSample))))
+      .toEqual(normalizeTransientIds(compactSample));
   });
 
   it("keeps QR payloads below the guarded render limit", () => {
-    expect(encodeSharedComposition(compactSample).length).toBeLessThan(2900);
+    expect(encodeSharedComposition(compactSample).length).toBeLessThan(1800);
   });
 
   it("continues to decode legacy base64url share data", () => {
     expect(decodeSharedComposition(legacyEncode(compactSample))).toEqual(compactSample);
+  });
+
+  it("continues to decode version 1 compact share data", () => {
+    expect(normalizeTransientIds(decodeSharedComposition(compactV1Encode(compactSample))))
+      .toEqual(normalizeTransientIds(compactSample));
   });
 });

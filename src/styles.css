@@ -615,9 +615,9 @@ h1 { font-size: clamp(30px, 4vw, 46px); letter-spacing: -.04em; margin: 8px 0 12
 .share-status { margin: 12px 0 0; color: #36735e; font-weight: 700; font-size: 12px; text-align: right; }
 .share-url { margin-top: 12px; }
 .share-url textarea { padding: 10px 12px; resize: none; color: #665b50; font-size: 10px; line-height: 1.4; }
-.mobile-record-qr { margin-top: 14px; padding: 14px; display: grid; grid-template-columns: 118px 1fr; gap: 14px; align-items: center; border: 1px solid #bddde4; border-radius: 16px; background: #f0fbfd; }
-.mobile-record-qr svg { width: 118px; height: 118px; padding: 6px; border-radius: 10px; background: white; }
-.mobile-record-qr-fallback { width: 118px; height: 118px; display: grid; place-items: center; border-radius: 10px; background: white; color: #1d5d72; }
+.mobile-record-qr { margin-top: 14px; padding: 16px; display: grid; grid-template-columns: minmax(240px,320px) 1fr; gap: 18px; align-items: center; border: 1px solid #bddde4; border-radius: 16px; background: #f0fbfd; }
+.mobile-record-qr svg { display: block; width: min(320px,100%); height: auto; border-radius: 4px; background: white; }
+.mobile-record-qr-fallback { width: min(320px,100%); aspect-ratio: 1; display: grid; place-items: center; border-radius: 4px; background: white; color: #1d5d72; }
 .mobile-record-qr strong { display: block; color: #1d5d72; font-size: 15px; }
 .mobile-record-qr p { margin: 5px 0 0; color: #53717a; font-size: 12px; font-weight: 800; line-height: 1.45; }
 
