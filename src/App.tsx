@@ -311,6 +311,7 @@ export default function App() {
   const noteAnimationTimers = useRef<number[]>([]);
   const projectFileInput = useRef<HTMLInputElement | null>(null);
   const recordingPreviewRef = useRef<HTMLAudioElement | null>(null);
+  const mobileRecordingQrRef = useRef<SVGSVGElement | null>(null);
   const backingMixRequest = useRef(0);
   const [selectedInstrumentId, setSelectedInstrumentId] = useState<InstrumentId>(
     findInstrument(resumableDraft?.instrumentId ?? incomingShare?.instrumentId ?? "piano").id
@@ -1282,6 +1283,48 @@ export default function App() {
       setShareStatus(isLocalHost(window.location)
         ? "아래 링크를 길게 눌러 복사해 주세요. localhost 주소는 스마트폰에서 바로 열리지 않을 수 있어요."
         : "아래 링크를 길게 눌러 복사하거나 QR을 스캔해 주세요.");
+    }
+  }
+
+  async function saveMobileRecordingQr() {
+    const svg = mobileRecordingQrRef.current;
+    if (!svg) return;
+
+    const source = new XMLSerializer().serializeToString(svg);
+    const svgBlob = new Blob([source], { type: "image/svg+xml;charset=utf-8" });
+    const svgUrl = URL.createObjectURL(svgBlob);
+    try {
+      const image = new Image();
+      await new Promise<void>((resolve, reject) => {
+        image.onload = () => resolve();
+        image.onerror = () => reject(new Error("QR image load failed"));
+        image.src = svgUrl;
+      });
+
+      const canvas = document.createElement("canvas");
+      canvas.width = 1024;
+      canvas.height = 1024;
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("Canvas is unavailable");
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+      const pngBlob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("PNG encoding failed")), "image/png");
+      });
+      const pngUrl = URL.createObjectURL(pngBlob);
+      const link = document.createElement("a");
+      link.href = pngUrl;
+      link.download = safeSongFileName("png").replace(/\.png$/i, "-스마트폰-녹음-QR.png");
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(pngUrl), 1000);
+      setShareStatus("QR 코드 이미지를 저장했어요.");
+    } catch (error) {
+      console.error(error);
+      setShareStatus("QR 코드 이미지를 저장하지 못했어요. 다시 시도해 주세요.");
+    } finally {
+      URL.revokeObjectURL(svgUrl);
     }
   }
 
@@ -2445,17 +2488,23 @@ export default function App() {
               {mobileRecordingUrl && (
                 <div className="mobile-record-qr" data-testid="mobile-recording-qr">
                   {canRenderMobileRecordingQr ? (
-                    <QRCodeSVG value={mobileRecordingUrl} size={320} marginSize={4} level="L" boostLevel={false}
+                    <QRCodeSVG ref={mobileRecordingQrRef} value={mobileRecordingUrl} size={320} marginSize={4} level="L" boostLevel={false}
                       bgColor="#ffffff" fgColor="#111111" shapeRendering="crispEdges"
                       title="스마트폰 녹음 링크 QR 코드" />
                   ) : (
                     <div className="mobile-record-qr-fallback"><QrCode size={38} /></div>
                   )}
-                  <div>
+                  <div className="mobile-record-qr-copy">
                     <strong>{canRenderMobileRecordingQr ? "스마트폰 카메라로 스캔" : "링크를 복사해서 열기"}</strong>
                     <p>{canRenderMobileRecordingQr
                       ? "폰에서는 작곡 도구 대신 녹음 버튼과 저장 화면만 열립니다."
                       : "곡 정보가 길어서 QR 대신 위 공유 주소를 스마트폰으로 보내 주세요."}</p>
+                    {canRenderMobileRecordingQr && (
+                      <button type="button" className="mobile-record-qr-save" data-testid="save-mobile-recording-qr"
+                        onClick={() => void saveMobileRecordingQr()}>
+                        <FileDown size={17} aria-hidden="true" /> QR 이미지 저장
+                      </button>
+                    )}
                   </div>
                 </div>
               )}

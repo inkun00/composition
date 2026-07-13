@@ -618,8 +618,11 @@ h1 { font-size: clamp(30px, 4vw, 46px); letter-spacing: -.04em; margin: 8px 0 12
 .mobile-record-qr { margin-top: 14px; padding: 16px; display: grid; grid-template-columns: minmax(240px,320px) 1fr; gap: 18px; align-items: center; border: 1px solid #bddde4; border-radius: 16px; background: #f0fbfd; }
 .mobile-record-qr svg { display: block; width: min(320px,100%); height: auto; border-radius: 4px; background: white; }
 .mobile-record-qr-fallback { width: min(320px,100%); aspect-ratio: 1; display: grid; place-items: center; border-radius: 4px; background: white; color: #1d5d72; }
+.mobile-record-qr-copy { min-width: 0; }
 .mobile-record-qr strong { display: block; color: #1d5d72; font-size: 15px; }
 .mobile-record-qr p { margin: 5px 0 0; color: #53717a; font-size: 12px; font-weight: 800; line-height: 1.45; }
+.mobile-record-qr-save { min-height: 40px; margin-top: 12px; padding: 0 14px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid #1c6d85; border-radius: 8px; background: #1c6d85; color: white; font-weight: 800; cursor: pointer; }
+.mobile-record-qr-save:hover { background: #155a70; }
 
 .mobile-record-main { min-height: 100vh; display: grid; place-items: center; padding: 24px 16px; background: linear-gradient(180deg,#f7fbff,#fff7e8); }
 .mobile-record-panel { width: min(460px, 100%); padding: 24px; border: 1px solid #d9e8e7; border-radius: 24px; background: rgba(255,255,255,.96); box-shadow: 0 18px 48px rgba(39,78,99,.14); }
