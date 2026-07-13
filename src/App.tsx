@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, CheckCircle2, ExternalLink, FileDown, FileMusic, FileUp, Menu, Mic2, Music2, PartyPopper, Plus, Redo2, Share2, SlidersHorizontal, Square, Undo2, Volume2, WandSparkles, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, ExternalLink, FileDown, FileMusic, FileUp, Menu, Mic2, Music2, PartyPopper, Plus, QrCode, Redo2, Share2, SlidersHorizontal, Smartphone, Square, Undo2, Volume2, WandSparkles, X } from "lucide-react";
 import { exportBackingCompositionMp3, pausePlayback, playComposition, playMeasure, recordKaraokeComposition, renderKaraokePreviewMix, renderProcessedKaraokeMp3, resumePlayback, stopPlayback,
   type KaraokePostProcessPreset } from "./audio/player";
 import { preloadInstrument } from "./audio/samplePlayer";
@@ -228,6 +228,24 @@ function compositionFromDraft(draft: SavedDraft, preset: HarmonyPreset): Measure
   }));
 }
 
+function isRecordingLink(search: string, hash: string): boolean {
+  return new URLSearchParams(search).get("record") === "1" || /(?:^#|&)record=1(?:&|$)/.test(hash);
+}
+
+function buildMobileRecordingUrl(shareUrl: string): string {
+  const [base, hash] = shareUrl.split("#");
+  const separator = base.includes("?") ? "&" : "?";
+  return `${base}${separator}record=1${hash ? `#${hash}` : ""}`;
+}
+
+function qrCodeImageUrl(value: string): string {
+  return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=12&data=${encodeURIComponent(value)}`;
+}
+
+function isLocalHost(location: Pick<Location, "hostname">): boolean {
+  return ["localhost", "127.0.0.1", "::1"].includes(location.hostname);
+}
+
 function replaceNote(
   notes: readonly NoteEvent[],
   id: string,
@@ -249,10 +267,11 @@ function sanitizeNoteLinks(notes: readonly NoteEvent[]): NoteEvent[] {
 }
 
 export default function App() {
+  const mobileRecordMode = isRecordingLink(window.location.search, window.location.hash);
   const [incomingShare] = useState(() => readCompositionFromHash(window.location.hash));
   const [savedDraft] = useState(() => readDraft(window.localStorage));
   const [showOpening, setShowOpening] = useState(() =>
-    new URLSearchParams(window.location.search).get("start") !== "new");
+    !mobileRecordMode && new URLSearchParams(window.location.search).get("start") !== "new");
   const [showAppMenu, setShowAppMenu] = useState(false);
   const resumableDraft = savedDraft && (!incomingShare || savedDraft.sourceHash === window.location.hash)
     ? savedDraft : null;
@@ -317,6 +336,7 @@ export default function App() {
   const [saveStatus, setSaveStatus] = useState(resumableDraft ? "이어 불러옴 ✓" : "저장됨 ✓");
   const [shareStatus, setShareStatus] = useState("");
   const [generatedShareUrl, setGeneratedShareUrl] = useState("");
+  const [mobileRecordingUrl, setMobileRecordingUrl] = useState("");
   const [exportingPdf, setExportingPdf] = useState(false);
   const [pdfIncludeAccompaniment, setPdfIncludeAccompaniment] = useState(false);
   const [exportingBacking, setExportingBacking] = useState(false);
@@ -1245,6 +1265,27 @@ export default function App() {
     }
   }
 
+  async function createMobileRecordingLink() {
+    const composition = makeSharedComposition();
+    if (!composition) {
+      setShareStatus("스마트폰 녹음 링크를 만들려면 곡 제목과 작곡가 이름을 먼저 적어 주세요.");
+      return;
+    }
+    const url = buildMobileRecordingUrl(buildShareUrl(composition, window.location));
+    setMobileRecordingUrl(url);
+    setGeneratedShareUrl(url);
+    try {
+      await navigator.clipboard.writeText(url);
+      setShareStatus(isLocalHost(window.location)
+        ? "녹음 링크를 복사했어요. localhost 주소는 스마트폰에서 바로 열리지 않을 수 있어요."
+        : "스마트폰 녹음 링크를 복사했어요. QR을 스캔해도 바로 열 수 있어요.");
+    } catch {
+      setShareStatus(isLocalHost(window.location)
+        ? "아래 링크를 길게 눌러 복사해 주세요. localhost 주소는 스마트폰에서 바로 열리지 않을 수 있어요."
+        : "아래 링크를 길게 눌러 복사하거나 QR을 스캔해 주세요.");
+    }
+  }
+
   async function exportPdf(includeAccompaniment = false) {
     if (!songTitle.trim() || !creatorName.trim()) {
       setShareStatus("PDF에 넣을 곡 제목과 작곡가 이름을 먼저 적어 주세요.");
@@ -1576,7 +1617,7 @@ export default function App() {
           </div>
         </section>
       )}
-      <header className="topbar">
+      {!mobileRecordMode && <header className="topbar">
         <div className="brand-menu-wrap">
           <a className="brand" href="#" aria-label="마음멜로디 홈">
             <span className="brand-mark"><Music2 size={23} strokeWidth={2.4} /></span>
@@ -1601,7 +1642,7 @@ export default function App() {
           <strong>{selectedPreset.childName} · {songLength}마디</strong>
         </div>
         <div className="save-button" role="status" aria-live="polite" data-testid="save-status">{saveStatus}</div>
-      </header>
+      </header>}
 
       {karaokeOpen && (
         <div className="karaoke-overlay" role="dialog" aria-modal="true" aria-label="노래 녹음 창">
@@ -1761,6 +1802,44 @@ export default function App() {
         </div>
       )}
 
+      {mobileRecordMode && (
+        <main className="mobile-record-main">
+          <section className="mobile-record-panel" aria-label="스마트폰 녹음 전용 화면">
+            <span className="mobile-record-kicker"><Smartphone size={18} /> 스마트폰 녹음</span>
+            <h1>{songTitle || "나의 노래"}</h1>
+            <p>
+              데스크탑에서 완성한 곡을 스마트폰 마이크로 녹음합니다. 이어폰을 끼면 반주가 다시 마이크에 들어가는 소리를 줄일 수 있어요.
+            </p>
+            <div className="mobile-record-summary">
+              <span>{songLength}마디</span>
+              <span>{meterKey(meter)}</span>
+              <span>{bpm} BPM</span>
+              <span>{selectedInstrument.name}</span>
+            </div>
+            {!incomingShare && (
+              <p className="mobile-record-warning">
+                곡 정보가 없는 녹음 주소예요. 데스크탑 작업 화면에서 스마트폰 녹음 링크를 다시 만들어 주세요.
+              </p>
+            )}
+            {isLocalHost(window.location) && (
+              <p className="mobile-record-warning">
+                이 주소는 localhost라서 스마트폰에서 데스크탑 앱에 접근하지 못할 수 있어요. 배포된 HTTPS 주소에서 만든 QR을 쓰면 가장 안정적입니다.
+              </p>
+            )}
+            <button type="button" className="mobile-record-start action-button" disabled={recordingSong || !allValid}
+              onClick={() => void recordSongMp3()}>
+              <Mic2 size={24} /> {recordingSong ? "녹음 중..." : "녹음 시작"}
+            </button>
+            {recordingStatus && <p className="mobile-record-status" role="status">{recordingStatus}</p>}
+            {recordingDownloadUrl && (
+              <button type="button" className="mobile-record-save action-button" onClick={saveProcessedRecording}>
+                MP3 저장
+              </button>
+            )}
+          </section>
+        </main>
+      )}
+
       {false && <nav className="stepper" aria-label="작곡 단계">
         {["화음 이야기", "박자와 길이", `${songLength}마디 가락`, "악기", "가사", "완성"].map((label, index) => (
           <div className={index < activeStep ? "step done" : index === activeStep ? "step active" : "step"} key={label}>
@@ -1770,7 +1849,7 @@ export default function App() {
         ))}
       </nav>}
 
-      <main>
+      {!mobileRecordMode && <main>
         {false && <section className="intro m1-intro">
           <div>
             <span className="section-kicker">M2 · 100가지 화음 이야기</span>
@@ -2337,6 +2416,10 @@ export default function App() {
                 </button>
                 <button type="button" className="share-link-button action-button" data-testid="copy-share-link"
                   onClick={() => void copyShareLink()}><Share2 size={18} /> 공유 링크 복사</button>
+                <button type="button" className="mobile-record-link-button action-button" data-testid="create-mobile-recording-link"
+                  disabled={!allValid} onClick={() => void createMobileRecordingLink()}>
+                  <QrCode size={18} /> 스마트폰 녹음 링크
+                </button>
                 <a className="samboard-share-button action-button" data-testid="open-samboard-share"
                   href="https://samboard.vivasam.com/studentEntry/?brdId=brd-0QZ60VWZ56TNW"
                   target="_blank" rel="noopener noreferrer">
@@ -2360,6 +2443,15 @@ export default function App() {
                 <label className="share-url"><span>공유 주소</span>
                   <textarea data-testid="share-url" readOnly value={generatedShareUrl} rows={3} /></label>
               )}
+              {mobileRecordingUrl && (
+                <div className="mobile-record-qr" data-testid="mobile-recording-qr">
+                  <img src={qrCodeImageUrl(mobileRecordingUrl)} alt="스마트폰 녹음 링크 QR 코드" />
+                  <div>
+                    <strong>스마트폰 카메라로 스캔</strong>
+                    <p>폰에서는 작곡 도구 대신 녹음 버튼과 저장 화면만 열립니다.</p>
+                  </div>
+                </div>
+              )}
             </div>
             <p className="audio-credit">
               ?? ??: FluidR3 SoundFont(MIT) ? ??? ??? THIRD_PARTY_NOTICES.md
@@ -2371,9 +2463,9 @@ export default function App() {
             )}
           </section>
         )}
-      </main>
+      </main>}
 
-      <footer className="bottom-bar">
+      {!mobileRecordMode && <footer className="bottom-bar">
         <div>
           <span className="mini-label">{activeIndex + 1}번째 마디 · {meterKey(meter)}</span>
           <strong>{activeMeasure.candidateName ?? "아직 가락을 고르지 않았어요"}</strong>
@@ -2392,7 +2484,7 @@ export default function App() {
             {songLength}마디 완성 <CheckCircle2 size={18} />
           </button>
         )}
-      </footer>
+      </footer>}
     </div>
   );
 }
