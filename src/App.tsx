@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, CheckCircle2, ExternalLink, FileDown, FileMusic, FileUp, Menu, Mic2, Music2, PartyPopper, Plus, QrCode, Redo2, Share2, SlidersHorizontal, Smartphone, Square, Undo2, Volume2, WandSparkles, X } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { exportBackingCompositionMp3, pausePlayback, playComposition, playMeasure, recordKaraokeComposition, renderKaraokePreviewMix, renderProcessedKaraokeMp3, resumePlayback, stopPlayback,
   type KaraokePostProcessPreset } from "./audio/player";
 import { preloadInstrument } from "./audio/samplePlayer";
@@ -236,10 +237,6 @@ function buildMobileRecordingUrl(shareUrl: string): string {
   const [base, hash] = shareUrl.split("#");
   const separator = base.includes("?") ? "&" : "?";
   return `${base}${separator}record=1${hash ? `#${hash}` : ""}`;
-}
-
-function qrCodeImageUrl(value: string): string {
-  return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=12&data=${encodeURIComponent(value)}`;
 }
 
 function isLocalHost(location: Pick<Location, "hostname">): boolean {
@@ -2445,7 +2442,8 @@ export default function App() {
               )}
               {mobileRecordingUrl && (
                 <div className="mobile-record-qr" data-testid="mobile-recording-qr">
-                  <img src={qrCodeImageUrl(mobileRecordingUrl)} alt="스마트폰 녹음 링크 QR 코드" />
+                  <QRCodeSVG value={mobileRecordingUrl} size={118} marginSize={2}
+                    title="스마트폰 녹음 링크 QR 코드" />
                   <div>
                     <strong>스마트폰 카메라로 스캔</strong>
                     <p>폰에서는 작곡 도구 대신 녹음 버튼과 저장 화면만 열립니다.</p>
