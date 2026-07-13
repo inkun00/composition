@@ -1,0 +1,15 @@
+{
+  "auth": {
+    "providers": {
+      "anonymous": false,
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "Maeum Melody",
+        "supportEmail": "inkun00@gmail.com",
+        "authorizedRedirectUris": []
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  }
+}

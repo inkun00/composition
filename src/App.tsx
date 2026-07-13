@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, CheckCircle2, ExternalLink, FileDown, FileMusic, FileUp, Menu, Mic2, Music2, PartyPopper, Plus, QrCode, Redo2, Share2, SlidersHorizontal, Smartphone, Square, Undo2, Volume2, WandSparkles, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, ExternalLink, FileDown, FileMusic, FileUp, Menu, Mic2, Music2, PartyPopper, Plus, QrCode, Redo2, Share2, SlidersHorizontal, Smartphone, Square, Undo2, UserRound, Volume2, WandSparkles, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { exportBackingCompositionMp3, pausePlayback, playComposition, playMeasure, recordKaraokeComposition, renderKaraokePreviewMix, renderProcessedKaraokeMp3, resumePlayback, stopPlayback,
   type KaraokePostProcessPreset } from "./audio/player";
@@ -10,6 +10,10 @@ import PdfScoreSheet from "./components/PdfScoreSheet";
 import ScoreMeasure from "./components/ScoreMeasure";
 import NoteLyrics from "./components/NoteLyrics";
 import SoundEffectEditor from "./components/SoundEffectEditor";
+import AccountLibrary from "./components/AccountLibrary";
+import { firebaseConfigured } from "./firebase/config";
+import type { User } from "./firebase/client";
+import type { CloudScore } from "./firebase/scores";
 import { ACCOMPANIMENT_STYLES, ENSEMBLE_PRESETS, MAX_ACCOMPANIMENT_INSTRUMENTS, accompanimentInstrumentPart, createAccompanimentPattern, findAccompanimentStyle,
   type AccompanimentStyleId } from "./music/accompaniment";
 import { getCandidates, MELODY_CANDIDATE_COUNT, MELODY_FEELING_GROUPS } from "./music/candidates";
@@ -271,6 +275,14 @@ export default function App() {
   const [showOpening, setShowOpening] = useState(() =>
     !mobileRecordMode && new URLSearchParams(window.location.search).get("start") !== "new");
   const [showAppMenu, setShowAppMenu] = useState(false);
+  const [accountLibraryOpen, setAccountLibraryOpen] = useState(false);
+  const [authUser, setAuthUser] = useState<User | null>(null);
+  const [authReady, setAuthReady] = useState(!firebaseConfigured);
+  const [cloudScores, setCloudScores] = useState<CloudScore[]>([]);
+  const [cloudLoading, setCloudLoading] = useState(false);
+  const [cloudBusy, setCloudBusy] = useState(false);
+  const [cloudError, setCloudError] = useState("");
+  const [activeCloudScoreId, setActiveCloudScoreId] = useState<string | null>(null);
   const resumableDraft = savedDraft && (!incomingShare || savedDraft.sourceHash === window.location.hash)
     ? savedDraft : null;
   const initialPreset = findHarmonyPreset(resumableDraft?.presetId ?? incomingShare?.presetId ?? HARMONY_PRESETS[0].id);
@@ -521,6 +533,49 @@ export default function App() {
     if (completionAnimationTimer.current !== null) window.clearTimeout(completionAnimationTimer.current);
     void stopPlayback();
   }, []);
+
+  useEffect(() => {
+    if (!firebaseConfigured) return;
+    let active = true;
+    let unsubscribe: (() => void) | undefined;
+    void import("./firebase/client").then(({ observeAuth }) => {
+      if (!active) return;
+      unsubscribe = observeAuth((user) => {
+        setAuthUser(user);
+        setAuthReady(true);
+        setActiveCloudScoreId(null);
+        setCloudError("");
+      });
+    }).catch((error) => {
+      console.error(error);
+      if (active) {
+        setAuthReady(true);
+        setCloudError("Firebase 인증을 시작하지 못했어요.");
+      }
+    });
+    return () => {
+      active = false;
+      unsubscribe?.();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!authUser) {
+      setCloudScores([]);
+      setCloudLoading(false);
+      return;
+    }
+    let active = true;
+    setCloudLoading(true);
+    void import("./firebase/scores").then(({ listCloudScores }) => listCloudScores(authUser.uid))
+      .then((scores) => { if (active) setCloudScores(scores); })
+      .catch((error) => {
+        console.error(error);
+        if (active) setCloudError("클라우드 악보를 불러오지 못했어요. Firebase 설정을 확인해 주세요.");
+      })
+      .finally(() => { if (active) setCloudLoading(false); });
+    return () => { active = false; };
+  }, [authUser]);
 
   useEffect(() => () => {
     if (recordingDownloadUrl) URL.revokeObjectURL(recordingDownloadUrl);
@@ -1436,6 +1491,110 @@ export default function App() {
     setShareStatus("나중에 다시 고칠 수 있는 작품 파일을 저장했어요.");
   }
 
+  function applyProjectDraft(project: SavedDraft) {
+    const preset = findHarmonyPreset(project.presetId);
+    historyCurrent.current = null;
+    setUndoStack([]);
+    setRedoStack([]);
+    setSelectedPresetId(preset.id);
+    setMeter(project.meter);
+    setSongLength(project.songLength);
+    setMeasures(compositionFromDraft(project, preset));
+    setSelectedInstrumentId(findInstrument(project.instrumentId).id);
+    setAccompanimentStyleId(project.accompanimentStyleId ?? "arpeggio");
+    setAccompanimentInstrumentIds(uniqueAccompanimentInstrumentIds(project.accompanimentInstrumentIds ?? ["piano"]));
+    setBpm(project.bpm ?? 96);
+    setShowArrangement(project.showArrangement);
+    setSongTitle(project.title);
+    setSongDescription(project.description ?? "");
+    setCreatorName(project.creator);
+    setOriginalCreator(project.originalCreator);
+    setSourceHash(project.sourceHash);
+    setActiveIndex(0);
+    setSelectedNoteId("");
+    setSelectedNoteIds([]);
+    setEditStatus("");
+    writeDraft(window.localStorage, project);
+  }
+
+  async function refreshCloudScores(uid: string) {
+    setCloudLoading(true);
+    try {
+      const { listCloudScores } = await import("./firebase/scores");
+      setCloudScores(await listCloudScores(uid));
+    } finally {
+      setCloudLoading(false);
+    }
+  }
+
+  async function handleGoogleSignIn() {
+    setCloudBusy(true);
+    setCloudError("");
+    try {
+      const { signInWithGoogle } = await import("./firebase/client");
+      await signInWithGoogle();
+    } catch (error) {
+      console.error(error);
+      setCloudError("Google 로그인에 실패했어요. 팝업 차단을 풀고 다시 시도해 주세요.");
+    } finally {
+      setCloudBusy(false);
+    }
+  }
+
+  async function handleFirebaseSignOut() {
+    setCloudBusy(true);
+    try {
+      const { signOutFirebase } = await import("./firebase/client");
+      await signOutFirebase();
+      setAccountLibraryOpen(false);
+    } finally {
+      setCloudBusy(false);
+    }
+  }
+
+  async function handleCloudSave(asCopy: boolean) {
+    if (!authUser) return;
+    setCloudBusy(true);
+    setCloudError("");
+    try {
+      const { saveCloudScore } = await import("./firebase/scores");
+      const scoreId = await saveCloudScore(authUser.uid, currentProjectDraft(), asCopy ? undefined : activeCloudScoreId ?? undefined);
+      setActiveCloudScoreId(scoreId);
+      await refreshCloudScores(authUser.uid);
+      setShareStatus(asCopy ? "현재 악보를 새 클라우드 악보로 저장했어요." : "내 악보함에 저장했어요.");
+    } catch (error) {
+      console.error(error);
+      setCloudError("클라우드 저장에 실패했어요. 잠시 뒤 다시 시도해 주세요.");
+    } finally {
+      setCloudBusy(false);
+    }
+  }
+
+  function handleCloudLoad(score: CloudScore) {
+    if (completedCount > 0 && !window.confirm(`지금 만든 곡 대신 '${score.title}' 악보를 열까요? 현재 곡은 로컬에 자동 저장되어 있어요.`)) return;
+    applyProjectDraft(score.draft);
+    setActiveCloudScoreId(score.id);
+    setAccountLibraryOpen(false);
+    setShareStatus("내 악보함에서 작품을 불러왔어요.");
+  }
+
+  async function handleCloudDelete(score: CloudScore) {
+    if (!authUser || !window.confirm(`'${score.title}' 악보를 내 악보함에서 삭제할까요?`)) return;
+    setCloudBusy(true);
+    setCloudError("");
+    try {
+      const { deleteCloudScore } = await import("./firebase/scores");
+      await deleteCloudScore(authUser.uid, score.id);
+      if (activeCloudScoreId === score.id) setActiveCloudScoreId(null);
+      await refreshCloudScores(authUser.uid);
+    } catch (error) {
+      console.error(error);
+      setCloudError("악보를 삭제하지 못했어요. 다시 시도해 주세요.");
+    } finally {
+      setCloudBusy(false);
+    }
+  }
+
   function startNewProject() {
     if (completedCount > 0 && !window.confirm("새 곡을 시작할까요? 지금 만든 곡은 작품 파일로 저장한 뒤 다시 불러올 수 있어요.")) return;
     window.localStorage.removeItem(DRAFT_STORAGE_KEY);
@@ -1455,29 +1614,8 @@ export default function App() {
       if (!isSavedDraft(parsed)) throw new Error("invalid-project");
       if (completedCount > 0 && !window.confirm("지금 만든 곡 대신 불러온 작품을 열까요? 현재 곡은 자동 저장되어 있어요.")) return;
       const project = parsed;
-      const preset = findHarmonyPreset(project.presetId);
-      historyCurrent.current = null;
-      setUndoStack([]);
-      setRedoStack([]);
-      setSelectedPresetId(preset.id);
-      setMeter(project.meter);
-      setSongLength(project.songLength);
-      setMeasures(compositionFromDraft(project, preset));
-      setSelectedInstrumentId(findInstrument(project.instrumentId).id);
-      setAccompanimentStyleId(project.accompanimentStyleId ?? "arpeggio");
-      setAccompanimentInstrumentIds(uniqueAccompanimentInstrumentIds(project.accompanimentInstrumentIds ?? ["piano"]));
-      setBpm(project.bpm ?? 96);
-      setShowArrangement(project.showArrangement);
-      setSongTitle(project.title);
-      setSongDescription(project.description ?? "");
-      setCreatorName(project.creator);
-      setOriginalCreator(project.originalCreator);
-      setSourceHash(project.sourceHash);
-      setActiveIndex(0);
-      setSelectedNoteId("");
-      setSelectedNoteIds([]);
-      setEditStatus("");
-      writeDraft(window.localStorage, project);
+      applyProjectDraft(project);
+      setActiveCloudScoreId(null);
       setShareStatus("작품 파일을 불러왔어요. 이어서 고쳐 보세요!");
     } catch (error) {
       console.error(error);
@@ -1683,8 +1821,26 @@ export default function App() {
           <span className="eyebrow">나의 첫 번째 노래</span>
           <strong>{selectedPreset.childName} · {songLength}마디</strong>
         </div>
-        <div className="save-button" role="status" aria-live="polite" data-testid="save-status">{saveStatus}</div>
+        <div className="topbar-actions">
+          <div className="save-button" role="status" aria-live="polite" data-testid="save-status">{saveStatus}</div>
+          <button type="button" className={authUser ? "account-trigger signed-in" : "account-trigger"}
+            data-testid="account-library-button" onClick={() => setAccountLibraryOpen(true)}>
+            {authUser?.photoURL
+              ? <img src={authUser.photoURL} alt="" referrerPolicy="no-referrer" />
+              : <UserRound size={18} aria-hidden="true" />}
+            <span>{authUser ? "내 악보함" : firebaseConfigured ? "로그인" : "계정 연결"}</span>
+          </button>
+        </div>
       </header>}
+
+      {accountLibraryOpen && !mobileRecordMode && (
+        <AccountLibrary configured={firebaseConfigured} user={authUser} authReady={authReady}
+          scores={cloudScores} loading={cloudLoading} busy={cloudBusy} error={cloudError}
+          currentScoreId={activeCloudScoreId} onClose={() => setAccountLibraryOpen(false)}
+          onSignIn={() => void handleGoogleSignIn()} onSignOut={() => void handleFirebaseSignOut()}
+          onSave={(asCopy) => void handleCloudSave(asCopy)} onLoad={handleCloudLoad}
+          onDelete={(score) => void handleCloudDelete(score)} />
+      )}
 
       {karaokeOpen && (
         <div className="karaoke-overlay" role="dialog" aria-modal="true" aria-label="노래 녹음 창">

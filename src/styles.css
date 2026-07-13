@@ -84,6 +84,47 @@ button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible
 .eyebrow { font-size: 12px; color: var(--muted); letter-spacing: .08em; }
 .save-button { justify-self: end; border: 1px solid #cce9dc; border-radius: 99px; padding: 10px 16px;
   background: linear-gradient(180deg,#f1fbf6,#e6f6ee); color: #24795b; font-weight: 700; box-shadow: 0 5px 14px rgba(34,119,87,.08); }
+.topbar-actions { justify-self: end; display: flex; align-items: center; gap: 9px; }
+.account-trigger { min-height: 42px; padding: 0 13px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid #d9d2eb; border-radius: 8px; background: #faf8ff; color: #56488f; font-size: 13px; font-weight: 800; cursor: pointer; }
+.account-trigger:hover { background: #f0ecff; }
+.account-trigger img { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
+.account-trigger.signed-in { border-color: #bcded1; background: #f1fbf6; color: #216f58; }
+
+.account-overlay { position: fixed; inset: 0; z-index: 95; display: grid; place-items: center; padding: 20px; background: rgba(37,32,53,.48); }
+.account-library { width: min(680px,100%); max-height: min(760px,calc(100vh - 40px)); overflow: auto; border: 1px solid #dcd7e5; border-radius: 8px; background: #fff; box-shadow: 0 24px 70px rgba(34,27,56,.25); }
+.account-library-header { position: sticky; top: 0; z-index: 2; min-height: 76px; padding: 15px 18px; display: flex; align-items: center; justify-content: space-between; gap: 14px; border-bottom: 1px solid #e8e3ec; background: rgba(255,255,255,.97); }
+.account-library-header > div { min-width: 0; display: flex; align-items: center; gap: 11px; }
+.account-library-header > div > span { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 8px; background: #ece8fb; color: #5f50a8; }
+.account-library-header h2 { margin: 0; color: #302b42; font-size: 20px; }
+.account-library-header p { margin: 2px 0 0; color: #77717e; font-size: 12px; }
+.account-close { width: 38px; height: 38px; display: grid; place-items: center; border: 0; border-radius: 8px; background: #f3f1f4; cursor: pointer; }
+.account-profile { margin: 18px 18px 12px; min-height: 58px; padding: 10px 12px; display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 10px; border: 1px solid #dce7e1; border-radius: 8px; background: #f7fcf9; }
+.account-profile img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
+.account-profile strong, .account-profile span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-profile span { margin-top: 2px; color: #6e7773; font-size: 11px; }
+.account-profile > button, .account-score-delete { width: 36px; height: 36px; display: grid; place-items: center; border: 0; border-radius: 8px; background: transparent; color: #756e79; cursor: pointer; }
+.account-profile > button:hover, .account-score-delete:hover { background: #efecef; color: #b44e4e; }
+.cloud-save-actions { padding: 0 18px 16px; display: flex; gap: 8px; }
+.account-primary, .account-secondary { min-height: 44px; padding: 0 15px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 8px; font-weight: 800; cursor: pointer; }
+.account-primary { border: 1px solid #5547a2; background: #6253b3; color: white; }
+.account-secondary { border: 1px solid #d6d0df; background: white; color: #594d76; }
+.account-error { margin: 0 18px 14px; padding: 10px 12px; border: 1px solid #efc5c1; border-radius: 8px; background: #fff5f4; color: #9a403b; font-size: 12px; font-weight: 800; }
+.account-score-heading { padding: 12px 18px 8px; display: flex; justify-content: space-between; border-top: 1px solid #ece8ef; color: #4e4859; }
+.account-score-heading span { color: #77717e; font-size: 12px; }
+.account-score-list { padding: 0 18px 20px; display: grid; gap: 8px; }
+.account-score { min-height: 62px; display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; border: 1px solid #e2dee6; border-radius: 8px; background: #fff; }
+.account-score.active { border-color: #8d7fd0; background: #f8f6ff; }
+.account-score-open { min-width: 0; min-height: 60px; padding: 9px 12px; display: flex; align-items: center; gap: 10px; border: 0; background: transparent; text-align: left; cursor: pointer; }
+.account-score-open > svg { flex: 0 0 auto; color: #6b5db7; }
+.account-score-open span, .account-score-open strong, .account-score-open small { display: block; min-width: 0; }
+.account-score-open strong { overflow: hidden; color: #373142; text-overflow: ellipsis; white-space: nowrap; }
+.account-score-open small { margin-top: 3px; color: #7b7580; font-size: 11px; }
+.account-empty { min-height: 300px; padding: 30px; display: grid; place-items: center; align-content: center; gap: 9px; color: #675b7f; text-align: center; }
+.account-empty.compact { min-height: 190px; }
+.account-empty strong { color: #3c354a; font-size: 17px; }
+.account-empty p { max-width: 420px; margin: 0 0 10px; color: #746e79; font-size: 13px; line-height: 1.55; }
+.account-spinner { width: 28px; height: 28px; border: 3px solid #ddd7ed; border-top-color: #6253b3; border-radius: 50%; animation: account-spin .8s linear infinite; }
+@keyframes account-spin { to { transform: rotate(360deg); } }
 
 .stepper { max-width: 1600px; margin: 0 auto; padding: 24px 20px 10px; display: flex; }
 .step { flex: 1; position: relative; display: grid; justify-items: center; gap: 6px; color: #a2a6a4; }
@@ -769,6 +810,12 @@ h1 { font-size: clamp(30px, 4vw, 46px); letter-spacing: -.04em; margin: 8px 0 12
 
 @media (max-width: 620px) {
   .topbar { height: 68px; padding: 0 16px; }
+  .save-button { display: none; }
+  .account-trigger { min-height: 38px; padding: 0 10px; }
+  .account-overlay { padding: 0; align-items: end; }
+  .account-library { width: 100%; max-height: 92vh; border-radius: 8px 8px 0 0; }
+  .cloud-save-actions { flex-direction: column; }
+  .account-primary, .account-secondary { width: 100%; }
   .brand { font-size: 19px; }
   .brand-mark { width: 37px; height: 37px; }
   .step small { display: none; }
@@ -822,6 +869,12 @@ h1 { font-size: clamp(30px, 4vw, 46px); letter-spacing: -.04em; margin: 8px 0 12
   .mobile-record-qr { grid-template-columns: 1fr; justify-items: center; text-align: center; }
   .mobile-record-panel { padding: 20px; border-radius: 20px; }
   .mobile-record-panel h1 { font-size: 26px; }
+}
+
+@media (max-width: 420px) {
+  .account-trigger span { display: none; }
+  .account-trigger { width: 38px; padding: 0; justify-content: center; }
+  .account-library-header p { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
