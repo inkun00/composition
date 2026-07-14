@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, CheckCircle2, ExternalLink, FileDown, FileMusic, FileUp, Menu, Mic2, Music2, PartyPopper, Plus, QrCode, Redo2, Share2, SlidersHorizontal, Smartphone, Square, Undo2, UserRound, Volume2, WandSparkles, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, ExternalLink, FileDown, FileMusic, FileUp, Menu, Mic2, Music2, PartyPopper, Plus, QrCode, Redo2, SlidersHorizontal, Smartphone, Square, Undo2, UserRound, Volume2, WandSparkles, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { exportBackingCompositionMp3, pausePlayback, playComposition, playMeasure, recordKaraokeComposition, renderKaraokePreviewMix, renderProcessedKaraokeMp3, resumePlayback, stopPlayback,
   type KaraokePostProcessPreset } from "./audio/player";
@@ -1322,22 +1322,6 @@ export default function App() {
       lyrics,
       measures: printableMeasures.map(({ candidateName, notes, effects }) => ({ candidateName, notes, effects }))
     };
-  }
-
-  async function copyShareLink() {
-    const composition = makeSharedComposition();
-    if (!composition) {
-      setShareStatus("곡 제목과 작곡가 이름을 먼저 적어 주세요.");
-      return;
-    }
-    const url = buildShareUrl(composition, window.location);
-    setGeneratedShareUrl(url);
-    try {
-      await navigator.clipboard.writeText(url);
-      setShareStatus("공유 링크를 복사했어요!");
-    } catch {
-      setShareStatus("아래 링크를 길게 눌러 복사해 주세요.");
-    }
   }
 
   async function createMobileRecordingLink() {
@@ -2667,23 +2651,21 @@ export default function App() {
                   disabled={exportingBacking || !allValid} onClick={() => void exportBackingMp3()}>
                   <Music2 size={18} /> {exportingBacking ? "반주 음악 만드는 중..." : "반주 음악 저장"}
                 </button>
-                <button type="button" className="share-link-button action-button" data-testid="copy-share-link"
-                  onClick={() => void copyShareLink()}><Share2 size={18} /> 공유 링크 복사</button>
                 <button type="button" className="mobile-record-link-button action-button" data-testid="create-mobile-recording-link"
                   disabled={!allValid} onClick={() => void createMobileRecordingLink()}>
                   <QrCode size={18} /> 스마트폰 녹음 링크
                 </button>
-                <a className="samboard-share-button action-button" data-testid="open-samboard-share"
-                  href="https://samboard.vivasam.com/studentEntry/?brdId=brd-0QZ60VWZ56TNW"
-                  target="_blank" rel="noopener noreferrer">
-                  <ExternalLink size={18} /> 완성 노래 공유
-                </a>
-              </div>
-              <div className="recording-actions">
-                <button type="button" className="record-mp3-button action-button" data-testid="record-song-mp3"
-                  disabled={recordingSong || !allValid} onClick={() => void recordSongMp3()}>
-                  <Mic2 size={18} /> {recordingSong ? "녹음 중..." : "노래 녹음 MP3 저장"}
-                </button>
+                <div className="publish-share-pair">
+                  <button type="button" className="record-mp3-button action-button" data-testid="record-song-mp3"
+                    disabled={recordingSong || !allValid} onClick={() => void recordSongMp3()}>
+                    <Mic2 size={18} /> {recordingSong ? "녹음 중..." : "노래 녹음 MP3 저장"}
+                  </button>
+                  <a className="samboard-share-button action-button" data-testid="open-samboard-share"
+                    href="https://samboard.vivasam.com/studentEntry/?brdId=brd-0QZ60VWZ56TNW"
+                    target="_blank" rel="noopener noreferrer">
+                    <ExternalLink size={18} /> 완성 노래 공유
+                  </a>
+                </div>
               </div>
               {recordingStatus && <p className="recording-status" role="status">{recordingStatus}</p>}
               {recordingDownloadUrl && (

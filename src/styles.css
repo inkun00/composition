@@ -666,9 +666,8 @@ h1 { font-size: clamp(30px, 4vw, 46px); letter-spacing: -.04em; margin: 8px 0 12
 .samboard-share-button { background: linear-gradient(135deg,#326dcf,#2554a5); }
 .pdf-button { background: linear-gradient(135deg,#238366,#176d58); border-color: #17644f !important; }
 .backing-mp3-button { background: linear-gradient(135deg,#d18442,#ad5b25); border-color: #a95520 !important; }
-.share-link-button { background: linear-gradient(135deg,#7865dc,#5945b7); border-color: #533fae !important; }
 .mobile-record-link-button { background: linear-gradient(135deg,#2d8fa6,#1c6d85); border-color: #1a657c !important; }
-.recording-actions { display: flex; justify-content: flex-end; margin-top: 10px; }
+.publish-share-pair { display: inline-flex; gap: 10px; }
 .record-mp3-button { min-height: 48px; padding: 0 18px; border: 1px solid #bd5637; border-radius: 14px;
   background: linear-gradient(135deg,#e17653,#c65739); color: white; font-weight: 800; cursor: pointer; box-shadow: 0 9px 20px rgba(197,83,55,.20); }
 .record-mp3-button:disabled { opacity: .55; cursor: not-allowed; box-shadow: none; }
@@ -837,6 +836,7 @@ h1 { font-size: clamp(30px, 4vw, 46px); letter-spacing: -.04em; margin: 8px 0 12
   .account-library { width: 100%; max-height: 92vh; border-radius: 8px 8px 0 0; }
   .cloud-save-actions { flex-direction: column; }
   .account-primary, .account-secondary { width: 100%; }
+  .publish-share-pair { width: 100%; flex-direction: column; }
   .brand { font-size: 19px; }
   .brand-mark { width: 37px; height: 37px; }
   .step small { display: none; }
