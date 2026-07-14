@@ -108,6 +108,27 @@ button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible
 .account-primary, .account-secondary { min-height: 44px; padding: 0 15px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 8px; font-weight: 800; cursor: pointer; }
 .account-primary { border: 1px solid #5547a2; background: #6253b3; color: white; }
 .account-secondary { border: 1px solid #d6d0df; background: white; color: #594d76; }
+.account-primary:disabled, .account-secondary:disabled, .account-reset:disabled { opacity: .58; cursor: wait; }
+.account-auth { width: min(420px,calc(100% - 36px)); margin: 0 auto; padding: 24px 0 28px; }
+.account-auth-heading { display: grid; justify-items: center; gap: 7px; margin-bottom: 18px; color: #675b7f; text-align: center; }
+.account-auth-heading strong { color: #3c354a; font-size: 17px; }
+.account-auth-heading p { margin: 0; color: #746e79; font-size: 13px; line-height: 1.5; }
+.account-auth-tabs { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); padding: 3px; border: 1px solid #ded9e6; border-radius: 8px; background: #f3f1f6; }
+.account-auth-tabs button { min-height: 38px; border: 0; border-radius: 6px; background: transparent; color: #746d7d; font-weight: 800; cursor: pointer; }
+.account-auth-tabs button[aria-selected="true"] { background: #fff; color: #5547a2; box-shadow: 0 1px 4px rgba(43,35,67,.13); }
+.account-auth-form { display: grid; gap: 12px; margin-top: 16px; }
+.account-auth-form label > span { display: block; margin: 0 0 6px; color: #514a5b; font-size: 12px; font-weight: 800; }
+.account-input { min-height: 44px; display: flex; align-items: center; gap: 8px; padding: 0 11px; border: 1px solid #d8d2df; border-radius: 8px; background: #fff; color: #7b7189; }
+.account-input:focus-within { border-color: #7566bd; box-shadow: 0 0 0 3px rgba(98,83,179,.12); }
+.account-input input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: #302b42; font: inherit; }
+.account-input button { width: 32px; height: 32px; display: grid; flex: 0 0 auto; place-items: center; border: 0; border-radius: 6px; background: transparent; color: #70687a; cursor: pointer; }
+.account-input button:hover { background: #f0edf3; }
+.account-auth-form .account-error, .account-auth-form .account-notice { margin: 0; }
+.account-notice { padding: 10px 12px; border: 1px solid #bfe1d3; border-radius: 8px; background: #f1fbf6; color: #24795b; font-size: 12px; font-weight: 800; }
+.account-reset { justify-self: center; border: 0; background: transparent; color: #6253a4; font-size: 12px; font-weight: 700; cursor: pointer; }
+.account-divider { display: flex; align-items: center; gap: 10px; margin: 18px 0 13px; color: #918a98; font-size: 11px; }
+.account-divider::before, .account-divider::after { height: 1px; flex: 1; background: #e2dee7; content: ""; }
+.account-google { width: 100%; }
 .account-error { margin: 0 18px 14px; padding: 10px 12px; border: 1px solid #efc5c1; border-radius: 8px; background: #fff5f4; color: #9a403b; font-size: 12px; font-weight: 800; }
 .account-score-heading { padding: 12px 18px 8px; display: flex; justify-content: space-between; border-top: 1px solid #ece8ef; color: #4e4859; }
 .account-score-heading span { color: #77717e; font-size: 12px; }

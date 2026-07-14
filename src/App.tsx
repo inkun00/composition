@@ -144,6 +144,26 @@ const storyInfo: Record<HarmonyStory, { label: string; description: string; icon
   folk: { label: "이야기 화음", description: "노래하듯 친근한 느낌", icon: "♪" }
 };
 
+function firebaseAuthMessage(error: unknown, action: "signin" | "signup" | "reset"): string {
+  const code = typeof error === "object" && error !== null && "code" in error
+    ? String((error as { code: unknown }).code)
+    : "";
+  if (code === "auth/email-already-in-use") return "이미 가입된 이메일이에요. 로그인하거나 비밀번호를 재설정해 주세요.";
+  if (code === "auth/invalid-email") return "이메일 주소 형식을 확인해 주세요.";
+  if (code === "auth/weak-password") return "비밀번호는 6자 이상으로 만들어 주세요.";
+  if (code === "auth/invalid-credential" || code === "auth/wrong-password" || code === "auth/user-not-found") {
+    return "이메일 또는 비밀번호가 맞지 않아요.";
+  }
+  if (code === "auth/too-many-requests") return "로그인 시도가 너무 많아요. 잠시 뒤 다시 시도해 주세요.";
+  if (code === "auth/network-request-failed") return "네트워크 연결을 확인하고 다시 시도해 주세요.";
+  if (code === "auth/operation-not-allowed" || code === "auth/admin-restricted-operation") {
+    return "이메일 계정 기능이 아직 열리지 않았어요. 관리자에게 문의해 주세요.";
+  }
+  if (action === "signup") return "회원가입에 실패했어요. 입력 내용을 확인해 주세요.";
+  if (action === "reset") return "비밀번호 재설정 메일을 보내지 못했어요. 다시 시도해 주세요.";
+  return "이메일 로그인에 실패했어요. 다시 시도해 주세요.";
+}
+
 type CompositionSnapshot = Readonly<{
   presetId: string;
   meter: Meter;
@@ -1541,6 +1561,39 @@ export default function App() {
     }
   }
 
+  async function handleEmailAuth(mode: "signin" | "signup", email: string, password: string): Promise<boolean> {
+    setCloudBusy(true);
+    setCloudError("");
+    try {
+      const { registerWithEmail, signInWithEmail } = await import("./firebase/client");
+      if (mode === "signup") await registerWithEmail(email, password);
+      else await signInWithEmail(email, password);
+      return true;
+    } catch (error) {
+      console.error(error);
+      setCloudError(firebaseAuthMessage(error, mode));
+      return false;
+    } finally {
+      setCloudBusy(false);
+    }
+  }
+
+  async function handlePasswordReset(email: string): Promise<boolean> {
+    setCloudBusy(true);
+    setCloudError("");
+    try {
+      const { resetEmailPassword } = await import("./firebase/client");
+      await resetEmailPassword(email);
+      return true;
+    } catch (error) {
+      console.error(error);
+      setCloudError(firebaseAuthMessage(error, "reset"));
+      return false;
+    } finally {
+      setCloudBusy(false);
+    }
+  }
+
   async function handleFirebaseSignOut() {
     setCloudBusy(true);
     try {
@@ -1837,7 +1890,9 @@ export default function App() {
         <AccountLibrary configured={firebaseConfigured} user={authUser} authReady={authReady}
           scores={cloudScores} loading={cloudLoading} busy={cloudBusy} error={cloudError}
           currentScoreId={activeCloudScoreId} onClose={() => setAccountLibraryOpen(false)}
-          onSignIn={() => void handleGoogleSignIn()} onSignOut={() => void handleFirebaseSignOut()}
+          onGoogleSignIn={() => void handleGoogleSignIn()} onEmailAuth={handleEmailAuth}
+          onPasswordReset={handlePasswordReset} onClearError={() => setCloudError("")}
+          onSignOut={() => void handleFirebaseSignOut()}
           onSave={(asCopy) => void handleCloudSave(asCopy)} onLoad={handleCloudLoad}
           onDelete={(score) => void handleCloudDelete(score)} />
       )}

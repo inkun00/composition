@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { Cloud, Copy, FileMusic, Library, LogIn, LogOut, Save, Trash2, UserRound, X } from "lucide-react";
+import { useEffect, useState, type FormEvent } from "react";
+import { Cloud, Copy, Eye, EyeOff, FileMusic, Library, LogIn, LogOut, Mail, Save, Trash2, UserRound, X } from "lucide-react";
 import type { User } from "../firebase/client";
 import type { CloudScore } from "../firebase/scores";
 
@@ -13,7 +13,10 @@ type AccountLibraryProps = Readonly<{
   error: string;
   currentScoreId: string | null;
   onClose: () => void;
-  onSignIn: () => void;
+  onGoogleSignIn: () => void;
+  onEmailAuth: (mode: "signin" | "signup", email: string, password: string) => Promise<boolean>;
+  onPasswordReset: (email: string) => Promise<boolean>;
+  onClearError: () => void;
   onSignOut: () => void;
   onSave: (asCopy: boolean) => void;
   onLoad: (score: CloudScore) => void;
@@ -28,7 +31,15 @@ function updatedLabel(timestamp: number): string {
 }
 
 export default function AccountLibrary({ configured, user, authReady, scores, loading, busy, error,
-  currentScoreId, onClose, onSignIn, onSignOut, onSave, onLoad, onDelete }: AccountLibraryProps) {
+  currentScoreId, onClose, onGoogleSignIn, onEmailAuth, onPasswordReset, onClearError,
+  onSignOut, onSave, onLoad, onDelete }: AccountLibraryProps) {
+  const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [formError, setFormError] = useState("");
+  const [resetSent, setResetSent] = useState(false);
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -41,6 +52,46 @@ export default function AccountLibrary({ configured, user, authReady, scores, lo
       document.removeEventListener("keydown", closeOnEscape);
     };
   }, [onClose]);
+
+  function changeAuthMode(mode: "signin" | "signup") {
+    setAuthMode(mode);
+    setPassword("");
+    setPasswordConfirm("");
+    setFormError("");
+    setResetSent(false);
+    onClearError();
+  }
+
+  function changeField(update: (value: string) => void, value: string) {
+    update(value);
+    setFormError("");
+    setResetSent(false);
+    onClearError();
+  }
+
+  async function submitEmailAuth(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setFormError("");
+    setResetSent(false);
+    if (authMode === "signup" && password !== passwordConfirm) {
+      setFormError("비밀번호가 서로 같지 않아요.");
+      return;
+    }
+    await onEmailAuth(authMode, email.trim(), password);
+  }
+
+  async function requestPasswordReset() {
+    setFormError("");
+    setResetSent(false);
+    const emailInput = document.createElement("input");
+    emailInput.type = "email";
+    emailInput.value = email.trim();
+    if (!emailInput.checkValidity()) {
+      setFormError("비밀번호를 재설정할 이메일 주소를 정확히 입력해 주세요.");
+      return;
+    }
+    setResetSent(await onPasswordReset(email.trim()));
+  }
 
   return (
     <div className="account-overlay" role="dialog" aria-modal="true" aria-label="내 악보함"
@@ -60,12 +111,64 @@ export default function AccountLibrary({ configured, user, authReady, scores, lo
         ) : !authReady ? (
           <div className="account-empty"><span className="account-spinner" /><strong>계정을 확인하고 있어요</strong></div>
         ) : !user ? (
-          <div className="account-empty">
-            <UserRound size={36} aria-hidden="true" />
-            <strong>내 악보를 안전하게 모아 두세요</strong>
-            <p>Google 계정으로 로그인하면 어느 기기에서든 내가 만든 악보를 열 수 있어요.</p>
-            <button type="button" className="account-primary" onClick={onSignIn} disabled={busy}>
-              <LogIn size={18} aria-hidden="true" /> Google로 로그인
+          <div className="account-auth">
+            <div className="account-auth-heading">
+              <UserRound size={32} aria-hidden="true" />
+              <strong>내 악보를 안전하게 모아 두세요</strong>
+              <p>이메일 계정이나 Google 계정으로 어느 기기에서든 악보를 열 수 있어요.</p>
+            </div>
+            <div className="account-auth-tabs" role="tablist" aria-label="계정 방식">
+              <button type="button" role="tab" aria-selected={authMode === "signin"}
+                onClick={() => changeAuthMode("signin")}>로그인</button>
+              <button type="button" role="tab" aria-selected={authMode === "signup"}
+                onClick={() => changeAuthMode("signup")}>회원가입</button>
+            </div>
+            <form className="account-auth-form" onSubmit={(event) => void submitEmailAuth(event)}>
+              <label>
+                <span>이메일</span>
+                <div className="account-input"><Mail size={18} aria-hidden="true" />
+                  <input type="email" value={email} onChange={(event) => changeField(setEmail, event.target.value)}
+                    placeholder="name@example.com" autoComplete="email" required disabled={busy} />
+                </div>
+              </label>
+              <label>
+                <span>비밀번호</span>
+                <div className="account-input">
+                  <input type={showPassword ? "text" : "password"} value={password}
+                    onChange={(event) => changeField(setPassword, event.target.value)} placeholder="6자 이상"
+                    autoComplete={authMode === "signup" ? "new-password" : "current-password"}
+                    minLength={6} required disabled={busy} />
+                  <button type="button" title={showPassword ? "비밀번호 숨기기" : "비밀번호 보기"}
+                    aria-label={showPassword ? "비밀번호 숨기기" : "비밀번호 보기"}
+                    onClick={() => setShowPassword((shown) => !shown)}>
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </label>
+              {authMode === "signup" && (
+                <label>
+                  <span>비밀번호 확인</span>
+                  <div className="account-input">
+                    <input type={showPassword ? "text" : "password"} value={passwordConfirm}
+                      onChange={(event) => changeField(setPasswordConfirm, event.target.value)} placeholder="한 번 더 입력"
+                      autoComplete="new-password" minLength={6} required disabled={busy} />
+                  </div>
+                </label>
+              )}
+              {(formError || error) && <p className="account-error" role="alert">{formError || error}</p>}
+              {resetSent && <p className="account-notice" role="status">비밀번호 재설정 메일을 보냈어요.</p>}
+              <button type="submit" className="account-primary" disabled={busy}>
+                <LogIn size={18} aria-hidden="true" /> {authMode === "signup" ? "이메일로 회원가입" : "이메일로 로그인"}
+              </button>
+              {authMode === "signin" && (
+                <button type="button" className="account-reset" onClick={() => void requestPasswordReset()} disabled={busy}>
+                  비밀번호를 잊었나요?
+                </button>
+              )}
+            </form>
+            <div className="account-divider"><span>또는</span></div>
+            <button type="button" className="account-secondary account-google" onClick={onGoogleSignIn} disabled={busy}>
+              <LogIn size={18} aria-hidden="true" /> Google로 계속하기
             </button>
           </div>
         ) : (

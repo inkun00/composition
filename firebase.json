@@ -2,6 +2,7 @@
   "auth": {
     "providers": {
       "anonymous": false,
+      "emailPassword": true,
       "googleSignIn": {
         "oAuthBrandDisplayName": "Maeum Melody",
         "supportEmail": "inkun00@gmail.com",

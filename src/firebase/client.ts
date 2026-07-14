@@ -1,5 +1,15 @@
 import { getApp, getApps, initializeApp } from "firebase/app";
-import { GoogleAuthProvider, getAuth, onAuthStateChanged, signInWithPopup, signOut, type User } from "firebase/auth";
+import {
+  GoogleAuthProvider,
+  createUserWithEmailAndPassword,
+  getAuth,
+  onAuthStateChanged,
+  sendPasswordResetEmail,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  signOut,
+  type User
+} from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { firebaseConfig, firebaseConfigured } from "./config";
 
@@ -21,6 +31,21 @@ export async function signInWithGoogle(): Promise<void> {
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: "select_account" });
   await signInWithPopup(firebaseAuth, provider);
+}
+
+export async function registerWithEmail(email: string, password: string): Promise<void> {
+  if (!firebaseAuth) throw new Error("firebase-not-configured");
+  await createUserWithEmailAndPassword(firebaseAuth, email, password);
+}
+
+export async function signInWithEmail(email: string, password: string): Promise<void> {
+  if (!firebaseAuth) throw new Error("firebase-not-configured");
+  await signInWithEmailAndPassword(firebaseAuth, email, password);
+}
+
+export async function resetEmailPassword(email: string): Promise<void> {
+  if (!firebaseAuth) throw new Error("firebase-not-configured");
+  await sendPasswordResetEmail(firebaseAuth, email);
 }
 
 export async function signOutFirebase(): Promise<void> {

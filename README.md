@@ -16,7 +16,7 @@
 - 리메이크 악보에는 최초 원작자를 수정할 수 없는 정보로 보존
 - 작업 변경 후 1초 안에 브라우저에 자동 저장하고 새로고침 시 이어서 작업
 - 같은 공유 링크의 리메이크 초안을 복원하면서 최초 원작자 정보를 그대로 보존
-- Firebase Authentication Google 로그인과 사용자별 Firestore 악보함
+- Firebase Authentication 이메일·비밀번호 회원가입, Google 로그인과 사용자별 Firestore 악보함
 - 클라우드 악보 저장·업데이트·사본 저장·불러오기·삭제
 
 ## 실행
@@ -31,7 +31,7 @@ npm run dev
 ## Firebase 연결
 
 1. Firebase Console에서 프로젝트와 Web App을 만듭니다.
-2. Authentication의 로그인 제공업체에서 Google을 활성화합니다.
+2. Authentication의 로그인 제공업체에서 이메일/비밀번호와 Google을 활성화합니다.
 3. Cloud Firestore 데이터베이스를 만든 뒤 `firestore.rules`를 배포합니다.
 4. `.env.example`을 참고해 로컬 `.env.local`과 Vercel 환경변수를 등록합니다.
 
