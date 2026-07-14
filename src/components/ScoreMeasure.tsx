@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { positionNotes } from "../music/score";
+import { pitchName, positionNotes } from "../music/score";
 import { measureCapacity, type Meter } from "../music/meter";
 import { toNumber } from "../music/rational";
 import { scoreLayout } from "../music/scoreLayout";
@@ -286,6 +286,13 @@ export default function ScoreMeasure({
       stave.setNoteStartX(showSignature ? noteStartX / notationScale : staveX + 28 / notationScale);
       stave.setContext(context).draw();
 
+      if (drawnNotes.length === 0) {
+        setVexPositions({});
+        onNoteLayout?.({});
+        host.dataset.vexReady = "true";
+        return;
+      }
+
       const stemDirectionById = new Map<string, number>();
       beamGroups.forEach((group) => {
         const pitchedGroup = group.filter((note) => note.pitch !== null);
@@ -419,7 +426,7 @@ export default function ScoreMeasure({
     <div className="score-shell" style={{ aspectRatio: `${width} / ${scoreHeight}` }}>
       {useVexLayer && <div ref={vexHost} className="vex-score-layer" />}
     <svg className={`score ${useVexLayer ? "score-vex-overlay" : "score-edit-layer"}`} viewBox={`0 0 ${width} ${scoreHeight}`} role="img"
-      aria-label={`${meter.beats}/${meter.beatUnit}諛뺤옄 ??留덈뵒 ?낅낫`}>
+      aria-label={`${meter.beats}/${meter.beatUnit}박자 한 마디 악보${notes.length === 0 ? ", 아직 비어 있음" : `, 음표와 쉼표 ${notes.length}개`}`}>
       {!useVexLayer && staffLines.map((y) => (
         <line key={y} x1={systemMeasure ? 0 : 10} x2={systemMeasure ? width : width - 10}
           y1={y} y2={y} className="staff-line" />
@@ -429,7 +436,7 @@ export default function ScoreMeasure({
       {!useVexLayer && showSignature && <text x={compact ? 38 : 40} y={expandedStaff ? 72 : 39} className="meter-number">{meter.beatUnit}</text>}
       {!useVexLayer && <line x1={systemMeasure ? width - 1 : width - 10} x2={systemMeasure ? width - 1 : width - 10}
         y1={staffLines[0]} y2={staffLines[staffLines.length - 1]} className="bar-line" />}
-      {drawnNotes.map((note) => {
+      {drawnNotes.map((note, noteIndex) => {
         const { x, y, durationValue: duration } = note;
         const displayX = dragPreview?.id === note.id ? x + dragPreview.dx : x;
         const selected = selectedNoteIds?.includes(note.id) ?? selectedNoteId === note.id;
@@ -535,7 +542,7 @@ export default function ScoreMeasure({
               onPointerUp={endPointerDrag} onPointerCancel={endPointerDrag}
               role={onSelectNote ? "button" : undefined}
               tabIndex={onSelectNote ? 0 : undefined} onKeyDown={handleNoteKeyDown}
-              aria-label="?쇳몴 ?좏깮">
+              aria-label={onSelectNote ? `${noteIndex + 1}번째 쉼표 선택` : `${noteIndex + 1}번째 쉼표`}>
               <rect x={displayX - 12} y={y - 25} width="28" height="50" rx="9"
                 className={selected ? "note-hit selected" : "note-hit"} />
               {!useVexLayer && renderRestMark(displayX, y, duration, note.dotted)}
@@ -553,7 +560,9 @@ export default function ScoreMeasure({
             onPointerUp={endPointerDrag} onPointerCancel={endPointerDrag}
             role={onSelectNote ? "button" : undefined}
             tabIndex={onSelectNote ? 0 : undefined} onKeyDown={handleNoteKeyDown}
-            aria-label="?뚰몴 ?좏깮">
+            aria-label={onSelectNote
+              ? `${noteIndex + 1}번째 ${pitchName(note.pitch)} 음표 선택`
+              : `${noteIndex + 1}번째 ${pitchName(note.pitch)} 음표`}>
             <rect x={displayX - 12} y={y - 23} width="28" height="48" rx="9"
               className={selected ? "note-hit selected" : "note-hit"} />
             {!useVexLayer && <ellipse cx={displayX} cy={y} rx="7" ry="5" className={isHalf ? "note-head hollow" : "note-head"}

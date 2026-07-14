@@ -286,7 +286,7 @@ h1 { font-size: clamp(30px, 4vw, 46px); letter-spacing: -.04em; margin: 8px 0 12
 .measure-slot.just-completed .measure-status-icon { animation: completion-check-pop .65s cubic-bezier(.18,1.35,.3,1); }
 @keyframes completion-check-pop { 0% { opacity: 0; transform: scale(.2) rotate(-22deg); } 70% { opacity: 1; transform: scale(1.18) rotate(4deg); } 100% { transform: scale(1) rotate(0); } }
 .measure-slot .score { margin: 0; }
-.degree-label { display: block; width: max-content; max-width: 100%; padding: 3px 6px; overflow: hidden; border-radius: 7px; background: #f0edff; color: #4f4690; font-size: 9px; font-weight: 800; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
+.measure-story-label { display: block; width: max-content; max-width: 100%; padding: 3px 6px; overflow: hidden; border-radius: 7px; background: #f0edff; color: #4f4690; font-size: 9px; font-weight: 800; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
 .empty-score-label { position: absolute; left: 0; right: 0; bottom: 11px; color: #9b948c; font-size: 9px; text-align: center; }
 .measure-effects { z-index:2; position:absolute; right:6px; bottom:4px; display:flex; gap:2px; }
 .measure-effects i { width:20px; height:20px; display:grid; place-items:center; border:1px solid #b8ddcc; border-radius:7px; background:#effaf5; font-style:normal; font-size:12px; }

@@ -378,7 +378,7 @@ async function loadAccompanimentLayers(context: BaseAudioContext, destination: A
     try {
       return { id, sample: await loadSampleWithTimeout(context, destination, id) };
     } catch (error) {
-      console.warn(`${id} 諛섏＜ ?섑뵆??遺덈윭?ㅼ? 紐삵빐 ?⑹꽦 ?뚯깋???ъ슜?⑸땲??`, error);
+      console.warn(`${id} 반주 악기 샘플을 불러오지 못해 합성 음색을 사용합니다.`, error);
       return { id, sample: null };
     }
   }));
@@ -991,7 +991,7 @@ export async function recordKaraokeComposition(
     try {
       sampledInstrument = await loadSampleWithTimeout(context, master, instrumentId);
     } catch (error) {
-      console.warn("?낃린 ?섑뵆??遺덈윭?ㅼ? 紐삵빐 ?⑹꽦 ?뚯깋???ъ슜?⑸땲??", error);
+      console.warn("악기 샘플을 불러오지 못해 합성 음색을 사용합니다.", error);
     }
     const accompanimentLayers = await loadAccompanimentLayers(context, master, accompaniment);
     const voiceState = createArrangementVoiceState();
@@ -1214,7 +1214,7 @@ export async function exportBackingCompositionMp3(
     try {
       sampledInstrument = await loadSampleWithTimeout(context, master, instrumentId);
     } catch (error) {
-      console.warn("?낃린 ?섑뵆??遺덈윭?ㅼ? 紐삵빐 ?⑹꽦 ?뚯깋???ъ슜?⑸땲??", error);
+      console.warn("악기 샘플을 불러오지 못해 합성 음색을 사용합니다.", error);
     }
     const accompanimentLayers = await loadAccompanimentLayers(context, master, accompaniment);
     const voiceState = createArrangementVoiceState();
@@ -1322,7 +1322,7 @@ export async function exportBackingCompositionMp3Offline(
     try {
       sampledInstrument = await loadSampleWithTimeout(context, master, instrumentId);
     } catch (error) {
-      console.warn("?낃린 ?섑뵆??遺덈윭?ㅼ? 紐삵빐 ?⑹꽦 ?뚯깋???ъ슜?⑸땲??", error);
+      console.warn("악기 샘플을 불러오지 못해 합성 음색을 사용합니다.", error);
     }
     // SoundFont players can succeed in a live AudioContext yet write no audio
     // into an OfflineAudioContext. Use the reliable synthesized voice for the

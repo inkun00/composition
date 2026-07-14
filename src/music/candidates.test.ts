@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getCandidates, MELODY_CANDIDATE_COUNT } from "./candidates";
+import { chordPitchClasses } from "./chord";
 import { SUPPORTED_METERS, validateMeasure } from "./meter";
 
 describe("M0 가락 후보", () => {
@@ -50,6 +51,17 @@ describe("M0 가락 후보", () => {
       ]);
       expect(highCandidates.every((candidate) =>
         candidate.notes.some((note) => (note.pitch ?? 0) >= 72))).toBe(true);
+    }
+  });
+
+  it("화음 음 사이를 살짝 스쳤다가 돌아오는 가락도 들려준다", () => {
+    const cTones = chordPitchClasses("C");
+    for (const story of ["home", "journey", "wonder"] as const) {
+      const candidates = getCandidates(story, { beats: 4, beatUnit: 4 }, ["C"]);
+      const passingCandidates = candidates.filter((candidate) => candidate.hint.includes("살짝 스쳤다가"));
+      expect(passingCandidates.length).toBeGreaterThan(0);
+      expect(passingCandidates.every((candidate) => candidate.notes.some((note) =>
+        note.pitch !== null && !cTones.includes(((note.pitch % 12) + 12) % 12)))).toBe(true);
     }
   });
 });

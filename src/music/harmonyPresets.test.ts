@@ -28,8 +28,9 @@ describe("100가지 화음 이야기", () => {
     expect(new Set(HARMONY_PRESETS.flatMap((preset) => preset.roles)).size).toBe(12);
   });
 
-  it("100개 이야기의 모든 가락이 해당 마디 화음 구성음과 박자에 맞는다", () => {
+  it("100개 이야기의 가락은 박자에 맞고 스치는 음은 짧게 이어진다", () => {
     const meter = { beats: 4, beatUnit: 4 } as const;
+    let passingToneCount = 0;
     for (const preset of HARMONY_PRESETS) {
       preset.bars.forEach((chords, barIndex) => {
         const candidates = getCandidates(preset.roles[barIndex], meter, chords);
@@ -37,15 +38,26 @@ describe("100가지 화음 이야기", () => {
           expect(validateMeasure(candidate.notes, meter).state).toBe("exact");
           let onset = 0;
           const chordDuration = 4 / chords.length;
-          for (const note of candidate.notes) {
+          candidate.notes.forEach((note, noteIndex) => {
             if (note.pitch !== null) {
               const chordIndex = Math.min(Math.floor(onset / chordDuration), chords.length - 1);
-              expect(chordPitchClasses(chords[chordIndex])).toContain(((note.pitch % 12) + 12) % 12);
+              const isChordTone = chordPitchClasses(chords[chordIndex]).includes(((note.pitch % 12) + 12) % 12);
+              if (!isChordTone) {
+                passingToneCount += 1;
+                const previousPitch = candidate.notes[noteIndex - 1]?.pitch;
+                const nextPitch = candidate.notes[noteIndex + 1]?.pitch;
+                expect(typeof previousPitch).toBe("number");
+                expect(typeof nextPitch).toBe("number");
+                expect(Math.abs((previousPitch ?? note.pitch) - note.pitch)).toBeLessThanOrEqual(2);
+                expect(Math.abs((nextPitch ?? note.pitch) - note.pitch)).toBeLessThanOrEqual(2);
+                expect(toNumber(note.duration)).toBeLessThanOrEqual(1);
+              }
             }
             onset += toNumber(note.duration);
-          }
+          });
         }
       });
     }
+    expect(passingToneCount).toBeGreaterThan(0);
   });
 });

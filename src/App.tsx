@@ -18,7 +18,7 @@ import { ACCOMPANIMENT_STYLES, ENSEMBLE_PRESETS, MAX_ACCOMPANIMENT_INSTRUMENTS, 
   type AccompanimentStyleId } from "./music/accompaniment";
 import { getCandidates, MELODY_CANDIDATE_COUNT, MELODY_FEELING_GROUPS } from "./music/candidates";
 import { chooseRecommendedCandidate, rankRecommendedCandidates, recommendedEndingPitch } from "./music/recommendation";
-import { chordDegreeSequence, chordMidiPitches, chordPitchClasses } from "./music/chord";
+import { chordMidiPitches, chordPitchClasses } from "./music/chord";
 import { DRAFT_STORAGE_KEY, isSavedDraft, readDraft, writeDraft, type SavedDraft } from "./music/draft";
 import { findHarmonyPreset, HARMONY_PRESETS, type HarmonyPreset } from "./music/harmonyPresets";
 import { findInstrument, INSTRUMENTS, type InstrumentId } from "./music/instruments";
@@ -2206,7 +2206,7 @@ export default function App() {
                 <button type="button" data-testid={`measure-${index + 1}`}
                   data-playing={playingMeasureIndex === index ? "true" : undefined}
                   aria-current={playingMeasureIndex === index ? "true" : undefined}
-                  aria-label={`${index + 1}마디, ${chordDegreeSequence(measure.chords)}${measure.notes ? ", 가락 선택 완료" : ", 가락 선택 전"}`}
+                  aria-label={`${index + 1}마디, ${storyInfo[measure.story].label}, ${measure.storyHint}${measure.notes ? ", 가락 선택 완료" : ", 가락 선택 전"}`}
                   className={`measure-slot ${measure.story}${activeIndex === index ? " active" : ""}${measure.notes ? " completed" : ""}${recentCompletedIndex === index ? " just-completed" : ""}${playingMeasureIndex === index ? " playing" : ""}`}
                   onClick={() => {
                     setActiveIndex(index);
@@ -2218,7 +2218,7 @@ export default function App() {
                     <strong>{index + 1}마디</strong>
                     <span className="measure-slot-meta">
                       {measure.notes && <span className="measure-status-icon" aria-label="가락 선택 완료"><CheckCircle2 size={13} /></span>}
-                      <span className="degree-label">{chordDegreeSequence(measure.chords)}</span>
+                      <span className="measure-story-label">{storyInfo[measure.story].icon} {measure.storyHint}</span>
                     </span>
                   </span>
                   <ScoreMeasure notes={measure.notes ?? []} meter={meter} compact wide
@@ -2436,7 +2436,7 @@ export default function App() {
                 {editStatus && <p className="edit-status" role="status">{editStatus}</p>}
               </>
             ) : (
-              <div className="empty-message"><span>♪</span><strong>먼저 가락을 하나 골라 주세요</strong><p>위의 스무 가지 카드를 눌러 시작할 수 있어요.</p></div>
+              <div className="empty-message"><span>♪</span><strong>먼저 가락을 하나 골라 주세요</strong><p>위의 추천 가락 카드를 눌러 시작할 수 있어요.</p></div>
             )}
           </div>
         </section>

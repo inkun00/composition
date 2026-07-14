@@ -1,6 +1,6 @@
 import type { Meter } from "./meter";
 import { meterKey } from "./meter";
-import { chordSequenceKey, nearestChordTone } from "./chord";
+import { chordPitchClasses, chordSequenceKey, nearestChordTone } from "./chord";
 import { rational, toNumber, type Rational } from "./rational";
 import type { HarmonyStory, MelodyCandidate, NoteEvent } from "./types";
 
@@ -203,6 +203,57 @@ function buildNotes(
   });
 }
 
+function addNeighborTone(notes: readonly NoteEvent[], chords: readonly string[]): NoteEvent[] {
+  if (chords.length === 0 || notes.length < 3) return [...notes];
+
+  const totalDuration = notes.reduce((total, note) => total + toNumber(note.duration), 0);
+  const chordDuration = totalDuration / chords.length;
+  let onset = 0;
+  const chordIndices = notes.map((note) => {
+    const chordIndex = Math.min(Math.floor(onset / chordDuration), chords.length - 1);
+    onset += toNumber(note.duration);
+    return chordIndex;
+  });
+
+  for (let index = 1; index < notes.length - 1; index += 1) {
+    const previous = notes[index - 1];
+    const current = notes[index];
+    const next = notes[index + 1];
+    if (previous.pitch === null || current.pitch === null || next.pitch === null) continue;
+    if (toNumber(current.duration) > 1) continue;
+    if (chordIndices[index - 1] !== chordIndices[index] || chordIndices[index] !== chordIndices[index + 1]) continue;
+
+    const chordTones = chordPitchClasses(chords[chordIndices[index]]);
+    const anchor = previous.pitch;
+    const direction = current.pitch >= anchor ? 1 : -1;
+    const neighbor = [2 * direction, direction, -direction, -2 * direction]
+      .map((step) => anchor + step)
+      .find((pitch) => pitch >= 52 && pitch <= 84 && !chordTones.includes(((pitch % 12) + 12) % 12));
+    if (neighbor === undefined) continue;
+
+    return notes.map((note, noteIndex) => {
+      if (noteIndex === index) return { ...note, pitch: neighbor };
+      if (noteIndex === index + 1) return { ...note, pitch: anchor };
+      return note;
+    });
+  }
+
+  return [...notes];
+}
+
+function hasNonChordTone(notes: readonly NoteEvent[], chords: readonly string[]): boolean {
+  if (chords.length === 0) return false;
+  const totalDuration = notes.reduce((total, note) => total + toNumber(note.duration), 0);
+  const chordDuration = totalDuration / chords.length;
+  let onset = 0;
+  return notes.some((note) => {
+    const chordIndex = Math.min(Math.floor(onset / chordDuration), chords.length - 1);
+    onset += toNumber(note.duration);
+    if (note.pitch === null) return false;
+    return !chordPitchClasses(chords[chordIndex]).includes(((note.pitch % 12) + 12) % 12);
+  });
+}
+
 function varyContour(contour: readonly number[], variation: number): readonly number[] {
   if (variation === 0) return contour;
 
@@ -240,28 +291,37 @@ export function getCandidates(
     const variation = Math.floor(index / availableShapes.length);
     const chordKey = chords.length > 0 ? `-${chordSequenceKey(chords)}` : "";
     const id = `${story}-${key.replace("/", "-")}${chordKey}-${index + 1}`;
+    const baseHint = isHighImpact || variation === 0 ? shape.hint : `${shape.hint} 음의 흐름도 새롭게 바꿨어요.`;
+    const chordToneNotes = isHighImpact ? buildNotes(
+      id,
+      "sparkle",
+      rhythms[(index + melodyProfiles.sparkle.rhythmOffset) % rhythms.length],
+      shape.contour,
+      chords
+    ) : addRestVariation(
+      buildNotes(
+        id,
+        story,
+        rhythms[(index + profile.rhythmOffset) % rhythms.length],
+        varyContour(shape.contour, variation),
+        chords
+      ),
+      index
+    );
+    const notes = !isHighImpact && index % 7 === 2
+      ? addNeighborTone(chordToneNotes, chords)
+      : chordToneNotes;
+    const hint = hasNonChordTone(notes, chords)
+      ? `${baseHint} 가운데에서 살짝 스쳤다가 편안한 음으로 돌아와요.`
+      : baseHint;
+
     return {
       id,
       name: isHighImpact || variation === 0 ? shape.name : `${shape.name} 새 리듬`,
-      hint: isHighImpact || variation === 0 ? shape.hint : `${shape.hint} 음의 흐름도 새롭게 바꿨어요.`,
+      hint,
       feelingId: feelingIdForIndex(index),
       harmony: story,
-      notes: isHighImpact ? buildNotes(
-        id,
-        "sparkle",
-        rhythms[(index + melodyProfiles.sparkle.rhythmOffset) % rhythms.length],
-        shape.contour,
-        chords
-      ) : addRestVariation(
-        buildNotes(
-          id,
-          story,
-          rhythms[(index + profile.rhythmOffset) % rhythms.length],
-          varyContour(shape.contour, variation),
-          chords
-        ),
-        index
-      )
+      notes
     };
   });
 }

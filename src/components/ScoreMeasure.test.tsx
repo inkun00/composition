@@ -54,4 +54,19 @@ describe("ScoreMeasure VexFlow 좌표 오버레이", () => {
     ]} />);
     expect(markup).not.toContain("class=\"beam\"");
   });
+
+  it("악보와 음표 선택을 읽기 쉬운 한국어로 설명한다", () => {
+    const markup = renderToStaticMarkup(<ScoreMeasure plain notes={[
+      { id: "note", pitch: 60, duration: { numerator: 1, denominator: 1 } },
+      { id: "rest", pitch: null, duration: { numerator: 1, denominator: 1 } }
+    ]} onSelectNote={() => undefined} />);
+    expect(markup).toContain('aria-label="4/4박자 한 마디 악보, 음표와 쉼표 2개"');
+    expect(markup).toContain('aria-label="1번째 도 음표 선택"');
+    expect(markup).toContain('aria-label="2번째 쉼표 선택"');
+  });
+
+  it("빈 악보 상태도 스크린리더에 알려 준다", () => {
+    const markup = renderToStaticMarkup(<ScoreMeasure plain notes={[]} />);
+    expect(markup).toContain('aria-label="4/4박자 한 마디 악보, 아직 비어 있음"');
+  });
 });
