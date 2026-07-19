@@ -4,6 +4,9 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import AccountLibrary from "./AccountLibrary";
+import type { User } from "../firebase/client";
+import type { CloudScore } from "../firebase/scores";
+import type { SavedDraft } from "../music/draft";
 
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -18,7 +21,7 @@ function renderAccountLibrary(onEmailAuth = vi.fn().mockResolvedValue(true)) {
     busy={false} error="" currentScoreId={null} onClose={() => undefined}
     onGoogleSignIn={() => undefined} onEmailAuth={onEmailAuth}
     onPasswordReset={vi.fn().mockResolvedValue(true)} onClearError={() => undefined} onSignOut={() => undefined}
-    onSave={() => undefined} onLoad={() => undefined} onDelete={() => undefined} />));
+    onSave={() => undefined} onLoad={() => undefined} onPublish={() => undefined} onDelete={() => undefined} />));
   return { container, onEmailAuth };
 }
 
@@ -56,5 +59,50 @@ describe("이메일 계정 화면", () => {
 
     expect(view.container.textContent).toContain("비밀번호가 서로 같지 않아요.");
     expect(view.onEmailAuth).not.toHaveBeenCalled();
+  });
+
+  it("완성된 저장 악보에 앨범 공개 버튼을 제공한다", async () => {
+    const onPublish = vi.fn();
+    const draft: SavedDraft = {
+      version: 1,
+      updatedAt: Date.now(),
+      sourceHash: "",
+      title: "햇살 노래",
+      creator: "민준",
+      originalCreator: "민준",
+      presetId: "H001",
+      meter: { beats: 4, beatUnit: 4 },
+      songLength: 8,
+      instrumentId: "piano",
+      lyrics: Array.from({ length: 8 }, () => ""),
+      measures: Array.from({ length: 8 }, (_, index) => ({
+        candidateId: `candidate-${index}`,
+        candidateName: "가락",
+        notes: [{ id: `note-${index}`, pitch: 60, duration: { numerator: 1, denominator: 1 } }]
+      })),
+      showArrangement: true
+    };
+    const score: CloudScore = {
+      id: "score-1",
+      title: draft.title,
+      creator: draft.creator,
+      songLength: 8,
+      updatedAt: Date.now(),
+      draft
+    };
+    const user = { uid: "user-1", email: "student@example.com", displayName: "민준" } as User;
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    act(() => root?.render(<AccountLibrary configured user={user} authReady scores={[score]} loading={false}
+      busy={false} error="" currentScoreId={null} onClose={() => undefined}
+      onGoogleSignIn={() => undefined} onEmailAuth={vi.fn().mockResolvedValue(true)}
+      onPasswordReset={vi.fn().mockResolvedValue(true)} onClearError={() => undefined} onSignOut={() => undefined}
+      onSave={() => undefined} onLoad={() => undefined} onPublish={onPublish} onDelete={() => undefined} />));
+
+    const publishButton = [...container.querySelectorAll<HTMLButtonElement>("button")]
+      .find((button) => button.textContent?.includes("앨범에 공개"));
+    await act(async () => publishButton?.click());
+    expect(onPublish).toHaveBeenCalledWith(score);
   });
 });

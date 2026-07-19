@@ -411,6 +411,7 @@ function scheduleMeasure(
   const arrangementLayerCount = Math.max(0, Math.min(options.accompanimentLayers.length,
     options.arrangementLayerCount ?? options.accompanimentLayers.length));
   const arrangementEnergy = options.arrangementEnergy ?? 1;
+  const layerDensityScale = arrangementLayerCount > 6 ? Math.sqrt(6 / arrangementLayerCount) : 1;
   const measureBeats = measure.notes.reduce((total, note) => total + toNumber(note.duration), 0);
   const chordSymbols = measure.chords && measure.chords.length > 0 ? measure.chords : [""];
   const chordBeats = measureBeats / chordSymbols.length;
@@ -477,7 +478,7 @@ function scheduleMeasure(
           const performedDuration = Math.max(.035, noteDuration * accompanimentArticulation(part.id, event.voice));
           const layerInstrument = findInstrument(layer.id);
           const performedVolume = layerInstrument.volume * .62 * roleVolume * sectionVolume *
-            backingVolumeMultiplier * arrangementEnergy * beatAccent(event.offsetBeats);
+            backingVolumeMultiplier * arrangementEnergy * layerDensityScale * beatAccent(event.offsetBeats);
           const shiftedPitch = Math.max(36, Math.min(96, pitch));
           if (layer.sample) {
             queueSampleNote(layer.sample, context, destination, shiftedPitch, noteStart, performedDuration, performedVolume);
@@ -866,7 +867,8 @@ export async function recordKaraokeComposition(
   bpm = 96,
   accompaniment?: AccompanimentOptions,
   callbacks: KaraokeRecordingCallbacks = {},
-  countIn: Readonly<{ beats: number; unitBeats: number }> = { beats: 4, unitBeats: 1 }
+  countIn: Readonly<{ beats: number; unitBeats: number }> = { beats: 4, unitBeats: 1 },
+  signal?: AbortSignal
 ): Promise<KaraokeRecordingResult | null> {
   if (activePlaybackContext) return null;
   if (!navigator.mediaDevices?.getUserMedia) {
@@ -886,8 +888,32 @@ export async function recordKaraokeComposition(
   let microphoneStream: MediaStream | null = null;
   let stopNoiseGate: (() => void) | null = null;
   let stopVocalMonitor: (() => void) | null = null;
+  let callbackTimers: number[] = [];
+  let activeRecorders: MediaRecorder[] = [];
+  const stopActiveRecorders = () => {
+    activeRecorders.forEach((recorder) => {
+      try {
+        if (recorder.state !== "inactive") recorder.stop();
+      } catch (error) {
+        console.warn("녹음기를 종료하지 못했어요.", error);
+      }
+    });
+  };
+  const abortRecording = () => {
+    callbackTimers.forEach((timer) => window.clearTimeout(timer));
+    callbackTimers = [];
+    stopActiveRecorders();
+    microphoneStream?.getTracks().forEach((track) => track.stop());
+    callbacks.onInputLevel?.(0);
+    if (context.state !== "closed") void context.close().catch(() => undefined);
+  };
+  const throwIfAborted = () => {
+    if (signal?.aborted) throw new DOMException("녹음을 중단했어요.", "AbortError");
+  };
+  signal?.addEventListener("abort", abortRecording, { once: true });
 
   try {
+    throwIfAborted();
     callbacks.onStatus?.("마이크 권한을 허용해 주세요.");
     microphoneStream = await navigator.mediaDevices.getUserMedia({
       audio: {
@@ -898,6 +924,7 @@ export async function recordKaraokeComposition(
         autoGainControl: false
       }
     });
+    throwIfAborted();
     if (context.state === "suspended") await context.resume();
 
     callbacks.onStatus?.("4마디 반주 뒤에 노래가 녹음돼요.");
@@ -994,6 +1021,7 @@ export async function recordKaraokeComposition(
       console.warn("악기 샘플을 불러오지 못해 합성 음색을 사용합니다.", error);
     }
     const accompanimentLayers = await loadAccompanimentLayers(context, master, accompaniment);
+    throwIfAborted();
     const voiceState = createArrangementVoiceState();
 
     const recorderOptions = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
@@ -1015,13 +1043,13 @@ export async function recordKaraokeComposition(
     const mixRecorder = createRecorder(recordingDestination);
     const vocalRecorder = createRecorder(vocalRecordingDestination);
     const backingRecorder = createRecorder(backingRecordingDestination);
+    activeRecorders = [mixRecorder.recorder, vocalRecorder.recorder, backingRecorder.recorder];
 
     const start = context.currentTime + 0.6;
     let cursor = 0;
     mixRecorder.recorder.start(250);
     vocalRecorder.recorder.start(250);
     backingRecorder.recorder.start(250);
-    const callbackTimers: number[] = [];
     const queueCallback = (relativeSeconds: number, callback: () => void) => {
       callbackTimers.push(window.setTimeout(callback, Math.max(0, (start - context.currentTime + relativeSeconds) * 1000)));
     };
@@ -1142,24 +1170,26 @@ export async function recordKaraokeComposition(
       });
     });
 
-    window.setTimeout(() => {
-      [mixRecorder.recorder, vocalRecorder.recorder, backingRecorder.recorder].forEach((recorder) => {
-        if (recorder.state !== "inactive") recorder.stop();
-      });
-    }, Math.max(0, (start - context.currentTime + cursor + tailSeconds) * 1000));
+    queueCallback(cursor + tailSeconds, stopActiveRecorders);
 
     const [recordedBlob, vocalBlob, backingBlob] = await Promise.all([
       mixRecorder.stopped, vocalRecorder.stopped, backingRecorder.stopped
     ]);
     callbackTimers.forEach((timer) => window.clearTimeout(timer));
+    callbackTimers = [];
+    throwIfAborted();
     callbacks.onHighlight?.({ section: "outro", measureIndex: null, noteId: null });
     callbacks.onPhase?.("encoding");
     callbacks.onStatus?.("MP3 파일로 바꾸는 중이에요.");
     const recordedBuffer = await recordedBlob.arrayBuffer();
     const decoded = await context.decodeAudioData(recordedBuffer);
+    throwIfAborted();
     const vocalAudioBuffer = await context.decodeAudioData(await vocalBlob.arrayBuffer());
+    throwIfAborted();
     const backingAudioBuffer = await context.decodeAudioData(await backingBlob.arrayBuffer());
+    throwIfAborted();
     const mp3Blob = encodeAudioBufferToMp3(decoded);
+    throwIfAborted();
     callbacks.onStatus?.("MP3 저장 준비가 끝났어요.");
     callbacks.onPhase?.("done");
     return {
@@ -1171,11 +1201,13 @@ export async function recordKaraokeComposition(
       introSeconds
     };
   } finally {
+    signal?.removeEventListener("abort", abortRecording);
+    callbackTimers.forEach((timer) => window.clearTimeout(timer));
     stopNoiseGate?.();
     stopVocalMonitor?.();
     microphoneStream?.getTracks().forEach((track) => track.stop());
     if (activePlaybackContext === context) activePlaybackContext = null;
-    if (context.state !== "closed") await context.close();
+    if (context.state !== "closed") await context.close().catch(() => undefined);
   }
 }
 

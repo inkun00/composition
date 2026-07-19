@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, CheckCircle2, ExternalLink, FileDown, FileMusic, FileUp, Menu, Mic2, Music2, PartyPopper, Plus, QrCode, Redo2, SlidersHorizontal, Smartphone, Square, Undo2, UserRound, Volume2, WandSparkles, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, ExternalLink, FileDown, FileMusic, FileUp, Library, Menu, Mic2, Music2, Plus, QrCode, Redo2, SlidersHorizontal, Smartphone, Square, Undo2, UserRound, Volume2, WandSparkles, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { exportBackingCompositionMp3, pausePlayback, playComposition, playMeasure, recordKaraokeComposition, renderKaraokePreviewMix, renderProcessedKaraokeMp3, resumePlayback, stopPlayback,
   type KaraokePostProcessPreset } from "./audio/player";
@@ -11,13 +11,16 @@ import ScoreMeasure from "./components/ScoreMeasure";
 import NoteLyrics from "./components/NoteLyrics";
 import SoundEffectEditor from "./components/SoundEffectEditor";
 import AccountLibrary from "./components/AccountLibrary";
+import CommunityAlbum from "./components/CommunityAlbum";
+import PublishScoreDialog from "./components/PublishScoreDialog";
 import { firebaseConfigured } from "./firebase/config";
 import type { User } from "./firebase/client";
+import type { PublishedSong } from "./firebase/communityAlbums";
 import type { CloudScore } from "./firebase/scores";
-import { ACCOMPANIMENT_STYLES, ENSEMBLE_PRESETS, MAX_ACCOMPANIMENT_INSTRUMENTS, accompanimentInstrumentPart, createAccompanimentPattern, findAccompanimentStyle,
+import { ACCOMPANIMENT_GENRE_STYLES, ACCOMPANIMENT_PLAYING_STYLES, ENSEMBLE_PRESETS, MAX_ACCOMPANIMENT_INSTRUMENTS, accompanimentInstrumentPart, createAccompanimentPattern, findAccompanimentStyle,
   type AccompanimentStyleId } from "./music/accompaniment";
 import { getCandidates, MELODY_CANDIDATE_COUNT, MELODY_FEELING_GROUPS } from "./music/candidates";
-import { chooseRecommendedCandidate, rankRecommendedCandidates, recommendedEndingPitch } from "./music/recommendation";
+import { chooseRecommendedCandidate, rankRecommendedCandidates, recommendationFeelingForMeasure, recommendedEndingPitch } from "./music/recommendation";
 import { chordMidiPitches, chordPitchClasses } from "./music/chord";
 import { DRAFT_STORAGE_KEY, isSavedDraft, readDraft, writeDraft, type SavedDraft } from "./music/draft";
 import { findHarmonyPreset, HARMONY_PRESETS, type HarmonyPreset } from "./music/harmonyPresets";
@@ -116,6 +119,7 @@ function backingDisplayNotes(measure: MeasureDraft, meter: Meter, styleId: Accom
 type SongLength = 8 | 12 | 16;
 type SongPlaybackState = "idle" | "playing" | "paused";
 type KaraokePhase = "idle" | "intro" | "song" | "outro" | "encoding" | "done" | "error";
+type BackingExportPhase = "idle" | "working" | "done" | "error";
 type KaraokeHighlight = Readonly<{
   section: "intro" | "song" | "outro";
   measureIndex: number | null;
@@ -124,7 +128,7 @@ type KaraokeHighlight = Readonly<{
 type PlaybackSegment = Readonly<{ measureIndex: number; start: number; end: number }>;
 type PlaybackNoteSegment = Readonly<{ measureIndex: number; noteId: string; start: number; end: number }>;
 
-const PREVIEW_INSTRUMENT_LIMIT = 15;
+const PREVIEW_INSTRUMENT_LIMIT = 12;
 const QR_RENDER_LIMIT = 2400;
 const QUICK_PREVIEW_INSTRUMENTS = INSTRUMENTS.slice(0, PREVIEW_INSTRUMENT_LIMIT);
 const MORE_PREVIEW_INSTRUMENTS = INSTRUMENTS.slice(PREVIEW_INSTRUMENT_LIMIT);
@@ -296,6 +300,8 @@ export default function App() {
     !mobileRecordMode && new URLSearchParams(window.location.search).get("start") !== "new");
   const [showAppMenu, setShowAppMenu] = useState(false);
   const [accountLibraryOpen, setAccountLibraryOpen] = useState(false);
+  const [communityAlbumOpen, setCommunityAlbumOpen] = useState(false);
+  const [publishingScore, setPublishingScore] = useState<CloudScore | null>(null);
   const [authUser, setAuthUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(!firebaseConfigured);
   const [cloudScores, setCloudScores] = useState<CloudScore[]>([]);
@@ -307,6 +313,7 @@ export default function App() {
     ? savedDraft : null;
   const initialPreset = findHarmonyPreset(resumableDraft?.presetId ?? incomingShare?.presetId ?? HARMONY_PRESETS[0].id);
   const initialLength = resumableDraft?.songLength ?? incomingShare?.songLength ?? 8;
+  const initialAccompanimentStyleId = resumableDraft?.accompanimentStyleId ?? incomingShare?.accompanimentStyleId ?? "arpeggio";
   const [selectedPresetId, setSelectedPresetId] = useState(initialPreset.id);
   const [songLength, setSongLength] = useState<SongLength>(initialLength);
   const [meter, setMeter] = useState<Meter>(resumableDraft?.meter ?? incomingShare?.meter ?? { beats: 4, beatUnit: 4 });
@@ -324,6 +331,7 @@ export default function App() {
   const historyCurrent = useRef<CompositionSnapshot | null>(null);
   const restoringHistory = useRef(false);
   const splitCounter = useRef(0);
+  const recommendationFillCount = useRef(0);
   const completionAnimationTimer = useRef<number | null>(null);
   const [recentCompletedIndex, setRecentCompletedIndex] = useState<number | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
@@ -332,6 +340,7 @@ export default function App() {
   const [playingNoteId, setPlayingNoteId] = useState<string | null>(null);
   const [playingMeasure, setPlayingMeasure] = useState(false);
   const [lyricNotePositions, setLyricNotePositions] = useState<Record<number, Record<string, { x: number; y: number }>>>({});
+  const [editorLyricNotePositions, setEditorLyricNotePositions] = useState<Record<number, Record<string, { x: number; y: number }>>>({});
   const [timelineLyricNotePositions, setTimelineLyricNotePositions] = useState<Record<number, Record<string, { x: number; y: number }>>>({});
   const [karaokeLyricNotePositions, setKaraokeLyricNotePositions] = useState<Record<number, Record<string, { x: number; y: number }>>>({});
   const playbackTicker = useRef<number | null>(null);
@@ -345,11 +354,15 @@ export default function App() {
   const recordingPreviewRef = useRef<HTMLAudioElement | null>(null);
   const mobileRecordingQrRef = useRef<SVGSVGElement | null>(null);
   const backingMixRequest = useRef(0);
+  const karaokeAbortController = useRef<AbortController | null>(null);
   const [selectedInstrumentId, setSelectedInstrumentId] = useState<InstrumentId>(
     findInstrument(resumableDraft?.instrumentId ?? incomingShare?.instrumentId ?? "piano").id
   );
   const [accompanimentStyleId, setAccompanimentStyleId] = useState<AccompanimentStyleId>(
-    resumableDraft?.accompanimentStyleId ?? incomingShare?.accompanimentStyleId ?? "arpeggio"
+    initialAccompanimentStyleId
+  );
+  const [accompanimentStyleView, setAccompanimentStyleView] = useState<"genre" | "playing">(
+    findAccompanimentStyle(initialAccompanimentStyleId).category
   );
   const [accompanimentInstrumentIds, setAccompanimentInstrumentIds] = useState<InstrumentId[]>(() =>
     uniqueAccompanimentInstrumentIds(resumableDraft?.accompanimentInstrumentIds ?? incomingShare?.accompanimentInstrumentIds ?? ["piano"])
@@ -371,6 +384,7 @@ export default function App() {
   const [exportingPdf, setExportingPdf] = useState(false);
   const [pdfIncludeAccompaniment, setPdfIncludeAccompaniment] = useState(false);
   const [exportingBacking, setExportingBacking] = useState(false);
+  const [backingExportPhase, setBackingExportPhase] = useState<BackingExportPhase>("idle");
   const [recordingSong, setRecordingSong] = useState(false);
   const [recordingStatus, setRecordingStatus] = useState("");
   const [recordingDownloadUrl, setRecordingDownloadUrl] = useState("");
@@ -464,6 +478,16 @@ export default function App() {
       return changed ? { ...current, [index]: positions } : current;
     });
   }, []);
+  const updateEditorLyricNotePositions = useCallback((index: number, positions: Record<string, { x: number; y: number }>) => {
+    setEditorLyricNotePositions((current) => {
+      const previous = current[index] ?? {};
+      const changed = Object.keys(previous).length !== Object.keys(positions).length ||
+        Object.entries(positions).some(([id, position]) =>
+          Math.abs((previous[id]?.x ?? -9999) - position.x) > 0.5 ||
+          Math.abs((previous[id]?.y ?? -9999) - position.y) > 0.5);
+      return changed ? { ...current, [index]: positions } : current;
+    });
+  }, []);
   const updateTimelineLyricNotePositions = useCallback((index: number, positions: Record<string, { x: number; y: number }>) => {
     setTimelineLyricNotePositions((current) => {
       const previous = current[index] ?? {};
@@ -548,6 +572,7 @@ export default function App() {
   }
 
   useEffect(() => () => {
+    karaokeAbortController.current?.abort();
     clearPlaybackTicker();
     clearNoteAnimationTimers();
     if (completionAnimationTimer.current !== null) window.clearTimeout(completionAnimationTimer.current);
@@ -674,6 +699,7 @@ export default function App() {
     setSelectedNoteId("");
     setSelectedNoteIds([]);
     setShowArrangement(false);
+    recommendationFillCount.current = 0;
   }
 
   function undoCompositionChange() {
@@ -707,6 +733,7 @@ export default function App() {
     setSelectedNoteId("");
     setSelectedNoteIds([]);
     setShowArrangement(false);
+    recommendationFillCount.current = 0;
   }
 
   function choosePreset(id: string) {
@@ -718,6 +745,7 @@ export default function App() {
     setSelectedNoteId("");
     setSelectedNoteIds([]);
     setShowArrangement(false);
+    recommendationFillCount.current = 0;
   }
 
   function chooseLength(length: SongLength) {
@@ -729,6 +757,7 @@ export default function App() {
     setSelectedNoteId("");
     setSelectedNoteIds([]);
     setShowArrangement(false);
+    recommendationFillCount.current = 0;
   }
 
   function updateActiveMeasure(update: (measure: MeasureDraft) => MeasureDraft) {
@@ -759,6 +788,8 @@ export default function App() {
   }
 
   function fillRecommended() {
+    const recommendationIndex = recommendationFillCount.current;
+    recommendationFillCount.current += 1;
     let previousPitch: number | null = null;
     let previousCandidateIndex = -1;
     const usedCandidateIndexes = new Set<number>();
@@ -771,7 +802,9 @@ export default function App() {
         index,
         measures.length,
         previousCandidateIndex,
-        usedCandidateIndexes
+        usedCandidateIndexes,
+        recommendationFeelingForMeasure(recommendationIndex, index, measures.length),
+        recommendationIndex + index * 2
       );
       previousCandidateIndex = measureCandidates.indexOf(candidate);
       usedCandidateIndexes.add(previousCandidateIndex);
@@ -836,10 +869,14 @@ export default function App() {
   function renderPreviewInstrumentPicker() {
     return (
       <div className="preview-instrument-picker measure-instrument-picker" aria-label="가락 미리듣기 악기 선택">
-        <div>
-          <span className="section-kicker">먼저 소리를 골라요</span>
-          <strong>가락을 어떤 악기로 들어 볼까요?</strong>
-          <small>여기서 고른 악기는 완성곡의 가락 악기로도 이어져요.</small>
+        <div className="preview-instrument-intro">
+          <img className="workspace-guide preview-guide-instrument" src="/illustrations/character-instrument-keyboard-boy-v1.webp"
+            alt="" aria-hidden="true" draggable="false" />
+          <div className="preview-instrument-copy">
+            <span className="section-kicker">먼저 소리를 골라요</span>
+            <strong>가락을 어떤 악기로 들어 볼까요?</strong>
+            <small>여기서 고른 악기는 완성곡의 가락 악기로도 이어져요.</small>
+          </div>
         </div>
         <div className="preview-instrument-options">
           {QUICK_PREVIEW_INSTRUMENTS.map((instrument) => (
@@ -1301,6 +1338,21 @@ export default function App() {
     window.setTimeout(() => document.querySelector("#arrangement")?.scrollIntoView({ behavior: "smooth" }), 50);
   }
 
+  function preserveViewportAfterButtonClick(event: React.MouseEvent<HTMLElement>) {
+    if (!(event.target as Element).closest("button")) return;
+    const left = window.scrollX;
+    const top = window.scrollY;
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+      if (Math.abs(window.scrollX - left) > 1 || Math.abs(window.scrollY - top) > 1) {
+        window.scrollTo({ left, top, behavior: "auto" });
+      }
+    }));
+  }
+
+  function keepEditorFocus(event: React.MouseEvent<HTMLElement>) {
+    if ((event.target as Element).closest("button")) event.preventDefault();
+  }
+
   function makeSharedComposition(): SharedComposition | null {
     if (!allValid || printableMeasures.length !== songLength) return null;
     const creator = creatorName.trim();
@@ -1430,6 +1482,7 @@ export default function App() {
     }
     if (exportingBacking) return;
     setExportingBacking(true);
+    setBackingExportPhase("working");
     setShareStatus("인트로와 아웃트로가 들어간 반주 음악을 만들고 있어요.");
     const playable = measures.flatMap((measure, index) => measure.notes ? [{
       notes: measure.notes,
@@ -1445,6 +1498,8 @@ export default function App() {
       });
       if (!blob) {
         setShareStatus("다른 연주나 녹음이 끝난 뒤에 다시 저장해 주세요.");
+        setBackingExportPhase("error");
+        await new Promise((resolve) => window.setTimeout(resolve, 1200));
         return;
       }
       const url = URL.createObjectURL(blob);
@@ -1454,11 +1509,16 @@ export default function App() {
       link.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 5000);
       setShareStatus("반주 음악 MP3를 저장했어요.");
+      setBackingExportPhase("done");
+      await new Promise((resolve) => window.setTimeout(resolve, 900));
     } catch (error) {
       console.error(error);
       setShareStatus("반주 음악을 만드는 중 문제가 생겼어요. 다시 시도해 주세요.");
+      setBackingExportPhase("error");
+      await new Promise((resolve) => window.setTimeout(resolve, 1200));
     } finally {
       setExportingBacking(false);
+      setBackingExportPhase("idle");
     }
   }
 
@@ -1505,7 +1565,9 @@ export default function App() {
     setSongLength(project.songLength);
     setMeasures(compositionFromDraft(project, preset));
     setSelectedInstrumentId(findInstrument(project.instrumentId).id);
-    setAccompanimentStyleId(project.accompanimentStyleId ?? "arpeggio");
+    const nextAccompanimentStyle = findAccompanimentStyle(project.accompanimentStyleId ?? "arpeggio");
+    setAccompanimentStyleId(nextAccompanimentStyle.id);
+    setAccompanimentStyleView(nextAccompanimentStyle.category);
     setAccompanimentInstrumentIds(uniqueAccompanimentInstrumentIds(project.accompanimentInstrumentIds ?? ["piano"]));
     setBpm(project.bpm ?? 96);
     setShowArrangement(project.showArrangement);
@@ -1583,6 +1645,7 @@ export default function App() {
     try {
       const { signOutFirebase } = await import("./firebase/client");
       await signOutFirebase();
+      setPublishingScore(null);
       setAccountLibraryOpen(false);
     } finally {
       setCloudBusy(false);
@@ -1613,6 +1676,45 @@ export default function App() {
     setActiveCloudScoreId(score.id);
     setAccountLibraryOpen(false);
     setShareStatus("내 악보함에서 작품을 불러왔어요.");
+  }
+
+  async function playPublishedSong(song: PublishedSong): Promise<boolean> {
+    const preset = findHarmonyPreset(song.draft.presetId);
+    const publishedMeasures = compositionFromDraft(song.draft, preset);
+    const playable = publishedMeasures.flatMap((measure, index) => measure.notes ? [{
+      notes: measure.notes,
+      harmony: measure.story,
+      chords: measure.chords,
+      effects: measure.effects,
+      measureIndex: index
+    }] : []);
+    if (playable.length !== song.draft.songLength) return false;
+    const duration = await playComposition(playable, findInstrument(song.draft.instrumentId).id,
+      song.draft.bpm ?? 96, song.draft.showArrangement ? {
+        styleId: findAccompanimentStyle(song.draft.accompanimentStyleId ?? "arpeggio").id,
+        instrumentIds: uniqueAccompanimentInstrumentIds(song.draft.accompanimentInstrumentIds ?? ["piano"])
+      } : undefined);
+    return duration !== null;
+  }
+
+  function openPublishedProjectCopy(song: PublishedSong) {
+    if (song.access !== "project") return;
+    if (completedCount > 0 && !window.confirm(`지금 만든 곡 대신 '${song.title}' 프로젝트의 사본을 열까요? 현재 곡은 로컬에 자동 저장되어 있어요.`)) return;
+    const copyTitle = `${song.title.trim().slice(0, 56) || "제목 없는 노래"} 사본`;
+    const copy: SavedDraft = {
+      ...JSON.parse(JSON.stringify(song.draft)) as SavedDraft,
+      updatedAt: Date.now(),
+      sourceHash: "",
+      title: copyTitle,
+      creator: authUser?.displayName || authUser?.email?.split("@")[0] || "새 작곡가",
+      originalCreator: song.draft.originalCreator || song.draft.creator || song.creator
+    };
+    applyProjectDraft(copy);
+    setActiveCloudScoreId(null);
+    setCommunityAlbumOpen(false);
+    setShowOpening(false);
+    setShareStatus(`'${song.title}' 프로젝트의 사본을 열었어요. 원본은 바뀌지 않아요.`);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function handleCloudDelete(score: CloudScore) {
@@ -1671,6 +1773,8 @@ export default function App() {
       return;
     }
     if (recordingSong) return;
+    const abortController = new AbortController();
+    karaokeAbortController.current = abortController;
     setRecordingSong(true);
     setKaraokeOpen(true);
     setKaraokePhase("intro");
@@ -1711,7 +1815,7 @@ export default function App() {
       }, {
         beats: meter.beats,
         unitBeats: 4 / meter.beatUnit
-      });
+      }, abortController.signal);
       if (!result) {
         setRecordingStatus("다른 연주가 끝난 뒤에 다시 녹음해 주세요.");
         return;
@@ -1735,12 +1839,29 @@ export default function App() {
       setRecordingStatus(`완료! 앞 ${Math.round(result.introSeconds)}초는 4마디 반주 인트로로 들어갔어요.`);
       setRecordingStatus("녹음이 끝났어요. 미리 들어보고 보정한 뒤 저장해 주세요.");
     } catch (error) {
+      if (abortController.signal.aborted) {
+        setKaraokePhase("idle");
+        setKaraokeCount(null);
+        setMicrophoneLevel(0);
+        setKaraokeHighlight({ section: "intro", measureIndex: null, noteId: null });
+        setRecordingStatus("녹음을 중단했어요. 마이크를 끄고 파일은 만들지 않았어요.");
+        return;
+      }
       console.error(error);
       setKaraokePhase("error");
       setRecordingStatus(error instanceof Error ? error.message : "녹음 중 문제가 생겼어요. 마이크 권한을 확인해 주세요.");
     } finally {
+      if (karaokeAbortController.current === abortController) karaokeAbortController.current = null;
       setRecordingSong(false);
     }
+  }
+
+  function closeKaraokeWindow() {
+    if (recordingSong) {
+      setRecordingStatus("녹음을 중단하고 마이크를 끄는 중이에요.");
+      karaokeAbortController.current?.abort();
+    }
+    setKaraokeOpen(false);
   }
 
   async function applyPostProcessPreset(preset: KaraokePostProcessPreset) {
@@ -1807,17 +1928,17 @@ export default function App() {
         accept="text/plain,.txt,application/json,.json" onChange={(event) => void loadProjectFile(event)} />
       {showOpening && (
         <section className="opening-screen" aria-label="마음멜로디 시작 화면">
-          <div className="opening-orb orb-one" />
-          <div className="opening-orb orb-two" />
-          <div className="opening-stars" aria-hidden="true">
-            <span>♪</span><span>✦</span><span>♫</span><span>✧</span><span>♩</span><span>✦</span>
-          </div>
-          <div className="opening-score" aria-hidden="true"><i /><i /><i /><i /><i /></div>
-          <div className="opening-card">
-            <div className="opening-mark"><Music2 size={42} /></div>
-            <span className="opening-kicker">나만의 멜로디 놀이터</span>
+          <picture className="opening-visual" aria-hidden="true">
+            <source media="(max-width: 700px)" srcSet="/illustrations/opening-studio-mobile-v1.webp" />
+            <img src="/illustrations/opening-studio-desktop-v2.webp" alt="" fetchPriority="high" />
+          </picture>
+          <div className="opening-content">
+            <div className="opening-brand-lockup">
+              <span className="opening-mark"><Music2 size={31} /></span>
+              <span className="opening-kicker">나만의 멜로디 놀이터</span>
+            </div>
             <h1>마음멜로디</h1>
-            <p>마음에 드는 가락을 고르고<br />나만의 노래를 완성해요.</p>
+            <p><strong>네 마음속 장면이 노래가 되는 곳</strong><br />친구들과 함께 첫 멜로디를 만들어 봐요.</p>
             <div className="opening-actions">
               <button type="button" className="opening-start action-button" onClick={() => {
                 window.localStorage.removeItem(DRAFT_STORAGE_KEY);
@@ -1830,7 +1951,7 @@ export default function App() {
                 <Music2 size={19} /> 이어하기
               </button>
             </div>
-            <small>{resumableDraft ? "저장한 노래를 이어서 만들 수 있어요." : "저장한 노래가 생기면 여기서 이어할 수 있어요."}</small>
+            <small className="opening-status">{resumableDraft ? "저장한 노래가 기다리고 있어요." : "오늘의 첫 노래를 시작해 볼까요?"}</small>
           </div>
         </section>
       )}
@@ -1851,6 +1972,10 @@ export default function App() {
                 setShowAppMenu(false);
                 projectFileInput.current?.click();
               }}><FileUp size={16} /> 악보 불러오기</button>
+              <button type="button" role="menuitem" onClick={() => {
+                setShowAppMenu(false);
+                setCommunityAlbumOpen(true);
+              }}><Library size={16} /> 모두의 앨범</button>
             </div>}
           </div>
         </div>
@@ -1878,7 +2003,71 @@ export default function App() {
           onPasswordReset={handlePasswordReset} onClearError={() => setCloudError("")}
           onSignOut={() => void handleFirebaseSignOut()}
           onSave={(asCopy) => void handleCloudSave(asCopy)} onLoad={handleCloudLoad}
+          onPublish={(score) => { setPublishingScore(score); setAccountLibraryOpen(false); }}
           onDelete={(score) => void handleCloudDelete(score)} />
+      )}
+
+      {communityAlbumOpen && !mobileRecordMode && (
+        <CommunityAlbum configured={firebaseConfigured} user={authUser}
+          onClose={() => setCommunityAlbumOpen(false)}
+          onRequestLogin={() => { setCommunityAlbumOpen(false); setAccountLibraryOpen(true); }}
+          onPlay={playPublishedSong} onOpenProject={openPublishedProjectCopy} />
+      )}
+
+      {publishingScore && authUser && !mobileRecordMode && (
+        <PublishScoreDialog user={authUser} score={publishingScore} onClose={() => {
+          setPublishingScore(null);
+          setAccountLibraryOpen(true);
+        }}
+          onPublished={(album) => {
+            setPublishingScore(null);
+            setAccountLibraryOpen(true);
+            setShareStatus(`'${publishingScore.title}'을 '${album.name}' 앨범에 공개했어요.`);
+          }} />
+      )}
+
+      {exportingBacking && !mobileRecordMode && (
+        <div className="backing-export-overlay" role="dialog" aria-modal="true"
+          aria-labelledby="backing-export-title" aria-describedby="backing-export-description">
+          <section className={`backing-export-dialog ${backingExportPhase}`} aria-busy={backingExportPhase === "working"}>
+            <header className="backing-export-header" role="status" aria-live="polite">
+              <span>{backingExportPhase === "done" ? "저장 완료" : backingExportPhase === "error" ? "다시 확인해요" : "반주 제작실"}</span>
+              <h2 id="backing-export-title">
+                {backingExportPhase === "done" ? "반주 파일을 저장했어요!" :
+                  backingExportPhase === "error" ? "반주를 완성하지 못했어요" : "친구들이 반주를 만들고 있어요"}
+              </h2>
+              <p id="backing-export-description">
+                {backingExportPhase === "done" ? "MP3 파일이 다운로드 폴더에 준비됐어요." :
+                  backingExportPhase === "error" ? "잠시 후 반주 저장 버튼을 다시 눌러 주세요." :
+                    "리듬과 악기 소리를 차곡차곡 섞는 중이에요. 잠깐만 기다려 주세요."}
+              </p>
+            </header>
+
+            <div className="backing-export-studio" aria-hidden="true">
+              <figure className="backing-worker keyboard-worker">
+                <img src="/illustrations/backing-export-keyboard-boy-v2.webp" alt="" draggable="false" />
+              </figure>
+              <figure className="backing-worker rhythm-worker">
+                <img src="/illustrations/backing-export-percussion-girl-v2.webp" alt="" draggable="false" />
+              </figure>
+              <figure className="backing-worker mix-worker">
+                <img src="/illustrations/backing-export-mixing-girl-v2.webp" alt="" draggable="false" />
+              </figure>
+              <div className="backing-export-note note-one">♪</div>
+              <div className="backing-export-note note-two">♫</div>
+              <div className="backing-export-note note-three">♪</div>
+              {backingExportPhase === "done" && <div className="backing-export-complete-mark"><CheckCircle2 /></div>}
+              {backingExportPhase === "error" && <div className="backing-export-complete-mark error"><X /></div>}
+            </div>
+
+            <div className="backing-export-progress" aria-label={backingExportPhase === "working" ? "반주 파일 만드는 중" : undefined}>
+              <div className="backing-export-progress-track"><i /></div>
+              <div className="backing-export-steps">
+                <span>건반 연주하기</span><span>리듬 녹음하기</span><span>소리 섞어 저장하기</span>
+              </div>
+            </div>
+          </section>
+        </div>
       )}
 
       {karaokeOpen && (
@@ -1900,8 +2089,12 @@ export default function App() {
                   <span>🤫 조용한 곳에서</span>
                 </div>
               </div>
-              <button type="button" className="karaoke-close" disabled={recordingSong}
-                onClick={() => setKaraokeOpen(false)}>닫기</button>
+              <button type="button" className={recordingSong ? "karaoke-force-stop" : "karaoke-close"}
+                data-testid={recordingSong ? "force-stop-recording" : "close-recording"}
+                aria-label={recordingSong ? "녹음 강제 종료" : "녹음 창 닫기"}
+                onClick={closeKaraokeWindow}>
+                {recordingSong ? <><Square size={17} /> 녹음 끝내기</> : "닫기"}
+              </button>
             </div>
 
             <div className="karaoke-score" data-testid="karaoke-score-window">
@@ -2100,7 +2293,7 @@ export default function App() {
           </div>
         </section>}
 
-        <section className="preset-chooser" aria-labelledby="preset-heading">
+        <section className="preset-chooser setup-with-guide" aria-labelledby="preset-heading">
           <div className="compact-heading">
             <span className="number-badge">1</span>
             <div><h2 id="preset-heading">화음 이야기를 골라요</h2><p>어려운 이름 대신 느낌과 장면으로 고를 수 있어요.</p></div>
@@ -2121,9 +2314,11 @@ export default function App() {
               <p>{selectedPreset.mood}</p>
             </div>
           </div>
+          <img className="workspace-guide setup-guide-boy" src="/illustrations/guide-boy-v1.webp"
+            alt="" aria-hidden="true" draggable="false" />
         </section>
 
-        <section className="meter-chooser" aria-labelledby="meter-heading">
+        <section className="meter-chooser meter-with-guide" aria-labelledby="meter-heading">
           <div className="compact-heading">
             <span className="number-badge">2</span>
             <div><h2 id="meter-heading">노래의 박자를 골라요</h2><p>박자를 바꾸면 작곡이 새로 시작돼요.</p></div>
@@ -2142,6 +2337,9 @@ export default function App() {
               );
             })}
           </div>
+          <img className="workspace-guide meter-guide-rhythm"
+            src="/illustrations/character-rhythm-shaker-girl-v1.webp"
+            alt="" aria-hidden="true" draggable="false" />
         </section>
 
         <section className="length-chooser" aria-labelledby="length-heading">
@@ -2244,6 +2442,93 @@ export default function App() {
                 </div>
               </div>
             ))}
+          </div>
+        </section>
+
+        <section className="editor-section">
+          <div className="editor-copy">
+            <div className="editor-copy-text">
+              <span className="section-kicker">선택 사항 · 직접 다듬기</span>
+              <h2>{activeIndex + 1}마디의 음표를 바꿔 보세요</h2>
+              <p>음표를 위아래로 끌면 높이가 바뀌어요. 여러 음표는 첫 음표를 누른 뒤 Shift를 누르고 마지막 음표를 골라요.</p>
+            </div>
+            <div className="editor-copy-actions">
+              <button className="listen-all action-button" type="button" disabled={!activeMeasure.notes || isAnyPlaying}
+                onClick={() => void playActiveMeasure()}>
+                <PlayIcon playing={playingMeasure} /> 이 마디 듣기
+              </button>
+              <div className="history-actions" aria-label="작곡 되돌리기">
+                <button type="button" disabled={undoStack.length === 0} onClick={undoCompositionChange}><Undo2 size={16} /> 되돌리기</button>
+                <button type="button" disabled={redoStack.length === 0} onClick={redoCompositionChange}><Redo2 size={16} /> 다시 하기</button>
+              </div>
+            </div>
+          </div>
+
+          <div className={activeMeasure.notes ? "editor-card" : "editor-card empty-editor"}>
+            {activeMeasure.notes ? (
+              <>
+                <ScoreMeasure notes={activeNotes} meter={meter}
+                  playingNoteId={playingMeasure || playingMeasureIndex === activeIndex ? playingNoteId : null}
+                  selectedNoteId={selectedNoteId} selectedNoteIds={selectedNoteIds}
+                  onSelectNote={selectNote} onMoveNote={moveNotePitch} onMovePosition={moveNotePosition}
+                  onNoteLayout={(positions) => updateEditorLyricNotePositions(activeIndex, positions)} />
+                <div className="editor-note-lyrics">
+                  <div><strong>이 마디 가사</strong><span>음표마다 한 글자씩 적어요.</span></div>
+                  <NoteLyrics notes={activeNotes} meter={meter} measureIndex={activeIndex}
+                    selectedNoteId={selectedNoteId} notePositions={editorLyricNotePositions[activeIndex]}
+                    onFocusNote={(noteId) => selectNote(noteId)}
+                    onChange={(noteId, value) => updateNoteLyric(activeIndex, noteId, value)} />
+                </div>
+                <div className="beat-meter">
+                  <div className="beat-meter-label">
+                    <span>이 마디에 채운 길이</span>
+                    <strong>{usedBeats} / {capacity}</strong>
+                  </div>
+                  <div className="beat-track"><span style={{ width: `${Math.min(usedBeats / capacity, 1) * 100}%` }} /></div>
+                  <p className={`validation ${validation?.state ?? ""}`}>
+                    {validation?.state === "exact" ? "✓" : "!"} {validation?.message}
+                  </p>
+                </div>
+                <div className="harmony-guide" aria-live="polite">
+                  <span className="harmony-guide-title">화음 어울림</span>
+                  <span className="fit-chord">● 딱 어울리는 음</span>
+                  <span className="fit-passing">● 지나가는 음</span>
+                  <span className="fit-color">● 색다른 음</span>
+                  {selectedNote && selectedHarmonyFit && <strong className={`fit-${selectedHarmonyFit}`}>
+                    {selectedHarmonyFit === "chord" ? "지금 고른 음은 이 화음에 딱 어울려요!" :
+                      selectedHarmonyFit === "passing" ? "지금 고른 음은 다음 음으로 이어 주는 지나가는 음이에요." :
+                        "지금 고른 음은 색다른 느낌을 주는 음이에요. 들어 보고 골라요."}
+                  </strong>}
+                </div>
+                <div className="note-tools" onMouseDown={keepEditorFocus} onClickCapture={preserveViewportAfterButtonClick}>
+                  <div><span>고른 음표</span><strong>{selectedNoteIds.length > 1 ? `${selectedNoteIds.length}개 선택` : selectedNote ? pitchName(selectedNote.pitch) : "음표를 골라 주세요"}</strong></div>
+                  <button type="button" onClick={() => changePitch(1)}
+                    disabled={selectedNoteIds.length === 0 || selectedNotes.every((note) => note.pitch === null)}>↑<span>높게</span></button>
+                  <button type="button" onClick={() => changePitch(-1)}
+                    disabled={selectedNoteIds.length === 0 || selectedNotes.every((note) => note.pitch === null)}>↓<span>낮게</span></button>
+                  <button type="button" data-testid="split-note" disabled={selectedNoteIds.length !== 1}
+                    onClick={splitSelectedNote}>½<span>쪼개기</span></button>
+                  <button type="button" onClick={lengthenSelectedNote} disabled={selectedNoteIds.length !== 1}>2×<span>길게</span></button>
+                  <button type="button" data-testid="dot-note" disabled={selectedNoteIds.length !== 1 || selectedNote?.dotted}
+                    onClick={dotSelectedNote}>•<span>점 붙이기</span></button>
+                  <button type="button" data-testid="beam-notes" disabled={selectedNoteIds.length < 2}
+                    onClick={beamSelectedNotes}>▰<span>기둥 묶기</span></button>
+                  <button type="button" data-testid="unbeam-notes" disabled={selectedNoteIds.length === 0}
+                    onClick={unbeamSelectedNotes}>▯<span>분리</span></button>
+                  <button type="button" data-testid="link-notes" disabled={selectedNoteIds.length !== 2}
+                    onClick={linkSelectedNotes}>⌒<span>음표 잇기</span></button>
+                  <button type="button" data-testid="add-rest" onClick={addRestNote}>𝄽<span>쉼표</span></button>
+                  <button type="button" data-testid="add-note" onClick={addMelodyNote}><Plus size={17} /><span>음표 추가</span></button>
+                  <button type="button" className="danger" onClick={deleteNote}>×<span>지우기</span></button>
+                  <button type="button" className="reset" data-testid="reset-measure" onClick={resetActiveMeasure}>↺<span>처음으로</span></button>
+                  <button type="button" data-testid="copy-notes" disabled={selectedNoteIds.length === 0}
+                    onClick={copySelectedNotes}>⧉<span>복사</span></button>
+                </div>
+                {editStatus && <p className="edit-status" role="status">{editStatus}</p>}
+              </>
+            ) : (
+              <div className="empty-message"><span>♪</span><strong>먼저 가락을 하나 골라 주세요</strong><p>위의 추천 가락 카드를 눌러 시작할 수 있어요.</p></div>
+            )}
           </div>
         </section>
 
@@ -2366,86 +2651,13 @@ export default function App() {
         </section>
         </div>
 
-        <section className="editor-section">
-          <div className="editor-copy">
-            <span className="section-kicker">선택 사항 · 직접 다듬기</span>
-            <h2>{activeIndex + 1}마디의 음표를 바꿔 보세요</h2>
-            <p>음표를 위아래로 끌면 높이가 바뀌어요. 여러 음표는 첫 음표를 누른 뒤 Shift를 누르고 마지막 음표를 골라요.</p>
-            <button className="listen-all action-button" type="button" disabled={!activeMeasure.notes || isAnyPlaying}
-              onClick={() => void playActiveMeasure()}>
-              <PlayIcon playing={playingMeasure} /> 이 마디 듣기
-            </button>
-            <div className="history-actions" aria-label="작곡 되돌리기">
-              <button type="button" disabled={undoStack.length === 0} onClick={undoCompositionChange}><Undo2 size={16} /> 되돌리기</button>
-              <button type="button" disabled={redoStack.length === 0} onClick={redoCompositionChange}><Redo2 size={16} /> 다시 하기</button>
-            </div>
-          </div>
-
-          <div className={activeMeasure.notes ? "editor-card" : "editor-card empty-editor"}>
-            {activeMeasure.notes ? (
-              <>
-                <ScoreMeasure notes={activeNotes} meter={meter}
-                  playingNoteId={playingMeasure || playingMeasureIndex === activeIndex ? playingNoteId : null}
-                  selectedNoteId={selectedNoteId} selectedNoteIds={selectedNoteIds}
-                  onSelectNote={selectNote} onMoveNote={moveNotePitch} onMovePosition={moveNotePosition} />
-                <div className="beat-meter">
-                  <div className="beat-meter-label">
-                    <span>이 마디에 채운 길이</span>
-                    <strong>{usedBeats} / {capacity}</strong>
-                  </div>
-                  <div className="beat-track"><span style={{ width: `${Math.min(usedBeats / capacity, 1) * 100}%` }} /></div>
-                  <p className={`validation ${validation?.state ?? ""}`}>
-                    {validation?.state === "exact" ? "✓" : "!"} {validation?.message}
-                  </p>
-                </div>
-                <div className="harmony-guide" aria-live="polite">
-                  <span className="harmony-guide-title">화음 어울림</span>
-                  <span className="fit-chord">● 딱 어울리는 음</span>
-                  <span className="fit-passing">● 지나가는 음</span>
-                  <span className="fit-color">● 색다른 음</span>
-                  {selectedNote && selectedHarmonyFit && <strong className={`fit-${selectedHarmonyFit}`}>
-                    {selectedHarmonyFit === "chord" ? "지금 고른 음은 이 화음에 딱 어울려요!" :
-                      selectedHarmonyFit === "passing" ? "지금 고른 음은 다음 음으로 이어 주는 지나가는 음이에요." :
-                        "지금 고른 음은 색다른 느낌을 주는 음이에요. 들어 보고 골라요."}
-                  </strong>}
-                </div>
-                <div className="note-tools">
-                  <div><span>고른 음표</span><strong>{selectedNoteIds.length > 1 ? `${selectedNoteIds.length}개 선택` : selectedNote ? pitchName(selectedNote.pitch) : "음표를 골라 주세요"}</strong></div>
-                  <button type="button" onClick={() => changePitch(1)}
-                    disabled={selectedNoteIds.length === 0 || selectedNotes.every((note) => note.pitch === null)}>↑<span>높게</span></button>
-                  <button type="button" onClick={() => changePitch(-1)}
-                    disabled={selectedNoteIds.length === 0 || selectedNotes.every((note) => note.pitch === null)}>↓<span>낮게</span></button>
-                  <button type="button" data-testid="split-note" disabled={selectedNoteIds.length !== 1}
-                    onClick={splitSelectedNote}>½<span>쪼개기</span></button>
-                  <button type="button" onClick={lengthenSelectedNote} disabled={selectedNoteIds.length !== 1}>2×<span>길게</span></button>
-                  <button type="button" data-testid="dot-note" disabled={selectedNoteIds.length !== 1 || selectedNote?.dotted}
-                    onClick={dotSelectedNote}>•<span>점 붙이기</span></button>
-                  <button type="button" data-testid="beam-notes" disabled={selectedNoteIds.length < 2}
-                    onClick={beamSelectedNotes}>▰<span>기둥 묶기</span></button>
-                  <button type="button" data-testid="unbeam-notes" disabled={selectedNoteIds.length === 0}
-                    onClick={unbeamSelectedNotes}>▯<span>분리</span></button>
-                  <button type="button" data-testid="link-notes" disabled={selectedNoteIds.length !== 2}
-                    onClick={linkSelectedNotes}>⌒<span>음표 잇기</span></button>
-                  <button type="button" data-testid="add-rest" onClick={addRestNote}>𝄽<span>쉼표</span></button>
-                  <button type="button" data-testid="add-note" onClick={addMelodyNote}><Plus size={17} /><span>음표 추가</span></button>
-                  <button type="button" className="danger" onClick={deleteNote}>×<span>지우기</span></button>
-                  <button type="button" className="reset" data-testid="reset-measure" onClick={resetActiveMeasure}>↺<span>처음으로</span></button>
-                  <button type="button" data-testid="copy-notes" disabled={selectedNoteIds.length === 0}
-                    onClick={copySelectedNotes}>⧉<span>복사</span></button>
-                </div>
-                {editStatus && <p className="edit-status" role="status">{editStatus}</p>}
-              </>
-            ) : (
-              <div className="empty-message"><span>♪</span><strong>먼저 가락을 하나 골라 주세요</strong><p>위의 추천 가락 카드를 눌러 시작할 수 있어요.</p></div>
-            )}
-          </div>
-        </section>
-
         {showArrangement && (
           <section className="arrangement-section" id="arrangement" data-testid="arrangement-section">
             {completionCelebration && (
               <div className="completion-celebration" role="status">
-                <span className="celebration-icon"><PartyPopper size={24} aria-hidden="true" /></span>
+                <img className="workspace-guide celebration-guide"
+                  src="/illustrations/character-song-complete-boy-v1.webp"
+                  alt="" aria-hidden="true" draggable="false" />
                 <div>
                   <strong>{songLength}마디 가락을 완성했어요!</strong>
                   <span>이제 반주 스타일과 악기를 골라 나만의 노래를 더 풍성하게 만들어 봐요.</span>
@@ -2456,7 +2668,7 @@ export default function App() {
               </div>
             )}
             <div className="arrangement-heading">
-              <div>
+              <div className="arrangement-heading-copy">
                 <span className="section-kicker">M3 · 악기와 가사</span>
                 <h2>내 노래에 어울리는 소리를 입혀요</h2>
                 <p>피아노가 기본이에요. 다른 악기를 눌러 소리를 바꿀 수 있어요.</p>
@@ -2495,28 +2707,53 @@ export default function App() {
             </div>
 
             <section className="accompaniment-builder" aria-labelledby="accompaniment-heading">
-              <div className="accompaniment-heading">
-                <div>
-                  <span className="section-kicker">자동 반주 만들기</span>
-                  <h2 id="accompaniment-heading">노래 뒤에 어울리는 악기들을 붙여요</h2>
-                  <p>리듬을 하나 고르고 여러 악기를 누르면 전체 듣기에서 함께 연주해요.</p>
+              <div className="accompaniment-style-with-guide">
+                <div className="accompaniment-heading">
+                  <div>
+                    <span className="section-kicker">자동 반주 만들기</span>
+                    <h2 id="accompaniment-heading">노래 뒤에 어울리는 악기들을 붙여요</h2>
+                    <p>장르나 연주 방식을 고르고, 필요한 악기를 더해 나만의 반주를 만들어요.</p>
+                  </div>
                 </div>
                 <div className="accompaniment-summary">
                   <small>지금 반주</small>
                   <strong>{selectedAccompanimentStyle.name}</strong>
                   <span>{accompanimentInstrumentIds.length}개 악기</span>
                 </div>
-              </div>
 
-              <div className="accompaniment-style-grid" aria-label="반주 스타일 선택">
-                {ACCOMPANIMENT_STYLES.map((style) => (
-                  <button key={style.id} type="button" data-testid={`accompaniment-style-${style.id}`}
-                    className={accompanimentStyleId === style.id ? "accompaniment-style active" : "accompaniment-style"}
-                    aria-pressed={accompanimentStyleId === style.id}
-                    onClick={() => setAccompanimentStyleId(style.id)}>
-                    <span>{style.alias}</span><strong>{style.name}</strong><small>{style.description}</small>
-                  </button>
-                ))}
+                <div className="accompaniment-style-content">
+                  <div className="accompaniment-style-tabs" role="tablist" aria-label="반주 선택 모드">
+                    <button type="button" role="tab" id="accompaniment-genre-tab" aria-controls="accompaniment-style-panel"
+                      data-testid="accompaniment-genre-tab" aria-selected={accompanimentStyleView === "genre"}
+                      className={accompanimentStyleView === "genre" ? "active" : ""}
+                      onClick={() => setAccompanimentStyleView("genre")}>장르 모드 <span>{ACCOMPANIMENT_GENRE_STYLES.length}</span></button>
+                    <button type="button" role="tab" id="accompaniment-playing-tab" aria-controls="accompaniment-style-panel"
+                      data-testid="accompaniment-playing-tab" aria-selected={accompanimentStyleView === "playing"}
+                      className={accompanimentStyleView === "playing" ? "active" : ""}
+                      onClick={() => setAccompanimentStyleView("playing")}>연주 방식 <span>{ACCOMPANIMENT_PLAYING_STYLES.length}</span></button>
+                  </div>
+                  <div className="accompaniment-style-grid" role="tabpanel" id="accompaniment-style-panel"
+                    aria-labelledby={accompanimentStyleView === "genre" ? "accompaniment-genre-tab" : "accompaniment-playing-tab"}
+                    aria-label={accompanimentStyleView === "genre" ? "장르 반주 선택" : "반주 연주 방식 선택"}>
+                    {(accompanimentStyleView === "genre" ? ACCOMPANIMENT_GENRE_STYLES : ACCOMPANIMENT_PLAYING_STYLES).map((style) => (
+                      <button key={style.id} type="button" data-testid={`accompaniment-style-${style.id}`}
+                        className={accompanimentStyleId === style.id ? "accompaniment-style active" : "accompaniment-style"}
+                        aria-pressed={accompanimentStyleId === style.id}
+                        onClick={() => {
+                          setAccompanimentStyleId(style.id);
+                          if (style.recommendedInstrumentIds) {
+                            setAccompanimentInstrumentIds(uniqueAccompanimentInstrumentIds(style.recommendedInstrumentIds));
+                          }
+                        }}>
+                        <span>{style.alias}</span><strong>{style.name}</strong><small>{style.description}</small>
+                        {style.recommendedInstrumentIds && <em>추천 악기 {style.recommendedInstrumentIds.length}개 함께 선택</em>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <img className="workspace-guide accompaniment-guide-recorder"
+                  src="/illustrations/character-music-tip-recorder-boy-v1.webp"
+                  alt="" aria-hidden="true" draggable="false" />
               </div>
 
               <div className="ensemble-presets">
@@ -2604,7 +2841,10 @@ export default function App() {
               ))}
             </div>
 
-            <div className="publish-section">
+            <div className="publish-section publish-with-guide">
+              <img className="workspace-guide publish-guide-singer"
+                src="/illustrations/character-recording-singer-girl-v1.webp"
+                alt="" aria-hidden="true" draggable="false" />
               <div className="publish-heading">
                 <div><span className="section-kicker">M4 · 저장과 공유</span><h2>내 악보를 세상에 보여 줘요</h2></div>
                 <span>A4 PDF · 공유 링크 · 리메이크</span>
@@ -2641,15 +2881,15 @@ export default function App() {
                 </button>
                 <button type="button" className="pdf-button action-button" data-testid="export-pdf"
                   disabled={exportingPdf} onClick={() => void exportPdf(false)}>
-                  <FileDown size={18} /> {exportingPdf ? "PDF 만드는 중..." : "A4 PDF 저장"}
+                  <FileDown size={18} /> {exportingPdf ? "악보 만드는 중..." : "악보 저장"}
                 </button>
                 <button type="button" className="pdf-button action-button" data-testid="export-pdf-with-accompaniment"
                   disabled={exportingPdf} onClick={() => void exportPdf(true)}>
-                  <FileMusic size={18} /> {exportingPdf ? "PDF 만드는 중..." : "A4 PDF 저장(반주 포함)"}
+                  <FileMusic size={18} /> {exportingPdf ? "악보 만드는 중..." : "악보 저장(반주 포함)"}
                 </button>
                 <button type="button" className="backing-mp3-button action-button" data-testid="export-backing-mp3"
                   disabled={exportingBacking || !allValid} onClick={() => void exportBackingMp3()}>
-                  <Music2 size={18} /> {exportingBacking ? "반주 음악 만드는 중..." : "반주 음악 저장"}
+                  <Music2 size={18} /> {exportingBacking ? "반주 만드는 중..." : "반주 저장"}
                 </button>
                 <button type="button" className="mobile-record-link-button action-button" data-testid="create-mobile-recording-link"
                   disabled={!allValid} onClick={() => void createMobileRecordingLink()}>
@@ -2658,12 +2898,12 @@ export default function App() {
                 <div className="publish-share-pair">
                   <button type="button" className="record-mp3-button action-button" data-testid="record-song-mp3"
                     disabled={recordingSong || !allValid} onClick={() => void recordSongMp3()}>
-                    <Mic2 size={18} /> {recordingSong ? "녹음 중..." : "노래 녹음 MP3 저장"}
+                    <Mic2 size={18} /> {recordingSong ? "녹음 중..." : "노래 녹음"}
                   </button>
                   <a className="samboard-share-button action-button" data-testid="open-samboard-share"
                     href="https://samboard.vivasam.com/studentEntry/?brdId=brd-0QZ60VWZ56TNW"
                     target="_blank" rel="noopener noreferrer">
-                    <ExternalLink size={18} /> 완성 노래 공유
+                    <ExternalLink size={18} /> 노래 공유
                   </a>
                 </div>
               </div>
@@ -2714,7 +2954,8 @@ export default function App() {
         )}
       </main>}
 
-      {!mobileRecordMode && <footer className="bottom-bar">
+      {!mobileRecordMode && <footer className="bottom-bar" onMouseDown={keepEditorFocus}
+        onClickCapture={preserveViewportAfterButtonClick}>
         <div>
           <span className="mini-label">{activeIndex + 1}번째 마디 · {meterKey(meter)}</span>
           <strong>{activeMeasure.candidateName ?? "아직 가락을 고르지 않았어요"}</strong>

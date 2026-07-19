@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import { Play } from "lucide-react";
 import { previewSoundEffect } from "../audio/soundEffects";
 import { findSoundEffect, SOUND_EFFECTS, type SoundEffectCategory, type SoundEffectId } from "../music/soundEffects";
 import type { SoundEffectEvent } from "../music/types";
@@ -47,6 +48,9 @@ export default function SoundEffectEditor({
 
   return (
     <section className="sound-effect-editor" aria-labelledby="sound-effect-heading">
+      <img className="workspace-guide sound-effect-guide"
+        src="/illustrations/character-sound-preview-girl-v1.webp"
+        alt="" aria-hidden="true" draggable="false" />
       <div className="sound-effect-heading">
         <div><span className="section-kicker">소리 추가</span><h2 id="sound-effect-heading">{measureIndex + 1}마디에 짧은 소리를 놓아요</h2></div>
         <p>아이콘을 누른 뒤, 아래 선에서 좌우로 끌어 재생 시간을 정해요.</p>
@@ -59,10 +63,18 @@ export default function SoundEffectEditor({
       </label>
       <div className="sound-effect-palette">
         {filteredEffects.map((effect) => (
-          <button key={effect.id} type="button" data-testid={`add-effect-${effect.id}`}
-            title={effect.description} onClick={() => { onAdd(effect.id); void previewSoundEffect(effect.id); }}>
-            <span>{effect.icon}</span><strong>{effect.name}</strong>
-          </button>
+          <div className="sound-effect-option" key={effect.id}>
+            <button type="button" className="effect-add-button" data-testid={`add-effect-${effect.id}`}
+              title={effect.description} aria-label={`${effect.name} 타임라인에 넣기`}
+              onClick={() => onAdd(effect.id)}>
+              <span>{effect.icon}</span><strong>{effect.name}</strong>
+            </button>
+            <button type="button" className="effect-preview-button"
+              data-testid={`preview-effect-${effect.id}`} title={`${effect.name} 미리 듣기`}
+              aria-label={`${effect.name} 미리 듣기`} onClick={() => void previewSoundEffect(effect.id)}>
+              <Play size={14} fill="currentColor" aria-hidden="true" />
+            </button>
+          </div>
         ))}
       </div>
       <div className="sound-effect-timeline" ref={timelineRef} data-testid="sound-effect-timeline">

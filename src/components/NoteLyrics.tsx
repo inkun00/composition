@@ -12,9 +12,11 @@ type NoteLyricsProps = Readonly<{
   wide?: boolean;
   showSignature?: boolean;
   playingNoteId?: string | null;
+  selectedNoteId?: string | null;
   notePositions?: Record<string, { x: number; y: number }>;
   readOnly?: boolean;
   onChange: (noteId: string, value: string) => void;
+  onFocusNote?: (noteId: string) => void;
 }>;
 
 export default function NoteLyrics({
@@ -25,9 +27,11 @@ export default function NoteLyrics({
   wide = false,
   showSignature = true,
   playingNoteId = null,
+  selectedNoteId = null,
   notePositions,
   readOnly = false,
-  onChange
+  onChange,
+  onFocusNote
 }: NoteLyricsProps) {
   const capacity = toNumber(measureCapacity(meter));
   const { width, noteStartX } = scoreLayout({ compact, wide, showSignature });
@@ -43,10 +47,11 @@ export default function NoteLyrics({
         return (
           <input key={note.id} data-testid={`note-lyric-${measureIndex + 1}-${noteIndex + 1}`}
             value={note.lyric ?? ""} maxLength={1} readOnly={readOnly}
-            className={playingNoteId === note.id ? "lyric-note-active" : undefined}
+            className={playingNoteId === note.id ? "lyric-note-active" : selectedNoteId === note.id ? "lyric-note-selected" : undefined}
             aria-label={`${measureIndex + 1}마디 ${noteIndex + 1}번째 음표 가사`}
             title="이 음표에 맞춰 부를 글자를 적어요"
             style={{ left: `${x / width * 100}%`, width: `${Math.max(8, Math.min(18, durationWidth / width * 100))}%` }}
+            onFocus={() => onFocusNote?.(note.id)}
             onChange={(event) => onChange(note.id, event.target.value)} placeholder="가" />
         );
       })}

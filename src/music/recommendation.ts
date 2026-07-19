@@ -15,6 +15,32 @@ function lastPitch(candidate: MelodyCandidate): number | null {
   return notes.at(-1)?.pitch ?? null;
 }
 
+export type RecommendationFeelingId = "gentle" | "bouncy" | "flowing" | "highlight";
+
+const recommendationFeelingPatterns: readonly (readonly RecommendationFeelingId[])[] = [
+  ["gentle", "flowing", "bouncy", "flowing", "gentle", "bouncy", "highlight", "gentle"],
+  ["bouncy", "flowing", "bouncy", "gentle", "bouncy", "flowing", "highlight", "bouncy"],
+  ["gentle", "flowing", "flowing", "gentle", "bouncy", "flowing", "highlight", "gentle"],
+  ["gentle", "bouncy", "flowing", "highlight", "gentle", "bouncy", "flowing", "gentle"]
+];
+
+const recommendationEndingFeelings: readonly RecommendationFeelingId[] = [
+  "gentle", "bouncy", "flowing", "gentle"
+];
+
+export function recommendationFeelingForMeasure(
+  recommendationIndex: number,
+  measureIndex: number,
+  measureCount: number
+): RecommendationFeelingId {
+  const patternIndex = ((recommendationIndex % recommendationFeelingPatterns.length) +
+    recommendationFeelingPatterns.length) % recommendationFeelingPatterns.length;
+  const pattern = recommendationFeelingPatterns[patternIndex];
+  if (measureIndex === measureCount - 1) return recommendationEndingFeelings[patternIndex];
+  if (measureCount >= 6 && measureIndex === measureCount - 2) return "highlight";
+  return pattern[measureIndex % pattern.length];
+}
+
 function scoreCandidate(
   candidate: MelodyCandidate,
   chords: readonly string[],
@@ -118,29 +144,22 @@ export function chooseRecommendedCandidate(
   measureIndex: number,
   measureCount: number,
   previousCandidateIndex = -1,
-  usedCandidateIndexes: ReadonlySet<number> = new Set()
+  usedCandidateIndexes: ReadonlySet<number> = new Set(),
+  preferredFeelingId?: RecommendationFeelingId,
+  variationIndex = 0
 ): MelodyCandidate {
   if (candidates.length === 0) throw new Error("추천할 가락이 없습니다.");
-
-  let best = candidates[0];
-  let bestScore = Number.NEGATIVE_INFINITY;
-  candidates.forEach((candidate, index) => {
-    const candidateScore = scoreCandidate(
-      candidate,
-      chords,
-      previousPitch,
-      measureIndex,
-      measureCount,
-      index,
-      previousCandidateIndex,
-      usedCandidateIndexes
-    );
-    if (candidateScore > bestScore) {
-      best = candidate;
-      bestScore = candidateScore;
-    }
-  });
-  return best;
+  const ranked = rankRecommendedCandidates(candidates, chords, previousPitch, measureIndex, measureCount,
+    previousCandidateIndex, usedCandidateIndexes);
+  const matchingFeeling = preferredFeelingId
+    ? ranked.filter((candidate) => candidate.feelingId === preferredFeelingId)
+    : [];
+  const pool = matchingFeeling.length > 0 ? matchingFeeling : ranked;
+  const unusedPool = pool.filter((candidate) => !usedCandidateIndexes.has(candidates.indexOf(candidate)));
+  const distinctPool = unusedPool.length > 0 ? unusedPool : pool;
+  const safePool = distinctPool.slice(0, Math.min(5, distinctPool.length));
+  const selectedIndex = ((variationIndex % safePool.length) + safePool.length) % safePool.length;
+  return safePool[selectedIndex];
 }
 
 export function rankRecommendedCandidates(

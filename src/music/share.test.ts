@@ -58,6 +58,18 @@ describe("공유 링크", () => {
       .toMatch(/^https:\/\/example\.com\/song#song=/);
   });
 
+  it("공유 링크는 반주 악기 10개까지 복원한다", () => {
+    const tenInstruments = ["acoustic_grand_piano", "bright_acoustic_piano", "xylophone", "glockenspiel",
+      "acoustic_guitar_nylon", "electric_bass_finger", "violin", "cello", "flute", "trumpet"];
+    const shared = { ...sample, accompanimentInstrumentIds: tenInstruments };
+    expect(decodeSharedComposition(encodeSharedComposition(shared))?.accompanimentInstrumentIds)
+      .toEqual(tenInstruments);
+    expect(decodeSharedComposition(encodeSharedComposition({
+      ...shared,
+      accompanimentInstrumentIds: [...tenInstruments, "trombone"]
+    }))).toBeNull();
+  });
+
   it("손상된 데이터는 열지 않는다", () => {
     expect(decodeSharedComposition("broken-data")).toBeNull();
   });

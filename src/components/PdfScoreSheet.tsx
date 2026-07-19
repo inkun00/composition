@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { measureCapacity, type Meter } from "../music/meter";
 import type { NoteEvent } from "../music/types";
 import { chordMidiPitches } from "../music/chord";
@@ -21,7 +21,32 @@ type PdfScoreSheetProps = {
   meter: Meter;
   measures: readonly PrintableMeasure[];
   includeAccompaniment: boolean;
+  preview?: boolean;
 };
+
+const PDF_PAGE_WIDTH = 794;
+const PDF_PAGE_HEIGHT = 1123;
+
+function PdfPreviewPage({ children }: Readonly<{ children: ReactNode }>) {
+  const shellRef = useRef<HTMLDivElement | null>(null);
+  const [scale, setScale] = useState(1);
+
+  useLayoutEffect(() => {
+    const shell = shellRef.current;
+    if (!shell) return;
+    const updateScale = () => setScale(Math.min(1, shell.clientWidth / PDF_PAGE_WIDTH));
+    updateScale();
+    const observer = new ResizeObserver(updateScale);
+    observer.observe(shell);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={shellRef} className="pdf-preview-page-shell" style={{ height: `${PDF_PAGE_HEIGHT * scale}px` }}>
+      <div className="pdf-preview-page-scale" style={{ transform: `scale(${scale})` }}>{children}</div>
+    </div>
+  );
+}
 
 function PdfMeasureLyrics({ notes, meter, showSignature, notePositions }: Readonly<{
   notes: readonly NoteEvent[];
@@ -83,7 +108,7 @@ function chunk<T>(items: readonly T[], size: number): readonly T[][] {
 }
 
 export default function PdfScoreSheet({
-  title, description, creator, originalCreator, meter, measures, includeAccompaniment
+  title, description, creator, originalCreator, meter, measures, includeAccompaniment, preview = false
 }: PdfScoreSheetProps) {
   const printableTitle = title || "나의 노래";
   // Keep student titles on one centered line while still allowing long names.
@@ -107,11 +132,11 @@ export default function PdfScoreSheet({
   const pages = chunk(measures, includeAccompaniment ? 8 : 16);
 
   return (
-    <div className="pdf-document" aria-hidden="true">
+    <div className={preview ? "pdf-document pdf-preview-document" : "pdf-document"} aria-hidden={!preview}>
       {pages.map((pageMeasures, pageIndex) => {
         const systems = chunk(pageMeasures, 4);
-        return (
-          <section className="pdf-page" data-pdf-page key={pageIndex}>
+        const page = (
+          <section className="pdf-page" data-pdf-page={preview ? undefined : "true"}>
             <header className="pdf-header">
               <h1 style={{ fontSize: `${titleFontSize}px` }}>{printableTitle}</h1>
               {pageIndex === 0 && description.trim() && (
@@ -180,6 +205,9 @@ export default function PdfScoreSheet({
             </div>
           </section>
         );
+        return preview
+          ? <PdfPreviewPage key={pageIndex}>{page}</PdfPreviewPage>
+          : <div key={pageIndex}>{page}</div>;
       })}
     </div>
   );

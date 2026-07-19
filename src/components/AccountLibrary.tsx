@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Cloud, Copy, Eye, EyeOff, FileMusic, Library, LogIn, LogOut, Mail, Save, Trash2, UserRound, X } from "lucide-react";
+import { Cloud, Copy, Eye, EyeOff, FileMusic, Library, LogIn, LogOut, Mail, Save, Share2, Trash2, UserRound, X } from "lucide-react";
 import type { User } from "../firebase/client";
 import type { CloudScore } from "../firebase/scores";
 
@@ -20,6 +20,7 @@ type AccountLibraryProps = Readonly<{
   onSignOut: () => void;
   onSave: (asCopy: boolean) => void;
   onLoad: (score: CloudScore) => void;
+  onPublish: (score: CloudScore) => void;
   onDelete: (score: CloudScore) => void;
 }>;
 
@@ -30,9 +31,13 @@ function updatedLabel(timestamp: number): string {
   }).format(new Date(timestamp));
 }
 
+function isPublishableScore(score: CloudScore): boolean {
+  return score.draft.measures.every((measure) => Array.isArray(measure.notes) && measure.notes.length > 0);
+}
+
 export default function AccountLibrary({ configured, user, authReady, scores, loading, busy, error,
   currentScoreId, onClose, onGoogleSignIn, onEmailAuth, onPasswordReset, onClearError,
-  onSignOut, onSave, onLoad, onDelete }: AccountLibraryProps) {
+  onSignOut, onSave, onLoad, onPublish, onDelete }: AccountLibraryProps) {
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -202,8 +207,15 @@ export default function AccountLibrary({ configured, user, authReady, scores, lo
                       <FileMusic size={21} aria-hidden="true" />
                       <span><strong>{score.title || "제목 없는 악보"}</strong><small>{score.songLength}마디 · {updatedLabel(score.updatedAt)}</small></span>
                     </button>
-                    <button type="button" className="account-score-delete" title="악보 삭제" aria-label={`${score.title} 삭제`}
-                      onClick={() => onDelete(score)} disabled={busy}><Trash2 size={18} /></button>
+                    <div className="account-score-actions">
+                      <button type="button" className="account-score-publish" title={isPublishableScore(score)
+                        ? "앨범에 공개" : "모든 마디를 완성하면 공개할 수 있어요."}
+                        onClick={() => onPublish(score)} disabled={busy || !isPublishableScore(score)}>
+                        <Share2 size={16} /> 앨범에 공개
+                      </button>
+                      <button type="button" className="account-score-delete" title="악보 삭제" aria-label={`${score.title} 삭제`}
+                        onClick={() => onDelete(score)} disabled={busy}><Trash2 size={18} /></button>
+                    </div>
                   </article>
                 ))}
               </div>

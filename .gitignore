@@ -5,6 +5,7 @@ vite.config.js
 vite.config.d.ts
 
 .vercel
+artifacts/
 .env
 .env.local
 .env.*.local

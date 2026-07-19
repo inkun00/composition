@@ -41,6 +41,17 @@ describe("브라우저 임시 저장", () => {
     expect(readDraft({ getItem: () => JSON.stringify({ ...draft, songLength: 7 }) })).toBeNull();
   });
 
+  it("반주 악기 10개는 저장하고 11개는 거부한다", () => {
+    const tenInstruments = ["acoustic_grand_piano", "bright_acoustic_piano", "xylophone", "glockenspiel",
+      "acoustic_guitar_nylon", "electric_bass_finger", "violin", "cello", "flute", "trumpet"];
+    const storage = { getItem: () => JSON.stringify({ ...draft, accompanimentInstrumentIds: tenInstruments }) };
+    expect(readDraft(storage)?.accompanimentInstrumentIds).toEqual(tenInstruments);
+    expect(readDraft({ getItem: () => JSON.stringify({
+      ...draft,
+      accompanimentInstrumentIds: [...tenInstruments, "trombone"]
+    }) })).toBeNull();
+  });
+
   it("저장 공간 오류를 앱 오류로 번지게 하지 않는다", () => {
     expect(writeDraft({ setItem: () => { throw new Error("quota"); } }, draft)).toBe(false);
     expect(DRAFT_STORAGE_KEY).toContain("draft");
