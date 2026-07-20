@@ -334,6 +334,7 @@ export default function App() {
   const recommendationFillCount = useRef(0);
   const completionAnimationTimer = useRef<number | null>(null);
   const [recentCompletedIndex, setRecentCompletedIndex] = useState<number | null>(null);
+  const [rhythmChecks, setRhythmChecks] = useState<Record<number, "valid" | "invalid">>({});
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [songPlaybackState, setSongPlaybackState] = useState<SongPlaybackState>("idle");
   const [playingMeasureIndex, setPlayingMeasureIndex] = useState<number | null>(null);
@@ -695,6 +696,7 @@ export default function App() {
     setMeter(snapshot.meter);
     setSongLength(snapshot.songLength);
     setMeasures(snapshot.measures as MeasureDraft[]);
+    setRhythmChecks({});
     setActiveIndex((index) => Math.min(index, snapshot.measures.length - 1));
     setSelectedNoteId("");
     setSelectedNoteIds([]);
@@ -729,6 +731,7 @@ export default function App() {
     if (!confirmNewStructure("박자를 바꾸면 새 노래를 만들어요.")) return;
     setMeter(next);
     setMeasures(emptyComposition(selectedPreset, songLength));
+    setRhythmChecks({});
     setActiveIndex(0);
     setSelectedNoteId("");
     setSelectedNoteIds([]);
@@ -741,6 +744,7 @@ export default function App() {
     if (preset.id !== selectedPresetId && !confirmNewStructure("화음 이야기를 바꾸면 새 노래를 만들어요.")) return;
     setSelectedPresetId(preset.id);
     setMeasures(emptyComposition(preset, songLength));
+    setRhythmChecks({});
     setActiveIndex(0);
     setSelectedNoteId("");
     setSelectedNoteIds([]);
@@ -753,6 +757,7 @@ export default function App() {
     if (!confirmNewStructure("마디 수를 바꾸면 새 노래를 만들어요.")) return;
     setSongLength(length);
     setMeasures(emptyComposition(selectedPreset, length));
+    setRhythmChecks({});
     setActiveIndex(0);
     setSelectedNoteId("");
     setSelectedNoteIds([]);
@@ -761,6 +766,12 @@ export default function App() {
   }
 
   function updateActiveMeasure(update: (measure: MeasureDraft) => MeasureDraft) {
+    setRhythmChecks((current) => {
+      if (!(activeIndex in current)) return current;
+      const next = { ...current };
+      delete next[activeIndex];
+      return next;
+    });
     setMeasures((current) =>
       current.map((measure, index) => (index === activeIndex ? update(measure) : measure))
     );
@@ -817,6 +828,7 @@ export default function App() {
       };
     });
     setMeasures(recommendedMeasures);
+    setRhythmChecks({});
     const activeCandidate = recommendedMeasures[activeIndex];
     setSelectedNoteId(activeCandidate.notes[0]?.id ?? "");
     setSelectedNoteIds(activeCandidate.notes[0] ? [activeCandidate.notes[0].id] : []);
@@ -1282,7 +1294,9 @@ export default function App() {
   }
 
   function goNext() {
-    if (validation?.state !== "exact") return;
+    const rhythmCheck = validation?.state === "exact" ? "valid" : "invalid";
+    setRhythmChecks((current) => ({ ...current, [activeIndex]: rhythmCheck }));
+    if (rhythmCheck === "invalid") return;
     if (activeIndex < measures.length - 1) {
       setActiveIndex(activeIndex + 1);
       const next = measures[activeIndex + 1];
@@ -1564,6 +1578,7 @@ export default function App() {
     setMeter(project.meter);
     setSongLength(project.songLength);
     setMeasures(compositionFromDraft(project, preset));
+    setRhythmChecks({});
     setSelectedInstrumentId(findInstrument(project.instrumentId).id);
     const nextAccompanimentStyle = findAccompanimentStyle(project.accompanimentStyleId ?? "arpeggio");
     setAccompanimentStyleId(nextAccompanimentStyle.id);
@@ -2405,7 +2420,8 @@ export default function App() {
                   data-playing={playingMeasureIndex === index ? "true" : undefined}
                   aria-current={playingMeasureIndex === index ? "true" : undefined}
                   aria-label={`${index + 1}마디, ${storyInfo[measure.story].label}, ${measure.storyHint}${measure.notes ? ", 가락 선택 완료" : ", 가락 선택 전"}`}
-                  className={`measure-slot ${measure.story}${activeIndex === index ? " active" : ""}${measure.notes ? " completed" : ""}${recentCompletedIndex === index ? " just-completed" : ""}${playingMeasureIndex === index ? " playing" : ""}`}
+                  data-rhythm-check={rhythmChecks[index]}
+                  className={`measure-slot ${measure.story}${activeIndex === index ? " active" : ""}${measure.notes ? " completed" : ""}${rhythmChecks[index] ? ` rhythm-${rhythmChecks[index]}` : ""}${recentCompletedIndex === index ? " just-completed" : ""}${playingMeasureIndex === index ? " playing" : ""}`}
                   onClick={() => {
                     setActiveIndex(index);
                     setSelectedNoteId(measure.notes?.[0]?.id ?? "");
@@ -2965,7 +2981,7 @@ export default function App() {
           onClick={() => setActiveIndex(Math.max(0, activeIndex - 1))}><ArrowLeft size={18} /> 이전 마디</button>
         {activeIndex < measures.length - 1 ? (
           <button type="button" className="primary action-button" data-testid="next-measure"
-            disabled={validation?.state !== "exact"} onClick={goNext}>
+            disabled={!activeMeasure.notes} onClick={goNext}>
             다음 마디로 <ArrowRight size={18} />
           </button>
         ) : (
