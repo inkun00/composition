@@ -1,0 +1,173 @@
+.recording-guide-overlay {
+  position: fixed;
+  z-index: 145;
+  inset: 0;
+  padding: 24px;
+  display: grid;
+  place-items: center;
+  background: rgba(34, 29, 47, .58);
+  backdrop-filter: blur(5px);
+}
+
+.recording-guide-dialog {
+  width: min(720px, calc(100vw - 32px));
+  padding: 26px;
+  border: 1px solid #ddd7eb;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 28px 80px rgba(30, 24, 45, .28);
+}
+
+.recording-guide-dialog header > span {
+  color: #6553c7;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.recording-guide-dialog h2 {
+  margin: 8px 0 5px;
+  color: #302a3c;
+  font-size: 24px;
+}
+
+.recording-guide-dialog header p {
+  margin: 0;
+  color: #716a7c;
+  font-size: 13px;
+}
+
+.recording-mode-options {
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.recording-mode-options button {
+  min-height: 174px;
+  padding: 22px 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  border: 1px solid #ddd7eb;
+  border-radius: 17px;
+  background: #fbfaff;
+  color: #342e40;
+  text-align: left;
+  cursor: pointer;
+  transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+
+.recording-mode-options button:hover {
+  transform: translateY(-2px);
+  border-color: #806ce5;
+  box-shadow: 0 10px 24px rgba(93, 73, 206, .12);
+}
+
+.recording-mode-options button > span {
+  font-size: 30px;
+}
+
+.recording-mode-options strong {
+  font-size: 18px;
+}
+
+.recording-mode-options small {
+  color: #5f5869;
+  font-size: 13px;
+}
+
+.recording-mode-options em {
+  margin-top: auto;
+  color: #6b59cf;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.choir-recording-guide {
+  margin-top: 20px;
+  display: grid;
+  gap: 9px;
+}
+
+.choir-recording-guide > div {
+  padding: 14px 16px;
+  display: grid;
+  grid-template-columns: 30px 1fr;
+  gap: 3px 8px;
+  border: 1px solid #d9e8e0;
+  border-radius: 13px;
+  background: #f5fbf7;
+}
+
+.choir-recording-guide > div > span {
+  grid-row: 1 / 3;
+  font-size: 21px;
+}
+
+.choir-recording-guide small {
+  color: #66746b;
+}
+
+.recording-guide-dialog footer {
+  margin-top: 18px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+}
+
+.recording-guide-dialog footer button {
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 11px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.recording-guide-cancel {
+  border: 1px solid #ddd8e6;
+  background: #fff;
+  color: #5f5869;
+}
+
+.recording-guide-back {
+  border: 1px solid #cbc2e8;
+  background: #f7f4ff;
+  color: #5d49a7;
+}
+
+.recording-guide-start {
+  border: 1px solid #5d49ce;
+  background: #6653d8;
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(93, 73, 206, .22);
+}
+
+@media (max-width: 620px) {
+  .recording-guide-overlay {
+    padding: 12px;
+  }
+
+  .recording-guide-dialog {
+    padding: 20px 16px;
+  }
+
+  .recording-guide-dialog h2 {
+    font-size: 20px;
+  }
+
+  .recording-guide-dialog footer button {
+    flex: 1;
+    padding: 0 8px;
+  }
+
+  .recording-mode-options {
+    grid-template-columns: 1fr;
+  }
+
+  .recording-mode-options button {
+    min-height: 130px;
+  }
+}

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { HARMONY_PRESETS } from "./harmonyPresets";
+import { HARMONY_REPLACEMENTS, HARMONY_RESEARCH_SOURCES } from "./harmonyAuditData";
 import { chordPitchClasses } from "./chord";
 import { getCandidates } from "./candidates";
 import { validateMeasure } from "./meter";
@@ -26,6 +27,29 @@ describe("100가지 화음 이야기", () => {
     const progressionKeys = HARMONY_PRESETS.map((preset) => preset.bars.map((bar) => bar.join("+")).join("|"));
     expect(new Set(progressionKeys).size).toBe(100);
     expect(new Set(HARMONY_PRESETS.flatMap((preset) => preset.roles)).size).toBe(12);
+  });
+
+  it("조사로 교체한 10개 진행을 실제 프리셋과 같은 구조로 유지한다", () => {
+    expect(HARMONY_REPLACEMENTS).toHaveLength(10);
+    expect(new Set(HARMONY_REPLACEMENTS.map((replacement) => replacement.id)).size).toBe(10);
+    expect(HARMONY_RESEARCH_SOURCES.length).toBeGreaterThanOrEqual(7);
+
+    const progressionKey = (bars: readonly (readonly string[])[]) =>
+      bars.map((bar) => bar.join("+")).join("|");
+    for (const replacement of HARMONY_REPLACEMENTS) {
+      const preset = HARMONY_PRESETS.find((item) => item.id === replacement.id);
+      expect(preset?.bars).toEqual(replacement.addedBars);
+      expect(progressionKey(preset?.bars ?? [])).not.toBe(progressionKey(replacement.removedBars));
+    }
+  });
+
+  it("나폴리 화음은 D단조의 올바른 플랫 2도와 정격 해결을 사용한다", () => {
+    expect(HARMONY_PRESETS.find((preset) => preset.id === "H008")?.bars).toEqual([
+      ["Dm"],
+      ["E♭"],
+      ["A7"],
+      ["Dm"]
+    ]);
   });
 
   it("100개 이야기의 가락은 박자에 맞고 스치는 음은 짧게 이어진다", () => {

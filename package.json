@@ -4,8 +4,10 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "check:file-lines": "node scripts/check-file-lines.mjs",
+    "pretest": "npm run check:file-lines",
+    "prebuild": "npm run check:file-lines",
     "generate:harmony": "node scripts/generate-harmony-data.mjs",
-    "prepare:soundfonts": "node scripts/download-soundfonts.mjs",
     "dev": "vite",
     "build": "tsc --noEmit -p tsconfig.app.json && vite build",
     "test": "vitest run",

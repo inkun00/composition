@@ -1,36 +1,43 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, CheckCircle2, ExternalLink, FileDown, FileMusic, FileUp, Library, Menu, Mic2, Music2, Plus, QrCode, Redo2, SlidersHorizontal, Smartphone, Square, Undo2, UserRound, Volume2, WandSparkles, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
-import { exportBackingCompositionMp3, pausePlayback, playComposition, playMeasure, recordKaraokeComposition, renderKaraokePreviewMix, renderProcessedKaraokeMp3, resumePlayback, stopPlayback,
+import { exportBackingCompositionMp3, pausePlayback, playComposition, playMeasure, practiceKaraokeComposition, recordKaraokeComposition, renderKaraokePreviewMix, renderProcessedKaraokeMp3, resumePlayback, stopPlayback,
   type KaraokePostProcessPreset } from "./audio/player";
 import { preloadInstrument } from "./audio/samplePlayer";
 import { reviewRecordedPitch, type RecordingPitchReview } from "./audio/pitchReview";
 import PlayIcon from "./components/PlayIcon";
 import PdfScoreSheet from "./components/PdfScoreSheet";
+import RecordingGuideDialog from "./components/RecordingGuideDialog";
 import ScoreMeasure from "./components/ScoreMeasure";
+import type { KaraokeGuideMode } from "./audio/karaokeGuide";
+import type { RecordingCaptureMode } from "./audio/vocalCapture";
 import NoteLyrics from "./components/NoteLyrics";
 import SoundEffectEditor from "./components/SoundEffectEditor";
 import AccountLibrary from "./components/AccountLibrary";
 import CommunityAlbum from "./components/CommunityAlbum";
+import HarmonyPresetChooser from "./components/HarmonyPresetChooser";
+import SongMoodSetup from "./components/SongMoodSetup";
 import PublishScoreDialog from "./components/PublishScoreDialog";
 import { firebaseConfigured } from "./firebase/config";
 import type { User } from "./firebase/client";
 import type { PublishedSong } from "./firebase/communityAlbums";
 import type { CloudScore } from "./firebase/scores";
-import { ACCOMPANIMENT_GENRE_STYLES, ACCOMPANIMENT_PLAYING_STYLES, ENSEMBLE_PRESETS, MAX_ACCOMPANIMENT_INSTRUMENTS, accompanimentInstrumentPart, createAccompanimentPattern, findAccompanimentStyle,
+import { ACCOMPANIMENT_MODES, ACCOMPANIMENT_PLAYING_STYLES, MAX_ACCOMPANIMENT_INSTRUMENTS, accompanimentInstrumentPart, createAccompanimentPattern, findAccompanimentStyle, isAccompanimentInstrument,
   type AccompanimentStyleId } from "./music/accompaniment";
 import { getCandidates, MELODY_CANDIDATE_COUNT, MELODY_FEELING_GROUPS } from "./music/candidates";
-import { chooseRecommendedCandidate, rankRecommendedCandidates, recommendationFeelingForMeasure, recommendedEndingPitch } from "./music/recommendation";
+import { rankRecommendedCandidates } from "./music/recommendation";
 import { chordMidiPitches, chordPitchClasses } from "./music/chord";
 import { DRAFT_STORAGE_KEY, isSavedDraft, readDraft, writeDraft, type SavedDraft } from "./music/draft";
 import { findHarmonyPreset, HARMONY_PRESETS, type HarmonyPreset } from "./music/harmonyPresets";
 import { findInstrument, INSTRUMENTS, type InstrumentId } from "./music/instruments";
 import { measureCapacity, meterKey, SUPPORTED_METERS, validateMeasure, type Meter } from "./music/meter";
 import { rational, toNumber } from "./music/rational";
+import { prioritizeCandidatesForRhythm, RHYTHM_PREFERENCE_LABELS, rhythmPreferenceForStyle } from "./music/rhythmPreference";
 import { pitchName, positionNotes } from "./music/score";
 import { findSoundEffect, type SoundEffectId } from "./music/soundEffects";
 import { buildShareUrl, readCompositionFromHash, type SharedComposition } from "./music/share";
 import type { HarmonyStory, MelodyCandidate, NoteEvent, SoundEffectEvent } from "./music/types";
+import { useKaraokeAutoFocus } from "./hooks/useKaraokeAutoFocus";
 
 type MeasureDraft = {
   story: HarmonyStory;
@@ -46,10 +53,14 @@ function uniqueAccompanimentInstrumentIds(ids: readonly InstrumentId[]): Instrum
   const unique: InstrumentId[] = [];
   ids.forEach((id) => {
     const canonicalId = findInstrument(id).id;
-    if (!unique.includes(canonicalId) && unique.length < MAX_ACCOMPANIMENT_INSTRUMENTS) unique.push(canonicalId);
+    if (isAccompanimentInstrument(canonicalId) &&
+      !unique.includes(canonicalId) && unique.length < MAX_ACCOMPANIMENT_INSTRUMENTS) unique.push(canonicalId);
   });
   return unique.length > 0 ? unique : [findInstrument("piano").id];
 }
+
+const ACCOMPANIMENT_INSTRUMENTS = INSTRUMENTS.filter((instrument) =>
+  isAccompanimentInstrument(instrument.id));
 
 async function waitForVexScoreRender(timeoutMs = 4000): Promise<void> {
   const started = performance.now();
@@ -84,7 +95,7 @@ function backingDisplayNotes(measure: MeasureDraft, meter: Meter, styleId: Accom
   let sequence = 0;
   const events = chordSymbols.flatMap((chord, chordIndex) => {
     const pitches = chord ? chordMidiPitches(chord) : chordMidiPitches("C");
-    return createAccompanimentPattern(styleId, chordBeats).map((event) => {
+    return createAccompanimentPattern(styleId, chordBeats, meter).map((event) => {
       const id = `${section}-${displayIndex}-${sequence}`;
       sequence += 1;
       const pitch = event.voice === "root"
@@ -119,6 +130,7 @@ function backingDisplayNotes(measure: MeasureDraft, meter: Meter, styleId: Accom
 type SongLength = 8 | 12 | 16;
 type SongPlaybackState = "idle" | "playing" | "paused";
 type KaraokePhase = "idle" | "intro" | "song" | "outro" | "encoding" | "done" | "error";
+type KaraokeMode = "recording" | "practice";
 type BackingExportPhase = "idle" | "working" | "done" | "error";
 type KaraokeHighlight = Readonly<{
   section: "intro" | "song" | "outro";
@@ -313,7 +325,7 @@ export default function App() {
     ? savedDraft : null;
   const initialPreset = findHarmonyPreset(resumableDraft?.presetId ?? incomingShare?.presetId ?? HARMONY_PRESETS[0].id);
   const initialLength = resumableDraft?.songLength ?? incomingShare?.songLength ?? 8;
-  const initialAccompanimentStyleId = resumableDraft?.accompanimentStyleId ?? incomingShare?.accompanimentStyleId ?? "arpeggio";
+  const initialAccompanimentStyleId = resumableDraft?.accompanimentStyleId ?? incomingShare?.accompanimentStyleId ?? "children_song";
   const [selectedPresetId, setSelectedPresetId] = useState(initialPreset.id);
   const [songLength, setSongLength] = useState<SongLength>(initialLength);
   const [meter, setMeter] = useState<Meter>(resumableDraft?.meter ?? incomingShare?.meter ?? { beats: 4, beatUnit: 4 });
@@ -331,11 +343,11 @@ export default function App() {
   const historyCurrent = useRef<CompositionSnapshot | null>(null);
   const restoringHistory = useRef(false);
   const splitCounter = useRef(0);
-  const recommendationFillCount = useRef(0);
   const completionAnimationTimer = useRef<number | null>(null);
   const [recentCompletedIndex, setRecentCompletedIndex] = useState<number | null>(null);
   const [rhythmChecks, setRhythmChecks] = useState<Record<number, "valid" | "invalid">>({});
   const [playingId, setPlayingId] = useState<string | null>(null);
+  const [presetPreviewing, setPresetPreviewing] = useState(false);
   const [songPlaybackState, setSongPlaybackState] = useState<SongPlaybackState>("idle");
   const [playingMeasureIndex, setPlayingMeasureIndex] = useState<number | null>(null);
   const [playingNoteId, setPlayingNoteId] = useState<string | null>(null);
@@ -362,11 +374,10 @@ export default function App() {
   const [accompanimentStyleId, setAccompanimentStyleId] = useState<AccompanimentStyleId>(
     initialAccompanimentStyleId
   );
-  const [accompanimentStyleView, setAccompanimentStyleView] = useState<"genre" | "playing">(
-    findAccompanimentStyle(initialAccompanimentStyleId).category
-  );
+  const [accompanimentStyleView, setAccompanimentStyleView] = useState<"mode" | "playing">("mode");
+  const [showAllAccompanimentModes, setShowAllAccompanimentModes] = useState(false);
   const [accompanimentInstrumentIds, setAccompanimentInstrumentIds] = useState<InstrumentId[]>(() =>
-    uniqueAccompanimentInstrumentIds(resumableDraft?.accompanimentInstrumentIds ?? incomingShare?.accompanimentInstrumentIds ?? ["piano"])
+    uniqueAccompanimentInstrumentIds(resumableDraft?.accompanimentInstrumentIds ?? incomingShare?.accompanimentInstrumentIds ?? ["acoustic_grand_piano"])
   );
   const [bpm, setBpm] = useState(resumableDraft?.bpm ?? incomingShare?.bpm ?? 96);
   const [showArrangement, setShowArrangement] = useState(resumableDraft?.showArrangement === true || incomingShare !== null);
@@ -387,6 +398,11 @@ export default function App() {
   const [exportingBacking, setExportingBacking] = useState(false);
   const [backingExportPhase, setBackingExportPhase] = useState<BackingExportPhase>("idle");
   const [recordingSong, setRecordingSong] = useState(false);
+  const [practicingSong, setPracticingSong] = useState(false);
+  const [karaokeMode, setKaraokeMode] = useState<KaraokeMode>("recording");
+  const [recordingCaptureMode, setRecordingCaptureMode] = useState<RecordingCaptureMode>("personal");
+  const [recordingGuideMode, setRecordingGuideMode] = useState<KaraokeGuideMode>("first-note");
+  const [recordingGuidePromptOpen, setRecordingGuidePromptOpen] = useState(false);
   const [recordingStatus, setRecordingStatus] = useState("");
   const [recordingDownloadUrl, setRecordingDownloadUrl] = useState("");
   const [recordedAudioBuffer, setRecordedAudioBuffer] = useState<AudioBuffer | null>(null);
@@ -414,8 +430,9 @@ export default function App() {
   const selectedPreset = findHarmonyPreset(selectedPresetId);
   const selectedInstrument = findInstrument(selectedInstrumentId);
   const selectedAccompanimentStyle = findAccompanimentStyle(accompanimentStyleId);
-  const activeEnsemblePresetId = ENSEMBLE_PRESETS.find((preset) =>
-    sameInstrumentOrder(preset.instrumentIds, accompanimentInstrumentIds))?.id ?? null;
+  const activeAccompanimentMode = ACCOMPANIMENT_MODES.find((mode) =>
+    mode.styleId === accompanimentStyleId &&
+    sameInstrumentOrder(mode.instrumentIds, accompanimentInstrumentIds)) ?? null;
   const canRenderMobileRecordingQr = mobileRecordingUrl.length > 0 && mobileRecordingUrl.length <= QR_RENDER_LIMIT;
 
   const activeMeasure = measures[activeIndex];
@@ -432,9 +449,11 @@ export default function App() {
       .map((measure) => candidates.findIndex((candidate) => candidate.id === measure.candidateId))
       .filter((index) => index >= 0));
     const previousCandidateIndex = candidates.findIndex((candidate) => candidate.id === measures[activeIndex - 1]?.candidateId);
-    return rankRecommendedCandidates(candidates, activeMeasure.chords, previousPitch, activeIndex, measures.length,
-      previousCandidateIndex, earlierIndexes);
-  }, [activeIndex, activeMeasure.chords, candidates, measures]);
+    const harmonyRanked = rankRecommendedCandidates(candidates, activeMeasure.chords, previousPitch, activeIndex,
+      measures.length, previousCandidateIndex, earlierIndexes);
+    return prioritizeCandidatesForRhythm(harmonyRanked, accompanimentStyleId);
+  }, [accompanimentStyleId, activeIndex, activeMeasure.chords, candidates, measures]);
+  const rhythmPreferenceLabel = RHYTHM_PREFERENCE_LABELS[rhythmPreferenceForStyle(accompanimentStyleId)];
   const visibleCandidates = showMoreCandidates ? candidatePriority : candidatePriority.slice(0, 6);
   const pitchReviewByMeasure = useMemo(() => {
     const worstByMeasure = new Map<number, RecordingPitchReview>();
@@ -468,7 +487,9 @@ export default function App() {
   const accompanimentReady = showArrangement && allValid;
   const activeStep = showArrangement ? 3 : 2;
   const playingSong = songPlaybackState !== "idle";
-  const isAnyPlaying = playingId !== null || playingSong || playingMeasure;
+  const karaokeRunning = recordingSong || practicingSong;
+  const isAnyPlaying = playingId !== null || playingSong || playingMeasure || karaokeRunning || presetPreviewing;
+  useKaraokeAutoFocus(karaokeOpen, karaokeRunning, karaokeHighlight);
   const updateLyricNotePositions = useCallback((index: number, positions: Record<string, { x: number; y: number }>) => {
     setLyricNotePositions((current) => {
       const previous = current[index] ?? {};
@@ -701,7 +722,6 @@ export default function App() {
     setSelectedNoteId("");
     setSelectedNoteIds([]);
     setShowArrangement(false);
-    recommendationFillCount.current = 0;
   }
 
   function undoCompositionChange() {
@@ -736,7 +756,6 @@ export default function App() {
     setSelectedNoteId("");
     setSelectedNoteIds([]);
     setShowArrangement(false);
-    recommendationFillCount.current = 0;
   }
 
   function choosePreset(id: string) {
@@ -749,7 +768,6 @@ export default function App() {
     setSelectedNoteId("");
     setSelectedNoteIds([]);
     setShowArrangement(false);
-    recommendationFillCount.current = 0;
   }
 
   function chooseLength(length: SongLength) {
@@ -762,7 +780,6 @@ export default function App() {
     setSelectedNoteId("");
     setSelectedNoteIds([]);
     setShowArrangement(false);
-    recommendationFillCount.current = 0;
   }
 
   function updateActiveMeasure(update: (measure: MeasureDraft) => MeasureDraft) {
@@ -796,43 +813,6 @@ export default function App() {
         completionAnimationTimer.current = null;
       }, 900);
     }
-  }
-
-  function fillRecommended() {
-    const recommendationIndex = recommendationFillCount.current;
-    recommendationFillCount.current += 1;
-    let previousPitch: number | null = null;
-    let previousCandidateIndex = -1;
-    const usedCandidateIndexes = new Set<number>();
-    const recommendedMeasures = measures.map((measure, index) => {
-      const measureCandidates = getCandidates(measure.story, meter, measure.chords);
-      const candidate = chooseRecommendedCandidate(
-        measureCandidates,
-        measure.chords,
-        previousPitch,
-        index,
-        measures.length,
-        previousCandidateIndex,
-        usedCandidateIndexes,
-        recommendationFeelingForMeasure(recommendationIndex, index, measures.length),
-        recommendationIndex + index * 2
-      );
-      previousCandidateIndex = measureCandidates.indexOf(candidate);
-      usedCandidateIndexes.add(previousCandidateIndex);
-      previousPitch = recommendedEndingPitch(candidate);
-      return {
-        ...measure,
-        candidateId: candidate.id,
-        candidateName: candidate.name,
-        notes: candidate.notes
-      };
-    });
-    setMeasures(recommendedMeasures);
-    setRhythmChecks({});
-    const activeCandidate = recommendedMeasures[activeIndex];
-    setSelectedNoteId(activeCandidate.notes[0]?.id ?? "");
-    setSelectedNoteIds(activeCandidate.notes[0] ? [activeCandidate.notes[0].id] : []);
-    setEditStatus("");
   }
 
   async function preview(candidate: MelodyCandidate, event?: React.MouseEvent) {
@@ -925,7 +905,8 @@ export default function App() {
     if (playable.length === 0) return;
     const duration = await playComposition(playable, selectedInstrumentId, bpm, accompanimentReady ? {
       styleId: accompanimentStyleId,
-      instrumentIds: accompanimentInstrumentIds
+      instrumentIds: accompanimentInstrumentIds,
+      meter
     } : undefined);
     if (duration === null) return;
     const secondsPerBeat = 60 / bpm;
@@ -994,7 +975,8 @@ export default function App() {
       measureIndex: activeIndex
     }], selectedInstrumentId, bpm, accompanimentReady ? {
       styleId: accompanimentStyleId,
-      instrumentIds: accompanimentInstrumentIds
+      instrumentIds: accompanimentInstrumentIds,
+      meter
     } : undefined);
     if (duration === null) return;
     setPlayingMeasure(true);
@@ -1508,7 +1490,8 @@ export default function App() {
     try {
       const blob = await exportBackingCompositionMp3(playable, selectedInstrumentId, bpm, {
         styleId: accompanimentStyleId,
-        instrumentIds: accompanimentInstrumentIds
+        instrumentIds: accompanimentInstrumentIds,
+        meter
       });
       if (!blob) {
         setShareStatus("다른 연주나 녹음이 끝난 뒤에 다시 저장해 주세요.");
@@ -1582,7 +1565,7 @@ export default function App() {
     setSelectedInstrumentId(findInstrument(project.instrumentId).id);
     const nextAccompanimentStyle = findAccompanimentStyle(project.accompanimentStyleId ?? "arpeggio");
     setAccompanimentStyleId(nextAccompanimentStyle.id);
-    setAccompanimentStyleView(nextAccompanimentStyle.category);
+    setAccompanimentStyleView(nextAccompanimentStyle.category === "playing" ? "playing" : "mode");
     setAccompanimentInstrumentIds(uniqueAccompanimentInstrumentIds(project.accompanimentInstrumentIds ?? ["piano"]));
     setBpm(project.bpm ?? 96);
     setShowArrangement(project.showArrangement);
@@ -1707,7 +1690,8 @@ export default function App() {
     const duration = await playComposition(playable, findInstrument(song.draft.instrumentId).id,
       song.draft.bpm ?? 96, song.draft.showArrangement ? {
         styleId: findAccompanimentStyle(song.draft.accompanimentStyleId ?? "arpeggio").id,
-        instrumentIds: uniqueAccompanimentInstrumentIds(song.draft.accompanimentInstrumentIds ?? ["piano"])
+        instrumentIds: uniqueAccompanimentInstrumentIds(song.draft.accompanimentInstrumentIds ?? ["piano"]),
+        meter: song.draft.meter
       } : undefined);
     return duration !== null;
   }
@@ -1782,14 +1766,16 @@ export default function App() {
     return `${safeTitle}.${extension}`;
   }
 
-  async function recordSongMp3() {
+  async function recordSongMp3(guideMode: KaraokeGuideMode = recordingGuideMode,
+    captureMode: RecordingCaptureMode = recordingCaptureMode) {
     if (!allValid || printableMeasures.length !== songLength) {
       setRecordingStatus("먼저 모든 마디를 정확한 박자로 완성해 주세요.");
       return;
     }
-    if (recordingSong) return;
+    if (karaokeRunning) return;
     const abortController = new AbortController();
     karaokeAbortController.current = abortController;
+    setKaraokeMode("recording");
     setRecordingSong(true);
     setKaraokeOpen(true);
     setKaraokePhase("intro");
@@ -1820,8 +1806,11 @@ export default function App() {
     try {
       const result = await recordKaraokeComposition(playable, selectedInstrumentId, bpm, {
         styleId: accompanimentStyleId,
-        instrumentIds: accompanimentInstrumentIds
+        instrumentIds: accompanimentInstrumentIds,
+        meter
       }, {
+        guideMelodyMode: guideMode,
+        recordingMode: captureMode,
         onStatus: setRecordingStatus,
         onInputLevel: setMicrophoneLevel,
         onPhase: setKaraokePhase,
@@ -1840,18 +1829,16 @@ export default function App() {
       setRecordedAudioBuffer(result.audioBuffer);
       setRecordedVocalBuffer(result.vocalAudioBuffer);
       setRecordedBackingBuffer(result.backingAudioBuffer);
-      setAnalyzingPitch(true);
+      setAnalyzingPitch(captureMode === "personal");
       // Run after the recording UI has settled so pitch checking never makes
       // the final recording feel slow. This is a gentle review, not a grade.
-      window.setTimeout(() => {
+      if (captureMode === "personal") window.setTimeout(() => {
         try {
           setPitchReviews(reviewRecordedPitch(result.audioBuffer, playable, result.introSeconds, 60 / bpm));
         } finally {
           setAnalyzingPitch(false);
         }
       }, 0);
-      setRecordingStatus("녹음이 끝났어요. 미리 들어보고 보정한 뒤 저장해 주세요.");
-      setRecordingStatus(`완료! 앞 ${Math.round(result.introSeconds)}초는 4마디 반주 인트로로 들어갔어요.`);
       setRecordingStatus("녹음이 끝났어요. 미리 들어보고 보정한 뒤 저장해 주세요.");
     } catch (error) {
       if (abortController.signal.aborted) {
@@ -1871,9 +1858,69 @@ export default function App() {
     }
   }
 
+  async function practiceSong() {
+    if (!allValid || printableMeasures.length !== songLength) {
+      setRecordingStatus("먼저 모든 마디를 정확한 박자로 완성해 주세요.");
+      return;
+    }
+    if (karaokeRunning) return;
+    const abortController = new AbortController();
+    karaokeAbortController.current = abortController;
+    setKaraokeMode("practice");
+    setPracticingSong(true);
+    setKaraokeOpen(true);
+    setKaraokePhase("intro");
+    setKaraokeCount(null);
+    setMicrophoneLevel(0);
+    setReviewPlaybackNoteId(null);
+    setKaraokeHighlight({ section: "intro", measureIndex: null, noteId: null });
+    setRecordingStatus("연습 반주와 메인 가락을 준비하고 있어요.");
+    const playable = measures.flatMap((measure, index) => measure.notes ? [{
+      notes: measure.notes,
+      harmony: measure.story,
+      chords: measure.chords,
+      effects: measure.effects,
+      measureIndex: index
+    }] : []);
+    try {
+      const duration = await practiceKaraokeComposition(playable, selectedInstrumentId, bpm, {
+        styleId: accompanimentStyleId,
+        instrumentIds: accompanimentInstrumentIds,
+        meter
+      }, {
+        onStatus: setRecordingStatus,
+        onPhase: setKaraokePhase,
+        onCount: setKaraokeCount,
+        onHighlight: setKaraokeHighlight
+      }, {
+        beats: meter.beats,
+        unitBeats: 4 / meter.beatUnit
+      }, abortController.signal);
+      if (duration === null && !abortController.signal.aborted) {
+        setKaraokePhase("error");
+        setRecordingStatus("다른 연주가 끝난 뒤에 다시 연습해 주세요.");
+      }
+    } catch (error) {
+      if (abortController.signal.aborted) {
+        setKaraokePhase("idle");
+        setKaraokeCount(null);
+        setKaraokeHighlight({ section: "intro", measureIndex: null, noteId: null });
+        setRecordingStatus("노래 연습을 중단했어요. 녹음된 파일은 없어요.");
+        return;
+      }
+      console.error(error);
+      setKaraokePhase("error");
+      setRecordingStatus(error instanceof Error ? error.message : "연습 재생 중 문제가 생겼어요.");
+    } finally {
+      if (karaokeAbortController.current === abortController) karaokeAbortController.current = null;
+      setPracticingSong(false);
+    }
+  }
+
   function closeKaraokeWindow() {
-    if (recordingSong) {
-      setRecordingStatus("녹음을 중단하고 마이크를 끄는 중이에요.");
+    if (karaokeRunning) {
+      if (practicingSong) setRecordingStatus("노래 연습을 중단하는 중이에요.");
+      else setRecordingStatus("녹음을 중단하고 마이크를 끄는 중이에요.");
       karaokeAbortController.current?.abort();
     }
     setKaraokeOpen(false);
@@ -1929,12 +1976,12 @@ export default function App() {
 
   function karaokePhaseLabel(): string {
     if (karaokePhase === "intro") return "인트로 4마디";
-    if (karaokePhase === "song") return "노래 녹음 중";
+    if (karaokePhase === "song") return karaokeMode === "practice" ? "가락 연습 중" : "노래 녹음 중";
     if (karaokePhase === "outro") return "아웃트로 4마디";
-    if (karaokePhase === "encoding") return "MP3 만드는 중";
-    if (karaokePhase === "done") return "녹음 완료";
-    if (karaokePhase === "error") return "녹음 확인 필요";
-    return "녹음 준비";
+    if (karaokePhase === "encoding") return karaokeMode === "practice" ? "연습 마무리" : "MP3 만드는 중";
+    if (karaokePhase === "done") return karaokeMode === "practice" ? "연습 완료" : "녹음 완료";
+    if (karaokePhase === "error") return karaokeMode === "practice" ? "연습 확인 필요" : "녹음 확인 필요";
+    return karaokeMode === "practice" ? "연습 준비" : "녹음 준비";
   }
 
   return (
@@ -2086,39 +2133,57 @@ export default function App() {
       )}
 
       {karaokeOpen && (
-        <div className="karaoke-overlay" role="dialog" aria-modal="true" aria-label="노래 녹음 창">
-          <section className="karaoke-window">
+        <div className="karaoke-overlay" role="dialog" aria-modal="true"
+          aria-label={karaokeMode === "practice" ? "노래 연습 창" : "노래 녹음 창"}>
+          <section className={`karaoke-window ${karaokeMode}`}>
             <div className="karaoke-toolbar">
               <div>
                 <span className={`karaoke-phase ${karaokePhase}`}>{karaokePhaseLabel()}</span>
                 <h2>{songTitle || "나의 노래"}</h2>
-                <p>{recordingStatus || "4마디 인트로 뒤에 노래를 불러 주세요."}</p>
-                <div className="microphone-level" aria-label="마이크 입력 크기">
-                  <span>마이크</span>
-                  <i><b style={{ width: `${Math.round(microphoneLevel * 100)}%` }} /></i>
-                  <em>{microphoneLevel < .12 ? "조금 더 가까이" : microphoneLevel > .86 ? "조금만 멀리" : "좋아요"}</em>
-                </div>
-                <div className="recording-tips" aria-label="녹음 도움말">
-                  <span>🎧 이어폰을 써요</span>
-                  <span>🎙️ 입에서 10~15cm</span>
-                  <span>🤫 조용한 곳에서</span>
-                </div>
+                <p>{recordingStatus || (karaokeMode === "practice"
+                  ? "4마디 인트로 뒤에 메인 가락을 들으며 노래해요."
+                  : "4마디 인트로 뒤에 노래를 불러 주세요.")}</p>
+                {karaokeMode === "recording" ? (
+                  <>
+                    <div className="microphone-level" aria-label="마이크 입력 크기">
+                      <span>마이크</span>
+                      <i><b style={{ width: `${Math.round(microphoneLevel * 100)}%` }} /></i>
+                      <em>{microphoneLevel < .12 ? "조금 더 가까이" : microphoneLevel > .86 ? "조금만 멀리" : "좋아요"}</em>
+                    </div>
+                    <div className="recording-tips" aria-label="녹음 도움말">
+                      {recordingCaptureMode === "choir" ? <>
+                        <span>👥 모두 함께 불러요</span><span>🎙️ 마이크는 앞 가운데</span><span>🔊 스피커와 마이크는 떨어뜨려요</span>
+                      </> : <>
+                        <span>🎧 이어폰을 써요</span><span>🎙️ 입에서 10~15cm</span><span>🤫 조용한 곳에서</span>
+                      </>}
+                    </div>
+                  </>
+                ) : (
+                  <div className="practice-tips" aria-label="노래 연습 도움말">
+                    <span>🎵 메인 가락을 따라 불러요</span>
+                    <span>🔒 마이크·녹음 사용 안 함</span>
+                    <span>👀 주황색 음표를 따라가요</span>
+                  </div>
+                )}
               </div>
-              <button type="button" className={recordingSong ? "karaoke-force-stop" : "karaoke-close"}
-                data-testid={recordingSong ? "force-stop-recording" : "close-recording"}
-                aria-label={recordingSong ? "녹음 강제 종료" : "녹음 창 닫기"}
+              <button type="button" className={karaokeRunning ? "karaoke-force-stop" : "karaoke-close"}
+                data-testid={recordingSong ? "force-stop-recording" : practicingSong ? "stop-song-practice" : "close-karaoke"}
+                aria-label={recordingSong ? "녹음 강제 종료" : practicingSong ? "노래 연습 종료" : "카라오케 창 닫기"}
                 onClick={closeKaraokeWindow}>
-                {recordingSong ? <><Square size={17} /> 녹음 끝내기</> : "닫기"}
+                {recordingSong ? <><Square size={17} /> 녹음 끝내기</>
+                  : practicingSong ? <><Square size={17} /> 연습 끝내기</> : "닫기"}
               </button>
             </div>
 
             <div className="karaoke-score" data-testid="karaoke-score-window">
               {karaokeCount !== null && <div className="karaoke-count">{karaokeCount}</div>}
-              <div className={karaokePhase === "intro" ? "karaoke-system active" : "karaoke-system"}>
+              <div className={karaokePhase === "intro" ? "karaoke-system active" : "karaoke-system"}
+                data-karaoke-section-panel="intro">
                 <div className="karaoke-system-label">인트로 반주 4마디</div>
                 <div className="karaoke-measure-row">
                   {karaokeIntroMeasures.map((measure, index) => (
-                    <div key={`intro-${index}`} className="karaoke-backing-measure">
+                    <div key={`intro-${index}`} className="karaoke-backing-measure" tabIndex={-1}
+                      data-karaoke-section="intro" data-karaoke-measure-index={index}>
                       <span>{index + 1}마디</span>
                       <em>{measure.chords.join(" · ")}</em>
                       <ScoreMeasure notes={backingDisplayNotes(measure, meter, accompanimentStyleId, "intro", index)}
@@ -2131,15 +2196,19 @@ export default function App() {
                 </div>
               </div>
 
-              <div className={karaokePhase === "song" ? "karaoke-system active" : "karaoke-system"}>
-                <div className="karaoke-system-label">노래 부르는 부분</div>
+              <div className={karaokePhase === "song" ? "karaoke-system active" : "karaoke-system"}
+                data-karaoke-section-panel="song">
+                <div className="karaoke-system-label">
+                  {karaokeMode === "practice" ? "메인 가락을 들으며 노래하는 부분" : "노래 부르는 부분"}
+                </div>
                 {Array.from({ length: Math.ceil(measures.length / 4) }, (_, rowIndex) => (
                   <div key={`song-row-${rowIndex}`} className="karaoke-measure-row">
                     {measures.slice(rowIndex * 4, rowIndex * 4 + 4).map((measure, columnIndex) => {
                       const measureIndex = rowIndex * 4 + columnIndex;
                       const active = karaokeHighlight.section === "song" && karaokeHighlight.measureIndex === measureIndex;
                       return (
-                        <div key={`song-${measureIndex}`} className={active ? "karaoke-song-measure active" : "karaoke-song-measure"}>
+                        <div key={`song-${measureIndex}`} className={active ? "karaoke-song-measure active" : "karaoke-song-measure"}
+                          tabIndex={-1} data-karaoke-section="song" data-karaoke-measure-index={measureIndex}>
                           <span>{measureIndex + 1}마디</span>
                           <em>{measure.chords.join(" · ")}</em>
                           <ScoreMeasure notes={measure.notes ?? []} meter={meter} compact systemMeasure
@@ -2160,25 +2229,27 @@ export default function App() {
                 ))}
               </div>
 
-              <div className={karaokePhase === "outro" ? "karaoke-system active" : "karaoke-system"}>
+              <div className={karaokePhase === "outro" ? "karaoke-system active" : "karaoke-system"}
+                data-karaoke-section-panel="outro">
                 <div className="karaoke-system-label">아웃트로 반주 4마디</div>
                 <div className="karaoke-measure-row">
                   {karaokeOutroMeasures.map((measure, index) => (
-                    <div key={`outro-${index}`} className="karaoke-backing-measure">
+                    <div key={`outro-${index}`} className="karaoke-backing-measure" tabIndex={-1}
+                      data-karaoke-section="outro" data-karaoke-measure-index={index}>
                       <span>{index + 1}마디</span>
                       <em>{measure.chords.join(" · ")}</em>
                       <ScoreMeasure notes={backingDisplayNotes(measure, meter, accompanimentStyleId, "outro", index)}
                         meter={meter} compact systemMeasure showSignature={index === 0}
                         playingNoteId={karaokeHighlight.section === "outro" && karaokeHighlight.measureIndex === index
                           ? karaokeHighlight.noteId : null} />
-                      <small>마지막 반주 뒤 자동 저장돼요</small>
+                      <small>{karaokeMode === "practice" ? "마지막 반주까지 듣고 마무리해요" : "마지막 반주 뒤 자동 저장돼요"}</small>
                     </div>
                   ))}
                 </div>
               </div>
             </div>
 
-            {recordingDownloadUrl && (
+            {karaokeMode === "recording" && recordingDownloadUrl && (
               <div className="karaoke-post-panel">
                 <h3>녹음 미리듣기와 보정</h3>
                 <audio ref={recordingPreviewRef} key={recordingDownloadUrl} controls src={recordingDownloadUrl}
@@ -2197,11 +2268,13 @@ export default function App() {
                 </label>
                 <section className="pitch-review" aria-live="polite">
                   <div>
-                    <strong>가락 맞춰 보기</strong>
-                    <span>{analyzingPitch ? "내 노래의 음높이를 살펴보고 있어요..." : "빨간 음표는 목표 음과 차이가 컸던 곳이에요."}</span>
+                    <strong>{recordingCaptureMode === "choir" ? "합창 녹음" : "가락 맞춰 보기"}</strong>
+                    <span>{recordingCaptureMode === "choir" ? "여러 목소리가 함께 나와 개인 음정 검사는 하지 않아요."
+                      : analyzingPitch ? "내 노래의 음높이를 살펴보고 있어요..." : "빨간 음표는 목표 음과 차이가 컸던 곳이에요."}</span>
                   </div>
                   {!analyzingPitch && pitchReviewByMeasure.length === 0 && (
-                    <p>크게 벗어난 음을 찾지 못했어요. 소리가 작았던 곳은 다음에 한 번 더 들어 보세요.</p>
+                    <p>{recordingCaptureMode === "choir" ? "미리듣기로 목소리와 반주의 크기를 확인해 보세요."
+                      : "크게 벗어난 음을 찾지 못했어요. 소리가 작았던 곳은 다음에 한 번 더 들어 보세요."}</p>
                   )}
                   <div className="pitch-review-list">
                     {pitchReviewByMeasure.map((review) => (
@@ -2247,6 +2320,14 @@ export default function App() {
         </div>
       )}
 
+      {recordingGuidePromptOpen && (
+        <RecordingGuideDialog value={recordingGuideMode} onChange={setRecordingGuideMode}
+          onCancel={() => setRecordingGuidePromptOpen(false)} onStart={(captureMode, guideMode) => {
+            setRecordingCaptureMode(captureMode); setRecordingGuideMode(guideMode);
+            setRecordingGuidePromptOpen(false); void recordSongMp3(guideMode, captureMode);
+          }} />
+      )}
+
       {mobileRecordMode && (
         <main className="mobile-record-main">
           <section className="mobile-record-panel" aria-label="스마트폰 녹음 전용 화면">
@@ -2271,8 +2352,8 @@ export default function App() {
                 이 주소는 localhost라서 스마트폰에서 데스크탑 앱에 접근하지 못할 수 있어요. 배포된 HTTPS 주소에서 만든 QR을 쓰면 가장 안정적입니다.
               </p>
             )}
-            <button type="button" className="mobile-record-start action-button" disabled={recordingSong || !allValid}
-              onClick={() => void recordSongMp3()}>
+            <button type="button" className="mobile-record-start action-button" disabled={karaokeRunning || !allValid}
+              onClick={() => setRecordingGuidePromptOpen(true)}>
               <Mic2 size={24} /> {recordingSong ? "녹음 중..." : "녹음 시작"}
             </button>
             {recordingStatus && <p className="mobile-record-status" role="status">{recordingStatus}</p>}
@@ -2308,34 +2389,17 @@ export default function App() {
           </div>
         </section>}
 
-        <section className="preset-chooser setup-with-guide" aria-labelledby="preset-heading">
-          <div className="compact-heading">
-            <span className="number-badge">1</span>
-            <div><h2 id="preset-heading">화음 이야기를 골라요</h2><p>어려운 이름 대신 느낌과 장면으로 고를 수 있어요.</p></div>
-          </div>
-          <div className="preset-picker">
-            <label>
-              <span>100가지 이야기</span>
-              <select data-testid="harmony-preset-select" value={selectedPresetId}
-                onChange={(event) => choosePreset(event.target.value)}>
-                {HARMONY_PRESETS.map((preset) => (
-                  <option key={preset.id} value={preset.id}>{preset.id} · {preset.childName}</option>
-                ))}
-              </select>
-            </label>
-            <div className="preset-summary">
-              <span>{selectedPreset.category} · {selectedPreset.difficulty}</span>
-              <strong>{selectedPreset.childName}</strong>
-              <p>{selectedPreset.mood}</p>
-            </div>
-          </div>
-          <img className="workspace-guide setup-guide-boy" src="/illustrations/guide-boy-v1.webp"
-            alt="" aria-hidden="true" draggable="false" />
-        </section>
+        <SongMoodSetup bpm={bpm} rhythmStyleId={accompanimentStyleId} disabled={isAnyPlaying}
+          onTempoChange={setBpm} onRhythmChange={setAccompanimentStyleId} />
+
+        <HarmonyPresetChooser preset={selectedPreset} meter={meter}
+          bpm={bpm} accompanimentStyleId={accompanimentStyleId}
+          disabled={isAnyPlaying} playing={presetPreviewing}
+          onPlayingChange={setPresetPreviewing} onSelect={choosePreset} />
 
         <section className="meter-chooser meter-with-guide" aria-labelledby="meter-heading">
           <div className="compact-heading">
-            <span className="number-badge">2</span>
+            <span className="number-badge">3</span>
             <div><h2 id="meter-heading">노래의 박자를 골라요</h2><p>박자를 바꾸면 작곡이 새로 시작돼요.</p></div>
           </div>
           <div className="meter-options">
@@ -2359,7 +2423,7 @@ export default function App() {
 
         <section className="length-chooser" aria-labelledby="length-heading">
           <div className="compact-heading">
-            <span className="number-badge">3</span>
+            <span className="number-badge">4</span>
             <div><h2 id="length-heading">노래 길이를 골라요</h2><p>처음에는 8마디, 긴 이야기는 12·16마디가 좋아요.</p></div>
           </div>
           <div className="length-options">
@@ -2377,7 +2441,7 @@ export default function App() {
           <div className="score-workspace-column">
         <section className="composition-section" aria-labelledby="composition-heading">
           <div className="compact-heading timeline-heading">
-            <span className="number-badge">4</span>
+            <span className="number-badge">5</span>
             <div><h2 id="composition-heading">{songLength}마디를 차례로 채워요</h2><p>색깔은 마디마다 어울리는 화음 느낌을 알려줘요.</p></div>
             <div className="timeline-actions">
               <label className="tempo-control">
@@ -2392,9 +2456,6 @@ export default function App() {
                   <strong>BPM</strong>
                 </span>
               </label>
-              <button type="button" className="ghost-button action-button" data-testid="fill-recommended" onClick={fillRecommended}>
-                <WandSparkles size={17} /> 추천으로 모두 채우기
-              </button>
               <button type="button" className="ghost-button action-button" data-testid="play-song-from-start"
                 disabled={completedCount === 0 || isAnyPlaying}
                 onClick={() => void playWholeSong(0)}>
@@ -2579,9 +2640,9 @@ export default function App() {
           <div className="candidate-priority-note">
             <div>
               <strong>{showMoreCandidates ? "모든 가락 보기" : "지금 마디에 추천하는 가락 6개"}</strong>
-              <span>{activeIndex === 0 ? "노래의 시작을 또렷하게 열어 주는 가락이에요." :
-              activeIndex === songLength - 1 ? "노래를 자연스럽게 마무리하는 가락이에요." :
-                "앞 마디와 부드럽게 이어지고, 다음 마디로 나아가는 가락이에요."}</span>
+              <span>{showMoreCandidates
+                ? `추천 밖의 다른 성격까지 ${MELODY_CANDIDATE_COUNT}개를 모두 보여줘요.`
+                : `"${rhythmPreferenceLabel}" 성격과 화음에 잘 맞는 가락을 먼저 보여줘요.`}</span>
             </div>
             <div className="candidate-view-toggle" role="group" aria-label="가락 보기 방식">
               <button type="button" className={!showMoreCandidates ? "active" : ""}
@@ -2727,44 +2788,94 @@ export default function App() {
                 <div className="accompaniment-heading">
                   <div>
                     <span className="section-kicker">자동 반주 만들기</span>
-                    <h2 id="accompaniment-heading">노래 뒤에 어울리는 악기들을 붙여요</h2>
-                    <p>장르나 연주 방식을 고르고, 필요한 악기를 더해 나만의 반주를 만들어요.</p>
+                    <h2 id="accompaniment-heading">어떤 느낌으로 연주할까요?</h2>
+                    <p>마음에 드는 카드를 하나 누르면 반주가 바로 완성돼요.</p>
                   </div>
                 </div>
                 <div className="accompaniment-summary">
-                  <small>지금 반주</small>
-                  <strong>{selectedAccompanimentStyle.name}</strong>
-                  <span>{accompanimentInstrumentIds.length}개 악기</span>
+                  <small>내가 고른 반주</small>
+                  <strong>{activeAccompanimentMode?.name ?? "내가 만든 반주"}</strong>
+                  <span>{accompanimentInstrumentIds.length}개 악기가 함께 연주해요</span>
                 </div>
 
                 <div className="accompaniment-style-content">
                   <div className="accompaniment-style-tabs" role="tablist" aria-label="반주 선택 모드">
-                    <button type="button" role="tab" id="accompaniment-genre-tab" aria-controls="accompaniment-style-panel"
-                      data-testid="accompaniment-genre-tab" aria-selected={accompanimentStyleView === "genre"}
-                      className={accompanimentStyleView === "genre" ? "active" : ""}
-                      onClick={() => setAccompanimentStyleView("genre")}>장르 모드 <span>{ACCOMPANIMENT_GENRE_STYLES.length}</span></button>
+                    <button type="button" role="tab" id="accompaniment-mode-tab" aria-controls="accompaniment-style-panel"
+                      data-testid="accompaniment-mode-tab" aria-selected={accompanimentStyleView === "mode"}
+                      className={accompanimentStyleView === "mode" ? "active" : ""}
+                      onClick={() => setAccompanimentStyleView("mode")}>쉬운 반주 고르기</button>
                     <button type="button" role="tab" id="accompaniment-playing-tab" aria-controls="accompaniment-style-panel"
                       data-testid="accompaniment-playing-tab" aria-selected={accompanimentStyleView === "playing"}
                       className={accompanimentStyleView === "playing" ? "active" : ""}
-                      onClick={() => setAccompanimentStyleView("playing")}>연주 방식 <span>{ACCOMPANIMENT_PLAYING_STYLES.length}</span></button>
+                      onClick={() => setAccompanimentStyleView("playing")}>내가 직접 바꾸기</button>
                   </div>
-                  <div className="accompaniment-style-grid" role="tabpanel" id="accompaniment-style-panel"
-                    aria-labelledby={accompanimentStyleView === "genre" ? "accompaniment-genre-tab" : "accompaniment-playing-tab"}
-                    aria-label={accompanimentStyleView === "genre" ? "장르 반주 선택" : "반주 연주 방식 선택"}>
-                    {(accompanimentStyleView === "genre" ? ACCOMPANIMENT_GENRE_STYLES : ACCOMPANIMENT_PLAYING_STYLES).map((style) => (
-                      <button key={style.id} type="button" data-testid={`accompaniment-style-${style.id}`}
-                        className={accompanimentStyleId === style.id ? "accompaniment-style active" : "accompaniment-style"}
-                        aria-pressed={accompanimentStyleId === style.id}
-                        onClick={() => {
-                          setAccompanimentStyleId(style.id);
-                          if (style.recommendedInstrumentIds) {
-                            setAccompanimentInstrumentIds(uniqueAccompanimentInstrumentIds(style.recommendedInstrumentIds));
-                          }
-                        }}>
-                        <span>{style.alias}</span><strong>{style.name}</strong><small>{style.description}</small>
-                        {style.recommendedInstrumentIds && <em>추천 악기 {style.recommendedInstrumentIds.length}개 함께 선택</em>}
-                      </button>
-                    ))}
+                  <div role="tabpanel" id="accompaniment-style-panel"
+                    aria-labelledby={accompanimentStyleView === "mode" ? "accompaniment-mode-tab" : "accompaniment-playing-tab"}
+                    aria-label={accompanimentStyleView === "mode" ? "쉬운 반주 선택" : "반주 직접 바꾸기"}>
+                    {accompanimentStyleView === "mode" ? (
+                      <>
+                        <div className="accompaniment-mode-grid" role="group" aria-label="쉬운 반주 선택">
+                          {ACCOMPANIMENT_MODES.slice(0, showAllAccompanimentModes ? ACCOMPANIMENT_MODES.length : 6)
+                            .map((mode) => (
+                              <button key={mode.id} type="button" data-testid={`accompaniment-mode-${mode.id}`}
+                                className={activeAccompanimentMode?.id === mode.id ? "active" : ""}
+                                aria-pressed={activeAccompanimentMode?.id === mode.id}
+                                disabled={isAnyPlaying}
+                                onClick={() => {
+                                  setAccompanimentStyleId(mode.styleId);
+                                  setAccompanimentInstrumentIds(uniqueAccompanimentInstrumentIds(mode.instrumentIds));
+                                }}>
+                                <span>{mode.icon}</span>
+                                <strong>{mode.name}</strong>
+                                <small>{mode.description}</small>
+                              </button>
+                            ))}
+                        </div>
+                        <button type="button" className="accompaniment-more-modes"
+                          data-testid="toggle-more-accompaniment-modes"
+                          onClick={() => setShowAllAccompanimentModes((current) => !current)}>
+                          {showAllAccompanimentModes ? "자주 쓰는 6가지만 보기" : "다른 느낌 4개 더 보기"}
+                        </button>
+                        <div className="easy-accompaniment-result">
+                          <div>
+                            <strong>{activeAccompanimentMode
+                              ? `${activeAccompanimentMode.icon} ${activeAccompanimentMode.name} 반주가 준비됐어요`
+                              : "카드를 눌러 반주를 골라 보세요"}</strong>
+                            <span>{activeAccompanimentMode?.description ?? "어려운 설정은 하지 않아도 괜찮아요."}</span>
+                          </div>
+                          <div className="easy-accompaniment-instruments" aria-label="함께 연주하는 악기">
+                            {accompanimentInstrumentIds.map((instrumentId) => {
+                              const instrument = findInstrument(instrumentId);
+                              return <span key={`easy-${instrument.id}`}>{instrument.icon} {instrument.name}</span>;
+                            })}
+                          </div>
+                          <button type="button" className="easy-accompaniment-listen" data-testid="listen-selected-accompaniment"
+                            disabled={playingId !== null || playingMeasure}
+                            onClick={() => toggleWholeSong(0)}>
+                            <PlayIcon playing={songPlaybackState === "playing"} />
+                            {songPlaybackState === "playing" ? "잠깐 멈추기"
+                              : songPlaybackState === "paused" ? "계속 들어보기" : "지금 들어보기"}
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <p className="custom-accompaniment-help">
+                          더 자세히 만들고 싶을 때만 사용해요. 연주 방법을 고른 뒤 아래에서 악기를 더하거나 빼 보세요.
+                        </p>
+                        <div className="accompaniment-style-grid">
+                          {ACCOMPANIMENT_PLAYING_STYLES.map((style) => (
+                            <button key={style.id} type="button" data-testid={`accompaniment-style-${style.id}`}
+                              className={accompanimentStyleId === style.id ? "accompaniment-style active" : "accompaniment-style"}
+                              aria-pressed={accompanimentStyleId === style.id}
+                              disabled={isAnyPlaying}
+                              onClick={() => setAccompanimentStyleId(style.id)}>
+                              <span>{style.alias}</span><strong>{style.name}</strong><small>{style.description}</small>
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
                 <img className="workspace-guide accompaniment-guide-recorder"
@@ -2772,18 +2883,7 @@ export default function App() {
                   alt="" aria-hidden="true" draggable="false" />
               </div>
 
-              <div className="ensemble-presets">
-                <div><strong>빠른 악기 편성</strong><span>한 번에 골라도 되고 아래에서 하나씩 바꿔도 돼요.</span></div>
-                {ENSEMBLE_PRESETS.map((preset) => (
-                  <button key={preset.id} type="button" data-testid={`ensemble-${preset.id}`}
-                    className={activeEnsemblePresetId === preset.id ? "active" : ""}
-                    aria-pressed={activeEnsemblePresetId === preset.id}
-                    onClick={() => setAccompanimentInstrumentIds(uniqueAccompanimentInstrumentIds(preset.instrumentIds))}>
-                    <strong>{preset.name}</strong><small>{preset.description}</small>
-                  </button>
-                ))}
-              </div>
-
+              {accompanimentStyleView === "playing" && (<>
               <div className={`mixer-board${playingSong ? " playing" : ""}`} aria-label="현재 반주 트랙">
                 <div className="mixer-board-heading">
                   <div><SlidersHorizontal size={18} aria-hidden="true" /><strong>지금 만드는 소리</strong></div>
@@ -2823,7 +2923,7 @@ export default function App() {
               </div>
 
               <div className="accompaniment-instruments" aria-label="반주 악기 여러 개 선택">
-                {INSTRUMENTS.map((instrument) => {
+                {ACCOMPANIMENT_INSTRUMENTS.map((instrument) => {
                   const active = accompanimentInstrumentIds.includes(instrument.id);
                   const blocked = !active && accompanimentInstrumentIds.length >= MAX_ACCOMPANIMENT_INSTRUMENTS;
                   return (
@@ -2838,6 +2938,7 @@ export default function App() {
               </div>
               {accompanimentInstrumentIds.length === 0 &&
                 <p className="accompaniment-warning">반주 악기를 하나 이상 골라 주세요. 지금은 가락만 연주돼요.</p>}
+              </>)}
             </section>
 
             <div className="lyrics-heading">
@@ -2912,8 +3013,12 @@ export default function App() {
                   <QrCode size={18} /> 스마트폰 녹음 링크
                 </button>
                 <div className="publish-share-pair">
+                  <button type="button" className="practice-song-button action-button" data-testid="practice-song"
+                    disabled={isAnyPlaying || !allValid} onClick={() => void practiceSong()}>
+                    <Music2 size={18} /> {practicingSong ? "연습 중..." : "노래 연습하기"}
+                  </button>
                   <button type="button" className="record-mp3-button action-button" data-testid="record-song-mp3"
-                    disabled={recordingSong || !allValid} onClick={() => void recordSongMp3()}>
+                    disabled={isAnyPlaying || !allValid} onClick={() => setRecordingGuidePromptOpen(true)}>
                     <Mic2 size={18} /> {recordingSong ? "녹음 중..." : "노래 녹음"}
                   </button>
                   <a className="samboard-share-button action-button" data-testid="open-samboard-share"

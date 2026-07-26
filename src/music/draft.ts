@@ -1,5 +1,5 @@
 import { INSTRUMENTS, isValidInstrumentId, type InstrumentId } from "./instruments";
-import { ACCOMPANIMENT_STYLES, MAX_ACCOMPANIMENT_INSTRUMENTS, type AccompanimentStyleId } from "./accompaniment";
+import { ACCOMPANIMENT_STYLES, MAX_SAVED_ACCOMPANIMENT_INSTRUMENTS, type AccompanimentStyleId } from "./accompaniment";
 import type { Meter } from "./meter";
 import type { NoteEvent } from "./types";
 import { isSoundEffectId } from "./soundEffects";
@@ -76,7 +76,7 @@ export function isSavedDraft(value: unknown): value is SavedDraft {
   if (draft.accompanimentStyleId !== undefined &&
     !ACCOMPANIMENT_STYLES.some((style) => style.id === draft.accompanimentStyleId)) return false;
   if (draft.accompanimentInstrumentIds !== undefined && (!Array.isArray(draft.accompanimentInstrumentIds) ||
-    draft.accompanimentInstrumentIds.length > MAX_ACCOMPANIMENT_INSTRUMENTS ||
+    draft.accompanimentInstrumentIds.length > MAX_SAVED_ACCOMPANIMENT_INSTRUMENTS ||
     new Set(draft.accompanimentInstrumentIds).size !== draft.accompanimentInstrumentIds.length ||
     !draft.accompanimentInstrumentIds.every(isValidInstrumentId))) return false;
   if (draft.bpm !== undefined && (!Number.isInteger(draft.bpm) || draft.bpm < 40 || draft.bpm > 220)) return false;

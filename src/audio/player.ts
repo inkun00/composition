@@ -1,13 +1,17 @@
 import { toNumber } from "../music/rational";
 import { chordMidiPitches } from "../music/chord";
-import { accompanimentInstrumentPart, accompanimentLayerRole, createAccompanimentPattern, createInstrumentAccompanimentPattern, type AccompanimentStyleId } from "../music/accompaniment";
+import { accompanimentInstrumentPart, accompanimentInstrumentProfile, accompanimentLayerRole, createAccompanimentPattern, createInstrumentAccompanimentPattern, createInstrumentTransitionFill, transposeOctaves, type AccompanimentInstrumentProfile, type AccompanimentStyleId } from "../music/accompaniment";
 import { findInstrument, type Instrument, type InstrumentId } from "../music/instruments";
+import type { Meter } from "../music/meter";
 import { loadSampleInstrument, queueSampleNote, resetSampleInstrumentCache } from "./samplePlayer";
 import { queueSoundEffect } from "./soundEffects";
 import { isSoundEffectId } from "../music/soundEffects";
 import type { HarmonyStory, NoteEvent, SoundEffectEvent } from "../music/types";
 import { Mp3Encoder } from "@breezystack/lamejs";
-
+import { scheduleDrumGroove } from "./drumGroove";
+import { karaokeGuideSettings, type KaraokeGuideMode } from "./karaokeGuide";
+import { createGentleNoiseGate, createVocalMonitor, karaokeBackingGainForRms, vocalCaptureProfile, type RecordingCaptureMode } from "./vocalCapture";
+export { karaokeBackingGainForRms } from "./vocalCapture";
 export type PlaybackMeasure = Readonly<{
   notes: readonly NoteEvent[];
   harmony: HarmonyStory;
@@ -19,6 +23,7 @@ export type PlaybackMeasure = Readonly<{
 export type AccompanimentOptions = Readonly<{
   styleId: AccompanimentStyleId;
   instrumentIds: readonly InstrumentId[];
+  meter?: Meter;
 }>;
 
 export type KaraokeRecordingResult = Readonly<{
@@ -33,6 +38,8 @@ export type KaraokeRecordingResult = Readonly<{
 export type KaraokePostProcessPreset = "natural" | "clear" | "soft" | "loud" | "singer";
 
 export type KaraokeRecordingCallbacks = Readonly<{
+  guideMelodyMode?: KaraokeGuideMode;
+  recordingMode?: RecordingCaptureMode;
   onStatus?: (message: string) => void;
   onInputLevel?: (level: number) => void;
   onPhase?: (phase: "intro" | "song" | "outro" | "encoding" | "done") => void;
@@ -43,7 +50,6 @@ export type KaraokeRecordingCallbacks = Readonly<{
     noteId: string | null;
   }>) => void;
 }>;
-
 const chordPitches: Record<HarmonyStory, number[]> = {
   home: [48, 52, 55],
   journey: [53, 57, 60],
@@ -232,9 +238,6 @@ function compositionSeconds(measures: readonly PlaybackMeasure[], secondsPerBeat
   return measures.reduce((total, measure) => total + measureSeconds(measure, secondsPerBeat), 0);
 }
 
-// A small, deterministic performance variation keeps repeated generated
-// patterns from sounding like they were stamped on a grid. It is deliberately
-// capped below 12 ms, so it never changes the learner's written rhythm.
 function performanceNudge(seed: number, secondsPerBeat: number): number {
   const contour = [-.62, .18, -.16, .46, -.32, .08, .3, -.08];
   return contour[Math.abs(seed) % contour.length] * Math.min(.012, secondsPerBeat * .018);
@@ -250,10 +253,17 @@ function accompanimentArticulation(partId: ReturnType<typeof accompanimentInstru
   return .88;
 }
 
-function beatAccent(offsetBeats: number): number {
+function beatAccent(offsetBeats: number, meter?: Meter): number {
+  if (meter?.beats === 6 && meter.beatUnit === 8) {
+    const compoundBeat = Math.round(offsetBeats / 1.5) * 1.5;
+    if (Math.abs(offsetBeats - compoundBeat) > .08) return .92;
+    return Math.abs(compoundBeat) < .08 ? 1.1 : 1.02;
+  }
   const beat = Math.round(offsetBeats);
-  if (Math.abs(offsetBeats - beat) > .08) return .94;
-  return beat % 2 === 0 ? 1.08 : .96;
+  if (Math.abs(offsetBeats - beat) > .08) return .93;
+  if (beat === 0) return 1.1;
+  if (meter?.beats === 4 && beat === 2) return 1.02;
+  return .96;
 }
 
 type ArrangementVoiceState = {
@@ -262,16 +272,6 @@ type ArrangementVoiceState = {
 
 function createArrangementVoiceState(): ArrangementVoiceState {
   return { centers: new Map() };
-}
-
-function partRange(partId: ReturnType<typeof accompanimentInstrumentPart>["id"]): readonly [number, number, number] {
-  if (partId === "bass") return [32, 55, 43];
-  if (partId === "keys") return [48, 76, 61];
-  if (partId === "guitar") return [52, 79, 64];
-  if (partId === "strings") return [52, 84, 67];
-  if (partId === "winds") return [58, 88, 72];
-  if (partId === "percussion") return [45, 78, 60];
-  return [48, 80, 63];
 }
 
 function pitchInClosestOctave(pitch: number, target: number, min: number, max: number): number {
@@ -285,13 +285,13 @@ function pitchInClosestOctave(pitch: number, target: number, min: number, max: n
 
 function voiceLedPitches(
   pitches: readonly number[],
-  part: ReturnType<typeof accompanimentInstrumentPart>,
+  profile: AccompanimentInstrumentProfile,
   layerId: InstrumentId,
   state?: ArrangementVoiceState
 ): readonly number[] {
   if (pitches.length === 0) return pitches;
-  const [min, max, restingCenter] = partRange(part.id);
-  const key = `${layerId}:${part.id}`;
+  const [min, max, restingCenter] = profile.range;
+  const key = `${layerId}:${profile.part.id}`;
   const previousCenter = state?.centers.get(key) ?? restingCenter;
 
   if (pitches.length === 1) {
@@ -318,14 +318,72 @@ function voiceLedPitches(
   return selected;
 }
 
+function melodyActivityAtBeat(
+  notes: readonly NoteEvent[],
+  targetBeat: number
+): Readonly<{ pitch: number; onset: number; duration: number }> | null {
+  let cursor = 0;
+  for (const note of notes) {
+    const duration = toNumber(note.duration);
+    const end = cursor + duration;
+    if (targetBeat >= cursor - .001 && targetBeat < end - .001) {
+      return note.pitch === null ? null : { pitch: note.pitch, onset: cursor, duration };
+    }
+    cursor = end;
+  }
+  return null;
+}
+
+function movePitchesAwayFromMelody(
+  pitches: readonly number[],
+  melodyPitch: number | null,
+  profile: AccompanimentInstrumentProfile
+): readonly number[] {
+  if (melodyPitch === null || profile.part.id === "bass") return pitches;
+  const [min, max] = profile.range;
+  const preferAbove = profile.part.id === "winds" || profile.part.id === "percussion";
+  return [...new Set(pitches.map((pitch) => {
+    const candidates = [-24, -12, 0, 12, 24]
+      .map((shift) => ({ pitch: pitch + shift, shift }))
+      .filter((candidate) => candidate.pitch >= min && candidate.pitch <= max);
+    if (candidates.length === 0) return pitch;
+    return candidates.reduce((best, candidate) => {
+      const score = (Math.abs(candidate.pitch - melodyPitch) < 7 ? 100 : 0) +
+        Math.abs(candidate.shift) * .12 +
+        (preferAbove ? candidate.pitch < melodyPitch ? 3 : 0 : candidate.pitch > melodyPitch ? 3 : 0);
+      const bestScore = (Math.abs(best.pitch - melodyPitch) < 7 ? 100 : 0) +
+        Math.abs(best.shift) * .12 +
+        (preferAbove ? best.pitch < melodyPitch ? 3 : 0 : best.pitch > melodyPitch ? 3 : 0);
+      return score < bestScore ? candidate : best;
+    }).pitch;
+  }))];
+}
+
 type ArrangementPlan = Readonly<{ layerCount: number; energy: number }>;
 
 function songArrangementPlan(measureIndex: number, measureCount: number, availableLayers: number): ArrangementPlan {
   if (availableLayers <= 2 || measureCount <= 3) return { layerCount: availableLayers, energy: 1 };
-  const progress = (measureIndex + 1) / measureCount;
-  if (progress <= .25) return { layerCount: Math.min(2, availableLayers), energy: .8 };
-  if (progress <= .62) return { layerCount: Math.min(Math.max(3, Math.ceil(availableLayers * .62)), availableLayers), energy: .93 };
-  return { layerCount: availableLayers, energy: 1.06 };
+  const phraseIndex = Math.floor(measureIndex / 4);
+  const phrasePosition = measureIndex % 4;
+  const lastMeasure = measureIndex === measureCount - 1;
+  const baseLayers = phraseIndex === 0 ? Math.min(2, availableLayers)
+    : Math.min(3 + Math.max(0, phraseIndex - 1), availableLayers);
+  if (lastMeasure) return { layerCount: availableLayers, energy: 1.04 };
+  if (phrasePosition === 0) return { layerCount: Math.max(1, baseLayers - 1), energy: .82 + phraseIndex * .06 };
+  if (phrasePosition === 3) return { layerCount: Math.min(baseLayers + 1, availableLayers), energy: .98 + phraseIndex * .04 };
+  return { layerCount: baseLayers, energy: .9 + phraseIndex * .06 };
+}
+
+export function recordingArrangementPlan(
+  measureIndex: number,
+  measureCount: number,
+  availableLayers: number
+): ArrangementPlan {
+  const plan = songArrangementPlan(measureIndex, measureCount, availableLayers);
+  return {
+    layerCount: Math.min(availableLayers, Math.max(Math.min(2, availableLayers), plan.layerCount + 1)),
+    energy: Math.max(.98, plan.energy * 1.08)
+  };
 }
 
 const CHROMATIC_ROOTS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
@@ -354,7 +412,6 @@ function buildIntroMeasures(measures: readonly PlaybackMeasure[]): PlaybackMeasu
   const cadence = cadenceChords(target);
   if (!cadence) return Array.from({ length: 4 }, (_, index) => measures[index % measures.length]);
   const [subdominant, dominant, tonic] = cadence;
-  // The final dominant points into the first measure of the learner's song.
   return [tonic, subdominant, dominant, dominant].map((chord) => accompanimentMeasure(measures[0], chord));
 }
 
@@ -368,7 +425,6 @@ function buildOutroMeasures(measures: readonly PlaybackMeasure[]): PlaybackMeasu
     return Array.from({ length: 4 }, (_, index) => source[index % source.length]);
   }
   const [subdominant, dominant, tonic] = cadence;
-  // A clear IV–V–I ending, then one more sustained tonic measure.
   return [subdominant, dominant, tonic, tonic].map((chord) => accompanimentMeasure(template, chord));
 }
 
@@ -399,6 +455,9 @@ function scheduleMeasure(
     includeEffects: boolean;
     backingVolumeMultiplier?: number;
     melodyVolumeMultiplier?: number;
+    melodyDestination?: AudioNode;
+    melodyMode?: "all" | "first-note";
+    transitionFill?: boolean;
     arrangementSection?: "intro" | "song" | "outro";
     voiceState?: ArrangementVoiceState;
     arrangementLayerCount?: number;
@@ -415,6 +474,10 @@ function scheduleMeasure(
   const measureBeats = measure.notes.reduce((total, note) => total + toNumber(note.duration), 0);
   const chordSymbols = measure.chords && measure.chords.length > 0 ? measure.chords : [""];
   const chordBeats = measureBeats / chordSymbols.length;
+  if (options.accompaniment) {
+    scheduleDrumGroove(context, destination, absoluteStart, secondsPerBeat, options.accompaniment.styleId,
+      measureBeats, options.accompaniment.meter, arrangementEnergy, options.transitionFill === true);
+  }
 
   chordSymbols.forEach((chord, chordIndex) => {
     const pitches = chord ? chordMidiPitches(chord) : chordPitches[measure.harmony];
@@ -426,37 +489,61 @@ function scheduleMeasure(
       return;
     }
     options.accompanimentLayers.slice(0, arrangementLayerCount).forEach((layer, layerIndex) => {
-      const part = accompanimentInstrumentPart(layer.id, layerIndex);
-      const pattern = createInstrumentAccompanimentPattern(options.accompaniment?.styleId ?? "arpeggio", chordBeats, layer.id, layerIndex);
+      const profile = accompanimentInstrumentProfile(layer.id, layerIndex);
+      const part = profile.part;
+      const regularPattern = createInstrumentAccompanimentPattern(
+        options.accompaniment?.styleId ?? "arpeggio",
+        chordBeats,
+        layer.id,
+        layerIndex,
+        options.accompaniment?.meter
+      );
+      const pattern = options.transitionFill && chordIndex === chordSymbols.length - 1
+        ? [...regularPattern, ...createInstrumentTransitionFill(
+          chordBeats, layer.id, layerIndex, options.accompaniment?.meter
+        )] : regularPattern;
       pattern.forEach((event) => {
         const role = accompanimentLayerRole(layerIndex);
+        const measureBeat = chordIndex * chordBeats + event.offsetBeats;
+        const melodyActivity = arrangementSection === "song"
+          ? melodyActivityAtBeat(measure.notes, measureBeat)
+          : null;
+        const melodyPitch = melodyActivity?.pitch ?? null;
+        const compingHasSpace = melodyActivity === null ||
+          (melodyActivity.duration >= 1 && measureBeat - melodyActivity.onset >= .5);
+        if (options.accompaniment?.styleId === "comping" && !compingHasSpace) return;
+        if (part.id === "winds" && options.accompanimentLayers.length > 1 && !compingHasSpace) return;
         let eventPitches: readonly number[];
-        if (options.accompanimentLayers.length === 1) {
-          eventPitches = event.voice === "root" ? [pitches[0] - 12]
-            : event.voice === "step" ? [pitches[(event.step ?? 0) % pitches.length]] : pitches.slice(0, 3);
-        } else if (part.id === "bass") {
-          eventPitches = [pitches[0] - (arrangementSection === "song" ? 24 : 18)];
+        if (part.id === "bass") {
+          eventPitches = [transposeOctaves(pitches[0], -2)];
         } else if (part.id === "keys") {
-          eventPitches = event.voice === "root" ? [pitches[0] - 12] : pitches.slice(0, 3);
+          eventPitches = event.voice === "root" ? [transposeOctaves(pitches[0], -1)] : pitches.slice(0, 3);
         } else if (part.id === "guitar") {
-          eventPitches = event.voice === "root" ? [pitches[0] - 12]
+          eventPitches = event.voice === "root" ? [transposeOctaves(pitches[0], -1)]
             : [pitches[(event.step ?? layerIndex) % pitches.length]];
         } else if (part.id === "strings") {
-          eventPitches = pitches.slice(0, 3);
+          eventPitches = profile.polyphonic
+            ? pitches.slice(0, 3)
+            : [pitches[(event.step ?? layerIndex) % pitches.length]];
         } else if (part.id === "winds") {
-          eventPitches = [pitches[(event.step ?? layerIndex) % pitches.length] + (arrangementSection === "song" ? 12 : 7)];
+          eventPitches = [transposeOctaves(pitches[(event.step ?? layerIndex) % pitches.length], 1)];
         } else if (part.id === "percussion") {
-          eventPitches = [pitches[(layerIndex + 1) % pitches.length] - 5];
+          eventPitches = layer.id.includes("timpani")
+            ? [transposeOctaves(pitches[0], -1)]
+            : layer.id.includes("orchestra_hit")
+              ? pitches.slice(0, 3)
+              : [pitches[(event.step ?? layerIndex) % pitches.length]];
         } else if (role.id === "high") {
-          eventPitches = [pitches[(event.step ?? layerIndex) % pitches.length] + (arrangementSection === "song" ? 12 : 7)];
+          eventPitches = [transposeOctaves(pitches[(event.step ?? layerIndex) % pitches.length], 1)];
         } else if (role.id === "pulse") {
-          eventPitches = [pitches[(layerIndex + 1) % pitches.length] - 5];
+          eventPitches = [pitches[(layerIndex + 1) % pitches.length]];
         } else if (role.id === "middle") {
           eventPitches = [pitches[(event.step ?? 1) % pitches.length]];
         } else {
-          eventPitches = [pitches[pitches.length - 1] + (arrangementSection === "song" ? 19 : 7)];
+          eventPitches = [transposeOctaves(pitches[pitches.length - 1], 1)];
         }
-        eventPitches = voiceLedPitches(eventPitches, part, layer.id, options.voiceState);
+        eventPitches = voiceLedPitches(eventPitches, profile, layer.id, options.voiceState);
+        eventPitches = movePitchesAwayFromMelody(eventPitches, melodyPitch, profile);
         const roleDelay = part.id === "bass" || part.id === "strings" ? 0 : arrangementSection === "song"
           ? Math.min(event.durationBeats * secondsPerBeat * .16, secondsPerBeat * .09) * (layerIndex % 3)
           : Math.min(event.durationBeats * secondsPerBeat * .07, secondsPerBeat * .035) * (layerIndex % 2);
@@ -465,9 +552,6 @@ function scheduleMeasure(
           : part.id === "winds" ? .9 : part.id === "percussion" ? .74
           : role.id === "bass" ? 1.15 : role.id === "chords" ? .82
           : role.id === "high" || role.id === "sparkle" ? .9 : .72;
-        // The song section can build up gradually, but the intro and outro
-        // have no melody on top. Keep those backing-only sections clearly
-        // audible instead of making them sound like a distant fade-in/out.
         const sectionVolume = arrangementSection === "intro" ? .97 : arrangementSection === "outro" ? .95 : 1;
         eventPitches.forEach((pitch) => {
           const baseStart = absoluteStart + (chordIndex * chordBeats + event.offsetBeats) * secondsPerBeat;
@@ -477,8 +561,9 @@ function scheduleMeasure(
             baseStart + Math.min(roleDelay, noteDuration * .24) + performanceNudge(expressionSeed, secondsPerBeat));
           const performedDuration = Math.max(.035, noteDuration * accompanimentArticulation(part.id, event.voice));
           const layerInstrument = findInstrument(layer.id);
-          const performedVolume = layerInstrument.volume * .62 * roleVolume * sectionVolume *
-            backingVolumeMultiplier * arrangementEnergy * layerDensityScale * beatAccent(event.offsetBeats);
+          const performedVolume = layerInstrument.volume * .62 * roleVolume * profile.gain * sectionVolume *
+            backingVolumeMultiplier * arrangementEnergy * layerDensityScale *
+            beatAccent(measureBeat, options.accompaniment?.meter);
           const shiftedPitch = Math.max(36, Math.min(96, pitch));
           if (layer.sample) {
             queueSampleNote(layer.sample, context, destination, shiftedPitch, noteStart, performedDuration, performedVolume);
@@ -492,17 +577,17 @@ function scheduleMeasure(
   });
 
   if (options.includeMelody) {
-    melodyPlaybackEvents(measure.notes, secondsPerBeat).forEach((event, index) => {
+    melodyPlaybackEvents(measure.notes, secondsPerBeat)
+      .filter((_, index) => options.melodyMode !== "first-note" || index === 0)
+      .forEach((event, index) => {
       const noteStart = absoluteStart + event.start + performanceNudge(index + 3, secondsPerBeat);
-      // Keep sung, connected melodies nearly legato; a tiny gap remains only
-      // between separately written notes so the rhythm stays easy to hear.
       const noteDuration = Math.max(.04, event.duration * .97);
       const melodyVolume = options.instrument.volume * melodyVolumeMultiplier * (index % 4 === 0 ? 1.06 : .98);
       if (options.sampledInstrument) {
-        queueSampleNote(options.sampledInstrument, context, destination, event.pitch,
+        queueSampleNote(options.sampledInstrument, context, options.melodyDestination ?? destination, event.pitch,
           noteStart, noteDuration, melodyVolume);
       } else {
-        addInstrumentTone(context, destination, event.pitch, noteStart, noteDuration,
+        addInstrumentTone(context, options.melodyDestination ?? destination, event.pitch, noteStart, noteDuration,
           { ...options.instrument, volume: melodyVolume });
       }
     });
@@ -572,84 +657,6 @@ function createRoomImpulse(context: BaseAudioContext, seconds = 0.65, decay = 2.
     }
   }
   return impulse;
-}
-
-function createGentleNoiseGate(context: AudioContext): Readonly<{
-  input: GainNode;
-  output: GainNode;
-  stop: () => void;
-}> {
-  const input = context.createGain();
-  const output = context.createGain();
-  output.gain.value = 0.9;
-  input.connect(output);
-  const analyser = context.createAnalyser();
-  analyser.fftSize = 1024;
-  analyser.smoothingTimeConstant = 0.82;
-  input.connect(analyser);
-  const data = new Float32Array(analyser.fftSize);
-  let frame = 0;
-  let closed = false;
-
-  const tick = () => {
-    if (closed || context.state === "closed") return;
-    analyser.getFloatTimeDomainData(data);
-    let sum = 0;
-    for (let index = 0; index < data.length; index += 1) sum += data[index] * data[index];
-    const rms = Math.sqrt(sum / data.length);
-    const now = context.currentTime;
-    // Keep quiet syllables and breathy endings intact. This is only a light
-    // room-noise reduction, not a hard gate.
-    const target = rms < 0.006 ? 0.65 : rms < 0.012 ? 0.86 : 1;
-    output.gain.cancelScheduledValues(now);
-    output.gain.setTargetAtTime(target, now, target < output.gain.value ? 0.18 : 0.055);
-    frame = window.setTimeout(tick, 45);
-  };
-  tick();
-
-  return {
-    input,
-    output,
-    stop: () => {
-      closed = true;
-      window.clearTimeout(frame);
-    }
-  };
-}
-
-function createVocalMonitor(
-  context: AudioContext,
-  source: AudioNode,
-  backingMaster: GainNode,
-  onInputLevel?: (level: number) => void
-): () => void {
-  const analyser = context.createAnalyser();
-  analyser.fftSize = 1024;
-  analyser.smoothingTimeConstant = .78;
-  source.connect(analyser);
-  const data = new Float32Array(analyser.fftSize);
-  let timer = 0;
-  let stopped = false;
-
-  const tick = () => {
-    if (stopped || context.state === "closed") return;
-    analyser.getFloatTimeDomainData(data);
-    let sum = 0;
-    for (const sample of data) sum += sample * sample;
-    const rms = Math.sqrt(sum / data.length);
-    // The meter is deliberately gentle: it helps the learner find a usable
-    // distance from the mic without asking them to sing loudly.
-    onInputLevel?.(Math.min(1, rms / .11));
-    const targetBacking = rms > .025 ? .78 : .86;
-    backingMaster.gain.setTargetAtTime(targetBacking, context.currentTime, rms > .025 ? .09 : .22);
-    timer = window.setTimeout(tick, 70);
-  };
-  tick();
-  return () => {
-    stopped = true;
-    window.clearTimeout(timer);
-    onInputLevel?.(0);
-  };
 }
 
 export async function renderProcessedKaraokeMp3(
@@ -839,9 +846,6 @@ export async function playComposition(
   let songCursor = 0;
 
   measures.forEach((measure, measureIndex) => {
-    // Keep the live player on the same arrangement path as recording and MP3
-    // export. Previously this had an older generic accompaniment loop, which
-    // made every selected instrument play almost the same part.
     const plan = songArrangementPlan(measureIndex, measures.length, accompanimentLayers.length);
     songCursor += scheduleMeasure(context, master, measure, start + songCursor, secondsPerBeat, {
       instrument,
@@ -853,12 +857,216 @@ export async function playComposition(
       arrangementSection: "song",
       voiceState,
       arrangementLayerCount: plan.layerCount,
+      transitionFill: (measureIndex + 1) % 4 === 0 || measureIndex === measures.length - 1,
       arrangementEnergy: plan.energy
     });
   });
 
   releasePlayback(context, songCursor + 0.5);
   return songCursor + 0.5;
+}
+
+export async function practiceKaraokeComposition(
+  measures: readonly PlaybackMeasure[],
+  instrumentId: InstrumentId = "piano",
+  bpm = 96,
+  accompaniment?: AccompanimentOptions,
+  callbacks: KaraokeRecordingCallbacks = {},
+  countIn: Readonly<{ beats: number; unitBeats: number }> = { beats: 4, unitBeats: 1 },
+  signal?: AbortSignal
+): Promise<number | null> {
+  if (activePlaybackContext) return null;
+  const AudioContextClass = window.AudioContext ||
+    (window as Window & typeof globalThis & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!AudioContextClass) {
+    throw new Error("이 브라우저에서는 노래 연습 재생을 사용할 수 없어요.");
+  }
+
+  const context = new AudioContextClass();
+  activePlaybackContext = context;
+  let callbackTimers: number[] = [];
+  let finishPractice: ((completed: boolean) => void) | null = null;
+  let aborted = signal?.aborted === true;
+  const stopPractice = () => {
+    aborted = true;
+    callbackTimers.forEach((timer) => window.clearTimeout(timer));
+    callbackTimers = [];
+    finishPractice?.(false);
+    finishPractice = null;
+    if (context.state !== "closed") void context.close().catch(() => undefined);
+  };
+  const throwIfAborted = () => {
+    if (aborted || signal?.aborted) throw new DOMException("노래 연습이 중단되었어요.", "AbortError");
+  };
+  signal?.addEventListener("abort", stopPractice, { once: true });
+
+  try {
+    throwIfAborted();
+    if (context.state === "suspended") await context.resume();
+    callbacks.onStatus?.("연습 반주와 메인 가락을 준비하고 있어요.");
+    const secondsPerBeat = 60 / bpm;
+    const introMeasures = buildIntroMeasures(measures);
+    const outroMeasures = buildOutroMeasures(measures);
+    const tailSeconds = 0.55;
+    const master = createProtectedMaster(context, context.destination, 0.84);
+    const instrument = findInstrument(instrumentId);
+    let sampledInstrument: Awaited<ReturnType<typeof loadSampleInstrument>> | null = null;
+    try {
+      sampledInstrument = await loadSampleWithTimeout(context, master, instrumentId);
+    } catch (error) {
+      console.warn("연습용 메인 악기 샘플을 불러오지 못해 합성 음색을 사용합니다.", error);
+    }
+    throwIfAborted();
+    const accompanimentLayers = await loadAccompanimentLayers(context, master, accompaniment);
+    throwIfAborted();
+    const voiceState = createArrangementVoiceState();
+    const start = context.currentTime + 0.35;
+    let cursor = 0;
+    const queueCallback = (relativeSeconds: number, callback: () => void) => {
+      callbackTimers.push(window.setTimeout(callback,
+        Math.max(0, (start - context.currentTime + relativeSeconds) * 1000)));
+    };
+
+    callbacks.onPhase?.("intro");
+    callbacks.onHighlight?.({ section: "intro", measureIndex: null, noteId: null });
+    callbacks.onStatus?.("4마디 인트로를 들으며 준비해요. 마지막 카운트 뒤에 메인 가락이 시작돼요.");
+    introMeasures.forEach((measure, introIndex) => {
+      const measureStart = cursor;
+      const measureBeats = measure.notes.reduce((total, note) => total + toNumber(note.duration), 0);
+      const chordSymbols = measure.chords && measure.chords.length > 0 ? measure.chords : [""];
+      const chordBeats = measureBeats / chordSymbols.length;
+      let eventIndex = 0;
+      chordSymbols.forEach((_, chordIndex) => {
+        createAccompanimentPattern(accompaniment?.styleId ?? "arpeggio", chordBeats, accompaniment?.meter)
+          .forEach((event) => {
+            const noteId = `intro-${introIndex}-${eventIndex}`;
+            queueCallback(measureStart + (chordIndex * chordBeats + event.offsetBeats) * secondsPerBeat, () => {
+              callbacks.onHighlight?.({ section: "intro", measureIndex: introIndex, noteId });
+            });
+            eventIndex += 1;
+          });
+      });
+      cursor += scheduleMeasure(context, master, measure, start + cursor, secondsPerBeat, {
+        instrument,
+        sampledInstrument: null,
+        accompaniment,
+        accompanimentLayers,
+        voiceState,
+        includeMelody: false,
+        includeEffects: false,
+        backingVolumeMultiplier: 1.22,
+        arrangementSection: "intro",
+        arrangementLayerCount: Math.min(3, accompanimentLayers.length),
+        arrangementEnergy: 1
+      });
+    });
+
+    const introEndsAfterSeconds = cursor;
+    const countDurationSeconds = countIn.beats * countIn.unitBeats * secondsPerBeat;
+    const countStartsAfterSeconds = Math.max(0, introEndsAfterSeconds - countDurationSeconds);
+    for (let count = countIn.beats; count >= 1; count -= 1) {
+      const offset = countStartsAfterSeconds + (countIn.beats - count) * countIn.unitBeats * secondsPerBeat;
+      queueCallback(offset, () => callbacks.onCount?.(count));
+    }
+    queueCallback(introEndsAfterSeconds, () => {
+      callbacks.onPhase?.("song");
+      callbacks.onCount?.(null);
+      callbacks.onStatus?.("메인 가락을 들으며 함께 불러 보세요. 녹음되지는 않아요.");
+    });
+
+    let songNoteCursor = introEndsAfterSeconds;
+    measures.forEach((measure, measureIndex) => {
+      let noteCursor = songNoteCursor;
+      measure.notes.forEach((note) => {
+        const noteDuration = toNumber(note.duration) * secondsPerBeat;
+        if (note.pitch !== null) {
+          queueCallback(noteCursor, () => {
+            callbacks.onHighlight?.({
+              section: "song",
+              measureIndex: measure.measureIndex ?? measureIndex,
+              noteId: note.id
+            });
+          });
+        }
+        noteCursor += noteDuration;
+      });
+      songNoteCursor += measureSeconds(measure, secondsPerBeat);
+      const plan = recordingArrangementPlan(measureIndex, measures.length, accompanimentLayers.length);
+      cursor += scheduleMeasure(context, master, measure, start + cursor, secondsPerBeat, {
+        instrument,
+        sampledInstrument,
+        accompaniment,
+        accompanimentLayers,
+        voiceState,
+        includeMelody: true,
+        includeEffects: true,
+        melodyVolumeMultiplier: .82,
+        backingVolumeMultiplier: 1.12,
+        arrangementLayerCount: plan.layerCount,
+        transitionFill: (measureIndex + 1) % 4 === 0 || measureIndex === measures.length - 1,
+        arrangementEnergy: plan.energy
+      });
+    });
+
+    const outroStartsAfterSeconds = cursor;
+    queueCallback(outroStartsAfterSeconds, () => {
+      callbacks.onPhase?.("outro");
+      callbacks.onHighlight?.({ section: "outro", measureIndex: null, noteId: null });
+      callbacks.onStatus?.("잘했어요! 4마디 아웃트로까지 편하게 들어 보세요.");
+    });
+    outroMeasures.forEach((measure, outroIndex) => {
+      const measureStart = cursor;
+      const measureBeats = measure.notes.reduce((total, note) => total + toNumber(note.duration), 0);
+      const chordSymbols = measure.chords && measure.chords.length > 0 ? measure.chords : [""];
+      const chordBeats = measureBeats / chordSymbols.length;
+      let eventIndex = 0;
+      chordSymbols.forEach((_, chordIndex) => {
+        createAccompanimentPattern(accompaniment?.styleId ?? "arpeggio", chordBeats, accompaniment?.meter)
+          .forEach((event) => {
+            const noteId = `outro-${outroIndex}-${eventIndex}`;
+            queueCallback(measureStart + (chordIndex * chordBeats + event.offsetBeats) * secondsPerBeat, () => {
+              callbacks.onHighlight?.({ section: "outro", measureIndex: outroIndex, noteId });
+            });
+            eventIndex += 1;
+          });
+      });
+      cursor += scheduleMeasure(context, master, measure, start + cursor, secondsPerBeat, {
+        instrument,
+        sampledInstrument: null,
+        accompaniment,
+        accompanimentLayers,
+        voiceState,
+        includeMelody: false,
+        includeEffects: false,
+        backingVolumeMultiplier: 1.18,
+        arrangementSection: "outro",
+        arrangementLayerCount: Math.min(3, accompanimentLayers.length),
+        arrangementEnergy: .98
+      });
+    });
+
+    const totalSeconds = cursor + tailSeconds;
+    const completed = await new Promise<boolean>((resolve) => {
+      finishPractice = resolve;
+      queueCallback(totalSeconds, () => {
+        callbacks.onHighlight?.({ section: "outro", measureIndex: null, noteId: null });
+        callbacks.onCount?.(null);
+        callbacks.onPhase?.("done");
+        callbacks.onStatus?.("연습이 끝났어요. 이제 가락을 떠올리며 한 번 더 불러 보세요.");
+        finishPractice = null;
+        resolve(true);
+      });
+    });
+    return completed ? totalSeconds : null;
+  } catch (error) {
+    if (aborted || signal?.aborted || (error instanceof DOMException && error.name === "AbortError")) return null;
+    throw error;
+  } finally {
+    signal?.removeEventListener("abort", stopPractice);
+    callbackTimers.forEach((timer) => window.clearTimeout(timer));
+    if (activePlaybackContext === context) activePlaybackContext = null;
+    if (context.state !== "closed") await context.close().catch(() => undefined);
+  }
 }
 
 export async function recordKaraokeComposition(
@@ -911,23 +1119,19 @@ export async function recordKaraokeComposition(
     if (signal?.aborted) throw new DOMException("녹음을 중단했어요.", "AbortError");
   };
   signal?.addEventListener("abort", abortRecording, { once: true });
+  const recordingMode = callbacks.recordingMode ?? "personal";
+  const capture = vocalCaptureProfile(recordingMode);
 
   try {
     throwIfAborted();
     callbacks.onStatus?.("마이크 권한을 허용해 주세요.");
-    microphoneStream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        // Browser auto gain can pump between sung syllables. A light,
-        // predictable compressor below is safer for a child's natural voice.
-        autoGainControl: false
-      }
-    });
+    microphoneStream = await navigator.mediaDevices.getUserMedia({ audio: capture.constraints });
     throwIfAborted();
     if (context.state === "suspended") await context.resume();
 
-    callbacks.onStatus?.("4마디 반주 뒤에 노래가 녹음돼요.");
+    callbacks.onStatus?.(recordingMode === "choir"
+      ? "4마디 반주 동안 교실 소리를 확인한 뒤 합창을 녹음해요."
+      : "4마디 반주 뒤에 노래가 녹음돼요.");
     const secondsPerBeat = 60 / bpm;
     const introMeasures = buildIntroMeasures(measures);
     const outroMeasures = buildOutroMeasures(measures);
@@ -935,13 +1139,15 @@ export async function recordKaraokeComposition(
     const songSeconds = compositionSeconds(measures, secondsPerBeat);
     const outroSeconds = compositionSeconds(outroMeasures, secondsPerBeat);
     const tailSeconds = 0.8;
+    const guide = karaokeGuideSettings(recordingMode === "choir" ? "off" : callbacks.guideMelodyMode ?? "first-note");
 
     const master = context.createGain();
-    master.gain.value = 0.86;
+    master.gain.value = karaokeBackingGainForRms(0);
+    const guideBus = context.createGain();
     const vocalBus = context.createGain();
-    vocalBus.gain.value = 1.08;
+    vocalBus.gain.value = capture.vocalBusGain;
     const mixBus = context.createGain();
-    mixBus.gain.value = 0.96;
+    mixBus.gain.value = capture.mixBusGain;
     const mixCompressor = context.createDynamicsCompressor();
     mixCompressor.threshold.value = -18;
     mixCompressor.knee.value = 12;
@@ -957,6 +1163,7 @@ export async function recordKaraokeComposition(
 
     master.connect(mixBus);
     master.connect(context.destination);
+    guideBus.connect(context.destination);
     vocalBus.connect(mixBus);
     mixBus.connect(mixCompressor).connect(limiter);
     const recordingDestination = context.createMediaStreamDestination();
@@ -969,56 +1176,60 @@ export async function recordKaraokeComposition(
     const microphone = context.createMediaStreamSource(microphoneStream);
     const vocalHighPass = context.createBiquadFilter();
     vocalHighPass.type = "highpass";
-    vocalHighPass.frequency.value = 90;
+    vocalHighPass.frequency.value = capture.highPassHz;
     vocalHighPass.Q.value = 0.7;
     const vocalLowPass = context.createBiquadFilter();
     vocalLowPass.type = "lowpass";
-    vocalLowPass.frequency.value = 12000;
+    vocalLowPass.frequency.value = capture.lowPassHz;
     vocalLowPass.Q.value = 0.5;
     const vocalMudCut = context.createBiquadFilter();
     vocalMudCut.type = "peaking";
     vocalMudCut.frequency.value = 260;
     vocalMudCut.Q.value = 1.1;
-    vocalMudCut.gain.value = -1.4;
+    vocalMudCut.gain.value = capture.mudCutDb;
     const vocalPresence = context.createBiquadFilter();
     vocalPresence.type = "peaking";
     vocalPresence.frequency.value = 3200;
     vocalPresence.Q.value = 0.9;
-    vocalPresence.gain.value = 1.2;
+    vocalPresence.gain.value = capture.presenceDb;
     const vocalDeEsser = context.createBiquadFilter();
     vocalDeEsser.type = "peaking";
     vocalDeEsser.frequency.value = 6500;
     vocalDeEsser.Q.value = 1.4;
-    vocalDeEsser.gain.value = -1.2;
-    const noiseGate = createGentleNoiseGate(context);
-    stopNoiseGate = noiseGate.stop;
+    vocalDeEsser.gain.value = capture.deEsserDb;
+    const noiseGate = capture.useNoiseGate ? createGentleNoiseGate(context) : null;
+    stopNoiseGate = noiseGate?.stop ?? null;
     const vocalCompressor = context.createDynamicsCompressor();
-    vocalCompressor.threshold.value = -20;
+    vocalCompressor.threshold.value = capture.compressorThreshold;
     vocalCompressor.knee.value = 24;
-    vocalCompressor.ratio.value = 2.2;
+    vocalCompressor.ratio.value = capture.compressorRatio;
     vocalCompressor.attack.value = 0.012;
     vocalCompressor.release.value = 0.24;
     const vocalDry = context.createGain();
-    vocalDry.gain.value = 0.96;
+    vocalDry.gain.value = capture.dryGain;
     const reverbSend = context.createGain();
-    reverbSend.gain.value = 0.09;
+    reverbSend.gain.value = capture.reverbSend;
     const reverb = context.createConvolver();
     reverb.buffer = createRoomImpulse(context);
     const reverbReturn = context.createGain();
-    reverbReturn.gain.value = 0.32;
+    reverbReturn.gain.value = capture.reverbReturn;
     microphone.connect(vocalHighPass).connect(vocalLowPass).connect(vocalMudCut)
-      .connect(vocalPresence).connect(vocalDeEsser).connect(noiseGate.input);
-    noiseGate.output.connect(vocalCompressor);
-    stopVocalMonitor = createVocalMonitor(context, noiseGate.output, master, callbacks.onInputLevel);
+      .connect(vocalPresence).connect(vocalDeEsser);
+    const vocalSource: AudioNode = noiseGate ? noiseGate.output : vocalDeEsser;
+    if (noiseGate) vocalDeEsser.connect(noiseGate.input);
+    vocalSource.connect(vocalCompressor);
+    stopVocalMonitor = createVocalMonitor(context, vocalSource, master, callbacks.onInputLevel, recordingMode);
     vocalCompressor.connect(vocalDry).connect(vocalBus);
     vocalCompressor.connect(reverbSend).connect(reverb).connect(reverbReturn).connect(vocalBus);
 
     const instrument = findInstrument(instrumentId);
     let sampledInstrument: Awaited<ReturnType<typeof loadSampleInstrument>> | null = null;
-    try {
-      sampledInstrument = await loadSampleWithTimeout(context, master, instrumentId);
-    } catch (error) {
-      console.warn("악기 샘플을 불러오지 못해 합성 음색을 사용합니다.", error);
+    if (guide.includeMelody) {
+      try {
+        sampledInstrument = await loadSampleWithTimeout(context, guideBus, instrumentId);
+      } catch (error) {
+        console.warn("가락 도움 악기 샘플을 불러오지 못해 합성 음색을 사용합니다.", error);
+      }
     }
     const accompanimentLayers = await loadAccompanimentLayers(context, master, accompaniment);
     throwIfAborted();
@@ -1064,7 +1275,7 @@ export async function recordKaraokeComposition(
       const chordBeats = measureBeats / chordSymbols.length;
       let eventIndex = 0;
       chordSymbols.forEach((_, chordIndex) => {
-        createAccompanimentPattern(accompaniment?.styleId ?? "arpeggio", chordBeats).forEach((event) => {
+        createAccompanimentPattern(accompaniment?.styleId ?? "arpeggio", chordBeats, accompaniment?.meter).forEach((event) => {
           const noteId = `intro-${introIndex}-${eventIndex}`;
           queueCallback(measureStart + (chordIndex * chordBeats + event.offsetBeats) * secondsPerBeat, () => {
             callbacks.onHighlight?.({ section: "intro", measureIndex: introIndex, noteId });
@@ -1118,19 +1329,21 @@ export async function recordKaraokeComposition(
         noteCursor += noteDuration;
       });
       songNoteCursor += measureSeconds(measure, secondsPerBeat);
-      const plan = songArrangementPlan(measureIndex, measures.length, accompanimentLayers.length);
+      const plan = recordingArrangementPlan(measureIndex, measures.length, accompanimentLayers.length);
       cursor += scheduleMeasure(context, master, measure, start + cursor, secondsPerBeat, {
         instrument,
         sampledInstrument,
         accompaniment,
         accompanimentLayers,
         voiceState,
-        includeMelody: true,
+        includeMelody: guide.includeMelody,
         includeEffects: true,
-        // The guide melody stays audible for timing, but leaves room for the
-        // learner's live voice in the recording.
-        melodyVolumeMultiplier: .5,
+        melodyDestination: guideBus,
+        melodyMode: guide.melodyMode,
+        melodyVolumeMultiplier: guide.volume,
+        backingVolumeMultiplier: 1.18,
         arrangementLayerCount: plan.layerCount,
+        transitionFill: (measureIndex + 1) % 4 === 0 || measureIndex === measures.length - 1,
         arrangementEnergy: plan.energy
       });
     });
@@ -1147,7 +1360,7 @@ export async function recordKaraokeComposition(
       const chordBeats = measureBeats / chordSymbols.length;
       let eventIndex = 0;
       chordSymbols.forEach((_, chordIndex) => {
-        createAccompanimentPattern(accompaniment?.styleId ?? "arpeggio", chordBeats).forEach((event) => {
+        createAccompanimentPattern(accompaniment?.styleId ?? "arpeggio", chordBeats, accompaniment?.meter).forEach((event) => {
           const noteId = `outro-${outroIndex}-${eventIndex}`;
           queueCallback(measureStart + (chordIndex * chordBeats + event.offsetBeats) * secondsPerBeat, () => {
             callbacks.onHighlight?.({ section: "outro", measureIndex: outroIndex, noteId });
@@ -1287,15 +1500,14 @@ export async function exportBackingCompositionMp3(
       const plan = songArrangementPlan(measureIndex, measures.length, accompanimentLayers.length);
       cursor += scheduleMeasure(context, master, measure, start + cursor, secondsPerBeat, {
         instrument,
-        sampledInstrument,
+        sampledInstrument: null,
         accompaniment,
         accompanimentLayers,
         voiceState,
-        // The saved instrumental version includes the student's composed
-        // melody during the song section, while intro/outro stay backing-only.
-        includeMelody: true,
+        includeMelody: false,
         includeEffects: true,
         arrangementLayerCount: plan.layerCount,
+        transitionFill: (measureIndex + 1) % 4 === 0 || measureIndex === measures.length - 1,
         arrangementEnergy: plan.energy
       });
     });
@@ -1356,9 +1568,6 @@ export async function exportBackingCompositionMp3Offline(
     } catch (error) {
       console.warn("악기 샘플을 불러오지 못해 합성 음색을 사용합니다.", error);
     }
-    // SoundFont players can succeed in a live AudioContext yet write no audio
-    // into an OfflineAudioContext. Use the reliable synthesized voice for the
-    // downloadable backing track so its MP3 is never silent.
     const accompanimentLayers = (accompaniment?.instrumentIds ?? []).map((id) => ({ id, sample: null }));
     const voiceState = createArrangementVoiceState();
     let cursor = 0;
@@ -1389,6 +1598,7 @@ export async function exportBackingCompositionMp3Offline(
         includeMelody: false,
         includeEffects: true,
         arrangementLayerCount: plan.layerCount,
+        transitionFill: (measureIndex + 1) % 4 === 0 || measureIndex === measures.length - 1,
         arrangementEnergy: plan.energy
       });
     });

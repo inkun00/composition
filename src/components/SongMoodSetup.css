@@ -1,0 +1,155 @@
+.song-mood-setup {
+  margin-bottom: 18px;
+  padding: 26px;
+  border: 1px solid var(--surface-border);
+  border-radius: 25px;
+  background: rgba(255, 255, 255, .96);
+  box-shadow: var(--shadow-soft);
+}
+
+.song-mood-top-row {
+  display: grid;
+  grid-template-columns: 1.08fr .92fr;
+  gap: 14px;
+}
+
+.mood-choice-group {
+  min-width: 0;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid #e6e0f4;
+  border-radius: 18px;
+  background: #fcfbff;
+}
+
+.mood-choice-group legend {
+  padding: 0 7px;
+  color: #443b6c;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.mood-choice-group > p {
+  margin: 0 0 12px;
+  color: #817a8d;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.tempo-mood-options,
+.rhythm-mood-options {
+  display: grid;
+  gap: 8px;
+}
+
+.tempo-mood-options,
+.rhythm-mood-options {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.tempo-mood-options button,
+.rhythm-mood-options button {
+  min-width: 0;
+  border: 2px solid transparent;
+  border-radius: 14px;
+  background: #f5f2fb;
+  color: #332d46;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.tempo-mood-options button {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  min-height: 112px;
+  padding: 10px 7px;
+  text-align: center;
+}
+
+.tempo-mood-options button > span,
+.rhythm-mood-options button > span {
+  font-size: 22px;
+}
+
+.tempo-mood-options strong,
+.rhythm-mood-options strong {
+  font-size: 13px;
+}
+
+.tempo-mood-options b {
+  color: #6753c5;
+  font-size: 12px;
+}
+
+.tempo-mood-options small,
+.rhythm-mood-options small {
+  color: #7e7789;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.tempo-mood-options button.active,
+.rhythm-mood-options button.active {
+  border-color: #8068df;
+  background: #f1edff;
+  box-shadow: 0 5px 14px rgba(96, 72, 187, .11);
+}
+
+.tempo-mood-options button:disabled,
+.rhythm-mood-options button:disabled {
+  cursor: not-allowed;
+  opacity: .55;
+}
+
+.custom-mood-value {
+  display: block;
+  margin-top: 8px;
+  color: #6958b7;
+  font-size: 10px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.rhythm-mood-options button {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 5px;
+  min-height: 112px;
+  padding: 12px;
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .song-mood-top-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .song-mood-setup {
+    padding: 18px 14px;
+  }
+
+  .tempo-mood-options,
+  .rhythm-mood-options {
+    grid-template-columns: 1fr;
+  }
+
+  .tempo-mood-options button {
+    grid-template-columns: auto 1fr auto;
+    justify-items: start;
+    align-items: center;
+    min-height: 66px;
+    text-align: left;
+  }
+
+  .tempo-mood-options button > span {
+    grid-row: 1 / span 2;
+  }
+
+  .tempo-mood-options button small {
+    grid-column: 2 / span 2;
+  }
+}

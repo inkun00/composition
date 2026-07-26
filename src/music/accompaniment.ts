@@ -1,6 +1,8 @@
 import type { InstrumentId } from "./instruments";
+import type { Meter } from "./meter";
 
-export const MAX_ACCOMPANIMENT_INSTRUMENTS = 10;
+export const MAX_ACCOMPANIMENT_INSTRUMENTS = 4;
+export const MAX_SAVED_ACCOMPANIMENT_INSTRUMENTS = 10;
 
 export type AccompanimentStyleId =
   | "strum" | "arpeggio" | "riff" | "folk" | "bossa" | "shuffle" | "comping"
@@ -44,27 +46,27 @@ export const ACCOMPANIMENT_STYLES: readonly AccompanimentStyle[] = [
   {
     id: "kpop", name: "K-POP 무대", alias: "K-POP", category: "genre",
     description: "단단한 낮은 음과 짧은 화음이 반복되어 힘차고 또렷해요.",
-    recommendedInstrumentIds: ["electric_piano_1", "electric_bass_finger", "electric_guitar_muted", "string_ensemble_1", "brass_section", "orchestra_hit"]
+    recommendedInstrumentIds: ["electric_piano_1", "electric_bass_finger", "electric_guitar_muted", "string_ensemble_1"]
   },
   {
     id: "children_song", name: "동요 놀이터", alias: "동요", category: "genre",
     description: "또렷한 박자 위에서 친숙한 악기들이 가볍게 주고받아요.",
-    recommendedInstrumentIds: ["acoustic_grand_piano", "acoustic_guitar_nylon", "pizzicato_strings", "recorder", "xylophone", "glockenspiel"]
+    recommendedInstrumentIds: ["acoustic_grand_piano", "acoustic_bass", "acoustic_guitar_nylon", "glockenspiel"]
   },
   {
     id: "animation_ost", name: "애니메이션 OST", alias: "애니 OST", category: "genre",
     description: "피아노 물결 위에 현악과 관악이 펼쳐져 장면이 크게 느껴져요.",
-    recommendedInstrumentIds: ["acoustic_grand_piano", "string_ensemble_1", "flute", "french_horn", "orchestral_harp", "timpani"]
+    recommendedInstrumentIds: ["acoustic_grand_piano", "contrabass", "string_ensemble_1", "flute"]
   },
   {
     id: "opera", name: "오페라 극장", alias: "오페라", category: "genre",
     description: "긴 화음과 합창 소리가 천천히 이어져 웅장하게 들려요.",
-    recommendedInstrumentIds: ["church_organ", "string_ensemble_1", "choir_aahs", "cello", "french_horn", "timpani"]
+    recommendedInstrumentIds: ["church_organ", "contrabass", "string_ensemble_1", "french_horn"]
   },
   {
     id: "musical", name: "뮤지컬 무대", alias: "뮤지컬", category: "genre",
     description: "또렷한 박자 사이로 금관과 목관이 대답해 장면 전환이 선명해요.",
-    recommendedInstrumentIds: ["bright_acoustic_piano", "string_ensemble_1", "trumpet", "trombone", "clarinet", "timpani"]
+    recommendedInstrumentIds: ["bright_acoustic_piano", "contrabass", "string_ensemble_1", "trumpet"]
   },
   { id: "strum", name: "시원한 쓸기 리듬", alias: "스트럼", category: "playing", description: "화음을 한 번에 쓸어 내려 시원하고 힘차게 받쳐 줘요." },
   { id: "arpeggio", name: "반짝이는 물결", alias: "아르페지오", category: "playing", description: "화음의 음을 차례로 연주해 노래를 돋보이게 해요." },
@@ -78,16 +80,89 @@ export const ACCOMPANIMENT_STYLES: readonly AccompanimentStyle[] = [
 export const ACCOMPANIMENT_GENRE_STYLES = ACCOMPANIMENT_STYLES.filter((style) => style.category === "genre");
 export const ACCOMPANIMENT_PLAYING_STYLES = ACCOMPANIMENT_STYLES.filter((style) => style.category === "playing");
 
-export const ENSEMBLE_PRESETS: readonly Readonly<{
-  id: "solo" | "acoustic" | "orchestra";
+export type AccompanimentModeId =
+  | "minimal" | "piano_ballad" | "acoustic" | "kpop_band" | "children_playground"
+  | "animation_cinema" | "bossa_cafe" | "musical_stage" | "opera_hall" | "bounce_band";
+
+export type AccompanimentMode = Readonly<{
+  id: AccompanimentModeId;
+  icon: string;
   name: string;
   description: string;
+  styleId: AccompanimentStyleId;
   instrumentIds: readonly InstrumentId[];
-}>[] = [
-  { id: "solo", name: "한 악기", description: "피아노 한 대로 담백하게", instrumentIds: ["piano"] },
-  { id: "acoustic", name: "작은 공연단", description: "피아노·기타·실로폰", instrumentIds: ["piano", "guitar", "xylophone"] },
-  { id: "orchestra", name: "풍성한 오케스트라", description: "건반·현악·관악을 함께", instrumentIds: ["piano", "guitar", "violin", "flute", "trumpet", "cello"] }
+}>;
+
+export const ACCOMPANIMENT_MODES: readonly AccompanimentMode[] = [
+  {
+    id: "minimal", icon: "🌙", name: "조용조용", description: "피아노와 낮은 음이 살짝 받쳐 줘요",
+    styleId: "comping", instrumentIds: ["acoustic_grand_piano", "acoustic_bass"]
+  },
+  {
+    id: "piano_ballad", icon: "🎹", name: "포근한 피아노", description: "피아노와 현악기가 부드럽게 이어져요",
+    styleId: "arpeggio", instrumentIds: ["acoustic_grand_piano", "acoustic_bass", "cello", "string_ensemble_2"]
+  },
+  {
+    id: "acoustic", icon: "🪵", name: "소풍 가는 기타", description: "통기타와 리코더가 가볍게 걸어가요",
+    styleId: "folk", instrumentIds: ["acoustic_guitar_steel", "acoustic_bass", "acoustic_grand_piano", "recorder"]
+  },
+  {
+    id: "children_playground", icon: "🎈", name: "통통 동요", description: "밝은 피아노와 종소리가 통통 튀어요",
+    styleId: "children_song", instrumentIds: ["bright_acoustic_piano", "acoustic_bass", "acoustic_guitar_nylon", "glockenspiel"]
+  },
+  {
+    id: "kpop_band", icon: "✨", name: "반짝 K-POP", description: "베이스와 짧은 기타가 힘차게 연주해요",
+    styleId: "kpop", instrumentIds: ["electric_piano_1", "electric_bass_finger", "electric_guitar_muted", "string_ensemble_1"]
+  },
+  {
+    id: "bounce_band", icon: "🚂", name: "신나는 바운스", description: "짧고 긴 박자가 번갈아 신나게 달려요",
+    styleId: "shuffle", instrumentIds: ["bright_acoustic_piano", "electric_bass_pick", "electric_guitar_muted", "marimba"]
+  },
+  {
+    id: "animation_cinema", icon: "🎬", name: "영화 속 모험", description: "현악기와 플루트가 멋진 장면을 만들어요",
+    styleId: "animation_ost", instrumentIds: ["acoustic_grand_piano", "contrabass", "string_ensemble_1", "flute"]
+  },
+  {
+    id: "bossa_cafe", icon: "☕", name: "살랑살랑 카페", description: "부드러운 기타와 비브라폰이 흔들려요",
+    styleId: "bossa", instrumentIds: ["electric_piano_1", "acoustic_bass", "acoustic_guitar_nylon", "vibraphone"]
+  },
+  {
+    id: "musical_stage", icon: "🎭", name: "신나는 뮤지컬", description: "현악기와 트럼펫이 씩씩하게 대답해요",
+    styleId: "musical", instrumentIds: ["bright_acoustic_piano", "contrabass", "string_ensemble_1", "trumpet"]
+  },
+  {
+    id: "opera_hall", icon: "🏛️", name: "웅장한 무대", description: "오르간과 오케스트라가 크게 울려요",
+    styleId: "opera", instrumentIds: ["church_organ", "contrabass", "string_ensemble_1", "french_horn"]
+  }
 ];
+
+// Previous code and saved UI tests referred to these as ensemble presets.
+// Keep the export as an alias while the product now presents them as modes.
+export const ENSEMBLE_PRESETS = ACCOMPANIMENT_MODES;
+
+export const ACCOMPANIMENT_INSTRUMENT_IDS: readonly InstrumentId[] = [
+  "acoustic_grand_piano", "bright_acoustic_piano", "electric_piano_1", "electric_piano_2",
+  "church_organ", "accordion",
+  "acoustic_guitar_nylon", "acoustic_guitar_steel", "electric_guitar_clean",
+  "electric_guitar_muted",
+  "acoustic_bass", "electric_bass_finger", "electric_bass_pick", "contrabass",
+  "violin", "viola", "cello", "string_ensemble_1", "string_ensemble_2",
+  "pizzicato_strings", "orchestral_harp",
+  "flute", "recorder", "clarinet", "oboe", "french_horn", "trumpet", "trombone",
+  "xylophone", "glockenspiel", "marimba", "vibraphone", "timpani", "orchestra_hit"
+];
+
+const accompanimentInstrumentIdSet = new Set(ACCOMPANIMENT_INSTRUMENT_IDS);
+
+export function isAccompanimentInstrument(id: InstrumentId): boolean {
+  const legacy = id === "piano" ? "acoustic_grand_piano"
+    : id === "guitar" ? "acoustic_guitar_nylon" : id;
+  return accompanimentInstrumentIdSet.has(legacy);
+}
+
+export function transposeOctaves(pitch: number, octaves: number): number {
+  return pitch + octaves * 12;
+}
 
 export function findAccompanimentStyle(id: string): AccompanimentStyle {
   return ACCOMPANIMENT_STYLES.find((style) => style.id === id) ??
@@ -107,9 +182,45 @@ function fitEvents(events: readonly AccompanimentEvent[], beats: number): readon
 
 export function createAccompanimentPattern(
   styleId: AccompanimentStyleId,
-  beats: number
+  beats: number,
+  meter?: Meter
 ): readonly AccompanimentEvent[] {
   const events: AccompanimentEvent[] = [];
+  const compoundSixEight = meter?.beats === 6 && meter.beatUnit === 8;
+  if (compoundSixEight) {
+    if (styleId === "strum") {
+      events.push(event(0, 1.18, "chord"), event(1.5, 1.18, "chord"));
+    } else if (styleId === "arpeggio" || styleId === "animation_ost") {
+      const steps = styleId === "animation_ost" ? [0, 1, 2, 1, 2, 1] : [0, 1, 2, 0, 1, 2];
+      for (let beat = 0, index = 0; beat < beats; beat += .5, index += 1) {
+        events.push(event(beat, .43, "step", steps[index % steps.length]));
+      }
+    } else if (styleId === "riff") {
+      [0, .5, 1.5, 2].forEach((beat, index) => events.push(event(beat, .4, "step", [0, 2, 1, 2][index])));
+    } else if (styleId === "folk") {
+      events.push(event(0, 1.08, "root"), event(1.5, 1.08, "chord"));
+    } else if (styleId === "bossa") {
+      events.push(event(0, .62, "root"), event(1, .4, "chord"),
+        event(1.5, .62, "root"), event(2.5, .4, "chord"));
+    } else if (styleId === "shuffle") {
+      events.push(event(0, .7, "root"), event(1, .32, "chord"),
+        event(1.5, .7, "root"), event(2.5, .32, "chord"));
+    } else if (styleId === "kpop") {
+      events.push(event(0, .46, "root"), event(.5, .3, "chord"),
+        event(1.5, .4, "chord"), event(2.5, .34, "chord"));
+    } else if (styleId === "children_song") {
+      events.push(event(0, .6, "root"), event(.5, .3, "step", 1),
+        event(1.5, .6, "chord"), event(2, .3, "step", 2));
+    } else if (styleId === "opera") {
+      events.push(event(0, beats, "chord"), event(0, 1.2, "root"), event(2.25, .6, "step", 2));
+    } else if (styleId === "musical") {
+      events.push(event(0, .65, "root"), event(1, .3, "chord"),
+        event(1.5, .55, "chord"), event(2.5, .32, "step", 2));
+    } else {
+      [.5, 1.5, 2.5].forEach((beat) => events.push(event(beat, .38, "chord")));
+    }
+    return fitEvents(events, beats);
+  }
   if (styleId === "strum") {
     for (let beat = 0; beat < beats; beat += 1) events.push(event(beat, .72, "chord"));
   } else if (styleId === "arpeggio") {
@@ -161,22 +272,112 @@ export type AccompanimentInstrumentPart = Readonly<{
   label: string;
 }>;
 
+export type AccompanimentInstrumentProfile = Readonly<{
+  part: AccompanimentInstrumentPart;
+  range: readonly [min: number, max: number, center: number];
+  gain: number;
+  polyphonic: boolean;
+}>;
+
+const PARTS = {
+  bass: { id: "bass", label: "낮은 받침" },
+  keys: { id: "keys", label: "화음 채우기" },
+  guitar: { id: "guitar", label: "쪼갠 리듬" },
+  strings: { id: "strings", label: "길게 받치기" },
+  winds: { id: "winds", label: "노래 사이의 응답" },
+  percussion: { id: "percussion", label: "리듬 꾸밈" }
+} as const satisfies Record<string, AccompanimentInstrumentPart>;
+
+const INSTRUMENT_PARTS: Readonly<Record<string, AccompanimentInstrumentPart>> = {
+  acoustic_grand_piano: PARTS.keys,
+  bright_acoustic_piano: PARTS.keys,
+  electric_piano_1: PARTS.keys,
+  electric_piano_2: PARTS.keys,
+  church_organ: PARTS.keys,
+  accordion: PARTS.keys,
+  acoustic_guitar_nylon: PARTS.guitar,
+  acoustic_guitar_steel: PARTS.guitar,
+  electric_guitar_clean: PARTS.guitar,
+  electric_guitar_muted: PARTS.guitar,
+  acoustic_bass: PARTS.bass,
+  electric_bass_finger: PARTS.bass,
+  electric_bass_pick: PARTS.bass,
+  contrabass: PARTS.bass,
+  violin: PARTS.strings,
+  viola: PARTS.strings,
+  cello: PARTS.strings,
+  string_ensemble_1: PARTS.strings,
+  string_ensemble_2: PARTS.strings,
+  pizzicato_strings: PARTS.strings,
+  orchestral_harp: PARTS.guitar,
+  flute: PARTS.winds,
+  recorder: PARTS.winds,
+  clarinet: PARTS.winds,
+  oboe: PARTS.winds,
+  french_horn: PARTS.winds,
+  trumpet: PARTS.winds,
+  trombone: PARTS.winds,
+  xylophone: PARTS.percussion,
+  glockenspiel: PARTS.percussion,
+  marimba: PARTS.percussion,
+  vibraphone: PARTS.percussion,
+  timpani: PARTS.percussion,
+  orchestra_hit: PARTS.percussion
+};
+
 export function accompanimentInstrumentPart(instrumentId: InstrumentId, layerIndex: number): AccompanimentInstrumentPart {
   const id = instrumentId.toLowerCase();
+  const canonicalId = id === "piano" ? "acoustic_grand_piano" : id === "guitar" ? "acoustic_guitar_nylon" : id;
+  const explicit = INSTRUMENT_PARTS[canonicalId];
+  if (explicit) return explicit;
   if (/(bass|tuba|bassoon|contrabass)/.test(id)) return { id: "bass", label: "낮은 받침" };
   if (/(guitar|banjo|mandolin)/.test(id)) return { id: "guitar", label: "쪼갠 리듬" };
+  if (/(piano|organ|accordion|harpsichord|clavinet|celesta)/.test(id)) return { id: "keys", label: "화음 채우기" };
   if (/(violin|viola|cello|string|choir|pad|harp)/.test(id)) return { id: "strings", label: "길게 받치기" };
   if (/(trumpet|trombone|horn|brass|sax|flute|clarinet|oboe|recorder|harmonica)/.test(id)) return { id: "winds", label: "짧은 강조" };
-  if (/(xylophone|marimba|vibraphone|bells|timpani|agogo|applause|orchestra_hit|cymbal)/.test(id)) return { id: "percussion", label: "리듬 꾸밈" };
-  if (/(piano|organ|accordion|harpsichord|clavinet)/.test(id)) return { id: "keys", label: "화음 채우기" };
+  if (/(xylophone|glockenspiel|marimba|vibraphone|bells|timpani|orchestra_hit)/.test(id)) return { id: "percussion", label: "리듬 꾸밈" };
   return { id: "support", label: accompanimentLayerRole(layerIndex).label };
+}
+
+export function accompanimentInstrumentProfile(
+  instrumentId: InstrumentId,
+  layerIndex: number
+): AccompanimentInstrumentProfile {
+  const part = accompanimentInstrumentPart(instrumentId, layerIndex);
+  const range: AccompanimentInstrumentProfile["range"] = part.id === "bass" ? [32, 52, 40]
+    : part.id === "keys" ? [40, 72, 55]
+    : part.id === "guitar" ? [48, 76, 61]
+    : part.id === "strings" ? [48, 81, 63]
+    : part.id === "winds" ? [58, 86, 71]
+    : part.id === "percussion" ? [48, 81, 64]
+    : [48, 78, 61];
+  const gain = instrumentId.includes("glockenspiel") || instrumentId.includes("orchestra_hit") ? .48
+    : instrumentId.includes("timpani") || part.id === "winds" ? .68
+    : part.id === "strings" ? .76
+    : part.id === "keys" ? .82
+    : part.id === "guitar" || part.id === "percussion" ? .84
+    : 1;
+  return {
+    part,
+    range,
+    gain,
+    polyphonic: part.id === "keys" || /ensemble|choir/.test(instrumentId) ||
+      instrumentId.includes("orchestra_hit")
+  };
+}
+
+function bassPulseOffsets(beats: number, meter?: Meter): readonly number[] {
+  if (meter?.beats === 6 && meter.beatUnit === 8) return [0, 1.5].filter((offset) => offset < beats);
+  return Array.from({ length: Math.ceil(beats) }, (_, index) => index)
+    .filter((offset) => offset < beats);
 }
 
 export function createInstrumentAccompanimentPattern(
   styleId: AccompanimentStyleId,
   beats: number,
   instrumentId: InstrumentId,
-  layerIndex: number
+  layerIndex: number,
+  meter?: Meter
 ): readonly AccompanimentEvent[] {
   const part = accompanimentInstrumentPart(instrumentId, layerIndex);
   if (styleId === "kpop") {
@@ -184,25 +385,24 @@ export function createInstrumentAccompanimentPattern(
       event(0, .3, "chord"), event(Math.max(.5, beats - .5), .3, "chord")
     ], beats);
     if (part.id === "bass") {
-      const offsets = Array.from({ length: Math.ceil(beats) }, (_, index) => index)
-        .filter((offset) => offset < beats);
+      const offsets = bassPulseOffsets(beats, meter);
       return offsets.map((offset) => event(offset, Math.min(.48, beats - offset), "root"));
     }
     if (part.id === "strings") return [event(0, beats, "chord")];
     if (part.id === "winds") return fitEvents([event(Math.max(0, beats - .5), .42, "chord")], beats);
-    if (part.id === "guitar" || part.id === "percussion") return createAccompanimentPattern("riff", beats);
+    if (part.id === "guitar" || part.id === "percussion") return createAccompanimentPattern("riff", beats, meter);
   }
   if (styleId === "children_song") {
-    if (instrumentId.includes("pizzicato")) return createAccompanimentPattern("folk", beats);
-    if (part.id === "bass" || part.id === "guitar") return createAccompanimentPattern("folk", beats);
+    if (instrumentId.includes("pizzicato")) return createAccompanimentPattern("folk", beats, meter);
+    if (part.id === "bass" || part.id === "guitar") return createAccompanimentPattern("folk", beats, meter);
     if (part.id === "winds") return fitEvents([
       event(0, .42, "step", layerIndex),
       event(Math.max(.5, beats - 1), .42, "step", layerIndex + 1)
     ], beats);
-    if (part.id === "percussion") return createAccompanimentPattern("children_song", beats);
+    if (part.id === "percussion") return createAccompanimentPattern("children_song", beats, meter);
   }
   if (styleId === "animation_ost") {
-    if (instrumentId.includes("harp")) return createAccompanimentPattern("arpeggio", beats);
+    if (instrumentId.includes("harp")) return createAccompanimentPattern("arpeggio", beats, meter);
     if (part.id === "bass") return [event(0, Math.min(1, beats), "root")];
     if (part.id === "strings") return [event(0, beats, "chord")];
     if (part.id === "winds") return fitEvents([
@@ -222,8 +422,7 @@ export function createInstrumentAccompanimentPattern(
   }
   if (styleId === "musical") {
     if (part.id === "bass") {
-      const offsets = Array.from({ length: Math.ceil(beats) }, (_, index) => index)
-        .filter((offset) => offset < beats);
+      const offsets = bassPulseOffsets(beats, meter);
       return offsets.map((offset) => event(offset, Math.min(.64, beats - offset), "root"));
     }
     if (part.id === "strings") return [event(0, beats, "chord")];
@@ -231,10 +430,12 @@ export function createInstrumentAccompanimentPattern(
       event(Math.min(.75, beats - .12), .3, "chord"),
       event(Math.max(.5, beats - .5), .42, "step", layerIndex)
     ], beats);
-    if (part.id === "percussion") return createAccompanimentPattern("strum", beats);
+    if (part.id === "percussion") return createAccompanimentPattern("strum", beats, meter);
   }
   if (part.id === "bass") {
-    const offsets = beats >= 3 ? [0, Math.min(2, beats - .5)] : [0];
+    const offsets = meter?.beats === 6 && meter.beatUnit === 8
+      ? bassPulseOffsets(beats, meter)
+      : beats >= 3 ? [0, Math.min(2, beats - .5)] : [0];
     return offsets.map((offset) => event(offset, Math.min(.82, beats - offset), "root"));
   }
   if (part.id === "strings") return [event(0, beats, "chord")];
@@ -242,7 +443,31 @@ export function createInstrumentAccompanimentPattern(
     const ending = Math.max(.5, beats - .75);
     return [event(0, .48, "chord"), event(ending, Math.min(.48, beats - ending), "step", layerIndex)];
   }
-  if (part.id === "percussion") return createAccompanimentPattern("riff", beats);
-  if (part.id === "guitar") return createAccompanimentPattern(styleId === "strum" ? "strum" : "arpeggio", beats);
-  return createAccompanimentPattern(styleId, beats);
+  if (part.id === "percussion") return createAccompanimentPattern("riff", beats, meter);
+  if (part.id === "guitar") return createAccompanimentPattern(styleId === "strum" ? "strum" : "arpeggio", beats, meter);
+  return createAccompanimentPattern(styleId, beats, meter);
+}
+
+export function createInstrumentTransitionFill(
+  beats: number,
+  instrumentId: InstrumentId,
+  layerIndex: number,
+  meter?: Meter
+): readonly AccompanimentEvent[] {
+  if (beats < 1) return [];
+  const part = accompanimentInstrumentPart(instrumentId, layerIndex);
+  const span = meter?.beats === 6 && meter.beatUnit === 8 ? Math.min(1.5, beats) : 1;
+  const start = beats - span;
+  if (part.id === "percussion") return fitEvents([
+    event(start, span / 4, "step", layerIndex), event(start + span / 4, span / 4, "step", layerIndex + 1),
+    event(start + span / 2, span / 4, "step", layerIndex + 2), event(start + span * .75, span / 4, "chord")
+  ], beats);
+  if (part.id === "winds") return fitEvents([
+    event(start + span / 2, span / 4, "step", layerIndex + 1),
+    event(start + span * .75, span / 4, "step", layerIndex + 2)
+  ], beats);
+  if (part.id === "keys" || part.id === "guitar") return fitEvents([
+    event(start + span / 2, span / 4, "chord"), event(start + span * .75, span / 4, "chord")
+  ], beats);
+  return [];
 }

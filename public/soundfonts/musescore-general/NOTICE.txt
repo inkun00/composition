@@ -1,3 +1,0 @@
-MuseScore General SoundFont
-Source: https://ftp.osuosl.org/pub/musescore/soundfont/MuseScore_General/
-License: MIT, see MuseScore_General_License.md

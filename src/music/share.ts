@@ -1,6 +1,6 @@
 import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from "lz-string";
 import { INSTRUMENTS, isValidInstrumentId, type InstrumentId } from "./instruments";
-import { ACCOMPANIMENT_STYLES, MAX_ACCOMPANIMENT_INSTRUMENTS, type AccompanimentStyleId } from "./accompaniment";
+import { ACCOMPANIMENT_STYLES, MAX_SAVED_ACCOMPANIMENT_INSTRUMENTS, type AccompanimentStyleId } from "./accompaniment";
 import type { Meter } from "./meter";
 import type { NoteEvent } from "./types";
 import { isSoundEffectId } from "./soundEffects";
@@ -235,7 +235,7 @@ function isSharedComposition(value: unknown): value is SharedComposition {
   if (item.accompanimentStyleId !== undefined &&
     !ACCOMPANIMENT_STYLES.some((style) => style.id === item.accompanimentStyleId)) return false;
   if (item.accompanimentInstrumentIds !== undefined && (!Array.isArray(item.accompanimentInstrumentIds) ||
-    item.accompanimentInstrumentIds.length > MAX_ACCOMPANIMENT_INSTRUMENTS ||
+    item.accompanimentInstrumentIds.length > MAX_SAVED_ACCOMPANIMENT_INSTRUMENTS ||
     new Set(item.accompanimentInstrumentIds).size !== item.accompanimentInstrumentIds.length ||
     !item.accompanimentInstrumentIds.every(isValidInstrumentId))) return false;
   if (item.bpm !== undefined && (!Number.isInteger(item.bpm) || item.bpm < 40 || item.bpm > 220)) return false;

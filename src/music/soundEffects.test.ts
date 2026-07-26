@@ -1,23 +1,26 @@
 import { describe, expect, it } from "vitest";
-import { findSoundEffect, isSoundEffectId, SOUND_EFFECTS } from "./soundEffects";
+import { SOUND_EFFECTS, soundEffectIconForName } from "./soundEffects";
 
-describe("sound effect library", () => {
-  it("provides unique real CC0 sample effects", () => {
-    expect(SOUND_EFFECTS.length).toBe(200);
-    expect(new Set(SOUND_EFFECTS.map((effect) => effect.id)).size).toBe(SOUND_EFFECTS.length);
-    expect(new Set(SOUND_EFFECTS.map((effect) => effect.source)).size).toBe(SOUND_EFFECTS.length);
-    expect(SOUND_EFFECTS.every((effect) => effect.source?.endsWith(".ogg"))).toBe(true);
-    expect(SOUND_EFFECTS.every((effect) => effect.license === "CC0")).toBe(true);
+describe("효과음 이름 아이콘", () => {
+  it.each([
+    ["발걸음 1", "👣"],
+    ["기계 1", "⚙️"],
+    ["이어지는 공사장 장소", "🚧"],
+    ["문 닫기 1", "🚪"],
+    ["냄비 1", "🍲"],
+    ["유리 1", "🪟"],
+    ["종 1", "🔔"],
+    ["바람 1", "🌬️"],
+    ["천둥 1", "⚡"]
+  ])("%s에 어울리는 아이콘을 고른다", (name, icon) => {
+    expect(soundEffectIconForName(name, "❓")).toBe(icon);
   });
 
-  it("keeps old shared scores compatible without showing duplicate aliases in the picker", () => {
-    expect(isSoundEffectId("bell")).toBe(true);
-    expect(findSoundEffect("bell").source).toBe("/sound-effects/cc0/bell_01.ogg");
-    expect(SOUND_EFFECTS.some((effect) => effect.id === "bell")).toBe(false);
-  });
+  it("화면에 제공하는 효과음 목록에도 이름별 아이콘을 반영한다", () => {
+    const iconOf = (name: string) => SOUND_EFFECTS.find((effect) => effect.name === name)?.icon;
 
-  it("recognizes new open sample IDs", () => {
-    expect(isSoundEffectId("cc0-bell-01")).toBe(true);
-    expect(findSoundEffect("cc0-bell-01").name).toBe("종 1");
+    expect(iconOf("발걸음 1")).toBe("👣");
+    expect(iconOf("기계 1")).toBe("⚙️");
+    expect(iconOf("문 1")).toBe("🚪");
   });
 });

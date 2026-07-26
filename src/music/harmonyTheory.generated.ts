@@ -158,38 +158,38 @@ export const HARMONY_THEORY: readonly HarmonyTheoryRow[] = [
   },
   {
     "id": "H008",
-    "teacherName": "나폴리 화음 진행",
-    "mood": "이국적 슬픔, 극적 비장미",
-    "original": "Dm–D♭–C",
+    "teacherName": "나폴리 화음 정격 진행",
+    "mood": "낯선 문을 지나 집으로 돌아오는 비장함",
+    "original": "Dm–E♭–A7–Dm",
     "bars": [
       [
         "Dm"
       ],
       [
-        "D♭"
+        "E♭"
       ],
       [
-        "C"
+        "A7"
       ],
       [
-        "C"
+        "Dm"
       ]
     ]
   },
   {
     "id": "H009",
-    "teacherName": "이탈리아 증6도 진행",
-    "mood": "날카로운 긴장, 웅장한 도약",
-    "original": "It+6(Fm 계열)–G",
+    "teacherName": "3도 화음이 여는 반종지",
+    "mood": "새싹처럼 생각이 자라 다음 장면을 기다림",
+    "original": "C–Em–F–G",
     "bars": [
       [
-        "It+6"
+        "C"
       ],
       [
-        "It+6"
+        "Em"
       ],
       [
-        "G"
+        "F"
       ],
       [
         "G"
@@ -198,18 +198,18 @@ export const HARMONY_THEORY: readonly HarmonyTheoryRow[] = [
   },
   {
     "id": "H010",
-    "teacherName": "프랑스 증6도 진행",
-    "mood": "오묘하고 세련된 긴장",
-    "original": "Fr+6(Fm 계열)–G",
+    "teacherName": "버금딸림 두 겹 반종지",
+    "mood": "한 걸음씩 힘이 모이며 다음 이야기를 기다림",
+    "original": "C–Dm–F–G",
     "bars": [
       [
-        "Fr+6"
+        "C"
       ],
       [
-        "Fr+6"
+        "Dm"
       ],
       [
-        "G"
+        "F"
       ],
       [
         "G"
@@ -545,21 +545,21 @@ export const HARMONY_THEORY: readonly HarmonyTheoryRow[] = [
   },
   {
     "id": "H027",
-    "teacherName": "저스틴 비버 진행",
-    "mood": "몽환적 표류감, 하이틴 감성",
-    "original": "Fmaj7–G–Em7–Am7",
+    "teacherName": "다이어토닉 두왑 변형",
+    "mood": "친근한 인사가 둥글게 돌아 다시 시작됨",
+    "original": "C–Am–Dm–G",
     "bars": [
       [
-        "Fmaj7"
+        "C"
+      ],
+      [
+        "Am"
+      ],
+      [
+        "Dm"
       ],
       [
         "G"
-      ],
-      [
-        "Em7"
-      ],
-      [
-        "Am7"
       ]
     ]
   },
@@ -766,21 +766,21 @@ export const HARMONY_THEORY: readonly HarmonyTheoryRow[] = [
   },
   {
     "id": "H038",
-    "teacherName": "새드 머니 코드",
-    "mood": "절망 속 희망, 엔딩 크레딧",
-    "original": "Am–F–C–G",
+    "teacherName": "블루스 내림3도 색채 진행",
+    "mood": "씩씩하고 장난스럽게 옆길로 갔다 돌아옴",
+    "original": "C–E♭–F–C",
     "bars": [
       [
-        "Am"
+        "C"
+      ],
+      [
+        "E♭"
       ],
       [
         "F"
       ],
       [
         "C"
-      ],
-      [
-        "G"
       ]
     ]
   },
@@ -846,22 +846,21 @@ export const HARMONY_THEORY: readonly HarmonyTheoryRow[] = [
   },
   {
     "id": "H042",
-    "teacherName": "로열 로드 마이너 변형",
-    "mood": "다크 판타지, 비장한 각성",
-    "original": "Fmaj7–E7–Am7–Gm7(C7)",
+    "teacherName": "장3도 상승과 단조 버금딸림",
+    "mood": "밝게 솟아오른 뒤 갑자기 아련해지는 반전",
+    "original": "C–E–F–Fm",
     "bars": [
       [
-        "Fmaj7"
+        "C"
       ],
       [
-        "E7"
+        "E"
       ],
       [
-        "Am7"
+        "F"
       ],
       [
-        "Gm7",
-        "C7"
+        "Fm"
       ]
     ]
   },
@@ -1089,7 +1088,7 @@ export const HARMONY_THEORY: readonly HarmonyTheoryRow[] = [
     "id": "H054",
     "teacherName": "네오 소울 루프",
     "mood": "몽환적이고 그루비함",
-    "original": "Fmaj7–E7–Am7–Dm7(G7)",
+    "original": "Fmaj7–E7–Am7–Gm7(C7)",
     "bars": [
       [
         "Fmaj7"
@@ -1101,8 +1100,8 @@ export const HARMONY_THEORY: readonly HarmonyTheoryRow[] = [
         "Am7"
       ],
       [
-        "Dm7",
-        "G7"
+        "Gm7",
+        "C7"
       ]
     ]
   },
@@ -1474,21 +1473,21 @@ export const HARMONY_THEORY: readonly HarmonyTheoryRow[] = [
   },
   {
     "id": "H073",
-    "teacherName": "렐러티브 메이저 스왑",
-    "mood": "슬픔 속 따뜻한 위로",
-    "original": "Am7–Dm7–G7–Cmaj7",
+    "teacherName": "버금딸림 기능 확장",
+    "mood": "포근한 길을 두 번 지나 기대를 모으는 흐름",
+    "original": "Cmaj7–Fmaj7–Dm7–G7",
     "bars": [
       [
-        "Am7"
+        "Cmaj7"
+      ],
+      [
+        "Fmaj7"
       ],
       [
         "Dm7"
       ],
       [
         "G7"
-      ],
-      [
-        "Cmaj7"
       ]
     ]
   },
@@ -1614,21 +1613,21 @@ export const HARMONY_THEORY: readonly HarmonyTheoryRow[] = [
   },
   {
     "id": "H080",
-    "teacherName": "도리안 모달 루프",
-    "mood": "소울풀하고 쿨한 영웅",
-    "original": "Dm7–G7–Dm7–G7",
+    "teacherName": "크로매틱 미디언트 왕복",
+    "mood": "먼 별로 순간 이동했다가 집으로 돌아오는 느낌",
+    "original": "C–A♭–E–C",
     "bars": [
       [
-        "Dm7"
+        "C"
       ],
       [
-        "G7"
+        "A♭"
       ],
       [
-        "Dm7"
+        "E"
       ],
       [
-        "G7"
+        "C"
       ]
     ]
   },
@@ -1654,21 +1653,21 @@ export const HARMONY_THEORY: readonly HarmonyTheoryRow[] = [
   },
   {
     "id": "H082",
-    "teacherName": "힙합 칠홉 루프",
-    "mood": "나른하고 빈티지한 Lo-fi",
-    "original": "Dm9–G13–Cmaj9",
+    "teacherName": "단조 플라갈 귀환",
+    "mood": "저녁길을 천천히 돌아 편안한 집에 도착함",
+    "original": "Am–G–Dm–Am",
     "bars": [
       [
-        "Dm9"
+        "Am"
       ],
       [
-        "G13"
+        "G"
       ],
       [
-        "Cmaj9"
+        "Dm"
       ],
       [
-        "Cmaj9"
+        "Am"
       ]
     ]
   },
@@ -1815,21 +1814,21 @@ export const HARMONY_THEORY: readonly HarmonyTheoryRow[] = [
   },
   {
     "id": "H090",
-    "teacherName": "모던 록 파워코드 진행",
-    "mood": "거칠고 날것의 청춘 에너지",
-    "original": "C5–G5–A5–F5",
+    "teacherName": "확장 플라갈 모험 진행",
+    "mood": "넓은 들판을 건너며 발걸음이 점점 커짐",
+    "original": "C–E♭–B♭–F",
     "bars": [
       [
-        "C5"
+        "C"
       ],
       [
-        "G5"
+        "E♭"
       ],
       [
-        "A5"
+        "B♭"
       ],
       [
-        "F5"
+        "F"
       ]
     ]
   },
@@ -1995,21 +1994,21 @@ export const HARMONY_THEORY: readonly HarmonyTheoryRow[] = [
   },
   {
     "id": "H099",
-    "teacherName": "할리우드 로맨스 종지",
-    "mood": "눈부신 해피엔딩",
-    "original": "Dm7–G7–C6",
+    "teacherName": "단조 대조형 정격 귀환",
+    "mood": "슬픔 속에서 용기를 모아 힘있게 집을 찾음",
+    "original": "Am–C–Dm–E",
     "bars": [
       [
-        "Dm7"
+        "Am"
       ],
       [
-        "G7"
+        "C"
       ],
       [
-        "C6"
+        "Dm"
       ],
       [
-        "C6"
+        "E"
       ]
     ]
   },

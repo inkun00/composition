@@ -1,0 +1,72 @@
+.recording-guide-selector {
+  grid-column: 1 / -1;
+  margin: 18px 0 12px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border: 1px solid #ddd7ef;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #fbfaff, #fffaf1);
+}
+
+.recording-guide-selector strong,
+.recording-guide-selector small {
+  display: block;
+}
+
+.recording-guide-selector strong {
+  color: #373146;
+  font-size: 14px;
+}
+
+.recording-guide-selector small {
+  margin-top: 4px;
+  color: #70697b;
+  font-size: 11px;
+}
+
+.recording-guide-options {
+  display: flex;
+  gap: 7px;
+}
+
+.recording-guide-options button {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid #ddd7e7;
+  border-radius: 10px;
+  background: #fff;
+  color: #50495c;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.recording-guide-options button span {
+  margin-right: 5px;
+}
+
+.recording-guide-options button.selected {
+  border-color: #6d5ce7;
+  background: #eeeaff;
+  color: #5140b5;
+  box-shadow: 0 0 0 2px rgba(109, 92, 231, .12);
+}
+
+@media (max-width: 760px) {
+  .recording-guide-selector {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .recording-guide-options {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .recording-guide-options button {
+    padding: 0 6px;
+    font-size: 11px;
+  }
+}

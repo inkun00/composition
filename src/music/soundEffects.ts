@@ -17,6 +17,54 @@ export type SoundEffectDefinition = Readonly<{
   credit?: string;
 }>;
 
+const soundEffectIconRules: readonly (readonly [needle: string, icon: string])[] = [
+  ["전자레인지", "♨️"],
+  ["자물쇠", "🔓"],
+  ["열쇠", "🔑"],
+  ["물 내리기", "🚽"],
+  ["물튀김", "💦"],
+  ["이어지는 물", "🌊"],
+  ["이어지는 배경", "🎧"],
+  ["나무 상자", "📦"],
+  ["발걸음", "👣"],
+  ["공사장", "🚧"],
+  ["도로", "🛣️"],
+  ["기계", "⚙️"],
+  ["그릇", "🍽️"],
+  ["냄비", "🍲"],
+  ["스위치", "🔘"],
+  ["종이", "📄"],
+  ["문", "🚪"],
+  ["놀이 소리", "🪀"],
+  ["신기한 소리", "✨"],
+  ["잡음", "📻"],
+  ["재미있는 소리", "🎉"],
+  ["금속", "🔩"],
+  ["나무", "🪵"],
+  ["도구", "🛠️"],
+  ["돌멩이", "🪨"],
+  ["물건", "📦"],
+  ["유리", "🪟"],
+  ["쾅", "💥"],
+  ["톡 치기", "👆"],
+  ["통통 튀기", "🟠"],
+  ["폭발", "💣"],
+  ["펑", "💥"],
+  ["퐁당", "💧"],
+  ["새소리", "🐦"],
+  ["박수", "👏"],
+  ["시계", "⏰"],
+  ["물소리", "💧"],
+  ["천둥", "⚡"],
+  ["바람", "🌬️"],
+  ["종", "🔔"],
+  ["징", "🥁"]
+];
+
+export function soundEffectIconForName(name: string, fallback: string): string {
+  return soundEffectIconRules.find(([needle]) => name.includes(needle))?.[1] ?? fallback;
+}
+
 const legacyEffectAliases: Readonly<Record<string, SoundEffectDefinition>> = {
   bird: {
     id: "bird",
@@ -80,7 +128,10 @@ const legacyEffectAliases: Readonly<Record<string, SoundEffectDefinition>> = {
   }
 };
 
-export const SOUND_EFFECTS: readonly SoundEffectDefinition[] = OPEN_SOUND_EFFECTS;
+export const SOUND_EFFECTS: readonly SoundEffectDefinition[] = OPEN_SOUND_EFFECTS.map((effect) => ({
+  ...effect,
+  icon: soundEffectIconForName(effect.name, effect.icon)
+}));
 
 export function isSoundEffectId(value: string): value is SoundEffectId {
   return SOUND_EFFECTS.some((effect) => effect.id === value) || value in legacyEffectAliases;
