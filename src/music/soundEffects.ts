@@ -1,4 +1,5 @@
 import { OPEN_SOUND_EFFECTS } from "./openSoundEffects";
+import { DIVERSE_SOUND_EFFECTS } from "./diverseSoundEffects";
 
 export type SoundEffectId = string;
 
@@ -15,6 +16,7 @@ export type SoundEffectDefinition = Readonly<{
   source?: string;
   license?: string;
   credit?: string;
+  sourcePage?: string;
 }>;
 
 const soundEffectIconRules: readonly (readonly [needle: string, icon: string])[] = [
@@ -128,15 +130,43 @@ const legacyEffectAliases: Readonly<Record<string, SoundEffectDefinition>> = {
   }
 };
 
-export const SOUND_EFFECTS: readonly SoundEffectDefinition[] = OPEN_SOUND_EFFECTS.map((effect) => ({
+function effectFamily(name: string): string {
+  return name.replace(/\s+\d+$/, "");
+}
+
+const familyCounts = new Map<string, number>();
+const retainedNames = new Set<string>();
+const retainedOpenEffects = OPEN_SOUND_EFFECTS.filter((effect) => {
+  const family = `${effect.category}|${effectFamily(effect.name)}`;
+  const nameKey = `${effect.category}|${effect.name}`;
+  if (retainedNames.has(nameKey)) return false;
+  const count = familyCounts.get(family) ?? 0;
+  if (count >= (effectFamily(effect.name) === "놀이 소리" ? 4 : 3)) return false;
+  retainedNames.add(nameKey);
+  familyCounts.set(family, count + 1);
+  return true;
+});
+const retainedFamilyEffect = new Map<string, SoundEffectDefinition>(retainedOpenEffects.map((effect) => [
+  `${effect.category}|${effectFamily(effect.name)}`, effect
+]));
+const retiredEffectAliases = new Map<string, SoundEffectDefinition>(OPEN_SOUND_EFFECTS
+  .filter((effect) => !retainedOpenEffects.includes(effect))
+  .map((effect) => [effect.id, retainedFamilyEffect.get(`${effect.category}|${effectFamily(effect.name)}`)!]));
+
+export const SOUND_EFFECTS: readonly SoundEffectDefinition[] = [
+  ...retainedOpenEffects,
+  ...DIVERSE_SOUND_EFFECTS
+].map((effect) => ({
   ...effect,
   icon: soundEffectIconForName(effect.name, effect.icon)
 }));
 
 export function isSoundEffectId(value: string): value is SoundEffectId {
-  return SOUND_EFFECTS.some((effect) => effect.id === value) || value in legacyEffectAliases;
+  return SOUND_EFFECTS.some((effect) => effect.id === value) ||
+    retiredEffectAliases.has(value) || value in legacyEffectAliases;
 }
 
 export function findSoundEffect(id: string): SoundEffectDefinition {
-  return SOUND_EFFECTS.find((effect) => effect.id === id) ?? legacyEffectAliases[id] ?? SOUND_EFFECTS[0];
+  return SOUND_EFFECTS.find((effect) => effect.id === id) ??
+    retiredEffectAliases.get(id) ?? legacyEffectAliases[id] ?? SOUND_EFFECTS[0];
 }

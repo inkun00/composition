@@ -43,4 +43,18 @@ describe("효과음 선택", () => {
     expect(onAdd).toHaveBeenCalledWith(effect.id);
     expect(previewSoundEffect).toHaveBeenCalledTimes(1);
   });
+
+  it("놓은 소리의 위치를 어린이가 읽기 쉬운 박자로 표시한다", () => {
+    const effect = SOUND_EFFECTS[0];
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    act(() => root?.render(<SoundEffectEditor measureIndex={2} capacity={4} compact
+      events={[{ id: "placed-1", effectId: effect.id, offsetBeats: 1.5 }]}
+      onAdd={() => undefined} onMove={() => undefined} onRemove={() => undefined} />));
+
+    expect(container.querySelector('[data-testid="effect-placed-1"]')?.textContent).toContain("2박 뒤 ½");
+    expect(container.textContent).toContain("1박");
+    expect(container.textContent).toContain("4박");
+  });
 });

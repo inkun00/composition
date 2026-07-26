@@ -1,6 +1,7 @@
 import type { SoundEffectDefinition } from "./soundEffects";
 
-// CC0 samples from OpenGameArt rubberduck packs. Generated from public/sound-effects/cc0/*.ogg.
+// CC0 source catalog from OpenGameArt rubberduck packs.
+// soundEffects.ts keeps a small, varied subset and maps retired IDs to a retained family member.
 export const OPEN_SOUND_EFFECTS = [
   { id: "cc0-sfx100v2-footstep-01", name: "\ubc1c\uac78\uc74c 1", icon: "\ud83d\udc4f", description: "\uc0ac\ub78c\uc758 \uc6c0\uc9c1\uc784\uc744 \ud45c\ud604\ud558\ub294 \uc2e4\uc81c \ud6a8\uacfc\uc74c", category: "body", source: "/sound-effects/cc0/sfx100v2_footstep_01.ogg", license: "CC0", credit: "rubberduck / OpenGameArt" },
   { id: "cc0-sfx100v2-footstep-02", name: "\ubc1c\uac78\uc74c 2", icon: "\ud83d\udc4f", description: "\uc0ac\ub78c\uc758 \uc6c0\uc9c1\uc784\uc744 \ud45c\ud604\ud558\ub294 \uc2e4\uc81c \ud6a8\uacfc\uc74c", category: "body", source: "/sound-effects/cc0/sfx100v2_footstep_02.ogg", license: "CC0", credit: "rubberduck / OpenGameArt" },

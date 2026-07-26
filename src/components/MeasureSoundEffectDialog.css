@@ -1,0 +1,242 @@
+.measure-sound-overlay {
+  position: fixed;
+  z-index: 150;
+  inset: 0;
+  padding: 24px;
+  display: grid;
+  place-items: center;
+  background: rgba(31, 27, 43, .62);
+  backdrop-filter: blur(6px);
+}
+
+.measure-sound-dialog {
+  width: min(1080px, calc(100vw - 32px));
+  max-height: calc(100vh - 40px);
+  padding: 24px;
+  overflow-y: auto;
+  border: 1px solid #ded9e9;
+  border-radius: 22px;
+  background: #fbfbfd;
+  box-shadow: 0 28px 90px rgba(27, 22, 43, .3);
+}
+
+.measure-sound-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.measure-sound-header span {
+  color: #6553c7;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.measure-sound-header h2 {
+  margin: 6px 0 4px;
+  color: #292e3d;
+  font-size: 24px;
+}
+
+.measure-sound-header p {
+  margin: 0;
+  color: #707786;
+  font-size: 13px;
+}
+
+.measure-sound-header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.measure-sound-header-actions button {
+  min-height: 42px;
+  border-radius: 11px;
+  cursor: pointer;
+}
+
+.measure-sound-play {
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid #cfc5ee;
+  background: #f5f2ff;
+  color: #5946bb;
+  font-weight: 900;
+}
+
+.measure-sound-close {
+  width: 42px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid #ded9e8;
+  background: #fff;
+  color: #5e5868;
+}
+
+.measure-sound-score {
+  margin-top: 18px;
+  padding: 12px 18px 8px;
+  border: 1px solid #e0dde7;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 7px 20px rgba(35, 29, 58, .05);
+}
+
+.measure-sound-lyrics {
+  margin: -4px 8px 2px;
+  padding-top: 7px;
+  border-top: 1px dashed #e4e0e8;
+}
+
+.measure-sound-lyrics > strong {
+  color: #665e72;
+  font-size: 11px;
+}
+
+.measure-sound-lyrics .note-lyrics {
+  height: 50px;
+}
+
+.measure-sound-dialog .sound-effect-editor {
+  min-height: 0;
+  margin-top: 18px;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.measure-sound-dialog .sound-effect-filter {
+  margin-top: 0;
+}
+
+.measure-sound-dialog .sound-effect-palette {
+  max-height: 176px;
+}
+
+.measure-sound-dialog .sound-effect-timeline {
+  height: 112px;
+}
+
+.measure-sound-dialog .sound-effect-timeline::after {
+  top: 68px;
+}
+
+.measure-sound-dialog .sound-effect-beats i {
+  position: relative;
+  height: 20px;
+  margin-top: 61px;
+}
+
+.measure-sound-dialog .sound-effect-beats i span {
+  position: absolute;
+  top: 24px;
+  left: 0;
+  transform: translateX(-50%);
+  color: #728079;
+  font-size: 10px;
+  font-style: normal;
+  white-space: nowrap;
+}
+
+.measure-sound-dialog .placed-sound-effect {
+  top: 7px;
+}
+
+.measure-sound-dialog .effect-empty {
+  top: 35px;
+}
+
+.measure-sound-dialog footer {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.measure-sound-dialog footer span {
+  color: #6d7470;
+  font-size: 12px;
+}
+
+.measure-sound-dialog footer button {
+  min-width: 112px;
+  min-height: 43px;
+  border: 1px solid #5d49ce;
+  border-radius: 11px;
+  background: #6653d8;
+  color: #fff;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.measure-sound-open {
+  min-height: 42px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid #aed7c5;
+  border-radius: 10px;
+  background: #f0faf5;
+  color: #26785a;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.measure-sound-open:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.measure-sound-count {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 99px;
+  background: #d8f2e6;
+  font-size: 10px;
+}
+
+@media (max-width: 760px) {
+  .measure-sound-overlay {
+    padding: 10px;
+  }
+
+  .measure-sound-dialog {
+    width: calc(100vw - 20px);
+    max-height: calc(100vh - 20px);
+    padding: 18px 14px;
+  }
+
+  .measure-sound-header {
+    flex-direction: column;
+  }
+
+  .measure-sound-header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .measure-sound-header h2 {
+    font-size: 20px;
+  }
+
+  .measure-sound-score {
+    padding-inline: 6px;
+    overflow-x: auto;
+  }
+
+  .measure-sound-dialog .sound-effect-palette {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

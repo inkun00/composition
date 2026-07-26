@@ -8,13 +8,14 @@ type SoundEffectEditorProps = Readonly<{
   measureIndex: number;
   capacity: number;
   events: readonly SoundEffectEvent[];
+  compact?: boolean;
   onAdd: (effectId: SoundEffectId) => void;
   onMove: (eventId: string, offsetBeats: number) => void;
   onRemove: (eventId: string) => void;
 }>;
 
 export default function SoundEffectEditor({
-  measureIndex, capacity, events, onAdd, onMove, onRemove
+  measureIndex, capacity, events, compact = false, onAdd, onMove, onRemove
 }: SoundEffectEditorProps) {
   const timelineRef = useRef<HTMLDivElement | null>(null);
   const draggingId = useRef<string | null>(null);
@@ -43,18 +44,27 @@ export default function SoundEffectEditor({
     const ratio = Math.max(0, Math.min(1,
       (event.clientX - rect.left - trackPadding) / Math.max(1, rect.width - trackPadding * 2)));
     const snapped = Math.round(ratio * capacity * 4) / 4;
-    onMove(eventId, Math.min(capacity - 0.01, snapped));
+    onMove(eventId, Math.min(capacity - 0.25, snapped));
+  };
+
+  const beatLabel = (offsetBeats: number) => {
+    const beat = Math.floor(offsetBeats) + 1;
+    const fraction = Math.round((offsetBeats % 1) * 4);
+    return fraction === 0 ? `${beat}박` : `${beat}박 뒤 ${["", "¼", "½", "¾"][fraction]}`;
   };
 
   return (
-    <section className="sound-effect-editor" aria-labelledby="sound-effect-heading">
-      <img className="workspace-guide sound-effect-guide"
-        src="/illustrations/character-sound-preview-girl-v1.webp"
-        alt="" aria-hidden="true" draggable="false" />
-      <div className="sound-effect-heading">
-        <div><span className="section-kicker">소리 추가</span><h2 id="sound-effect-heading">{measureIndex + 1}마디에 짧은 소리를 놓아요</h2></div>
-        <p>아이콘을 누른 뒤, 아래 선에서 좌우로 끌어 재생 시간을 정해요.</p>
-      </div>
+    <section className={`sound-effect-editor${compact ? " compact" : ""}`}
+      aria-label={`${measureIndex + 1}마디 효과음 편집`}>
+      {!compact && <>
+        <img className="workspace-guide sound-effect-guide"
+          src="/illustrations/character-sound-preview-girl-v1.webp"
+          alt="" aria-hidden="true" draggable="false" />
+        <div className="sound-effect-heading">
+          <div><span className="section-kicker">소리 추가</span><h2>{measureIndex + 1}마디에 짧은 소리를 놓아요</h2></div>
+          <p>아이콘을 누른 뒤, 아래 선에서 좌우로 끌어 재생 시간을 정해요.</p>
+        </div>
+      </>}
       <label className="sound-effect-filter">
         <span>소리 종류</span>
         <select value={category} onChange={(event) => setCategory(event.target.value as SoundEffectCategory | "all")}>
@@ -79,7 +89,9 @@ export default function SoundEffectEditor({
       </div>
       <div className="sound-effect-timeline" ref={timelineRef} data-testid="sound-effect-timeline">
         <div className="sound-effect-beats" aria-hidden="true">
-          {Array.from({ length: Math.ceil(capacity) + 1 }, (_, index) => <i key={index} />)}
+          {Array.from({ length: Math.ceil(capacity) + 1 }, (_, index) => (
+            <i key={index}><span>{index < capacity ? `${index + 1}박` : "끝"}</span></i>
+          ))}
         </div>
         {events.map((event) => {
           const effect = findSoundEffect(event.effectId);
@@ -87,7 +99,7 @@ export default function SoundEffectEditor({
             <div key={event.id} className="placed-sound-effect"
               style={{ left: `calc(26px + (100% - 52px) * ${event.offsetBeats / capacity})` }}>
               <button type="button" className="effect-drag-handle"
-                data-testid={`effect-${event.id}`} aria-label={`${effect.name}, ${event.offsetBeats + 1}박 위치`}
+                data-testid={`effect-${event.id}`} aria-label={`${effect.name}, ${beatLabel(event.offsetBeats)} 위치`}
                 onPointerDown={(pointerEvent) => {
                   draggingId.current = event.id;
                   pointerEvent.currentTarget.setPointerCapture(pointerEvent.pointerId);
@@ -102,7 +114,7 @@ export default function SoundEffectEditor({
                   }
                   draggingId.current = null;
                 }}>
-                <span>{effect.icon}</span><small>{event.offsetBeats.toFixed(2).replace(/\.00$/, "")}박</small>
+                <span>{effect.icon}</span><small>{beatLabel(event.offsetBeats)}</small>
               </button>
               <button type="button" className="effect-remove" aria-label={`${effect.name} 지우기`}
                 onClick={() => onRemove(event.id)}>×</button>

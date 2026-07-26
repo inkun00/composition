@@ -12,7 +12,7 @@ import ScoreMeasure from "./components/ScoreMeasure";
 import type { KaraokeGuideMode } from "./audio/karaokeGuide";
 import type { RecordingCaptureMode } from "./audio/vocalCapture";
 import NoteLyrics from "./components/NoteLyrics";
-import SoundEffectEditor from "./components/SoundEffectEditor";
+import MeasureSoundEffectDialog from "./components/MeasureSoundEffectDialog";
 import AccountLibrary from "./components/AccountLibrary";
 import CommunityAlbum from "./components/CommunityAlbum";
 import HarmonyPresetChooser from "./components/HarmonyPresetChooser";
@@ -337,6 +337,7 @@ export default function App() {
   const [selectedNoteId, setSelectedNoteId] = useState("");
   const [selectedNoteIds, setSelectedNoteIds] = useState<string[]>([]);
   const [showMoreCandidates, setShowMoreCandidates] = useState(false);
+  const [soundEffectDialogOpen, setSoundEffectDialogOpen] = useState(false);
   const [editStatus, setEditStatus] = useState("");
   const [undoStack, setUndoStack] = useState<readonly CompositionSnapshot[]>([]);
   const [redoStack, setRedoStack] = useState<readonly CompositionSnapshot[]>([]);
@@ -1300,7 +1301,7 @@ export default function App() {
       effects: [...measure.effects, {
         id: `effect-${activeIndex + 1}-${effectId}-${Date.now()}-${measure.effects.length + 1}`,
         effectId,
-        offsetBeats: Math.min(capacity - 0.01, measure.effects.length * 0.5)
+        offsetBeats: Math.min(capacity - 0.25, measure.effects.length * 0.5)
       }]
     }));
   }
@@ -2328,6 +2329,13 @@ export default function App() {
           }} />
       )}
 
+      {soundEffectDialogOpen && activeMeasure.notes && (
+        <MeasureSoundEffectDialog measureIndex={activeIndex} notes={activeMeasure.notes} meter={meter}
+          capacity={capacity} events={activeMeasure.effects} playing={playingMeasure}
+          onPlay={() => void playActiveMeasure()} onAdd={addSoundEffect} onMove={moveSoundEffect}
+          onRemove={removeSoundEffect} onClose={() => setSoundEffectDialogOpen(false)} />
+      )}
+
       {mobileRecordMode && (
         <main className="mobile-record-main">
           <section className="mobile-record-panel" aria-label="스마트폰 녹음 전용 화면">
@@ -2530,6 +2538,12 @@ export default function App() {
               <p>음표를 위아래로 끌면 높이가 바뀌어요. 여러 음표는 첫 음표를 누른 뒤 Shift를 누르고 마지막 음표를 골라요.</p>
             </div>
             <div className="editor-copy-actions">
+              <button className="measure-sound-open" type="button"
+                disabled={!activeMeasure.notes || validation?.state !== "exact" || isAnyPlaying}
+                onClick={() => setSoundEffectDialogOpen(true)}>
+                <Volume2 size={17} /> 소리 추가
+                {activeMeasure.effects.length > 0 && <span className="measure-sound-count">{activeMeasure.effects.length}</span>}
+              </button>
               <button className="listen-all action-button" type="button" disabled={!activeMeasure.notes || isAnyPlaying}
                 onClick={() => void playActiveMeasure()}>
                 <PlayIcon playing={playingMeasure} /> 이 마디 듣기
@@ -2622,10 +2636,6 @@ export default function App() {
             <div><strong>{storyInfo[activeMeasure.story].label}</strong><small>{storyInfo[activeMeasure.story].description}</small></div>
           </div>
         </section>
-        {activeMeasure.notes && validation?.state === "exact" && (
-          <SoundEffectEditor measureIndex={activeIndex} capacity={capacity} events={activeMeasure.effects}
-            onAdd={addSoundEffect} onMove={moveSoundEffect} onRemove={removeSoundEffect} />
-        )}
           </div>
 
         <section className="candidate-section candidate-sidebar">
