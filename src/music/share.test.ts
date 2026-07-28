@@ -12,6 +12,8 @@ const sample: SharedComposition = {
   instrumentId: "piano",
   accompanimentStyleId: "arpeggio",
   accompanimentInstrumentIds: ["piano", "violin"],
+  beatInstrumentIds: ["kick", "clap", "hihat"],
+  beatVolume: 125,
   bpm: 124,
   lyrics: Array(8).fill("라라라"),
   measures: Array.from({ length: 8 }, (_, index) => ({

@@ -13,6 +13,7 @@ import type { KaraokeGuideMode } from "./audio/karaokeGuide";
 import type { RecordingCaptureMode } from "./audio/vocalCapture";
 import NoteLyrics from "./components/NoteLyrics";
 import MeasureSoundEffectDialog from "./components/MeasureSoundEffectDialog";
+import BeatInstrumentChooser from "./components/BeatInstrumentChooser";
 import AccountLibrary from "./components/AccountLibrary";
 import CommunityAlbum from "./components/CommunityAlbum";
 import HarmonyPresetChooser from "./components/HarmonyPresetChooser";
@@ -35,6 +36,7 @@ import { rational, toNumber } from "./music/rational";
 import { prioritizeCandidatesForRhythm, RHYTHM_PREFERENCE_LABELS, rhythmPreferenceForStyle } from "./music/rhythmPreference";
 import { pitchName, positionNotes } from "./music/score";
 import { findSoundEffect, type SoundEffectId } from "./music/soundEffects";
+import { normalizeBeatInstrumentIds, normalizeBeatVolume, type BeatInstrumentId } from "./music/beatInstruments";
 import { buildShareUrl, readCompositionFromHash, type SharedComposition } from "./music/share";
 import type { HarmonyStory, MelodyCandidate, NoteEvent, SoundEffectEvent } from "./music/types";
 import { useKaraokeAutoFocus } from "./hooks/useKaraokeAutoFocus";
@@ -349,6 +351,7 @@ export default function App() {
   const [rhythmChecks, setRhythmChecks] = useState<Record<number, "valid" | "invalid">>({});
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [presetPreviewing, setPresetPreviewing] = useState(false);
+  const [beatPreviewing, setBeatPreviewing] = useState(false);
   const [songPlaybackState, setSongPlaybackState] = useState<SongPlaybackState>("idle");
   const [playingMeasureIndex, setPlayingMeasureIndex] = useState<number | null>(null);
   const [playingNoteId, setPlayingNoteId] = useState<string | null>(null);
@@ -380,6 +383,10 @@ export default function App() {
   const [accompanimentInstrumentIds, setAccompanimentInstrumentIds] = useState<InstrumentId[]>(() =>
     uniqueAccompanimentInstrumentIds(resumableDraft?.accompanimentInstrumentIds ?? incomingShare?.accompanimentInstrumentIds ?? ["acoustic_grand_piano"])
   );
+  const [beatInstrumentIds, setBeatInstrumentIds] = useState<BeatInstrumentId[]>(() =>
+    normalizeBeatInstrumentIds(resumableDraft?.beatInstrumentIds ?? incomingShare?.beatInstrumentIds ?? []));
+  const [beatVolume, setBeatVolume] = useState(() =>
+    normalizeBeatVolume(resumableDraft?.beatVolume ?? incomingShare?.beatVolume));
   const [bpm, setBpm] = useState(resumableDraft?.bpm ?? incomingShare?.bpm ?? 96);
   const [showArrangement, setShowArrangement] = useState(resumableDraft?.showArrangement === true || incomingShare !== null);
   const [completionCelebration, setCompletionCelebration] = useState(false);
@@ -434,6 +441,8 @@ export default function App() {
   const activeAccompanimentMode = ACCOMPANIMENT_MODES.find((mode) =>
     mode.styleId === accompanimentStyleId &&
     sameInstrumentOrder(mode.instrumentIds, accompanimentInstrumentIds)) ?? null;
+  const accompanimentOptions = { styleId: accompanimentStyleId,
+    instrumentIds: accompanimentInstrumentIds, beatInstrumentIds, beatVolume, meter };
   const canRenderMobileRecordingQr = mobileRecordingUrl.length > 0 && mobileRecordingUrl.length <= QR_RENDER_LIMIT;
 
   const activeMeasure = measures[activeIndex];
@@ -489,7 +498,8 @@ export default function App() {
   const activeStep = showArrangement ? 3 : 2;
   const playingSong = songPlaybackState !== "idle";
   const karaokeRunning = recordingSong || practicingSong;
-  const isAnyPlaying = playingId !== null || playingSong || playingMeasure || karaokeRunning || presetPreviewing;
+  const isAnyPlaying = playingId !== null || playingSong || playingMeasure ||
+    karaokeRunning || presetPreviewing || beatPreviewing;
   useKaraokeAutoFocus(karaokeOpen, karaokeRunning, karaokeHighlight);
   const updateLyricNotePositions = useCallback((index: number, positions: Record<string, { x: number; y: number }>) => {
     setLyricNotePositions((current) => {
@@ -701,6 +711,8 @@ export default function App() {
         instrumentId: selectedInstrumentId,
         accompanimentStyleId,
         accompanimentInstrumentIds,
+        beatInstrumentIds,
+        beatVolume,
         bpm,
         lyrics,
         measures: measures.map(({ candidateId, candidateName, notes, effects }) => ({ candidateId, candidateName, notes, effects })),
@@ -709,7 +721,7 @@ export default function App() {
       setSaveStatus(writeDraft(window.localStorage, draft) ? "저장됨 ✓" : "저장하지 못했어요");
     }, 800);
     return () => window.clearTimeout(timer);
-  }, [accompanimentInstrumentIds, accompanimentStyleId, bpm, creatorName, measures, meter,
+  }, [accompanimentInstrumentIds, accompanimentStyleId, beatInstrumentIds, beatVolume, bpm, creatorName, measures, meter,
     originalCreator, selectedInstrumentId, selectedPresetId, songDescription, sourceHash, showArrangement, songLength, songTitle]);
 
   function restoreComposition(snapshot: CompositionSnapshot) {
@@ -904,11 +916,8 @@ export default function App() {
       measureIndex: startMeasureIndex + relativeIndex
     }] : []);
     if (playable.length === 0) return;
-    const duration = await playComposition(playable, selectedInstrumentId, bpm, accompanimentReady ? {
-      styleId: accompanimentStyleId,
-      instrumentIds: accompanimentInstrumentIds,
-      meter
-    } : undefined);
+    const duration = await playComposition(playable, selectedInstrumentId, bpm,
+      accompanimentReady ? accompanimentOptions : undefined);
     if (duration === null) return;
     const secondsPerBeat = 60 / bpm;
     let offsetSeconds = 0.08;
@@ -974,11 +983,7 @@ export default function App() {
       chords: activeMeasure.chords,
       effects: activeMeasure.effects,
       measureIndex: activeIndex
-    }], selectedInstrumentId, bpm, accompanimentReady ? {
-      styleId: accompanimentStyleId,
-      instrumentIds: accompanimentInstrumentIds,
-      meter
-    } : undefined);
+    }], selectedInstrumentId, bpm, accompanimentReady ? accompanimentOptions : undefined);
     if (duration === null) return;
     setPlayingMeasure(true);
     animateSingleMeasureNotes(notes, bpm);
@@ -1367,6 +1372,8 @@ export default function App() {
       instrumentId: selectedInstrumentId,
       accompanimentStyleId,
       accompanimentInstrumentIds,
+      beatInstrumentIds,
+      beatVolume,
       bpm,
       lyrics,
       measures: printableMeasures.map(({ candidateName, notes, effects }) => ({ candidateName, notes, effects }))
@@ -1489,11 +1496,8 @@ export default function App() {
       measureIndex: index
     }] : []);
     try {
-      const blob = await exportBackingCompositionMp3(playable, selectedInstrumentId, bpm, {
-        styleId: accompanimentStyleId,
-        instrumentIds: accompanimentInstrumentIds,
-        meter
-      });
+      const blob = await exportBackingCompositionMp3(
+        playable, selectedInstrumentId, bpm, accompanimentOptions);
       if (!blob) {
         setShareStatus("다른 연주나 녹음이 끝난 뒤에 다시 저장해 주세요.");
         setBackingExportPhase("error");
@@ -1535,6 +1539,8 @@ export default function App() {
       instrumentId: selectedInstrumentId,
       accompanimentStyleId,
       accompanimentInstrumentIds,
+      beatInstrumentIds,
+      beatVolume,
       bpm,
       lyrics,
       measures: measures.map(({ candidateId, candidateName, notes, effects }) => ({ candidateId, candidateName, notes, effects })),
@@ -1568,6 +1574,8 @@ export default function App() {
     setAccompanimentStyleId(nextAccompanimentStyle.id);
     setAccompanimentStyleView(nextAccompanimentStyle.category === "playing" ? "playing" : "mode");
     setAccompanimentInstrumentIds(uniqueAccompanimentInstrumentIds(project.accompanimentInstrumentIds ?? ["piano"]));
+    setBeatInstrumentIds(normalizeBeatInstrumentIds(project.beatInstrumentIds ?? []));
+    setBeatVolume(normalizeBeatVolume(project.beatVolume));
     setBpm(project.bpm ?? 96);
     setShowArrangement(project.showArrangement);
     setSongTitle(project.title);
@@ -1692,6 +1700,8 @@ export default function App() {
       song.draft.bpm ?? 96, song.draft.showArrangement ? {
         styleId: findAccompanimentStyle(song.draft.accompanimentStyleId ?? "arpeggio").id,
         instrumentIds: uniqueAccompanimentInstrumentIds(song.draft.accompanimentInstrumentIds ?? ["piano"]),
+        beatInstrumentIds: normalizeBeatInstrumentIds(song.draft.beatInstrumentIds ?? []),
+        beatVolume: normalizeBeatVolume(song.draft.beatVolume),
         meter: song.draft.meter
       } : undefined);
     return duration !== null;
@@ -1805,11 +1815,7 @@ export default function App() {
       measureIndex: index
     }] : []);
     try {
-      const result = await recordKaraokeComposition(playable, selectedInstrumentId, bpm, {
-        styleId: accompanimentStyleId,
-        instrumentIds: accompanimentInstrumentIds,
-        meter
-      }, {
+      const result = await recordKaraokeComposition(playable, selectedInstrumentId, bpm, accompanimentOptions, {
         guideMelodyMode: guideMode,
         recordingMode: captureMode,
         onStatus: setRecordingStatus,
@@ -1884,11 +1890,7 @@ export default function App() {
       measureIndex: index
     }] : []);
     try {
-      const duration = await practiceKaraokeComposition(playable, selectedInstrumentId, bpm, {
-        styleId: accompanimentStyleId,
-        instrumentIds: accompanimentInstrumentIds,
-        meter
-      }, {
+      const duration = await practiceKaraokeComposition(playable, selectedInstrumentId, bpm, accompanimentOptions, {
         onStatus: setRecordingStatus,
         onPhase: setKaraokePhase,
         onCount: setKaraokeCount,
@@ -2892,6 +2894,11 @@ export default function App() {
                   src="/illustrations/character-music-tip-recorder-boy-v1.webp"
                   alt="" aria-hidden="true" draggable="false" />
               </div>
+
+              <BeatInstrumentChooser value={beatInstrumentIds} styleId={accompanimentStyleId}
+                meter={meter} bpm={bpm} volume={beatVolume} disabled={isAnyPlaying} playing={beatPreviewing}
+                onChange={setBeatInstrumentIds} onVolumeChange={setBeatVolume}
+                onPlayingChange={setBeatPreviewing} />
 
               {accompanimentStyleView === "playing" && (<>
               <div className={`mixer-board${playingSong ? " playing" : ""}`} aria-label="현재 반주 트랙">

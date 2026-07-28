@@ -104,6 +104,7 @@ describe("화음 이야기 미리듣기", () => {
     expect(playComposition.mock.calls[0][3]).toMatchObject({
       styleId: "arpeggio",
       instrumentIds: ["acoustic_grand_piano"],
+      beatInstrumentIds: [],
       meter: { beats: 4, beatUnit: 4 }
     });
     expect(onPlayingChange).toHaveBeenCalledWith(true);

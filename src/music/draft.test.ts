@@ -14,6 +14,8 @@ const draft: SavedDraft = {
   instrumentId: "acoustic_grand_piano",
   accompanimentStyleId: "folk",
   accompanimentInstrumentIds: ["guitar", "violin"],
+  beatInstrumentIds: ["soft-kick", "clap", "shaker"],
+  beatVolume: 135,
   bpm: 82,
   lyrics: Array(8).fill("랄라"),
   measures: Array.from({ length: 8 }, (_, index) => ({
@@ -50,6 +52,17 @@ describe("브라우저 임시 저장", () => {
       ...draft,
       accompanimentInstrumentIds: [...tenInstruments, "trombone"]
     }) })).toBeNull();
+  });
+
+  it("직접 고른 비트 악기 세 개를 저장하고 같은 역할 중복은 거부한다", () => {
+    const storage = { getItem: () => JSON.stringify(draft) };
+    expect(readDraft(storage)?.beatInstrumentIds).toEqual(["soft-kick", "clap", "shaker"]);
+    expect(readDraft(storage)?.beatVolume).toBe(135);
+    expect(readDraft({ getItem: () => JSON.stringify({
+      ...draft,
+      beatInstrumentIds: ["kick", "soft-kick"]
+    }) })).toBeNull();
+    expect(readDraft({ getItem: () => JSON.stringify({ ...draft, beatVolume: 137 }) })).toBeNull();
   });
 
   it("저장 공간 오류를 앱 오류로 번지게 하지 않는다", () => {

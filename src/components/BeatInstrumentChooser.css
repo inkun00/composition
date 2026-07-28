@@ -1,0 +1,304 @@
+.beat-instrument-chooser {
+  margin: 18px 0 2px;
+  padding: 22px;
+  border: 1px solid #dcd7f3;
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 95% 0, rgba(120, 91, 214, .1), transparent 27%),
+    linear-gradient(135deg, #fff 0%, #fbfaff 54%, #f7fbf8 100%);
+  box-shadow: 0 14px 38px rgba(61, 47, 111, .08);
+}
+
+.beat-instrument-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 18px;
+}
+
+.beat-instrument-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+}
+
+.beat-instrument-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  place-items: center;
+  border-radius: 13px;
+  color: #654bd2;
+  background: #eee9ff;
+}
+
+.beat-instrument-title small {
+  display: block;
+  margin-bottom: 3px;
+  color: #765ddb;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.beat-instrument-title h3 {
+  margin: 0;
+  color: #29283a;
+  font-size: 20px;
+  letter-spacing: -.03em;
+}
+
+.beat-instrument-title p {
+  margin: 5px 0 0;
+  color: #777489;
+  font-size: 13px;
+}
+
+.beat-layer-count {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  column-gap: 7px;
+  min-width: 155px;
+  padding: 11px 15px;
+  border: 1px solid #e2def0;
+  border-radius: 15px;
+  color: #7c758f;
+  background: rgba(255, 255, 255, .88);
+}
+
+.beat-layer-count svg {
+  grid-row: 1 / span 2;
+  color: #7961d6;
+}
+
+.beat-layer-count span {
+  font-size: 11px;
+}
+
+.beat-layer-count strong {
+  color: #4d3bac;
+  font-size: 14px;
+}
+
+.beat-layer-count.layer-0 strong {
+  color: #777489;
+}
+
+.beat-role-groups {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.beat-role-group {
+  min-width: 0;
+  margin: 0;
+  padding: 13px;
+  border: 1px solid #e4e0ef;
+  border-radius: 17px;
+  background: rgba(255, 255, 255, .78);
+}
+
+.beat-role-group legend {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 4px;
+  color: #37344a;
+}
+
+.beat-role-group legend > b {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 8px;
+  color: #fff;
+  background: #7760dc;
+  font-size: 12px;
+}
+
+.beat-role-group legend span {
+  display: grid;
+}
+
+.beat-role-group legend strong {
+  font-size: 13px;
+}
+
+.beat-role-group legend small {
+  margin-top: 1px;
+  color: #8a8697;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.beat-instrument-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 9px;
+}
+
+.beat-role-group:first-child .beat-instrument-options {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.beat-instrument-options button {
+  display: grid;
+  min-width: 0;
+  min-height: 84px;
+  padding: 10px 6px 8px;
+  place-items: center;
+  border: 1px solid #e5e1ed;
+  border-radius: 13px;
+  color: #4a4756;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+
+.beat-instrument-options button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: #a895ed;
+  box-shadow: 0 8px 18px rgba(80, 58, 156, .12);
+}
+
+.beat-instrument-options button.active {
+  border-color: #765ee0;
+  color: #4d38b3;
+  background: linear-gradient(145deg, #f0ecff, #fff);
+  box-shadow: inset 0 0 0 1px #765ee0, 0 7px 16px rgba(79, 55, 168, .11);
+}
+
+.beat-instrument-options button:disabled {
+  cursor: default;
+  opacity: .58;
+}
+
+.beat-instrument-options button > span {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.beat-instrument-options button strong {
+  overflow: hidden;
+  max-width: 100%;
+  margin-top: 6px;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.beat-instrument-options button small {
+  margin-top: 3px;
+  color: #94909e;
+  font-size: 9px;
+}
+
+.beat-instrument-options button.active small {
+  color: #6f58cd;
+  font-weight: 700;
+}
+
+.beat-listen-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 14px;
+  padding: 11px 12px 11px 16px;
+  border-radius: 14px;
+  background: #f4f2fa;
+}
+
+.beat-volume-control {
+  display: grid;
+  grid-template-columns: minmax(205px, .8fr) minmax(240px, 1.6fr) 58px;
+  align-items: center;
+  gap: 16px;
+  margin-top: 14px;
+  padding: 13px 16px;
+  border: 1px solid #e5e0f3;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .86);
+}
+
+.beat-volume-control label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #5e49c0;
+}
+
+.beat-volume-control label span {
+  display: grid;
+}
+
+.beat-volume-control label strong {
+  color: #3e3a50;
+  font-size: 13px;
+}
+
+.beat-volume-control label small {
+  margin-top: 2px;
+  color: #8b8798;
+  font-size: 10px;
+}
+
+.beat-volume-control input {
+  width: 100%;
+  accent-color: #7058d9;
+  cursor: pointer;
+}
+
+.beat-volume-control input:disabled {
+  cursor: default;
+  opacity: .55;
+}
+
+.beat-volume-control output {
+  padding: 7px 8px;
+  border-radius: 10px;
+  color: #5943bb;
+  background: #eee9ff;
+  font-size: 13px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.beat-listen-row p {
+  margin: 0;
+  color: #716d7e;
+  font-size: 12px;
+}
+
+.beat-preview-button {
+  display: inline-flex;
+  min-width: 170px;
+  padding: 10px 15px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid #765ee0;
+  border-radius: 11px;
+  color: #5b43c4;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.beat-preview-button:hover:not(:disabled) {
+  color: #fff;
+  background: #6952d2;
+}
+
+.beat-preview-button:disabled {
+  border-color: #dad6e5;
+  color: #aaa5b7;
+  background: #f9f8fb;
+  cursor: default;
+}

@@ -4,6 +4,7 @@ import type { Meter } from "./meter";
 import type { NoteEvent } from "./types";
 import { isSoundEffectId } from "./soundEffects";
 import type { SoundEffectEvent } from "./types";
+import { isValidBeatInstrumentSelection, isValidBeatVolume, type BeatInstrumentId } from "./beatInstruments";
 
 export const DRAFT_STORAGE_KEY = "maeum-melody:draft:v1";
 
@@ -28,6 +29,8 @@ export type SavedDraft = Readonly<{
   instrumentId: InstrumentId;
   accompanimentStyleId?: AccompanimentStyleId;
   accompanimentInstrumentIds?: readonly InstrumentId[];
+  beatInstrumentIds?: readonly BeatInstrumentId[];
+  beatVolume?: number;
   bpm?: number;
   lyrics: readonly string[];
   measures: readonly DraftMeasure[];
@@ -79,6 +82,9 @@ export function isSavedDraft(value: unknown): value is SavedDraft {
     draft.accompanimentInstrumentIds.length > MAX_SAVED_ACCOMPANIMENT_INSTRUMENTS ||
     new Set(draft.accompanimentInstrumentIds).size !== draft.accompanimentInstrumentIds.length ||
     !draft.accompanimentInstrumentIds.every(isValidInstrumentId))) return false;
+  if (draft.beatInstrumentIds !== undefined &&
+    !isValidBeatInstrumentSelection(draft.beatInstrumentIds)) return false;
+  if (draft.beatVolume !== undefined && !isValidBeatVolume(draft.beatVolume)) return false;
   if (draft.bpm !== undefined && (!Number.isInteger(draft.bpm) || draft.bpm < 40 || draft.bpm > 220)) return false;
   if (typeof draft.showArrangement !== "boolean") return false;
   if (!Array.isArray(draft.lyrics) || draft.lyrics.length !== draft.songLength ||

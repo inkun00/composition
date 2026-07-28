@@ -9,6 +9,8 @@ import { isSoundEffectId } from "../music/soundEffects";
 import type { HarmonyStory, NoteEvent, SoundEffectEvent } from "../music/types";
 import { Mp3Encoder } from "@breezystack/lamejs";
 import { scheduleDrumGroove } from "./drumGroove";
+import type { BeatInstrumentId } from "../music/beatInstruments";
+import { preloadBeatSamples } from "./beatSamples";
 import { karaokeGuideSettings, type KaraokeGuideMode } from "./karaokeGuide";
 import { createGentleNoiseGate, createVocalMonitor, karaokeBackingGainForRms, vocalCaptureProfile, type RecordingCaptureMode } from "./vocalCapture";
 export { karaokeBackingGainForRms } from "./vocalCapture";
@@ -23,6 +25,8 @@ export type PlaybackMeasure = Readonly<{
 export type AccompanimentOptions = Readonly<{
   styleId: AccompanimentStyleId;
   instrumentIds: readonly InstrumentId[];
+  beatInstrumentIds: readonly BeatInstrumentId[];
+  beatVolume: number;
   meter?: Meter;
 }>;
 
@@ -430,7 +434,8 @@ function buildOutroMeasures(measures: readonly PlaybackMeasure[]): PlaybackMeasu
 
 async function loadAccompanimentLayers(context: BaseAudioContext, destination: AudioNode,
   accompaniment?: AccompanimentOptions) {
-  return Promise.all((accompaniment?.instrumentIds ?? []).map(async (id) => {
+  const beatSamplesReady = preloadBeatSamples(context, accompaniment?.beatInstrumentIds ?? []);
+  const layers = await Promise.all((accompaniment?.instrumentIds ?? []).map(async (id) => {
     try {
       return { id, sample: await loadSampleWithTimeout(context, destination, id) };
     } catch (error) {
@@ -438,6 +443,8 @@ async function loadAccompanimentLayers(context: BaseAudioContext, destination: A
       return { id, sample: null };
     }
   }));
+  await beatSamplesReady;
+  return layers;
 }
 
 function scheduleMeasure(
@@ -476,7 +483,8 @@ function scheduleMeasure(
   const chordBeats = measureBeats / chordSymbols.length;
   if (options.accompaniment) {
     scheduleDrumGroove(context, destination, absoluteStart, secondsPerBeat, options.accompaniment.styleId,
-      measureBeats, options.accompaniment.meter, arrangementEnergy, options.transitionFill === true);
+      measureBeats, options.accompaniment.meter, options.accompaniment.beatInstrumentIds,
+      options.accompaniment.beatVolume, arrangementEnergy, options.transitionFill === true);
   }
 
   chordSymbols.forEach((chord, chordIndex) => {
@@ -833,14 +841,7 @@ export async function playComposition(
   } catch (error) {
     console.warn("악기 샘플을 불러오지 못해 합성 음색을 사용합니다.", error);
   }
-  const accompanimentLayers = await Promise.all((accompaniment?.instrumentIds ?? []).map(async (id) => {
-    try {
-      return { id, sample: await loadSampleWithTimeout(context, master, id) };
-    } catch (error) {
-      console.warn(`${id} 반주 샘플을 불러오지 못해 합성 음색을 사용합니다.`, error);
-      return { id, sample: null };
-    }
-  }));
+  const accompanimentLayers = await loadAccompanimentLayers(context, master, accompaniment);
   const voiceState = createArrangementVoiceState();
   const start = context.currentTime + 0.08;
   let songCursor = 0;
@@ -1568,6 +1569,7 @@ export async function exportBackingCompositionMp3Offline(
     } catch (error) {
       console.warn("악기 샘플을 불러오지 못해 합성 음색을 사용합니다.", error);
     }
+    await preloadBeatSamples(context, accompaniment?.beatInstrumentIds ?? []);
     const accompanimentLayers = (accompaniment?.instrumentIds ?? []).map((id) => ({ id, sample: null }));
     const voiceState = createArrangementVoiceState();
     let cursor = 0;
