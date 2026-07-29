@@ -8,12 +8,14 @@ import { queueSoundEffect } from "./soundEffects";
 import { isSoundEffectId } from "../music/soundEffects";
 import type { HarmonyStory, NoteEvent, SoundEffectEvent } from "../music/types";
 import { Mp3Encoder } from "@breezystack/lamejs";
-import { scheduleDrumGroove } from "./drumGroove";
-import type { BeatInstrumentId } from "../music/beatInstruments";
+import { scheduleBeatPattern } from "./drumGroove";
+import { beatPatternInstrumentIds, type BeatPatternEvent } from "../music/beatPattern";
 import { preloadBeatSamples } from "./beatSamples";
 import { karaokeGuideSettings, type KaraokeGuideMode } from "./karaokeGuide";
 import { createGentleNoiseGate, createVocalMonitor, karaokeBackingGainForRms, vocalCaptureProfile, type RecordingCaptureMode } from "./vocalCapture";
+import { KARAOKE_INTRO_FADE_SECONDS, karaokeIntroArrangementPlan, karaokeScheduleLeadSeconds } from "./karaokePlaybackStart";
 export { karaokeBackingGainForRms } from "./vocalCapture";
+export const PREVIEW_MELODY_VOLUME_MULTIPLIER = 0.7;
 export type PlaybackMeasure = Readonly<{
   notes: readonly NoteEvent[];
   harmony: HarmonyStory;
@@ -25,7 +27,7 @@ export type PlaybackMeasure = Readonly<{
 export type AccompanimentOptions = Readonly<{
   styleId: AccompanimentStyleId;
   instrumentIds: readonly InstrumentId[];
-  beatInstrumentIds: readonly BeatInstrumentId[];
+  beatPattern: readonly BeatPatternEvent[];
   beatVolume: number;
   meter?: Meter;
 }>;
@@ -406,8 +408,8 @@ function cadenceChords(target: string): readonly [string, string, string] | null
   return [subdominant, dominant, tonic];
 }
 
-function accompanimentMeasure(template: PlaybackMeasure, chord: string): PlaybackMeasure {
-  return { ...template, chords: [chord], effects: [] };
+function accompanimentMeasure(template: PlaybackMeasure, chord: string, measureIndex: number): PlaybackMeasure {
+  return { ...template, chords: [chord], effects: [], measureIndex };
 }
 
 function buildIntroMeasures(measures: readonly PlaybackMeasure[]): PlaybackMeasure[] {
@@ -416,7 +418,8 @@ function buildIntroMeasures(measures: readonly PlaybackMeasure[]): PlaybackMeasu
   const cadence = cadenceChords(target);
   if (!cadence) return Array.from({ length: 4 }, (_, index) => measures[index % measures.length]);
   const [subdominant, dominant, tonic] = cadence;
-  return [tonic, subdominant, dominant, dominant].map((chord) => accompanimentMeasure(measures[0], chord));
+  return [tonic, subdominant, dominant, dominant]
+    .map((chord, measureIndex) => accompanimentMeasure(measures[0], chord, measureIndex));
 }
 
 function buildOutroMeasures(measures: readonly PlaybackMeasure[]): PlaybackMeasure[] {
@@ -429,12 +432,14 @@ function buildOutroMeasures(measures: readonly PlaybackMeasure[]): PlaybackMeasu
     return Array.from({ length: 4 }, (_, index) => source[index % source.length]);
   }
   const [subdominant, dominant, tonic] = cadence;
-  return [subdominant, dominant, tonic, tonic].map((chord) => accompanimentMeasure(template, chord));
+  return [subdominant, dominant, tonic, tonic]
+    .map((chord, measureIndex) => accompanimentMeasure(template, chord, measureIndex));
 }
 
 async function loadAccompanimentLayers(context: BaseAudioContext, destination: AudioNode,
   accompaniment?: AccompanimentOptions) {
-  const beatSamplesReady = preloadBeatSamples(context, accompaniment?.beatInstrumentIds ?? []);
+  const beatSamplesReady = preloadBeatSamples(context,
+    beatPatternInstrumentIds(accompaniment?.beatPattern ?? []));
   const layers = await Promise.all((accompaniment?.instrumentIds ?? []).map(async (id) => {
     try {
       return { id, sample: await loadSampleWithTimeout(context, destination, id) };
@@ -482,9 +487,9 @@ function scheduleMeasure(
   const chordSymbols = measure.chords && measure.chords.length > 0 ? measure.chords : [""];
   const chordBeats = measureBeats / chordSymbols.length;
   if (options.accompaniment) {
-    scheduleDrumGroove(context, destination, absoluteStart, secondsPerBeat, options.accompaniment.styleId,
-      measureBeats, options.accompaniment.meter, options.accompaniment.beatInstrumentIds,
-      options.accompaniment.beatVolume, arrangementEnergy, options.transitionFill === true);
+    scheduleBeatPattern(context, destination, absoluteStart, secondsPerBeat, measureBeats,
+      measure.measureIndex ?? 0, options.accompaniment.beatPattern,
+      options.accompaniment.beatVolume, arrangementEnergy);
   }
 
   chordSymbols.forEach((chord, chordIndex) => {
@@ -790,6 +795,7 @@ export async function playMeasure(
     console.warn("악기 샘플을 불러오지 못해 합성 음색을 사용합니다.", error);
   }
   const start = context.currentTime + 0.06;
+  const melodyVolume = instrument.volume * PREVIEW_MELODY_VOLUME_MULTIPLIER;
 
   const totalBeats = notes.reduce((total, note) => total + toNumber(note.duration), 0);
   if (playAccompaniment) {
@@ -807,9 +813,10 @@ export async function playMeasure(
   melodyPlaybackEvents(notes, secondsPerBeat).forEach((event) => {
     if (sampledInstrument) {
       queueSampleNote(sampledInstrument, context, master, event.pitch,
-        start + event.start, event.duration * .92, instrument.volume);
+        start + event.start, event.duration * .92, melodyVolume);
     } else {
-      addInstrumentTone(context, master, event.pitch, start + event.start, event.duration * 0.92, instrument);
+      addInstrumentTone(context, master, event.pitch, start + event.start, event.duration * 0.92,
+        { ...instrument, volume: melodyVolume });
     }
   });
   const cursor = totalBeats * secondsPerBeat;
@@ -855,6 +862,7 @@ export async function playComposition(
       accompanimentLayers,
       includeMelody: true,
       includeEffects: true,
+      melodyVolumeMultiplier: PREVIEW_MELODY_VOLUME_MULTIPLIER,
       arrangementSection: "song",
       voiceState,
       arrangementLayerCount: plan.layerCount,
@@ -921,7 +929,9 @@ export async function practiceKaraokeComposition(
     const accompanimentLayers = await loadAccompanimentLayers(context, master, accompaniment);
     throwIfAborted();
     const voiceState = createArrangementVoiceState();
-    const start = context.currentTime + 0.35;
+    const start = context.currentTime + karaokeScheduleLeadSeconds(measures.length, accompanimentLayers.length);
+    master.gain.setValueAtTime(0.0001, start);
+    master.gain.exponentialRampToValueAtTime(0.84, start + KARAOKE_INTRO_FADE_SECONDS);
     let cursor = 0;
     const queueCallback = (relativeSeconds: number, callback: () => void) => {
       callbackTimers.push(window.setTimeout(callback,
@@ -932,6 +942,7 @@ export async function practiceKaraokeComposition(
     callbacks.onHighlight?.({ section: "intro", measureIndex: null, noteId: null });
     callbacks.onStatus?.("4마디 인트로를 들으며 준비해요. 마지막 카운트 뒤에 메인 가락이 시작돼요.");
     introMeasures.forEach((measure, introIndex) => {
+      const introPlan = karaokeIntroArrangementPlan(introIndex, accompanimentLayers.length);
       const measureStart = cursor;
       const measureBeats = measure.notes.reduce((total, note) => total + toNumber(note.duration), 0);
       const chordSymbols = measure.chords && measure.chords.length > 0 ? measure.chords : [""];
@@ -957,8 +968,8 @@ export async function practiceKaraokeComposition(
         includeEffects: false,
         backingVolumeMultiplier: 1.22,
         arrangementSection: "intro",
-        arrangementLayerCount: Math.min(3, accompanimentLayers.length),
-        arrangementEnergy: 1
+        arrangementLayerCount: introPlan.layerCount,
+        arrangementEnergy: introPlan.energy
       });
     });
 
@@ -1569,7 +1580,7 @@ export async function exportBackingCompositionMp3Offline(
     } catch (error) {
       console.warn("악기 샘플을 불러오지 못해 합성 음색을 사용합니다.", error);
     }
-    await preloadBeatSamples(context, accompaniment?.beatInstrumentIds ?? []);
+    await preloadBeatSamples(context, beatPatternInstrumentIds(accompaniment?.beatPattern ?? []));
     const accompanimentLayers = (accompaniment?.instrumentIds ?? []).map((id) => ({ id, sample: null }));
     const voiceState = createArrangementVoiceState();
     let cursor = 0;

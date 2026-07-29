@@ -22,6 +22,8 @@ type PdfScoreSheetProps = {
   measures: readonly PrintableMeasure[];
   includeAccompaniment: boolean;
   preview?: boolean;
+  activeMeasureIndex?: number | null;
+  activeNoteId?: string | null;
 };
 
 const PDF_PAGE_WIDTH = 794;
@@ -48,11 +50,12 @@ function PdfPreviewPage({ children }: Readonly<{ children: ReactNode }>) {
   );
 }
 
-function PdfMeasureLyrics({ notes, meter, showSignature, notePositions }: Readonly<{
+function PdfMeasureLyrics({ notes, meter, showSignature, notePositions, activeNoteId }: Readonly<{
   notes: readonly NoteEvent[];
   meter: Meter;
   showSignature: boolean;
   notePositions?: Record<string, { x: number; y: number }>;
+  activeNoteId?: string | null;
 }>) {
   const { width, noteStartX } = scoreLayout({ compact: true, showSignature });
   const capacity = toNumber(measureCapacity(meter));
@@ -63,7 +66,9 @@ function PdfMeasureLyrics({ notes, meter, showSignature, notePositions }: Readon
     <div className="pdf-measure-lyrics">
       {pitched.map((note) => {
         const x = notePositions?.[note.id]?.x ?? noteStartX + (note.onset / capacity) * usableWidth + 10;
-        return <span key={note.id} className="pdf-lyric-syllable" style={{ left: `${x / width * 100}%` }}>
+        return <span key={note.id}
+          className={`pdf-lyric-syllable${note.id === activeNoteId ? " is-playback-active" : ""}`}
+          style={{ left: `${x / width * 100}%` }}>
           {note.lyric || " "}
         </span>;
       })}
@@ -108,7 +113,8 @@ function chunk<T>(items: readonly T[], size: number): readonly T[][] {
 }
 
 export default function PdfScoreSheet({
-  title, description, creator, originalCreator, meter, measures, includeAccompaniment, preview = false
+  title, description, creator, originalCreator, meter, measures, includeAccompaniment, preview = false,
+  activeMeasureIndex = null, activeNoteId = null
 }: PdfScoreSheetProps) {
   const printableTitle = title || "나의 노래";
   // Keep student titles on one centered line while still allowing long names.
@@ -129,7 +135,8 @@ export default function PdfScoreSheet({
   }, []);
   // Melody-only sheets fit four four-bar systems per page; accompaniment sheets
   // need twice the vertical room for the piano staff.
-  const pages = chunk(measures, includeAccompaniment ? 8 : 16);
+  const measuresPerPage = includeAccompaniment ? 8 : 16;
+  const pages = chunk(measures, measuresPerPage);
 
   return (
     <div className={preview ? "pdf-document pdf-preview-document" : "pdf-document"} aria-hidden={!preview}>
@@ -153,11 +160,21 @@ export default function PdfScoreSheet({
               <p className="pdf-original">원작자 {originalCreator} · 이 표시는 리메이크 악보에서 지울 수 없습니다.</p>
             )}
             <div className={includeAccompaniment ? "pdf-score-systems with-accompaniment" : "pdf-score-systems melody-only"}>
-              {systems.map((system, systemIndex) => (
-                <section className={includeAccompaniment ? "pdf-system with-accompaniment" : "pdf-system melody-only"} key={systemIndex}>
+              {systems.map((system, systemIndex) => {
+                const systemStartIndex = pageIndex * measuresPerPage + systemIndex * 4;
+                const systemActive = activeMeasureIndex !== null &&
+                  activeMeasureIndex >= systemStartIndex && activeMeasureIndex < systemStartIndex + system.length;
+                return (
+                <section
+                  className={`${includeAccompaniment ? "pdf-system with-accompaniment" : "pdf-system melody-only"}${systemActive ? " is-playback-active" : ""}`}
+                  data-score-system-index={Math.floor(systemStartIndex / 4)}
+                  key={systemIndex}
+                >
                   <div className="pdf-melody-row">
-                    {system.map((measure, localIndex) => (
-                      <article className="pdf-system-measure" key={localIndex}>
+                    {system.map((measure, localIndex) => {
+                      const measureActive = activeMeasureIndex === systemStartIndex + localIndex;
+                      return (
+                      <article className={`pdf-system-measure${measureActive ? " is-playback-active" : ""}`} key={localIndex}>
                         <ScoreMeasure notes={measure.notes} meter={meter} compact
                           renderBackend="canvas" showSignature={localIndex === 0} systemMeasure connectedSystem
                           endBarline={pageIndex * (includeAccompaniment ? 8 : 16) + systemIndex * 4 + localIndex === measures.length - 1
@@ -165,15 +182,21 @@ export default function PdfScoreSheet({
                           onNoteLayout={(positions) => updateMelodyNotePositions(
                             `${pageIndex}-${systemIndex}-${localIndex}`, positions)} />
                       </article>
-                    ))}
+                      );
+                    })}
                   </div>
                   <div className="pdf-lyrics-row">
-                    {system.map((measure, localIndex) => (
-                      <article className="pdf-system-measure" key={localIndex}>
+                    {system.map((measure, localIndex) => {
+                      const measureActive = activeMeasureIndex === systemStartIndex + localIndex;
+                      return (
+                      <article className={`pdf-system-measure${measureActive ? " is-playback-active" : ""}`}
+                        aria-current={measureActive ? "true" : undefined} key={localIndex}>
                         <PdfMeasureLyrics notes={measure.notes} meter={meter} showSignature={localIndex === 0}
-                          notePositions={melodyNotePositions[`${pageIndex}-${systemIndex}-${localIndex}`]} />
+                          notePositions={melodyNotePositions[`${pageIndex}-${systemIndex}-${localIndex}`]}
+                          activeNoteId={measureActive ? activeNoteId : null} />
                       </article>
-                    ))}
+                      );
+                    })}
                   </div>
                   {includeAccompaniment && <div className="pdf-piano-system">
                     <div className="pdf-brace">{"{"}</div>
@@ -201,7 +224,8 @@ export default function PdfScoreSheet({
                     </div>
                   </div>}
                 </section>
-              ))}
+                );
+              })}
             </div>
           </section>
         );

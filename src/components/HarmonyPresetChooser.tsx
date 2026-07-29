@@ -114,7 +114,7 @@ export default function HarmonyPresetChooser({
       const duration = await playComposition(measures, "acoustic_grand_piano", bpm, {
         styleId: accompanimentStyleId,
         instrumentIds: ["acoustic_grand_piano"],
-        beatInstrumentIds: [],
+        beatPattern: [],
         beatVolume: 100,
         meter
       });

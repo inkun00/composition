@@ -41,9 +41,17 @@ describe("비트 악기 선택", () => {
       .toEqual(["timpani", "claves", "ride"]);
   });
 
+  it("밴드 드럼의 높은 톰·오픈 하이햇·크래시 심벌을 고를 수 있다", () => {
+    const bandDrumIds = ["rack-tom", "open-hihat", "crash"];
+    expect(BEAT_INSTRUMENTS.filter(({ id }) => bandDrumIds.includes(id)).map(({ id }) => id))
+      .toEqual(bandDrumIds);
+    expect(normalizeBeatInstrumentIds(["rack-tom", "snare", "crash"]))
+      .toEqual(["rack-tom", "snare", "crash"]);
+  });
+
   it("비트 음량을 5% 단위의 안전한 범위로 맞춘다", () => {
     expect(normalizeBeatVolume(137)).toBe(135);
-    expect(normalizeBeatVolume(999)).toBe(160);
+    expect(normalizeBeatVolume(999)).toBe(260);
     expect(normalizeBeatVolume(undefined)).toBe(100);
     expect(isValidBeatVolume(135)).toBe(true);
     expect(isValidBeatVolume(137)).toBe(false);

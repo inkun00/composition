@@ -55,105 +55,239 @@
   font-size: 13px;
 }
 
-.beat-layer-count {
+.beat-event-count {
   display: grid;
-  grid-template-columns: auto auto;
-  align-items: center;
-  column-gap: 7px;
-  min-width: 155px;
-  padding: 11px 15px;
+  min-width: 110px;
+  padding: 10px 15px;
   border: 1px solid #e2def0;
   border-radius: 15px;
-  color: #7c758f;
-  background: rgba(255, 255, 255, .88);
+  background: rgba(255, 255, 255, .9);
+  text-align: center;
 }
 
-.beat-layer-count svg {
-  grid-row: 1 / span 2;
-  color: #7961d6;
+.beat-event-count span {
+  color: #898398;
+  font-size: 10px;
 }
 
-.beat-layer-count span {
-  font-size: 11px;
+.beat-event-count strong {
+  margin-top: 2px;
+  color: #5942bd;
+  font-size: 17px;
 }
 
-.beat-layer-count strong {
-  color: #4d3bac;
+.beat-event-count small {
+  margin-top: 3px;
+  color: #918b9d;
+  font-size: 9px;
+}
+
+.beat-palette,
+.beat-track-picker,
+.beat-pattern-editor {
+  padding: 16px;
+  border: 1px solid #e4e0ef;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, .78);
+}
+
+.beat-track-picker-heading,
+.beat-palette-heading,
+.beat-pattern-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.beat-track-picker-heading > div,
+.beat-pattern-heading > div {
+  display: grid;
+}
+
+.beat-track-picker-heading strong,
+.beat-palette-heading > strong,
+.beat-pattern-heading strong {
+  color: #37344a;
   font-size: 14px;
 }
 
-.beat-layer-count.layer-0 strong {
-  color: #777489;
+.beat-track-picker-heading span,
+.beat-pattern-heading span {
+  margin-top: 2px;
+  color: #8a8697;
+  font-size: 10px;
+}
+
+.beat-add-track {
+  display: inline-flex;
+  min-height: 36px;
+  padding: 7px 12px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid #765ee0;
+  border-radius: 10px;
+  color: #5b43c4;
+  background: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.beat-add-track:hover:not(:disabled) {
+  color: #fff;
+  background: #6952d2;
+}
+
+.beat-add-track:disabled {
+  border-color: #dcd7e7;
+  color: #9d97aa;
+  background: #f5f3f8;
+  cursor: default;
+}
+
+.beat-track-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.beat-track-tab {
+  position: relative;
+  min-width: 0;
+  border: 1px solid #e3deed;
+  border-radius: 13px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.beat-track-tab.active {
+  border-color: #765ee0;
+  background: #f5f2ff;
+  box-shadow: inset 0 0 0 1px #765ee0;
+}
+
+.beat-track-tab > [role="tab"] {
+  width: 100%;
+  min-height: 68px;
+  padding: 10px 42px 10px 12px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  border: 0;
+  color: #494455;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.beat-track-tab > [role="tab"] > span:first-child {
+  font-size: 23px;
+}
+
+.beat-track-tab > [role="tab"] > span:nth-child(2) {
+  display: grid;
+  min-width: 0;
+}
+
+.beat-track-tab > [role="tab"] small {
+  color: #8d8699;
+  font-size: 9px;
+}
+
+.beat-track-tab > [role="tab"] strong {
+  margin-top: 2px;
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.beat-track-tab > [role="tab"] em {
+  padding: 4px 6px;
+  border-radius: 7px;
+  color: #6550bd;
+  background: #eee9ff;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.beat-remove-track {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #ead4d1;
+  border-radius: 8px;
+  color: #a6534a;
+  background: #fff;
+  cursor: pointer;
+}
+
+.beat-remove-track:hover:not(:disabled) {
+  background: #fff0ee;
+}
+
+.beat-palette {
+  margin-top: 12px;
+}
+
+.beat-palette-heading > span {
+  padding: 7px 11px;
+  border-radius: 10px;
+  color: #6551bd;
+  background: #f0ecff;
+  font-size: 12px;
 }
 
 .beat-role-groups {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
 }
 
 .beat-role-group {
   min-width: 0;
   margin: 0;
-  padding: 13px;
-  border: 1px solid #e4e0ef;
-  border-radius: 17px;
-  background: rgba(255, 255, 255, .78);
+  padding: 10px;
+  border: 1px solid #ebe7f3;
+  border-radius: 14px;
+  background: #fbfaff;
 }
 
 .beat-role-group legend {
-  display: flex;
-  align-items: center;
-  gap: 9px;
   padding: 0 4px;
-  color: #37344a;
-}
-
-.beat-role-group legend > b {
-  display: grid;
-  width: 24px;
-  height: 24px;
-  place-items: center;
-  border-radius: 8px;
-  color: #fff;
-  background: #7760dc;
-  font-size: 12px;
-}
-
-.beat-role-group legend span {
-  display: grid;
-}
-
-.beat-role-group legend strong {
-  font-size: 13px;
-}
-
-.beat-role-group legend small {
-  margin-top: 1px;
-  color: #8a8697;
-  font-size: 10px;
-  font-weight: 500;
+  color: #6a5ab4;
+  font-size: 11px;
+  font-weight: 800;
 }
 
 .beat-instrument-options {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 7px;
-  margin-top: 9px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 5px;
 }
 
 .beat-role-group:first-child .beat-instrument-options {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .beat-instrument-options button {
   display: grid;
   min-width: 0;
-  min-height: 84px;
-  padding: 10px 6px 8px;
+  min-height: 64px;
+  padding: 8px 4px 7px;
   place-items: center;
   border: 1px solid #e5e1ed;
-  border-radius: 13px;
+  border-radius: 11px;
   color: #4a4756;
   background: #fff;
   cursor: pointer;
@@ -179,39 +313,379 @@
 }
 
 .beat-instrument-options button > span {
-  font-size: 22px;
+  font-size: 20px;
   line-height: 1;
 }
 
 .beat-instrument-options button strong {
   overflow: hidden;
   max-width: 100%;
-  margin-top: 6px;
-  font-size: 12px;
+  margin-top: 5px;
+  font-size: 10px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.beat-instrument-options button small {
+.beat-pattern-editor {
+  padding: 12px;
+  background: linear-gradient(145deg, #fff, #f9fffC);
+}
+
+.beat-pattern-section-heading {
+  margin: 16px 2px 9px;
+  display: grid;
+}
+
+.beat-pattern-section-heading strong {
+  color: #37344a;
+  font-size: 14px;
+}
+
+.beat-pattern-section-heading span {
   margin-top: 3px;
-  color: #94909e;
+  color: #8a8697;
+  font-size: 10px;
+}
+
+.beat-pattern-stack {
+  display: grid;
+  gap: 10px;
+}
+
+.beat-pattern-track-editor.active {
+  border-color: #8b74e8;
+  box-shadow: inset 0 0 0 1px #8b74e8, 0 8px 20px rgba(86, 63, 169, .08);
+}
+
+.beat-pattern-track-summary {
+  display: flex !important;
+  min-width: 0;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.beat-pattern-track-summary > span:first-child {
+  margin: 0;
+  color: inherit;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.beat-pattern-track-summary > span:nth-child(2) {
+  display: grid;
+  margin: 0;
+}
+
+.beat-pattern-track-summary small {
+  margin-top: 2px;
+  color: #8a8697;
   font-size: 9px;
 }
 
-.beat-instrument-options button.active small {
-  color: #6f58cd;
+.beat-pattern-heading > .beat-clear-track {
+  display: inline-flex;
+  min-height: 29px;
+  padding: 5px 8px;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid #ddd6ed;
+  border-radius: 8px;
+  color: #725f94;
+  background: #fff;
+  font-size: 9px;
   font-weight: 700;
+  cursor: pointer;
 }
 
-.beat-listen-row {
+.beat-pattern-heading > .beat-clear-track:disabled {
+  cursor: default;
+  opacity: .45;
+}
+
+.beat-pattern-heading > .beat-rhythm-controls {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.beat-rhythm-controls > span {
+  margin: 0 3px 0 0;
+  padding: 5px 7px;
+  border-radius: 7px;
+  color: #5f4bb6;
+  background: #eee9ff;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.beat-rhythm-controls > button {
+  display: inline-flex;
+  min-height: 29px;
+  padding: 5px 8px;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid #ddd6ed;
+  border-radius: 9px;
+  color: #725f94;
+  background: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.beat-rhythm-controls > button:hover:not(:disabled) {
+  border-color: #9784df;
+  color: #5a43b9;
+  background: #f5f2ff;
+}
+
+.beat-rhythm-controls > .beat-delete-event {
+  border-color: #e2b9b4;
+  color: #a24c44;
+}
+
+.beat-rhythm-controls > button:disabled {
+  cursor: default;
+  opacity: .45;
+}
+
+.beat-measure-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.beat-pattern-measure {
+  min-width: 0;
+  padding: 7px;
+  border: 1px solid #dfe9e4;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .92);
+}
+
+.beat-pattern-measure > header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  margin-top: 14px;
-  padding: 11px 12px 11px 16px;
-  border-radius: 14px;
-  background: #f4f2fa;
+  margin-bottom: 5px;
+}
+
+.beat-pattern-measure > header strong {
+  color: #3d3a4c;
+  font-size: 10px;
+}
+
+.beat-pattern-measure > header span {
+  color: #8b8795;
+  font-size: 9px;
+}
+
+.beat-pattern-measure > .beat-measure-header {
+  display: grid;
+  align-items: stretch;
+  gap: 5px;
+}
+
+.beat-measure-controls {
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 3px;
+}
+
+.beat-measure-controls > span {
+  display: grid;
+  min-width: 0;
+  margin: 0;
+  min-height: 42px;
+  padding: 7px 4px;
+  place-items: center;
+  border: 1px solid #d9d0f7;
+  border-radius: 9px;
+  color: #5f4bb6;
+  background: #eee9ff;
+  font-size: 11px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.beat-measure-controls > button {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 7px 3px;
+  border: 1px solid #ddd6ed;
+  border-radius: 9px;
+  color: #725f94;
+  background: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.beat-pattern-measure > .beat-measure-header .beat-measure-controls > span {
+  font-size: 11px;
+}
+
+.beat-measure-controls > button:hover:not(:disabled) {
+  border-color: #9784df;
+  color: #5a43b9;
+  background: #f5f2ff;
+}
+
+.beat-measure-controls > .beat-delete-event {
+  border-color: #e2b9b4;
+  color: #a24c44;
+}
+
+.beat-measure-controls > button:disabled {
+  cursor: default;
+  opacity: .4;
+}
+
+.beat-slot-grid {
+  display: grid;
+  gap: 3px;
+}
+
+.beat-slot {
+  min-width: 0;
+  padding: 2px;
+  border: 1px dashed #cfc9dc;
+  border-radius: 7px;
+  background: #fbfafc;
+}
+
+.beat-slot.filled {
+  border-style: solid;
+  border-color: #a8d9c4;
+  background: #f4fcf8;
+}
+
+.beat-slot.beat-start {
+  border-left-color: #8e85a0;
+}
+
+.beat-slot.selected {
+  border-color: #735add;
+  box-shadow: 0 0 0 2px rgba(115, 90, 221, .22);
+}
+
+.beat-slot > button {
+  display: flex;
+  width: 100%;
+  min-height: 27px;
+  padding: 2px 4px;
+  align-items: center;
+  justify-content: space-between;
+  border: 0;
+  border-radius: 7px;
+  color: #746e80;
+  background: transparent;
+  cursor: pointer;
+}
+
+.beat-slot > button > span {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.beat-slot > button:hover:not(:disabled),
+.beat-slot > button.selected-sound {
+  color: #5941bb;
+  background: #eee9ff;
+}
+
+.beat-slot > button b {
+  font-size: 9px;
+}
+
+.beat-slot > button small {
+  font-size: 10px;
+}
+
+.beat-slot-grid.subdivision-2 {
+  gap: 2px;
+}
+
+.beat-slot-grid.subdivision-2 .beat-slot {
+  padding: 1px;
+  border-radius: 6px;
+}
+
+.beat-slot-grid.subdivision-2 .beat-slot > button {
+  min-height: 25px;
+  padding: 1px 2px;
+}
+
+.beat-slot-grid.subdivision-4 {
+  gap: 1px;
+}
+
+.beat-slot-grid.subdivision-4 .beat-slot {
+  padding: 0;
+  border-radius: 4px;
+}
+
+.beat-slot-grid.subdivision-4 .beat-slot > button {
+  min-height: 23px;
+  padding: 1px;
+}
+
+.beat-slot-grid.subdivision-4 .beat-slot > button b {
+  font-size: 7px;
+}
+
+.beat-slot-grid.subdivision-4 .beat-slot > button > span {
+  font-size: 9px;
+}
+
+.beat-slot-grid.subdivision-4 .beat-slot > button small {
+  font-size: 8px;
+}
+
+.beat-slot-sounds {
+  display: grid;
+  gap: 3px;
+  margin-top: 3px;
+}
+
+.beat-slot-sounds button {
+  display: flex;
+  min-width: 0;
+  padding: 4px;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border: 1px solid #bee4d3;
+  border-radius: 7px;
+  color: #247557;
+  background: #eaf9f1;
+  cursor: pointer;
+}
+
+.beat-slot-sounds button:hover:not(:disabled) {
+  border-color: #e2afa9;
+  color: #a84e45;
+  background: #fff1ef;
+}
+
+.beat-slot-sounds button span {
+  font-size: 13px;
+}
+
+.beat-slot-sounds button small {
+  overflow: hidden;
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .beat-volume-control {
@@ -267,6 +741,17 @@
   font-size: 13px;
   font-weight: 800;
   text-align: center;
+}
+
+.beat-listen-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 14px;
+  padding: 11px 12px 11px 16px;
+  border-radius: 14px;
+  background: #f4f2fa;
 }
 
 .beat-listen-row p {

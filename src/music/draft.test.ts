@@ -15,6 +15,10 @@ const draft: SavedDraft = {
   accompanimentStyleId: "folk",
   accompanimentInstrumentIds: ["guitar", "violin"],
   beatInstrumentIds: ["soft-kick", "clap", "shaker"],
+  beatPattern: [
+    { id: "beat-a", instrumentId: "timpani", measureIndex: 0, offsetBeats: 0 },
+    { id: "beat-b", instrumentId: "clap", measureIndex: 2, offsetBeats: 2.5 }
+  ],
   beatVolume: 135,
   bpm: 82,
   lyrics: Array(8).fill("랄라"),
@@ -63,6 +67,15 @@ describe("브라우저 임시 저장", () => {
       beatInstrumentIds: ["kick", "soft-kick"]
     }) })).toBeNull();
     expect(readDraft({ getItem: () => JSON.stringify({ ...draft, beatVolume: 137 }) })).toBeNull();
+  });
+
+  it("네 마디에 직접 놓은 비트 위치를 저장하고 잘못된 칸은 거부한다", () => {
+    const storage = { getItem: () => JSON.stringify(draft) };
+    expect(readDraft(storage)?.beatPattern).toEqual(draft.beatPattern);
+    expect(readDraft({ getItem: () => JSON.stringify({
+      ...draft,
+      beatPattern: [{ id: "bad", instrumentId: "kick", measureIndex: 4, offsetBeats: .25 }]
+    }) })).toBeNull();
   });
 
   it("저장 공간 오류를 앱 오류로 번지게 하지 않는다", () => {

@@ -4,8 +4,9 @@ export type BeatInstrumentId =
   | "kick" | "soft-kick"
   | "snare" | "clap" | "woodblock"
   | "shaker" | "tambourine" | "hihat"
-  | "floor-tom" | "djembe" | "conga" | "cowbell" | "triangle"
-  | "timpani" | "cajon" | "bongo" | "claves" | "ride" | "guiro";
+  | "floor-tom" | "rack-tom" | "djembe" | "conga" | "cowbell" | "triangle"
+  | "timpani" | "cajon" | "bongo" | "claves" | "ride" | "guiro"
+  | "open-hihat" | "crash";
 
 export type BeatInstrumentDefinition = Readonly<{
   id: BeatInstrumentId;
@@ -19,7 +20,7 @@ export type BeatInstrumentDefinition = Readonly<{
 export const MAX_BEAT_INSTRUMENTS = 3;
 export const DEFAULT_BEAT_VOLUME = 100;
 export const MIN_BEAT_VOLUME = 0;
-export const MAX_BEAT_VOLUME = 160;
+export const MAX_BEAT_VOLUME = 260;
 
 export function normalizeBeatVolume(value: unknown): number {
   if (typeof value !== "number" || !Number.isFinite(value)) return DEFAULT_BEAT_VOLUME;
@@ -69,6 +70,10 @@ export const BEAT_INSTRUMENTS: readonly BeatInstrumentDefinition[] = [
     description: "깊게 울리는 둥 소리로 힘찬 행진 느낌을 만들어요."
   },
   {
+    id: "rack-tom", name: "높은 톰", icon: "🥁", role: "low", roleLabel: "낮은 쿵",
+    description: "단단한 둥 소리로 드럼이 이어 달리는 듯한 필인을 만들어요."
+  },
+  {
     id: "djembe", name: "젬베", icon: "🪘", role: "low", roleLabel: "낮은 쿵",
     description: "손으로 두드리는 통통 소리로 신나는 움직임을 만들어요."
   },
@@ -103,6 +108,14 @@ export const BEAT_INSTRUMENTS: readonly BeatInstrumentDefinition[] = [
   {
     id: "ride", name: "라이드 심벌", icon: "💿", role: "high", roleLabel: "잔박자 찰찰",
     description: "맑은 금속 울림으로 반주가 앞으로 나아가게 해요."
+  },
+  {
+    id: "open-hihat", name: "오픈 하이햇", icon: "✨", role: "high", roleLabel: "잔박자 찰찰",
+    description: "길게 퍼지는 치익 소리로 박자를 시원하게 열어 줘요."
+  },
+  {
+    id: "crash", name: "크래시 심벌", icon: "💥", role: "high", roleLabel: "잔박자 찰찰",
+    description: "강하게 퍼지는 촤앙 소리로 시작과 마무리를 힘차게 꾸며요."
   },
   {
     id: "guiro", name: "귀로", icon: "🪵", role: "high", roleLabel: "잔박자 찰찰",

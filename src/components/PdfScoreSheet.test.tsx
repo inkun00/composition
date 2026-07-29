@@ -17,4 +17,18 @@ describe("PDF 악보 화면 미리보기", () => {
     expect(markup).toContain("우리 노래");
     expect(markup).not.toContain("data-pdf-page");
   });
+
+  it("재생 중인 마디와 가사 음절을 강조한다", () => {
+    const markup = renderToStaticMarkup(<PdfScoreSheet title="우리 노래" description=""
+      creator="어린이 작곡가" originalCreator="" meter={{ beats: 4, beatUnit: 4 }}
+      measures={[{
+        candidateName: "첫 가락",
+        chords: ["C"],
+        notes: [{ id: "note-1", pitch: 60, duration: { numerator: 1, denominator: 1 }, lyric: "우" }]
+      }]} includeAccompaniment={false} preview activeMeasureIndex={0} activeNoteId="note-1" />);
+
+    expect(markup).toContain("pdf-system melody-only is-playback-active");
+    expect(markup).toContain("pdf-lyric-syllable is-playback-active");
+    expect(markup).toContain('aria-current="true"');
+  });
 });

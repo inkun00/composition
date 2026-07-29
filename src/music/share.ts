@@ -5,6 +5,7 @@ import type { Meter } from "./meter";
 import type { NoteEvent } from "./types";
 import { isSoundEffectId } from "./soundEffects";
 import type { SoundEffectEvent } from "./types";
+import { MAX_BEAT_PATTERN_EVENTS, isValidBeatPattern, type BeatPatternEvent } from "./beatPattern";
 import {
   BEAT_INSTRUMENTS,
   isValidBeatInstrumentSelection,
@@ -31,6 +32,7 @@ export type SharedComposition = Readonly<{
   accompanimentStyleId?: AccompanimentStyleId;
   accompanimentInstrumentIds?: readonly InstrumentId[];
   beatInstrumentIds?: readonly BeatInstrumentId[];
+  beatPattern?: readonly BeatPatternEvent[];
   beatVolume?: number;
   bpm?: number;
   lyrics: readonly string[];
@@ -75,6 +77,7 @@ type CompactCompositionV1 = [
 type CompactNote = [number | null, number, number, boolean?, number?, boolean?, boolean?, number?, string?];
 type CompactEffect = [string, number];
 type CompactMeasure = [string, CompactNote[], CompactEffect[]?];
+type CompactBeatEvent = [number, number, number];
 type CompactComposition = [
   2,
   string,
@@ -92,7 +95,8 @@ type CompactComposition = [
   readonly string[],
   CompactMeasure[],
   readonly number[] | null | undefined,
-  number | null | undefined
+  number | null | undefined,
+  readonly CompactBeatEvent[] | null | undefined
 ];
 
 function trimTrailingEmpty<T>(items: T[]): T[] {
@@ -148,7 +152,12 @@ function compactComposition(composition: SharedComposition): CompactComposition 
     }),
     composition.beatInstrumentIds?.map((id) =>
       BEAT_INSTRUMENTS.findIndex((instrument) => instrument.id === id)),
-    composition.beatVolume
+    composition.beatVolume,
+    composition.beatPattern?.map((event) => [
+      BEAT_INSTRUMENTS.findIndex((instrument) => instrument.id === event.instrumentId),
+      event.measureIndex,
+      event.offsetBeats
+    ])
   ];
 }
 
@@ -171,6 +180,15 @@ function expandCompactComposition(compact: CompactComposition): SharedCompositio
       return id ? [id] : [];
     }),
     beatVolume: optional(compact[16]),
+    beatPattern: compact[17]?.flatMap((event, eventIndex) => {
+      const instrumentId = BEAT_INSTRUMENTS[event[0]]?.id;
+      return instrumentId ? [{
+        id: `shared-beat-${eventIndex}`,
+        instrumentId,
+        measureIndex: event[1],
+        offsetBeats: event[2]
+      }] : [];
+    }),
     lyrics: compact[13],
     measures: compact[14].map((measure, measureIndex) => ({
       candidateName: measure[0],
@@ -202,7 +220,12 @@ function isCompactComposition(value: unknown): value is CompactComposition {
     typeof value[9] === "string" && Array.isArray(value[13]) && Array.isArray(value[14]) &&
     (value[15] == null || (Array.isArray(value[15]) && value[15].length <= 3 &&
       value[15].every((index) => Number.isInteger(index) && index >= 0 && index < BEAT_INSTRUMENTS.length))) &&
-    (value[16] == null || isValidBeatVolume(value[16]));
+    (value[16] == null || isValidBeatVolume(value[16])) &&
+    (value[17] == null || (Array.isArray(value[17]) && value[17].length <= MAX_BEAT_PATTERN_EVENTS &&
+      value[17].every((event) => Array.isArray(event) && event.length === 3 &&
+        Number.isInteger(event[0]) && event[0] >= 0 && event[0] < BEAT_INSTRUMENTS.length &&
+        Number.isInteger(event[1]) && event[1] >= 0 && event[1] < 4 &&
+        typeof event[2] === "number" && Number.isFinite(event[2]))));
 }
 
 function isCompactCompositionV1(value: unknown): value is CompactCompositionV1 {
@@ -261,6 +284,7 @@ function isSharedComposition(value: unknown): value is SharedComposition {
     !item.accompanimentInstrumentIds.every(isValidInstrumentId))) return false;
   if (item.beatInstrumentIds !== undefined &&
     !isValidBeatInstrumentSelection(item.beatInstrumentIds)) return false;
+  if (item.beatPattern !== undefined && !isValidBeatPattern(item.beatPattern, item.meter)) return false;
   if (item.beatVolume !== undefined && !isValidBeatVolume(item.beatVolume)) return false;
   if (item.bpm !== undefined && (!Number.isInteger(item.bpm) || item.bpm < 40 || item.bpm > 220)) return false;
   if (![2, 3, 4, 6].includes(item.meter.beats) || ![2, 4, 8].includes(item.meter.beatUnit)) return false;

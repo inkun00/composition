@@ -4,6 +4,7 @@ import App from "./App";
 import { preloadVexFlow } from "./music/vexflow";
 import "./styles.css";
 import "./desktop-polish.css";
+import "./button-system.css";
 
 preloadVexFlow();
 

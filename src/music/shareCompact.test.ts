@@ -14,6 +14,11 @@ const compactSample: SharedComposition = {
   accompanimentStyleId: "arpeggio",
   accompanimentInstrumentIds: ["piano", "violin", "flute"],
   beatInstrumentIds: ["soft-kick", "woodblock", "tambourine"],
+  beatPattern: [
+    { id: "beat-a", instrumentId: "kick", measureIndex: 0, offsetBeats: 0 },
+    { id: "beat-b", instrumentId: "clap", measureIndex: 1, offsetBeats: 1 },
+    { id: "beat-c", instrumentId: "ride", measureIndex: 3, offsetBeats: 3 }
+  ],
   beatVolume: 145,
   bpm: 124,
   lyrics: Array(16).fill("la"),
@@ -69,6 +74,7 @@ function normalizeTransientIds(composition: SharedComposition | null): unknown {
   if (!composition) return composition;
   const normalized = {
     ...composition,
+    beatPattern: composition.beatPattern?.map(({ id: _id, ...event }) => event),
     measures: composition.measures.map((measure) => {
       const beamGroups = new Map<string, number>();
       return {
@@ -121,6 +127,7 @@ describe("compact share encoding", () => {
       .toEqual(normalizeTransientIds({
         ...compactSample,
         beatInstrumentIds: undefined,
+        beatPattern: undefined,
         beatVolume: undefined
       }));
   });
