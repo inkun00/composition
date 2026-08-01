@@ -34,11 +34,15 @@ async function errorFromResponse(response: Response): Promise<HomrLocalError> {
 }
 
 async function localFetch(path: string, init?: RequestInit): Promise<Response> {
+  const endpoint = import.meta.env.PROD ? `http://127.0.0.1:37641${path}` : path;
+  const requestInit = import.meta.env.PROD
+    ? { ...init, mode: "cors", targetAddressSpace: "loopback" }
+    : init;
   try {
-    return await fetch(path, init);
+    return await fetch(endpoint, requestInit as RequestInit);
   } catch {
     throw new HomrLocalError(
-      "악보 읽기 기능을 시작하지 못했어요. 앱을 다시 실행해 주세요.",
+      "악보 읽기 도우미를 먼저 켜 주세요.",
       "LOCAL_SERVER_MISSING"
     );
   }

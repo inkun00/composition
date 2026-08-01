@@ -6,9 +6,11 @@
   "scripts": {
     "check:file-lines": "node scripts/check-file-lines.mjs",
     "pretest": "npm run check:file-lines",
-    "prebuild": "npm run check:file-lines",
+    "prebuild": "npm run check:file-lines && npm run generate:homr-helper",
     "audit:sounds": "node scripts/audit-sound-effects.mjs",
     "generate:harmony": "node scripts/generate-harmony-data.mjs",
+    "generate:homr-helper": "node scripts/build-homr-helper.mjs",
+    "homr:helper": "npm run generate:homr-helper && node public/homr-helper.generated.mjs",
     "dev": "vite",
     "build": "tsc --noEmit -p tsconfig.app.json && vite build",
     "test": "vitest run",

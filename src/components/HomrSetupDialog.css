@@ -105,7 +105,8 @@
   border-top: 1px solid #eee8f3;
 }
 
-.homr-setup-dialog > footer button {
+.homr-setup-dialog > footer button,
+.homr-setup-dialog > footer a {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -117,6 +118,7 @@
   color: #554d61;
   background: #fff;
   font-weight: 800;
+  text-decoration: none;
   cursor: pointer;
 }
 

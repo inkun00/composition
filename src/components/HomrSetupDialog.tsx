@@ -18,7 +18,7 @@ type SetupPhase = "checking" | "missing" | "installing" | "ready" | "error";
 
 function setupErrorMessage(error: unknown): string {
   if (error instanceof HomrLocalError && error.code === "LOCAL_SERVER_MISSING") {
-    return "앱을 다시 열어 주세요.";
+    return "아래 도우미를 받은 뒤 열어 주세요.";
   }
   return "잠시 후 다시 해 주세요.";
 }
@@ -116,9 +116,14 @@ export default function HomrSetupDialog({ open, onClose, onReady }: HomrSetupDia
             </button>
           )}
           {phase === "error" && (
-            <button type="button" className="primary" data-testid="homr-retry" onClick={() => void checkStatus()}>
-              다시 확인하기
-            </button>
+            <>
+              <a href="/start-score-reader.cmd" download data-testid="homr-helper-download">
+                <Download size={17} /> 도우미 받기
+              </a>
+              <button type="button" className="primary" data-testid="homr-retry" onClick={() => void checkStatus()}>
+                다시 확인하기
+              </button>
+            </>
           )}
         </footer>
       </section>
