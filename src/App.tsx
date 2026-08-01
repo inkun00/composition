@@ -35,14 +35,14 @@ import { findInstrument, INSTRUMENTS, type InstrumentId } from "./music/instrume
 import { measureCapacity, meterKey, SUPPORTED_METERS, validateMeasure, type Meter } from "./music/meter";
 import { rational, toNumber } from "./music/rational";
 import { prioritizeCandidatesForRhythm, RHYTHM_PREFERENCE_LABELS, rhythmPreferenceForStyle } from "./music/rhythmPreference";
-import { pitchName, positionNotes } from "./music/score";
+import { pitchName, positionNotes, withEditedPitch } from "./music/score";
 import { findSoundEffect, type SoundEffectId } from "./music/soundEffects";
 import { normalizeBeatVolume } from "./music/beatInstruments";
 import { normalizeBeatPattern, type BeatPatternEvent } from "./music/beatPattern";
 import { buildShareUrl, readCompositionFromHash, type SharedComposition } from "./music/share";
 import type { HarmonyStory, MelodyCandidate, NoteEvent, SoundEffectEvent } from "./music/types";
 import { useKaraokeAutoFocus } from "./hooks/useKaraokeAutoFocus";
-
+import { useProjectHistory } from "./hooks/useProjectHistory";
 type MeasureDraft = {
   story: HarmonyStory;
   storyHint: string;
@@ -51,8 +51,8 @@ type MeasureDraft = {
   candidateName: string | null;
   notes: readonly NoteEvent[] | null;
   effects: readonly SoundEffectEvent[];
+  keyFifths?: number;
 };
-
 function uniqueAccompanimentInstrumentIds(ids: readonly InstrumentId[]): InstrumentId[] {
   const unique: InstrumentId[] = [];
   ids.forEach((id) => {
@@ -131,7 +131,7 @@ function backingDisplayNotes(measure: MeasureDraft, meter: Meter, styleId: Accom
   return notes;
 }
 
-type SongLength = 8 | 12 | 16;
+type SongLength = 8 | 12 | 16 | 20 | 24 | 28 | 32;
 type SongPlaybackState = "idle" | "playing" | "paused";
 type KaraokePhase = "idle" | "intro" | "song" | "outro" | "encoding" | "done" | "error";
 type KaraokeMode = "recording" | "practice";
@@ -184,11 +184,18 @@ function firebaseAuthMessage(error: unknown, action: "signin" | "signup" | "rese
   return "이메일 로그인에 실패했어요. 다시 시도해 주세요.";
 }
 
-type CompositionSnapshot = Readonly<{
+type ProjectSnapshot = Readonly<{
   presetId: string;
   meter: Meter;
   songLength: SongLength;
   measures: readonly MeasureDraft[];
+  selectedInstrumentId: InstrumentId;
+  accompanimentStyleId: AccompanimentStyleId;
+  accompanimentInstrumentIds: readonly InstrumentId[];
+  beatPattern: readonly BeatPatternEvent[];
+  beatVolume: number;
+  bpm: number;
+  showArrangement: boolean;
 }>;
 
 type HarmonyFit = "chord" | "passing" | "color";
@@ -256,16 +263,19 @@ function applyLegacyLyric(notes: readonly NoteEvent[], lyric: string | undefined
 function compositionFromShare(shared: SharedComposition, preset: HarmonyPreset): MeasureDraft[] {
   return emptyComposition(preset, shared.songLength).map((measure, index) => ({
     ...measure,
+    chords: shared.measures[index].chords ?? measure.chords,
+    keyFifths: shared.measures[index].keyFifths,
     candidateId: "shared",
     candidateName: shared.measures[index].candidateName,
     notes: applyLegacyLyric(shared.measures[index].notes, shared.lyrics[index]),
     effects: shared.measures[index].effects ?? []
   }));
 }
-
 function compositionFromDraft(draft: SavedDraft, preset: HarmonyPreset): MeasureDraft[] {
   return emptyComposition(preset, draft.songLength).map((measure, index) => ({
     ...measure,
+    chords: draft.measures[index].chords ?? measure.chords,
+    keyFifths: draft.measures[index].keyFifths,
     candidateId: draft.measures[index].candidateId,
     candidateName: draft.measures[index].candidateName,
     notes: draft.measures[index].notes
@@ -273,7 +283,6 @@ function compositionFromDraft(draft: SavedDraft, preset: HarmonyPreset): Measure
     effects: draft.measures[index].effects ?? []
   }));
 }
-
 function isRecordingLink(search: string, hash: string): boolean {
   return new URLSearchParams(search).get("record") === "1" || /(?:^#|&)record=1(?:&|$)/.test(hash);
 }
@@ -343,10 +352,6 @@ export default function App() {
   const [showMoreCandidates, setShowMoreCandidates] = useState(false);
   const [soundEffectDialogOpen, setSoundEffectDialogOpen] = useState(false);
   const [editStatus, setEditStatus] = useState("");
-  const [undoStack, setUndoStack] = useState<readonly CompositionSnapshot[]>([]);
-  const [redoStack, setRedoStack] = useState<readonly CompositionSnapshot[]>([]);
-  const historyCurrent = useRef<CompositionSnapshot | null>(null);
-  const restoringHistory = useRef(false);
   const splitCounter = useRef(0);
   const completionAnimationTimer = useRef<number | null>(null);
   const [recentCompletedIndex, setRecentCompletedIndex] = useState<number | null>(null);
@@ -438,6 +443,13 @@ export default function App() {
   const [originalCreator, setOriginalCreator] = useState(resumableDraft?.originalCreator ??
     (incomingShare ? incomingShare.originalCreator || incomingShare.creator : ""));
   const [sourceHash, setSourceHash] = useState(incomingShare ? window.location.hash : resumableDraft?.sourceHash ?? "");
+  const historySnapshot = useMemo<ProjectSnapshot>(() => ({
+    presetId: selectedPresetId, meter, songLength, measures, selectedInstrumentId, accompanimentStyleId,
+    accompanimentInstrumentIds, beatPattern, beatVolume, bpm, showArrangement
+  }), [accompanimentInstrumentIds, accompanimentStyleId, beatPattern, beatVolume, bpm, measures, meter,
+    selectedInstrumentId, selectedPresetId, showArrangement, songLength]);
+  const { canUndo, canRedo, undo: undoProjectChange, redo: redoProjectChange, reset: resetProjectHistory } =
+    useProjectHistory({ current: historySnapshot, onRestore: restoreProjectSnapshot });
   const selectedPreset = findHarmonyPreset(selectedPresetId);
   const selectedInstrument = findInstrument(selectedInstrumentId);
   const selectedAccompanimentStyle = findAccompanimentStyle(accompanimentStyleId);
@@ -548,11 +560,11 @@ export default function App() {
     candidateName: measure.candidateName ?? "나만의 가락",
     notes: measure.notes,
     chords: measure.chords,
+    keyFifths: measure.keyFifths,
     effects: measure.effects
   }] : []);
   const karaokeIntroMeasures = repeatFourMeasures(measures, false);
   const karaokeOutroMeasures = repeatFourMeasures(measures, true);
-
   function clearPlaybackTicker() {
     if (playbackTicker.current !== null) window.clearInterval(playbackTicker.current);
     playbackTicker.current = null;
@@ -679,25 +691,6 @@ export default function App() {
   }, [accompanimentInstrumentIds]);
 
   useEffect(() => {
-    const next: CompositionSnapshot = { presetId: selectedPresetId, meter, songLength, measures };
-    const previous = historyCurrent.current;
-    if (!previous) {
-      historyCurrent.current = next;
-      return;
-    }
-    if (restoringHistory.current) {
-      restoringHistory.current = false;
-      historyCurrent.current = next;
-      return;
-    }
-    if (previous.presetId === next.presetId && previous.meter === next.meter &&
-      previous.songLength === next.songLength && previous.measures === next.measures) return;
-    setUndoStack((stack) => [...stack, previous].slice(-40));
-    setRedoStack([]);
-    historyCurrent.current = next;
-  }, [measures, meter, selectedPresetId, songLength]);
-
-  useEffect(() => {
     setSaveStatus("저장 중…");
     const timer = window.setTimeout(() => {
       const draft: SavedDraft = {
@@ -718,7 +711,7 @@ export default function App() {
         beatVolume,
         bpm,
         lyrics,
-        measures: measures.map(({ candidateId, candidateName, notes, effects }) => ({ candidateId, candidateName, notes, effects })),
+        measures: measures.map(({ candidateId, candidateName, notes, chords, effects, keyFifths }) => ({ candidateId, candidateName, notes, chords, effects, keyFifths })),
         showArrangement
       };
       setSaveStatus(writeDraft(window.localStorage, draft) ? "저장됨 ✓" : "저장하지 못했어요");
@@ -727,35 +720,23 @@ export default function App() {
   }, [accompanimentInstrumentIds, accompanimentStyleId, beatPattern, beatVolume, bpm, creatorName, measures, meter,
     originalCreator, selectedInstrumentId, selectedPresetId, songDescription, sourceHash, showArrangement, songLength, songTitle]);
 
-  function restoreComposition(snapshot: CompositionSnapshot) {
-    restoringHistory.current = true;
+  function restoreProjectSnapshot(snapshot: ProjectSnapshot) {
     setSelectedPresetId(snapshot.presetId);
     setMeter(snapshot.meter);
     setSongLength(snapshot.songLength);
     setMeasures(snapshot.measures as MeasureDraft[]);
+    setSelectedInstrumentId(snapshot.selectedInstrumentId);
+    setAccompanimentStyleId(snapshot.accompanimentStyleId);
+    setAccompanimentStyleView(findAccompanimentStyle(snapshot.accompanimentStyleId).category === "playing" ? "playing" : "mode");
+    setAccompanimentInstrumentIds(snapshot.accompanimentInstrumentIds as InstrumentId[]);
+    setBeatPattern(snapshot.beatPattern as BeatPatternEvent[]);
+    setBeatVolume(snapshot.beatVolume);
+    setBpm(snapshot.bpm);
+    setShowArrangement(snapshot.showArrangement);
     setRhythmChecks({});
     setActiveIndex((index) => Math.min(index, snapshot.measures.length - 1));
     setSelectedNoteId("");
     setSelectedNoteIds([]);
-    setShowArrangement(false);
-  }
-
-  function undoCompositionChange() {
-    const previous = undoStack.at(-1);
-    const current = historyCurrent.current;
-    if (!previous || !current) return;
-    setUndoStack((stack) => stack.slice(0, -1));
-    setRedoStack((stack) => [...stack, current].slice(-40));
-    restoreComposition(previous);
-  }
-
-  function redoCompositionChange() {
-    const next = redoStack.at(-1);
-    const current = historyCurrent.current;
-    if (!next || !current) return;
-    setRedoStack((stack) => stack.slice(0, -1));
-    setUndoStack((stack) => [...stack, current].slice(-40));
-    restoreComposition(next);
   }
 
   function confirmNewStructure(message: string): boolean {
@@ -1001,7 +982,7 @@ export default function App() {
       candidateId: "custom",
       candidateName: measure.candidateName ? measure.candidateName + " · 나만의 변화" : "나만의 가락",
       notes: (measure.notes ?? []).map((note) => selectedNoteIds.includes(note.id) && note.pitch !== null
-        ? { ...note, pitch: Math.max(48, Math.min(84, note.pitch + amount)) }
+        ? withEditedPitch(note, Math.max(48, Math.min(84, note.pitch + amount)), measure.keyFifths)
         : note)
     }));
   }
@@ -1011,7 +992,7 @@ export default function App() {
       ...measure,
       candidateId: "custom",
       candidateName: "직접 다듬은 가락",
-      notes: replaceNote(measure.notes ?? [], id, (note) => note.pitch === null ? note : { ...note, pitch: value })
+      notes: replaceNote(measure.notes ?? [], id, (note) => withEditedPitch(note, value, measure.keyFifths))
     }));
   }
 
@@ -1380,7 +1361,7 @@ export default function App() {
       beatVolume,
       bpm,
       lyrics,
-      measures: printableMeasures.map(({ candidateName, notes, effects }) => ({ candidateName, notes, effects }))
+      measures: printableMeasures.map(({ candidateName, notes, chords, effects, keyFifths }) => ({ candidateName, notes, chords, effects, keyFifths }))
     };
   }
 
@@ -1547,11 +1528,10 @@ export default function App() {
       beatVolume,
       bpm,
       lyrics,
-      measures: measures.map(({ candidateId, candidateName, notes, effects }) => ({ candidateId, candidateName, notes, effects })),
+      measures: measures.map(({ candidateId, candidateName, notes, chords, effects, keyFifths }) => ({ candidateId, candidateName, notes, chords, effects, keyFifths })),
       showArrangement
     };
   }
-
   function saveProjectFile() {
     const blob = new Blob([JSON.stringify(currentProjectDraft(), null, 2)], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -1565,9 +1545,7 @@ export default function App() {
 
   function applyProjectDraft(project: SavedDraft) {
     const preset = findHarmonyPreset(project.presetId);
-    historyCurrent.current = null;
-    setUndoStack([]);
-    setRedoStack([]);
+    resetProjectHistory();
     setSelectedPresetId(preset.id);
     setMeter(project.meter);
     setSongLength(project.songLength);
@@ -1682,7 +1660,7 @@ export default function App() {
   }
 
   function handleCloudLoad(score: CloudScore) {
-    if (completedCount > 0 && !window.confirm(`지금 만든 곡 대신 '${score.title}' 악보를 열까요? 현재 곡은 로컬에 자동 저장되어 있어요.`)) return;
+    if (completedCount > 0 && !window.confirm(`지금 만든 곡 대신 '${score.title}' 악보를 열까요? 현재 곡은 이 컴퓨터에 자동 저장되어 있어요.`)) return;
     applyProjectDraft(score.draft);
     setActiveCloudScoreId(score.id);
     setAccountLibraryOpen(false);
@@ -1713,7 +1691,7 @@ export default function App() {
 
   function openPublishedProjectCopy(song: PublishedSong) {
     if (song.access !== "project") return;
-    if (completedCount > 0 && !window.confirm(`지금 만든 곡 대신 '${song.title}' 프로젝트의 사본을 열까요? 현재 곡은 로컬에 자동 저장되어 있어요.`)) return;
+    if (completedCount > 0 && !window.confirm(`지금 만든 곡 대신 '${song.title}' 프로젝트의 사본을 열까요? 현재 곡은 이 컴퓨터에 자동 저장되어 있어요.`)) return;
     const copyTitle = `${song.title.trim().slice(0, 56) || "제목 없는 노래"} 사본`;
     const copy: SavedDraft = {
       ...JSON.parse(JSON.stringify(song.draft)) as SavedDraft,
@@ -2218,7 +2196,7 @@ export default function App() {
                           tabIndex={-1} data-karaoke-section="song" data-karaoke-measure-index={measureIndex}>
                           <span>{measureIndex + 1}마디</span>
                           <em>{measure.chords.join(" · ")}</em>
-                          <ScoreMeasure notes={measure.notes ?? []} meter={meter} compact systemMeasure
+                           <ScoreMeasure notes={measure.notes ?? []} meter={meter} keyFifths={measure.keyFifths} compact systemMeasure
                             showSignature={columnIndex === 0}
                             onNoteLayout={(positions) => updateKaraokeLyricNotePositions(measureIndex, positions)}
                             playingNoteId={reviewPlaybackNoteId ?? (active ? karaokeHighlight.noteId : null)}
@@ -2415,7 +2393,8 @@ export default function App() {
         <HarmonyPresetChooser preset={selectedPreset} meter={meter}
           bpm={bpm} accompanimentStyleId={accompanimentStyleId}
           disabled={isAnyPlaying} playing={presetPreviewing}
-          onPlayingChange={setPresetPreviewing} onSelect={choosePreset} />
+          onPlayingChange={setPresetPreviewing} onSelect={choosePreset}
+          baseDraft={currentProjectDraft()} onImportScore={applyProjectDraft} />
 
         <section className="meter-chooser meter-with-guide" aria-labelledby="meter-heading">
           <div className="compact-heading">
@@ -2444,14 +2423,14 @@ export default function App() {
         <section className="length-chooser" aria-labelledby="length-heading">
           <div className="compact-heading">
             <span className="number-badge">4</span>
-            <div><h2 id="length-heading">노래 길이를 골라요</h2><p>처음에는 8마디, 긴 이야기는 12·16마디가 좋아요.</p></div>
+            <div><h2 id="length-heading">노래 길이를 골라요</h2><p>8마디부터 32마디까지, 4마디씩 늘려 고를 수 있어요.</p></div>
           </div>
           <div className="length-options">
-            {([8, 12, 16] as const).map((length) => (
+            {([8, 12, 16, 20, 24, 28, 32] as const).map((length) => (
               <button key={length} type="button" data-testid={`length-${length}`}
                 className={songLength === length ? "length-option active" : "length-option"}
                 aria-pressed={songLength === length} onClick={() => chooseLength(length)}>
-                <strong>{length}마디</strong><span>{length / 4}개의 이야기 묶음</span>
+                <strong>{length}마디</strong>
               </button>
             ))}
           </div>
@@ -2516,7 +2495,7 @@ export default function App() {
                       <span className="measure-story-label">{storyInfo[measure.story].icon} {measure.storyHint}</span>
                     </span>
                   </span>
-                  <ScoreMeasure notes={measure.notes ?? []} meter={meter} compact wide
+                  <ScoreMeasure notes={measure.notes ?? []} meter={meter} keyFifths={measure.keyFifths} compact wide
                     playingNoteId={playingMeasureIndex === index ? playingNoteId : null}
                     showSignature={index % 4 === 0} systemMeasure
                     onNoteLayout={(positions) => updateTimelineLyricNotePositions(index, positions)} />
@@ -2560,9 +2539,9 @@ export default function App() {
                 onClick={() => void playActiveMeasure()}>
                 <PlayIcon playing={playingMeasure} /> 이 마디 듣기
               </button>
-              <div className="history-actions" aria-label="작곡 되돌리기">
-                <button type="button" disabled={undoStack.length === 0} onClick={undoCompositionChange}><Undo2 size={16} /> 되돌리기</button>
-                <button type="button" disabled={redoStack.length === 0} onClick={redoCompositionChange}><Redo2 size={16} /> 다시 하기</button>
+              <div className="history-actions" aria-label="편집 되돌리기">
+                <button type="button" disabled={!canUndo} onClick={undoProjectChange} aria-keyshortcuts="Control+Z Meta+Z" title="되돌리기 (Ctrl+Z)"><Undo2 size={16} /> 되돌리기</button>
+                <button type="button" disabled={!canRedo} onClick={redoProjectChange} aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z Control+Y" title="다시 하기 (Ctrl+Shift+Z)"><Redo2 size={16} /> 다시 하기</button>
               </div>
             </div>
           </div>
@@ -2570,7 +2549,7 @@ export default function App() {
           <div className={activeMeasure.notes ? "editor-card" : "editor-card empty-editor"}>
             {activeMeasure.notes ? (
               <>
-                <ScoreMeasure notes={activeNotes} meter={meter}
+                <ScoreMeasure notes={activeNotes} meter={meter} keyFifths={activeMeasure.keyFifths}
                   playingNoteId={playingMeasure || playingMeasureIndex === activeIndex ? playingNoteId : null}
                   selectedNoteId={selectedNoteId} selectedNoteIds={selectedNoteIds}
                   onSelectNote={selectNote} onMoveNote={moveNotePitch} onMovePosition={moveNotePosition}
@@ -2604,7 +2583,7 @@ export default function App() {
                   </strong>}
                 </div>
                 <div className="note-tools" onMouseDown={keepEditorFocus} onClickCapture={preserveViewportAfterButtonClick}>
-                  <div><span>고른 음표</span><strong>{selectedNoteIds.length > 1 ? `${selectedNoteIds.length}개 선택` : selectedNote ? pitchName(selectedNote.pitch) : "음표를 골라 주세요"}</strong></div>
+                  <div><span>고른 음표</span><strong>{selectedNoteIds.length > 1 ? `${selectedNoteIds.length}개 선택` : selectedNote ? pitchName(selectedNote.pitch, selectedNote.accidental) : "음표를 골라 주세요"}</strong></div>
                   <button type="button" onClick={() => changePitch(1)}
                     disabled={selectedNoteIds.length === 0 || selectedNotes.every((note) => note.pitch === null)}>↑<span>높게</span></button>
                   <button type="button" onClick={() => changePitch(-1)}
@@ -2981,7 +2960,7 @@ export default function App() {
               {measures.map((measure, index) => (
                 <div key={index} className={lyrics[index].trim() ? "lyric-card filled" : "lyric-card"}>
                   <span>{index + 1}마디</span>
-                  <ScoreMeasure notes={measure.notes ?? []} meter={meter} compact
+                  <ScoreMeasure notes={measure.notes ?? []} meter={meter} keyFifths={measure.keyFifths} compact
                     onNoteLayout={(positions) => updateLyricNotePositions(index, positions)} />
                   <NoteLyrics notes={measure.notes ?? []} meter={meter} measureIndex={index} compact
                     notePositions={lyricNotePositions[index]}

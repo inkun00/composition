@@ -294,10 +294,10 @@ h1 { font-size: clamp(30px, 4vw, 46px); letter-spacing: -.04em; margin: 8px 0 12
 .meter-option strong { font: 800 24px Nunito, sans-serif; color: #5543ac; }
 .meter-option span { font-weight: 700; margin-top: 1px; }
 .meter-option small { color: var(--muted); margin-top: 4px; }
-.length-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-.length-option { min-height: 68px; padding: 11px 15px; border: 2px solid transparent; border-radius: 17px; background: #faf8f4; text-align: left; cursor: pointer; }
+.length-options { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+.length-option { min-height: 52px; padding: 9px 12px; border: 2px solid transparent; border-radius: 15px; background: #faf8f4; text-align: left; cursor: pointer; }
 .length-option strong, .length-option span { display: block; }
-.length-option strong { font: 800 20px Nunito, sans-serif; }
+.length-option strong { font: 800 18px Nunito, sans-serif; }
 .length-option span { margin-top: 3px; color: var(--muted); font-size: 12px; }
 .length-option.active { border-color: #7865d2; background: #f2efff; color: #5543ac; }
 

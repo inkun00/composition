@@ -11,6 +11,7 @@ export type PrintableMeasure = Readonly<{
   candidateName: string;
   notes: readonly NoteEvent[];
   chords: readonly string[];
+  keyFifths?: number;
 }>;
 
 type PdfScoreSheetProps = {
@@ -175,7 +176,7 @@ export default function PdfScoreSheet({
                       const measureActive = activeMeasureIndex === systemStartIndex + localIndex;
                       return (
                       <article className={`pdf-system-measure${measureActive ? " is-playback-active" : ""}`} key={localIndex}>
-                        <ScoreMeasure notes={measure.notes} meter={meter} compact
+                        <ScoreMeasure notes={measure.notes} meter={meter} keyFifths={measure.keyFifths} compact
                           renderBackend="canvas" showSignature={localIndex === 0} systemMeasure connectedSystem
                           endBarline={pageIndex * (includeAccompaniment ? 8 : 16) + systemIndex * 4 + localIndex === measures.length - 1
                             ? "final" : "single"}

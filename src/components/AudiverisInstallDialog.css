@@ -1,0 +1,106 @@
+.audiveris-install-dialog-overlay {
+  position: fixed;
+  z-index: 1950;
+  inset: 0;
+  padding: 24px;
+  display: grid;
+  place-items: center;
+  background: rgb(24 20 42 / 76%);
+  backdrop-filter: blur(9px);
+}
+
+.audiveris-install-dialog {
+  width: min(720px, calc(100vw - 48px));
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  border: 1px solid rgb(255 255 255 / 74%);
+  border-radius: 24px;
+  background: linear-gradient(145deg, #fff, #fbfaff 60%, #f2faf6);
+  box-shadow: 0 38px 100px rgb(20 15 48 / 46%);
+}
+
+.audiveris-install-dialog > header {
+  position: sticky;
+  z-index: 2;
+  top: 0;
+  padding: 21px 23px 18px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  border-bottom: 1px solid #e5dfef;
+  background: rgb(255 255 255 / 94%);
+  backdrop-filter: blur(14px);
+}
+
+.audiveris-install-dialog > header > div {
+  min-width: 0;
+}
+
+.audiveris-install-dialog > header span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #6553c9;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.audiveris-install-dialog > header h2 {
+  margin: 6px 0 3px;
+  color: #29243a;
+  font-size: 22px;
+  letter-spacing: -.035em;
+}
+
+.audiveris-install-dialog > header p {
+  margin: 0;
+  color: #7b7286;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.audiveris-install-dialog > header button {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 0;
+  border-radius: 12px;
+  background: #f1eef5;
+  color: #615969;
+  cursor: pointer;
+}
+
+.audiveris-install-dialog > header button:hover {
+  background: #e8e3ef;
+  color: #332c3d;
+}
+
+.audiveris-install-dialog-body {
+  padding: 8px 22px 23px;
+}
+
+@media (max-width: 620px) {
+  .audiveris-install-dialog-overlay {
+    padding: 10px;
+  }
+
+  .audiveris-install-dialog {
+    width: calc(100vw - 20px);
+    max-height: calc(100vh - 20px);
+  }
+
+  .audiveris-install-dialog > header {
+    padding: 18px 17px 15px;
+  }
+
+  .audiveris-install-dialog > header h2 {
+    font-size: 19px;
+  }
+
+  .audiveris-install-dialog-body {
+    padding: 5px 13px 17px;
+  }
+}

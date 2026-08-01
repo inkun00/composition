@@ -8,7 +8,7 @@ const sample: SharedComposition = {
   originalCreator: "새봄",
   presetId: "H001",
   meter: { beats: 4, beatUnit: 4 },
-  songLength: 8,
+  songLength: 32,
   instrumentId: "piano",
   accompanimentStyleId: "arpeggio",
   accompanimentInstrumentIds: ["piano", "violin"],
@@ -19,17 +19,20 @@ const sample: SharedComposition = {
   ],
   beatVolume: 125,
   bpm: 124,
-  lyrics: Array(8).fill("라라라"),
-  measures: Array.from({ length: 8 }, (_, index) => ({
+  lyrics: Array(32).fill("라라라"),
+  measures: Array.from({ length: 32 }, (_, index) => ({
     candidateName: "햇살 계단",
     notes: [{
       id: `note-${index}`,
-      pitch: 60,
+      pitch: 61,
+      accidental: "sharp",
       duration: { numerator: 3, denominator: 2 },
       dotted: true,
       beamGroup: "beam-a",
       lyric: "라"
     }],
+    chords: [index % 2 === 0 ? "C" : "G7"],
+    keyFifths: 2,
     effects: [{ id: `effect-${index}`, effectId: "bird", offsetBeats: 1.5 }]
   }))
 };

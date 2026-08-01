@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { playComposition, stopPlayback, type PlaybackMeasure } from "../audio/player";
 import type { AccompanimentStyleId } from "../music/accompaniment";
 import { getCandidates } from "../music/candidates";
+import type { SavedDraft } from "../music/draft";
 import { HARMONY_PRESETS, type HarmonyPreset } from "../music/harmonyPresets";
 import type { Meter } from "../music/meter";
 import {
@@ -10,6 +11,7 @@ import {
 } from "../music/recommendation";
 import { prioritizeCandidatesForRhythm } from "../music/rhythmPreference";
 import PlayIcon from "./PlayIcon";
+import ScoreImageImport from "./ScoreImageImport";
 import "./HarmonyPresetChooser.css";
 
 type HarmonyPresetChooserProps = Readonly<{
@@ -21,6 +23,8 @@ type HarmonyPresetChooserProps = Readonly<{
   playing: boolean;
   onPlayingChange: (playing: boolean) => void;
   onSelect: (id: string) => void;
+  baseDraft?: SavedDraft;
+  onImportScore?: (draft: SavedDraft) => void;
 }>;
 
 export function buildHarmonyPreviewMeasures(
@@ -73,7 +77,9 @@ export default function HarmonyPresetChooser({
   disabled,
   playing,
   onPlayingChange,
-  onSelect
+  onSelect,
+  baseDraft,
+  onImportScore
 }: HarmonyPresetChooserProps) {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState("추천 음악으로 네 마디의 느낌을 먼저 들어 보세요.");
@@ -186,6 +192,13 @@ export default function HarmonyPresetChooser({
           </div>
         </div>
       </div>
+      {baseDraft && onImportScore && <div className="preset-score-import-bar">
+        <div className="preset-score-import-info">
+          <strong>이미 만든 악보가 있나요?</strong>
+          <span>사진이나 악보 파일을 읽어 가락에 어울리는 화음을 자동으로 찾아요.</span>
+        </div>
+        <ScoreImageImport baseDraft={baseDraft} disabled={disabled} onImport={onImportScore} />
+      </div>}
       <img className="workspace-guide setup-guide-boy" src="/illustrations/guide-boy-v1.webp"
         alt="" aria-hidden="true" draggable="false" />
     </section>

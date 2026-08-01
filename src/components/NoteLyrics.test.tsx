@@ -13,6 +13,7 @@ describe("음표별 가사 칸", () => {
     expect(markup.match(/data-testid="note-lyric-/g)).toHaveLength(2);
     expect(markup).toContain("value=\"봄\"");
     expect(markup).toContain("maxLength=\"1\"");
+    expect(markup).toContain("data-project-history=\"true\"");
     expect(markup).toContain("lyric-note-selected");
   });
 });

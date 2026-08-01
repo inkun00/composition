@@ -17,7 +17,7 @@ export type CloudScore = Readonly<{
   id: string;
   title: string;
   creator: string;
-  songLength: 8 | 12 | 16;
+  songLength: 8 | 12 | 16 | 20 | 24 | 28 | 32;
   updatedAt: number;
   draft: SavedDraft;
 }>;

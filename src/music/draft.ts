@@ -13,8 +13,16 @@ export type DraftMeasure = Readonly<{
   candidateId: string | null;
   candidateName: string | null;
   notes: readonly NoteEvent[] | null;
+  chords?: readonly string[];
+  keyFifths?: number;
   effects?: readonly SoundEffectEvent[];
 }>;
+
+function isChordList(value: unknown): value is readonly string[] {
+  return Array.isArray(value) && value.length > 0 && value.length <= 4 &&
+    value.every((chord) => typeof chord === "string" && chord.length <= 16 &&
+      /^[A-G](?:#|b)?(?:maj7|m7b5|m7|m|dim|aug|sus4|7|5)?(?:\/[A-G](?:#|b)?)?$/.test(chord));
+}
 
 export type SavedDraft = Readonly<{
   version: 1;
@@ -26,7 +34,7 @@ export type SavedDraft = Readonly<{
   originalCreator: string;
   presetId: string;
   meter: Meter;
-  songLength: 8 | 12 | 16;
+  songLength: 8 | 12 | 16 | 20 | 24 | 28 | 32;
   instrumentId: InstrumentId;
   accompanimentStyleId?: AccompanimentStyleId;
   accompanimentInstrumentIds?: readonly InstrumentId[];
@@ -44,6 +52,7 @@ function isNoteEvent(value: unknown): value is NoteEvent {
   const note = value as Partial<NoteEvent>;
   return typeof note.id === "string" && note.id.length <= 120 &&
     (note.pitch === null || (Number.isInteger(note.pitch) && (note.pitch ?? 0) >= 0 && (note.pitch ?? 0) <= 127)) &&
+    (note.accidental === undefined || note.accidental === "sharp" || note.accidental === "flat" || note.accidental === "natural") &&
     Number.isInteger(note.duration?.numerator) && Number.isInteger(note.duration?.denominator) &&
     (note.duration?.denominator ?? 0) > 0 &&
     (note.dotted === undefined || typeof note.dotted === "boolean") &&
@@ -74,7 +83,7 @@ export function isSavedDraft(value: unknown): value is SavedDraft {
   if (typeof draft.creator !== "string" || draft.creator.length > 40) return false;
   if (typeof draft.originalCreator !== "string" || draft.originalCreator.length > 40) return false;
   if (typeof draft.presetId !== "string" || draft.presetId.length > 20) return false;
-  if (![8, 12, 16].includes(draft.songLength ?? 0) || !draft.meter || !draft.instrumentId) return false;
+  if (![8, 12, 16, 20, 24, 28, 32].includes(draft.songLength ?? 0) || !draft.meter || !draft.instrumentId) return false;
   if (![[2, 4], [3, 4], [4, 4], [6, 8]].some(([beats, unit]) =>
     draft.meter?.beats === beats && draft.meter?.beatUnit === unit)) return false;
   if (!isValidInstrumentId(draft.instrumentId)) return false;
@@ -97,6 +106,9 @@ export function isSavedDraft(value: unknown): value is SavedDraft {
     if (!measure || typeof measure !== "object") return false;
     if (measure.candidateId !== null && typeof measure.candidateId !== "string") return false;
     if (measure.candidateName !== null && typeof measure.candidateName !== "string") return false;
+    if (measure.chords !== undefined && !isChordList(measure.chords)) return false;
+    if (measure.keyFifths !== undefined && (!Number.isInteger(measure.keyFifths) ||
+      measure.keyFifths < -7 || measure.keyFifths > 7)) return false;
     if (measure.effects !== undefined && (!Array.isArray(measure.effects) || measure.effects.length > 16 ||
       !measure.effects.every(isSoundEffectEvent))) return false;
     return measure.notes === null || (Array.isArray(measure.notes) && measure.notes.length <= 32 &&
