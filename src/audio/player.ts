@@ -14,6 +14,9 @@ import { preloadBeatSamples } from "./beatSamples";
 import { karaokeGuideSettings, type KaraokeGuideMode } from "./karaokeGuide";
 import { createGentleNoiseGate, createVocalMonitor, karaokeBackingGainForRms, vocalCaptureProfile, type RecordingCaptureMode } from "./vocalCapture";
 import { KARAOKE_INTRO_FADE_SECONDS, karaokeIntroArrangementPlan, karaokeScheduleLeadSeconds } from "./karaokePlaybackStart";
+import { effectiveBeatPattern } from "./animeRockArrangement";
+import { recordingArrangementPlan, songArrangementPlan } from "./arrangementPlan";
+export { recordingArrangementPlan } from "./arrangementPlan";
 export { karaokeBackingGainForRms } from "./vocalCapture";
 export const PREVIEW_MELODY_VOLUME_MULTIPLIER = 0.7;
 export type PlaybackMeasure = Readonly<{
@@ -365,33 +368,6 @@ function movePitchesAwayFromMelody(
   }))];
 }
 
-type ArrangementPlan = Readonly<{ layerCount: number; energy: number }>;
-
-function songArrangementPlan(measureIndex: number, measureCount: number, availableLayers: number): ArrangementPlan {
-  if (availableLayers <= 2 || measureCount <= 3) return { layerCount: availableLayers, energy: 1 };
-  const phraseIndex = Math.floor(measureIndex / 4);
-  const phrasePosition = measureIndex % 4;
-  const lastMeasure = measureIndex === measureCount - 1;
-  const baseLayers = phraseIndex === 0 ? Math.min(2, availableLayers)
-    : Math.min(3 + Math.max(0, phraseIndex - 1), availableLayers);
-  if (lastMeasure) return { layerCount: availableLayers, energy: 1.04 };
-  if (phrasePosition === 0) return { layerCount: Math.max(1, baseLayers - 1), energy: .82 + phraseIndex * .06 };
-  if (phrasePosition === 3) return { layerCount: Math.min(baseLayers + 1, availableLayers), energy: .98 + phraseIndex * .04 };
-  return { layerCount: baseLayers, energy: .9 + phraseIndex * .06 };
-}
-
-export function recordingArrangementPlan(
-  measureIndex: number,
-  measureCount: number,
-  availableLayers: number
-): ArrangementPlan {
-  const plan = songArrangementPlan(measureIndex, measureCount, availableLayers);
-  return {
-    layerCount: Math.min(availableLayers, Math.max(Math.min(2, availableLayers), plan.layerCount + 1)),
-    energy: Math.max(.98, plan.energy * 1.08)
-  };
-}
-
 const CHROMATIC_ROOTS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 const NATURAL_ROOTS: Readonly<Record<string, number>> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
 
@@ -438,8 +414,13 @@ function buildOutroMeasures(measures: readonly PlaybackMeasure[]): PlaybackMeasu
 
 async function loadAccompanimentLayers(context: BaseAudioContext, destination: AudioNode,
   accompaniment?: AccompanimentOptions) {
+  const playbackBeatPattern = effectiveBeatPattern(
+    accompaniment?.styleId,
+    accompaniment?.beatPattern ?? [],
+    accompaniment?.meter
+  );
   const beatSamplesReady = preloadBeatSamples(context,
-    beatPatternInstrumentIds(accompaniment?.beatPattern ?? []));
+    beatPatternInstrumentIds(playbackBeatPattern));
   const layers = await Promise.all((accompaniment?.instrumentIds ?? []).map(async (id) => {
     try {
       return { id, sample: await loadSampleWithTimeout(context, destination, id) };
@@ -487,8 +468,13 @@ function scheduleMeasure(
   const chordSymbols = measure.chords && measure.chords.length > 0 ? measure.chords : [""];
   const chordBeats = measureBeats / chordSymbols.length;
   if (options.accompaniment) {
+    const playbackBeatPattern = effectiveBeatPattern(
+      options.accompaniment.styleId,
+      options.accompaniment.beatPattern,
+      options.accompaniment.meter
+    );
     scheduleBeatPattern(context, destination, absoluteStart, secondsPerBeat, measureBeats,
-      measure.measureIndex ?? 0, options.accompaniment.beatPattern,
+      measure.measureIndex ?? 0, playbackBeatPattern,
       options.accompaniment.beatVolume, arrangementEnergy);
   }
 
@@ -532,8 +518,15 @@ function scheduleMeasure(
         } else if (part.id === "keys") {
           eventPitches = event.voice === "root" ? [transposeOctaves(pitches[0], -1)] : pitches.slice(0, 3);
         } else if (part.id === "guitar") {
-          eventPitches = event.voice === "root" ? [transposeOctaves(pitches[0], -1)]
-            : [pitches[(event.step ?? layerIndex) % pitches.length]];
+          if (options.accompaniment?.styleId === "anime_rock") {
+            const powerChordRoot = transposeOctaves(pitches[0], -1);
+            eventPitches = event.voice === "root"
+              ? [powerChordRoot]
+              : [powerChordRoot, powerChordRoot + 7, powerChordRoot + 12];
+          } else {
+            eventPitches = event.voice === "root" ? [transposeOctaves(pitches[0], -1)]
+              : [pitches[(event.step ?? layerIndex) % pitches.length]];
+          }
         } else if (part.id === "strings") {
           eventPitches = profile.polyphonic
             ? pitches.slice(0, 3)
@@ -854,7 +847,8 @@ export async function playComposition(
   let songCursor = 0;
 
   measures.forEach((measure, measureIndex) => {
-    const plan = songArrangementPlan(measureIndex, measures.length, accompanimentLayers.length);
+    const plan = songArrangementPlan(
+      measureIndex, measures.length, accompanimentLayers.length, accompaniment?.styleId);
     songCursor += scheduleMeasure(context, master, measure, start + songCursor, secondsPerBeat, {
       instrument,
       sampledInstrument,
@@ -1003,7 +997,8 @@ export async function practiceKaraokeComposition(
         noteCursor += noteDuration;
       });
       songNoteCursor += measureSeconds(measure, secondsPerBeat);
-      const plan = recordingArrangementPlan(measureIndex, measures.length, accompanimentLayers.length);
+      const plan = recordingArrangementPlan(
+        measureIndex, measures.length, accompanimentLayers.length, accompaniment?.styleId);
       cursor += scheduleMeasure(context, master, measure, start + cursor, secondsPerBeat, {
         instrument,
         sampledInstrument,
@@ -1341,7 +1336,8 @@ export async function recordKaraokeComposition(
         noteCursor += noteDuration;
       });
       songNoteCursor += measureSeconds(measure, secondsPerBeat);
-      const plan = recordingArrangementPlan(measureIndex, measures.length, accompanimentLayers.length);
+      const plan = recordingArrangementPlan(
+        measureIndex, measures.length, accompanimentLayers.length, accompaniment?.styleId);
       cursor += scheduleMeasure(context, master, measure, start + cursor, secondsPerBeat, {
         instrument,
         sampledInstrument,
@@ -1509,7 +1505,8 @@ export async function exportBackingCompositionMp3(
       });
     });
     measures.forEach((measure, measureIndex) => {
-      const plan = songArrangementPlan(measureIndex, measures.length, accompanimentLayers.length);
+      const plan = songArrangementPlan(
+        measureIndex, measures.length, accompanimentLayers.length, accompaniment?.styleId);
       cursor += scheduleMeasure(context, master, measure, start + cursor, secondsPerBeat, {
         instrument,
         sampledInstrument: null,
@@ -1580,7 +1577,12 @@ export async function exportBackingCompositionMp3Offline(
     } catch (error) {
       console.warn("악기 샘플을 불러오지 못해 합성 음색을 사용합니다.", error);
     }
-    await preloadBeatSamples(context, beatPatternInstrumentIds(accompaniment?.beatPattern ?? []));
+    const playbackBeatPattern = effectiveBeatPattern(
+      accompaniment?.styleId,
+      accompaniment?.beatPattern ?? [],
+      accompaniment?.meter
+    );
+    await preloadBeatSamples(context, beatPatternInstrumentIds(playbackBeatPattern));
     const accompanimentLayers = (accompaniment?.instrumentIds ?? []).map((id) => ({ id, sample: null }));
     const voiceState = createArrangementVoiceState();
     let cursor = 0;
@@ -1601,7 +1603,8 @@ export async function exportBackingCompositionMp3Offline(
       });
     });
     measures.forEach((measure, measureIndex) => {
-      const plan = songArrangementPlan(measureIndex, measures.length, accompanimentLayers.length);
+      const plan = songArrangementPlan(
+        measureIndex, measures.length, accompanimentLayers.length, accompaniment?.styleId);
       cursor += scheduleMeasure(context, master, measure, start + cursor, secondsPerBeat, {
         instrument,
         sampledInstrument: null,

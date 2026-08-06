@@ -41,6 +41,18 @@ afterEach(() => {
 });
 
 describe("악기별 4마디 비트 겹치기", () => {
+  it("록 드럼 기본 비트를 한 번에 넣고 각 소리를 편집할 수 있다", async () => {
+    renderHarness();
+    expect(container?.textContent).toContain("기본 비트 추가");
+    expect(container?.textContent).toContain("큰통(킥)·작은북(스네어)·하이햇");
+    await click("beat-rock-preset");
+
+    expect(container?.querySelectorAll('[data-testid^="beat-track-"]')).toHaveLength(3);
+    expect(container?.querySelectorAll(".beat-slot.filled")).toHaveLength(54);
+    expect(container?.querySelector('[data-testid="beat-slot-1-3-5"].selected-sound')).not.toBeNull();
+    expect(container?.querySelector('[data-testid="beat-slot-1-3-7"].selected-sound')).not.toBeNull();
+  });
+
   it("처음에는 한 악기의 네 마디 한 박자 칸을 보여준다", () => {
     renderHarness();
     expect(container?.querySelectorAll('[data-testid^="beat-track-"]')).toHaveLength(1);

@@ -6,7 +6,7 @@ export const MAX_SAVED_ACCOMPANIMENT_INSTRUMENTS = 10;
 
 export type AccompanimentStyleId =
   | "strum" | "arpeggio" | "riff" | "folk" | "bossa" | "shuffle" | "comping"
-  | "kpop" | "children_song" | "animation_ost" | "opera" | "musical";
+  | "kpop" | "anime_rock" | "children_song" | "animation_ost" | "opera" | "musical";
 
 export type AccompanimentStyle = Readonly<{
   id: AccompanimentStyleId;
@@ -49,6 +49,11 @@ export const ACCOMPANIMENT_STYLES: readonly AccompanimentStyle[] = [
     recommendedInstrumentIds: ["electric_piano_1", "electric_bass_finger", "electric_guitar_muted", "string_ensemble_1"]
   },
   {
+    id: "anime_rock", name: "애니 오프닝 록", alias: "애니 록", category: "genre",
+    description: "빠른 밴드 드럼과 힘찬 기타가 후렴으로 갈수록 커져요.",
+    recommendedInstrumentIds: ["electric_bass_pick", "distortion_guitar", "bright_acoustic_piano", "string_ensemble_1"]
+  },
+  {
     id: "children_song", name: "동요 놀이터", alias: "동요", category: "genre",
     description: "또렷한 박자 위에서 친숙한 악기들이 가볍게 주고받아요.",
     recommendedInstrumentIds: ["acoustic_grand_piano", "acoustic_bass", "acoustic_guitar_nylon", "glockenspiel"]
@@ -82,7 +87,7 @@ export const ACCOMPANIMENT_PLAYING_STYLES = ACCOMPANIMENT_STYLES.filter((style) 
 
 export type AccompanimentModeId =
   | "minimal" | "piano_ballad" | "acoustic" | "kpop_band" | "children_playground"
-  | "animation_cinema" | "bossa_cafe" | "musical_stage" | "opera_hall" | "bounce_band";
+  | "anime_opening_rock" | "animation_cinema" | "bossa_cafe" | "musical_stage" | "opera_hall" | "bounce_band";
 
 export type AccompanimentMode = Readonly<{
   id: AccompanimentModeId;
@@ -115,6 +120,12 @@ export const ACCOMPANIMENT_MODES: readonly AccompanimentMode[] = [
     styleId: "kpop", instrumentIds: ["electric_piano_1", "electric_bass_finger", "electric_guitar_muted", "string_ensemble_1"]
   },
   {
+    id: "anime_opening_rock", icon: "⚡", name: "애니 오프닝 록",
+    description: "강한 기타와 밴드 드럼이 후렴까지 힘차게 달려가요",
+    styleId: "anime_rock",
+    instrumentIds: ["electric_bass_pick", "distortion_guitar", "bright_acoustic_piano", "string_ensemble_1"]
+  },
+  {
     id: "bounce_band", icon: "🚂", name: "신나는 바운스", description: "짧고 긴 박자가 번갈아 신나게 달려요",
     styleId: "shuffle", instrumentIds: ["bright_acoustic_piano", "electric_bass_pick", "electric_guitar_muted", "marimba"]
   },
@@ -144,7 +155,7 @@ export const ACCOMPANIMENT_INSTRUMENT_IDS: readonly InstrumentId[] = [
   "acoustic_grand_piano", "bright_acoustic_piano", "electric_piano_1", "electric_piano_2",
   "church_organ", "accordion",
   "acoustic_guitar_nylon", "acoustic_guitar_steel", "electric_guitar_clean",
-  "electric_guitar_muted",
+  "electric_guitar_muted", "overdriven_guitar", "distortion_guitar",
   "acoustic_bass", "electric_bass_finger", "electric_bass_pick", "contrabass",
   "violin", "viola", "cello", "string_ensemble_1", "string_ensemble_2",
   "pizzicato_strings", "orchestral_harp",
@@ -208,6 +219,10 @@ export function createAccompanimentPattern(
     } else if (styleId === "kpop") {
       events.push(event(0, .46, "root"), event(.5, .3, "chord"),
         event(1.5, .4, "chord"), event(2.5, .34, "chord"));
+    } else if (styleId === "anime_rock") {
+      for (let beat = 0; beat < beats; beat += .5) {
+        events.push(event(beat, .36, beat % 1 === 0 ? "chord" : "root"));
+      }
     } else if (styleId === "children_song") {
       events.push(event(0, .6, "root"), event(.5, .3, "step", 1),
         event(1.5, .6, "chord"), event(2, .3, "step", 2));
@@ -242,6 +257,10 @@ export function createAccompanimentPattern(
     for (let start = 0; start < beats; start += 2) {
       events.push(event(start, .46, "root"), event(start + .5, .3, "chord"),
         event(start + 1, .34, "chord"), event(start + 1.5, .38, "chord"));
+    }
+  } else if (styleId === "anime_rock") {
+    for (let beat = 0; beat < beats; beat += .5) {
+      events.push(event(beat, .34, beat % 1 === 0 ? "chord" : "root"));
     }
   } else if (styleId === "children_song") {
     for (let beat = 0; beat < beats; beat += 1) {
@@ -299,6 +318,8 @@ const INSTRUMENT_PARTS: Readonly<Record<string, AccompanimentInstrumentPart>> = 
   acoustic_guitar_steel: PARTS.guitar,
   electric_guitar_clean: PARTS.guitar,
   electric_guitar_muted: PARTS.guitar,
+  overdriven_guitar: PARTS.guitar,
+  distortion_guitar: PARTS.guitar,
   acoustic_bass: PARTS.bass,
   electric_bass_finger: PARTS.bass,
   electric_bass_pick: PARTS.bass,
@@ -352,6 +373,7 @@ export function accompanimentInstrumentProfile(
     : part.id === "percussion" ? [48, 81, 64]
     : [48, 78, 61];
   const gain = instrumentId.includes("glockenspiel") || instrumentId.includes("orchestra_hit") ? .48
+    : instrumentId.includes("distortion") || instrumentId.includes("overdriven") ? .7
     : instrumentId.includes("timpani") || part.id === "winds" ? .68
     : part.id === "strings" ? .76
     : part.id === "keys" ? .82
@@ -380,6 +402,19 @@ export function createInstrumentAccompanimentPattern(
   meter?: Meter
 ): readonly AccompanimentEvent[] {
   const part = accompanimentInstrumentPart(instrumentId, layerIndex);
+  if (styleId === "anime_rock") {
+    const pulseOffsets = Array.from({ length: Math.ceil(beats * 2) }, (_, index) => index * .5)
+      .filter((offset) => offset < beats);
+    if (part.id === "bass") {
+      return pulseOffsets.map((offset) => event(offset, Math.min(.34, beats - offset), "root"));
+    }
+    if (part.id === "guitar") return createAccompanimentPattern("anime_rock", beats, meter);
+    if (part.id === "keys") {
+      return pulseOffsets.filter((_, index) => index % 2 === 1)
+        .map((offset) => event(offset, Math.min(.4, beats - offset), "chord"));
+    }
+    if (part.id === "strings") return [event(0, beats, "chord")];
+  }
   if (styleId === "kpop") {
     if (instrumentId.includes("orchestra_hit")) return fitEvents([
       event(0, .3, "chord"), event(Math.max(.5, beats - .5), .3, "chord")
