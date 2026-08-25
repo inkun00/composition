@@ -75,6 +75,9 @@ describe("QR 악보 노래 재생", () => {
     expect(container?.textContent).toContain("연주 멈추기");
     expect(container?.textContent).toContain("가락과 반주를 함께 연주하고 있어요.");
     expect(container?.textContent).not.toContain("MP3");
+    expect(container?.querySelectorAll(".qr-playback-lyric-lines p")).toHaveLength(8);
+    expect(container?.querySelector<HTMLImageElement>(".qr-playback-art")?.src)
+      .toContain("/illustrations/qr-song-playback-v1.png");
   });
 
   it("연주 중 버튼을 다시 누르면 바로 멈춘다", async () => {
