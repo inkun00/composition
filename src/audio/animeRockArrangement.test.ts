@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { beatPatternMeasureBeats } from "../music/beatPattern";
 import {
   createAnimeRockBeatPattern,
-  createEditableRockBeatPattern,
   effectiveBeatPattern
 } from "./animeRockArrangement";
 
@@ -23,14 +22,6 @@ describe("애니 오프닝 록 자동 드럼", () => {
     const pattern = effectiveBeatPattern("anime_rock", customKick);
     expect(pattern.filter((event) => event.instrumentId === "kick")).toEqual(customKick);
     expect(pattern.some((event) => event.instrumentId === "snare")).toBe(true);
-  });
-
-  it("기본 비트용 록 드럼은 세 악기로 편집할 수 있고 마지막 마디에 필인이 있다", () => {
-    const pattern = createEditableRockBeatPattern();
-    expect(new Set(pattern.map((event) => event.instrumentId)))
-      .toEqual(new Set(["kick", "snare", "hihat"]));
-    expect(pattern.filter((event) => event.measureIndex === 3 && event.instrumentId === "snare")
-      .map((event) => event.offsetBeats)).toEqual([1, 3, 2.5, 3.5]);
   });
 
   it("다른 반주 모드의 비트는 바꾸지 않는다", () => {

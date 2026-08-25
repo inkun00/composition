@@ -61,6 +61,25 @@ service cloud.firestore {
       }
     }
 
+    match /qrSongs/{songId} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if request.resource.data.keys().hasOnly(["createdAt", "composition"])
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.composition is map
+        && request.resource.data.composition.version == 1
+        && request.resource.data.composition.title is string
+        && request.resource.data.composition.title.size() > 0
+        && request.resource.data.composition.title.size() <= 60
+        && request.resource.data.composition.creator is string
+        && request.resource.data.composition.creator.size() > 0
+        && request.resource.data.composition.creator.size() <= 40
+        && request.resource.data.composition.songLength in [8, 12, 16, 20, 24, 28, 32]
+        && request.resource.data.composition.measures is list
+        && request.resource.data.composition.measures.size() == request.resource.data.composition.songLength;
+      allow update, delete: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

@@ -1,0 +1,34 @@
+.pdf-header.has-playback-qr h1 {
+  width: calc(100% - 114px);
+  box-sizing: border-box;
+  padding: 0;
+}
+
+.pdf-header.has-playback-qr .pdf-meta {
+  right: auto;
+  left: 0;
+  justify-items: start;
+}
+
+.pdf-header.has-playback-qr .pdf-description {
+  right: 114px;
+}
+
+.pdf-playback-qr {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 106px;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  color: #111;
+  font: 700 8px/1.2 "Gowun Dodum", sans-serif;
+  text-align: center;
+}
+
+.pdf-playback-qr svg {
+  display: block;
+  border: 1px solid #111;
+  background: #fff;
+}

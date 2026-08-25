@@ -1,5 +1,6 @@
 import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from "lz-string";
-import { INSTRUMENTS, isValidInstrumentId, type InstrumentId } from "./instruments";
+import { deflateSync, inflateSync, strFromU8, strToU8 } from "fflate";
+import { findInstrument, INSTRUMENTS, isValidInstrumentId, type InstrumentId } from "./instruments";
 import { ACCOMPANIMENT_STYLES, MAX_SAVED_ACCOMPANIMENT_INSTRUMENTS, type AccompanimentStyleId } from "./accompaniment";
 import type { Meter } from "./meter";
 import type { NoteEvent } from "./types";
@@ -101,6 +102,26 @@ type CompactComposition = [
   readonly CompactBeatEvent[] | null | undefined
 ];
 
+type QrPlaybackNote = [number | null, number, number, number?];
+type QrPlaybackMeasure = [QrPlaybackNote[], readonly string[] | null];
+type QrPlaybackComposition = [
+  1,
+  string,
+  string,
+  string,
+  number,
+  2 | 4 | 8,
+  8 | 12 | 16 | 20 | 24 | 28 | 32,
+  number,
+  number | null,
+  readonly number[] | null,
+  number | null,
+  QrPlaybackMeasure[],
+  readonly number[] | null,
+  number | null,
+  readonly CompactBeatEvent[] | null
+];
+
 function trimTrailingEmpty<T>(items: T[]): T[] {
   while (items.length > 0 && items[items.length - 1] === undefined) items.pop();
   return items;
@@ -108,6 +129,18 @@ function trimTrailingEmpty<T>(items: T[]): T[] {
 
 function optional<T>(value: T | null | undefined): T | undefined {
   return value ?? undefined;
+}
+
+function bytesToBase64Url(bytes: Uint8Array): string {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
+}
+
+function base64UrlToBytes(value: string): Uint8Array {
+  const base64 = value.replaceAll("-", "+").replaceAll("_", "/");
+  const binary = atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, "="));
+  return Uint8Array.from(binary, (char) => char.charCodeAt(0));
 }
 
 function compactComposition(composition: SharedComposition): CompactComposition {
@@ -221,6 +254,105 @@ function expandCompactComposition(compact: CompactComposition): SharedCompositio
   return JSON.parse(JSON.stringify(expanded)) as SharedComposition;
 }
 
+function compactQrPlaybackComposition(composition: SharedComposition): QrPlaybackComposition {
+  const instrumentIndex = INSTRUMENTS.findIndex((item) => item.id === findInstrument(composition.instrumentId).id);
+  const styleIndex = composition.accompanimentStyleId === undefined
+    ? null
+    : ACCOMPANIMENT_STYLES.findIndex((style) => style.id === composition.accompanimentStyleId);
+  return [
+    1,
+    composition.title,
+    composition.creator,
+    composition.presetId,
+    composition.meter.beats,
+    composition.meter.beatUnit,
+    composition.songLength,
+    instrumentIndex,
+    styleIndex,
+    composition.accompanimentInstrumentIds?.map((id) =>
+      INSTRUMENTS.findIndex((item) => item.id === findInstrument(id).id)) ?? null,
+    composition.bpm ?? null,
+    composition.measures.map((measure) => [
+      measure.notes.map((note) => {
+        const flags = (note.dotted ? 1 : 0) | (note.linkToNext ? 2 : 0);
+        return flags
+          ? [note.pitch, note.duration.numerator, note.duration.denominator, flags]
+          : [note.pitch, note.duration.numerator, note.duration.denominator];
+      }),
+      measure.chords ?? null
+    ]),
+    composition.beatInstrumentIds?.map((id) =>
+      BEAT_INSTRUMENTS.findIndex((instrument) => instrument.id === id)) ?? null,
+    composition.beatVolume ?? null,
+    composition.beatPattern?.map((event) => [
+      BEAT_INSTRUMENTS.findIndex((instrument) => instrument.id === event.instrumentId),
+      event.measureIndex,
+      event.offsetBeats
+    ]) ?? null
+  ];
+}
+
+function isQrPlaybackComposition(value: unknown): value is QrPlaybackComposition {
+  if (!Array.isArray(value) || value[0] !== 1 || typeof value[1] !== "string" || typeof value[2] !== "string" ||
+    typeof value[3] !== "string" || ![2, 3, 4, 6].includes(value[4]) || ![2, 4, 8].includes(value[5]) ||
+    ![8, 12, 16, 20, 24, 28, 32].includes(value[6]) || !Number.isInteger(value[7]) || !INSTRUMENTS[value[7]] ||
+    (value[8] !== null && (!Number.isInteger(value[8]) || !ACCOMPANIMENT_STYLES[value[8]])) ||
+    (value[9] !== null && (!Array.isArray(value[9]) || value[9].length > MAX_SAVED_ACCOMPANIMENT_INSTRUMENTS ||
+      value[9].some((index) => !Number.isInteger(index) || !INSTRUMENTS[index]))) ||
+    (value[10] !== null && (!Number.isInteger(value[10]) || value[10] < 40 || value[10] > 220)) ||
+    !Array.isArray(value[11]) || value[11].length !== value[6]) return false;
+  if (!value[11].every((measure) => Array.isArray(measure) && Array.isArray(measure[0]) &&
+    measure[0].length > 0 && measure[0].length <= 32 && measure[0].every((note) =>
+      Array.isArray(note) && note.length >= 3 && note.length <= 4 &&
+      (note[0] === null || Number.isInteger(note[0])) && Number.isInteger(note[1]) &&
+      Number.isInteger(note[2]) && note[2] > 0 &&
+      (note[3] === undefined || (Number.isInteger(note[3]) && note[3] >= 0 && note[3] <= 3))))) return false;
+  return (value[12] === null || (Array.isArray(value[12]) && value[12].length <= 3 &&
+    value[12].every((index) => Number.isInteger(index) && Boolean(BEAT_INSTRUMENTS[index])))) &&
+    (value[13] === null || isValidBeatVolume(value[13])) &&
+    (value[14] === null || (Array.isArray(value[14]) && value[14].length <= MAX_BEAT_PATTERN_EVENTS &&
+      value[14].every((event) => Array.isArray(event) && event.length === 3 &&
+        Number.isInteger(event[0]) && Boolean(BEAT_INSTRUMENTS[event[0]]) &&
+        Number.isInteger(event[1]) && event[1] >= 0 && event[1] < 4 &&
+        typeof event[2] === "number" && Number.isFinite(event[2]))));
+}
+
+function expandQrPlaybackComposition(compact: QrPlaybackComposition): SharedComposition {
+  return {
+    version: 1,
+    title: compact[1],
+    creator: compact[2],
+    originalCreator: compact[2],
+    presetId: compact[3],
+    meter: { beats: compact[4], beatUnit: compact[5] },
+    songLength: compact[6],
+    instrumentId: INSTRUMENTS[compact[7]].id,
+    accompanimentStyleId: compact[8] === null ? undefined : ACCOMPANIMENT_STYLES[compact[8]].id,
+    accompanimentInstrumentIds: compact[9]?.map((index) => INSTRUMENTS[index].id),
+    bpm: compact[10] ?? undefined,
+    lyrics: Array(compact[6]).fill(""),
+    measures: compact[11].map((measure, measureIndex) => ({
+      candidateName: `QR ${measureIndex + 1}`,
+      notes: measure[0].map((note, noteIndex) => ({
+        id: `qr-${measureIndex}-${noteIndex}`,
+        pitch: note[0],
+        duration: { numerator: note[1], denominator: note[2] },
+        dotted: Boolean((note[3] ?? 0) & 1) || undefined,
+        linkToNext: Boolean((note[3] ?? 0) & 2) || undefined
+      })),
+      chords: measure[1] ?? undefined
+    })),
+    beatInstrumentIds: compact[12]?.map((index) => BEAT_INSTRUMENTS[index].id),
+    beatVolume: compact[13] ?? undefined,
+    beatPattern: compact[14]?.map((event, eventIndex) => ({
+      id: `qr-beat-${eventIndex}`,
+      instrumentId: BEAT_INSTRUMENTS[event[0]].id,
+      measureIndex: event[1],
+      offsetBeats: event[2]
+    }))
+  };
+}
+
 function isCompactComposition(value: unknown): value is CompactComposition {
   return Array.isArray(value) && value[0] === 2 && typeof value[1] === "string" &&
     typeof value[3] === "string" && typeof value[4] === "string" && typeof value[5] === "string" &&
@@ -277,7 +409,7 @@ function expandCompactCompositionV1(compact: CompactCompositionV1): SharedCompos
   return JSON.parse(JSON.stringify(expanded)) as SharedComposition;
 }
 
-function isSharedComposition(value: unknown): value is SharedComposition {
+export function isSharedComposition(value: unknown): value is SharedComposition {
   if (!value || typeof value !== "object") return false;
   const item = value as Partial<SharedComposition>;
   if (item.version !== 1 || typeof item.title !== "string" || typeof item.creator !== "string") return false;
@@ -363,11 +495,37 @@ export function decodeSharedComposition(value: string): SharedComposition | null
   }
 }
 
+export function encodeQrPlaybackComposition(composition: SharedComposition): string {
+  const compact = JSON.stringify(compactQrPlaybackComposition(composition));
+  return bytesToBase64Url(deflateSync(strToU8(compact), { level: 9 }));
+}
+
+export function decodeQrPlaybackComposition(value: string): SharedComposition | null {
+  if (!value || value.length > 4000) return null;
+  try {
+    const parsed: unknown = JSON.parse(strFromU8(inflateSync(base64UrlToBytes(value))));
+    if (!isQrPlaybackComposition(parsed)) return null;
+    const expanded = expandQrPlaybackComposition(parsed);
+    return isSharedComposition(expanded) ? expanded : null;
+  } catch {
+    return null;
+  }
+}
+
 export function readCompositionFromHash(hash: string): SharedComposition | null {
+  const qrMatch = hash.match(/(?:^#|&)q=([^&]+)/);
+  if (qrMatch) return decodeQrPlaybackComposition(qrMatch[1]);
   const match = hash.match(/(?:^#|&)song=([^&]+)/);
   return match ? decodeSharedComposition(match[1]) : null;
 }
 
 export function buildShareUrl(composition: SharedComposition, location: Pick<Location, "origin" | "pathname">): string {
   return `${location.origin}${location.pathname}#song=${encodeSharedComposition(composition)}`;
+}
+
+export function buildQrPlaybackUrl(
+  songId: string,
+  location: Pick<Location, "origin" | "pathname">
+): string {
+  return `${location.origin}${location.pathname}?play=qr&song=${encodeURIComponent(songId)}`;
 }

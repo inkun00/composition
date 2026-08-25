@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Drum, Music2, Plus, Trash2, Volume2 } from "lucide-react";
+import { Music2, Plus, Trash2, Volume2 } from "lucide-react";
 import { previewBeatPattern, stopBeatPreview } from "../audio/drumGroove";
-import { createEditableRockBeatPattern } from "../audio/animeRockArrangement";
 import {
   BEAT_PATTERN_MEASURES,
   MAX_BEAT_PATTERN_INSTRUMENTS,
@@ -23,7 +22,6 @@ import {
 import type { Meter } from "../music/meter";
 import PlayIcon from "./PlayIcon";
 import "./BeatInstrumentChooser.css";
-import "./BeatInstrumentChooserPreset.css";
 
 type BeatInstrumentChooserProps = Readonly<{
   events: readonly BeatPatternEvent[];
@@ -145,17 +143,6 @@ export default function BeatInstrumentChooser({
     ]);
     setActiveTrackIndex(trackInstrumentIds.length);
     setSelectedEventId(null);
-  }
-
-  async function applyRockDrumPreset() {
-    await stopPreview();
-    const rockEvents = normalizeBeatPattern(createEditableRockBeatPattern(meter), meter);
-    const rockInstruments: BeatInstrumentId[] = ["kick", "snare", "hihat"];
-    setTrackInstrumentIds(rockInstruments);
-    setTrackSubdivisions(initialTrackSubdivisions(rockEvents, meter, rockInstruments));
-    setActiveTrackIndex(0);
-    setSelectedEventId(null);
-    onChange(rockEvents);
   }
 
   async function removeInstrumentTrack(index: number) {
@@ -285,19 +272,6 @@ export default function BeatInstrumentChooser({
           <strong>{trackInstrumentIds.length} / {MAX_BEAT_PATTERN_INSTRUMENTS}</strong>
           <small>놓은 소리 {normalizedEvents.length}개</small>
         </div>
-      </div>
-
-      <div className="beat-preset-picker" aria-label="기본 비트 추가">
-        <div>
-          <strong>기본 비트 추가</strong>
-          <span>여러 드럼 소리를 한 번에 넣을 수 있어요.</span>
-        </div>
-        <button type="button" className="beat-rock-preset" data-testid="beat-rock-preset"
-          disabled={disabled} onClick={() => void applyRockDrumPreset()}>
-          <Drum size={22} aria-hidden="true" />
-          <span><strong>록 드럼</strong><small>큰통(킥)·작은북(스네어)·하이햇</small></span>
-          <em>한 번에 넣기</em>
-        </button>
       </div>
 
       <div className="beat-track-picker">

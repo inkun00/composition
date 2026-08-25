@@ -80,24 +80,6 @@ export function createAnimeRockBeatPattern(meter: Meter = DEFAULT_METER): readon
   return adaptablePattern(meter);
 }
 
-export function createEditableRockBeatPattern(meter: Meter = DEFAULT_METER): readonly BeatPatternEvent[] {
-  const editableInstruments = new Set<BeatInstrumentId>(["kick", "snare", "hihat"]);
-  const seen = new Set<string>();
-  return createAnimeRockBeatPattern(meter).flatMap((event) => {
-    const instrumentId = event.instrumentId === "rack-tom" || event.instrumentId === "floor-tom"
-      ? "snare" : event.instrumentId;
-    if (!editableInstruments.has(instrumentId)) return [];
-    const key = `${instrumentId}:${event.measureIndex}:${event.offsetBeats}`;
-    if (seen.has(key)) return [];
-    seen.add(key);
-    return [{
-      ...event,
-      id: `rock-preset-${instrumentId}-${event.measureIndex}-${event.offsetBeats}`,
-      instrumentId
-    }];
-  });
-}
-
 export function effectiveBeatPattern(
   styleId: AccompanimentStyleId | undefined,
   customEvents: readonly BeatPatternEvent[],

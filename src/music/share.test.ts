@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { buildShareUrl, decodeSharedComposition, encodeSharedComposition, type SharedComposition } from "./share";
+import {
+  buildQrPlaybackUrl,
+  buildShareUrl,
+  decodeQrPlaybackComposition,
+  decodeSharedComposition,
+  encodeQrPlaybackComposition,
+  encodeSharedComposition,
+  type SharedComposition
+} from "./share";
 
 const sample: SharedComposition = {
   version: 1,
@@ -66,6 +74,32 @@ describe("공유 링크", () => {
   it("공유 주소에 곡 데이터를 넣는다", () => {
     expect(buildShareUrl(sample, { origin: "https://example.com", pathname: "/song" }))
       .toMatch(/^https:\/\/example\.com\/song#song=/);
+  });
+
+  it("QR 재생 주소는 전용 재생 화면과 곡 데이터를 함께 연다", () => {
+    const url = buildQrPlaybackUrl("AbCdEfGhIjKlMnOpQrSt", { origin: "https://example.com", pathname: "/song" });
+    expect(url).toBe("https://example.com/song?play=qr&song=AbCdEfGhIjKlMnOpQrSt");
+    expect(url.length).toBeLessThan(100);
+  });
+
+  it("QR 전용 데이터는 가락과 반주에 필요한 내용만 작게 복원한다", () => {
+    const encoded = encodeQrPlaybackComposition(sample);
+    const restored = decodeQrPlaybackComposition(encoded);
+    expect(restored).not.toBeNull();
+    expect(restored?.title).toBe(sample.title);
+    expect(restored?.instrumentId).toBe("acoustic_grand_piano");
+    expect(restored?.accompanimentStyleId).toBe(sample.accompanimentStyleId);
+    expect(restored?.accompanimentInstrumentIds).toEqual(["acoustic_grand_piano", "violin"]);
+    expect(restored?.beatPattern?.map(({ instrumentId, measureIndex, offsetBeats }) =>
+      ({ instrumentId, measureIndex, offsetBeats }))).toEqual(sample.beatPattern?.map(
+      ({ instrumentId, measureIndex, offsetBeats }) => ({ instrumentId, measureIndex, offsetBeats })));
+    expect(restored?.measures[0].notes[0]).toMatchObject({
+      pitch: 61,
+      duration: { numerator: 3, denominator: 2 },
+      dotted: true
+    });
+    expect(restored?.measures[0].chords).toEqual(["C"]);
+    expect(restored?.measures[0].effects).toBeUndefined();
   });
 
   it("공유 링크는 반주 악기 10개까지 복원한다", () => {

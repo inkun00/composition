@@ -1555,10 +1555,12 @@ export async function exportBackingCompositionMp3Offline(
   measures: readonly PlaybackMeasure[],
   instrumentId: InstrumentId = "piano",
   bpm = 96,
-  accompaniment?: AccompanimentOptions
+  accompaniment?: AccompanimentOptions,
+  renderOptions?: Readonly<{ includeMelody?: boolean; onProgress?: (progress: number) => void }>
 ): Promise<Blob | null> {
   if (activePlaybackContext || activeOfflineExport) return null;
   activeOfflineExport = true;
+  renderOptions?.onProgress?.(5);
   try {
     const secondsPerBeat = 60 / bpm;
     const introMeasures = buildIntroMeasures(measures);
@@ -1583,6 +1585,7 @@ export async function exportBackingCompositionMp3Offline(
       accompaniment?.meter
     );
     await preloadBeatSamples(context, beatPatternInstrumentIds(playbackBeatPattern));
+    renderOptions?.onProgress?.(28);
     const accompanimentLayers = (accompaniment?.instrumentIds ?? []).map((id) => ({ id, sample: null }));
     const voiceState = createArrangementVoiceState();
     let cursor = 0;
@@ -1607,11 +1610,11 @@ export async function exportBackingCompositionMp3Offline(
         measureIndex, measures.length, accompanimentLayers.length, accompaniment?.styleId);
       cursor += scheduleMeasure(context, master, measure, start + cursor, secondsPerBeat, {
         instrument,
-        sampledInstrument: null,
+        sampledInstrument: renderOptions?.includeMelody ? sampledInstrument : null,
         accompaniment,
         accompanimentLayers,
         voiceState,
-        includeMelody: false,
+        includeMelody: renderOptions?.includeMelody === true,
         includeEffects: true,
         arrangementLayerCount: plan.layerCount,
         transitionFill: (measureIndex + 1) % 4 === 0 || measureIndex === measures.length - 1,
@@ -1634,11 +1637,16 @@ export async function exportBackingCompositionMp3Offline(
       });
     });
 
+    renderOptions?.onProgress?.(58);
     const rendered = await context.startRendering();
+    renderOptions?.onProgress?.(88);
     if (renderedAudioPeak(rendered) < 0.0001) {
       throw new Error("반주 소리를 만들지 못했어요. 다시 시도해 주세요.");
     }
-    return encodeAudioBufferToMp3(rendered);
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+    const blob = encodeAudioBufferToMp3(rendered);
+    renderOptions?.onProgress?.(100);
+    return blob;
   } finally {
     activeOfflineExport = false;
   }

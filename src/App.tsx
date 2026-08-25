@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, CheckCircle2, ExternalLink, FileDown, FileUp, Library, Menu, Mic2, Music2, Plus, QrCode, Redo2, SlidersHorizontal, Smartphone, Square, Undo2, UserRound, Volume2, WandSparkles, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, ExternalLink, FileDown, Library, Menu, Mic2, Music2, Plus, QrCode, Redo2, SlidersHorizontal, Smartphone, Square, Undo2, UserRound, Volume2, WandSparkles, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { exportBackingCompositionMp3, pausePlayback, playComposition, playMeasure, practiceKaraokeComposition, recordKaraokeComposition, renderKaraokePreviewMix, renderProcessedKaraokeMp3, resumePlayback, stopPlayback,
   type KaraokePostProcessPreset } from "./audio/player";
@@ -20,6 +20,7 @@ import HarmonyPresetChooser from "./components/HarmonyPresetChooser";
 import SongMoodSetup from "./components/SongMoodSetup";
 import PublishScoreDialog from "./components/PublishScoreDialog";
 import ScoreExportDialog from "./components/ScoreExportDialog";
+import QrSongPlayback from "./components/QrSongPlayback";
 import { firebaseConfigured } from "./firebase/config";
 import type { User } from "./firebase/client";
 import type { PublishedSong } from "./firebase/communityAlbums";
@@ -29,7 +30,7 @@ import { ACCOMPANIMENT_MODES, ACCOMPANIMENT_PLAYING_STYLES, MAX_ACCOMPANIMENT_IN
 import { getCandidates, MELODY_CANDIDATE_COUNT, MELODY_FEELING_GROUPS } from "./music/candidates";
 import { rankRecommendedCandidates } from "./music/recommendation";
 import { chordMidiPitches, chordPitchClasses } from "./music/chord";
-import { DRAFT_STORAGE_KEY, isSavedDraft, readDraft, writeDraft, type SavedDraft } from "./music/draft";
+import { DRAFT_STORAGE_KEY, readDraft, writeDraft, type SavedDraft } from "./music/draft";
 import { findHarmonyPreset, HARMONY_PRESETS, type HarmonyPreset } from "./music/harmonyPresets";
 import { findInstrument, INSTRUMENTS, type InstrumentId } from "./music/instruments";
 import { measureCapacity, meterKey, SUPPORTED_METERS, validateMeasure, type Meter } from "./music/meter";
@@ -39,7 +40,7 @@ import { pitchName, positionNotes, withEditedPitch } from "./music/score";
 import { findSoundEffect, type SoundEffectId } from "./music/soundEffects";
 import { normalizeBeatVolume } from "./music/beatInstruments";
 import { normalizeBeatPattern, type BeatPatternEvent } from "./music/beatPattern";
-import { buildShareUrl, readCompositionFromHash, type SharedComposition } from "./music/share";
+import { buildQrPlaybackUrl, buildShareUrl, readCompositionFromHash, type SharedComposition } from "./music/share";
 import type { HarmonyStory, MelodyCandidate, NoteEvent, SoundEffectEvent } from "./music/types";
 import { useKaraokeAutoFocus } from "./hooks/useKaraokeAutoFocus";
 import { useProjectHistory } from "./hooks/useProjectHistory";
@@ -297,6 +298,12 @@ function isLocalHost(location: Pick<Location, "hostname">): boolean {
   return ["localhost", "127.0.0.1", "::1"].includes(location.hostname);
 }
 
+function qrPlaybackLocation(location: Location): Pick<Location, "origin" | "pathname"> {
+  return isLocalHost(location)
+    ? { origin: "https://maeum-melody.vercel.app", pathname: "/" }
+    : location;
+}
+
 function replaceNote(
   notes: readonly NoteEvent[],
   id: string,
@@ -319,10 +326,12 @@ function sanitizeNoteLinks(notes: readonly NoteEvent[]): NoteEvent[] {
 
 export default function App() {
   const mobileRecordMode = isRecordingLink(window.location.search, window.location.hash);
+  const qrPlaybackMode = new URLSearchParams(window.location.search).get("play") === "qr";
+  const qrSongId = new URLSearchParams(window.location.search).get("song") ?? "";
   const [incomingShare] = useState(() => readCompositionFromHash(window.location.hash));
   const [savedDraft] = useState(() => readDraft(window.localStorage));
   const [showOpening, setShowOpening] = useState(() =>
-    !mobileRecordMode && new URLSearchParams(window.location.search).get("start") !== "new");
+    !mobileRecordMode && !qrPlaybackMode && new URLSearchParams(window.location.search).get("start") !== "new");
   const [showAppMenu, setShowAppMenu] = useState(false);
   const [accountLibraryOpen, setAccountLibraryOpen] = useState(false);
   const [communityAlbumOpen, setCommunityAlbumOpen] = useState(false);
@@ -374,7 +383,6 @@ export default function App() {
   const playbackSegments = useRef<readonly PlaybackSegment[]>([]);
   const playbackNoteSegments = useRef<readonly PlaybackNoteSegment[]>([]);
   const noteAnimationTimers = useRef<number[]>([]);
-  const projectFileInput = useRef<HTMLInputElement | null>(null);
   const recordingPreviewRef = useRef<HTMLAudioElement | null>(null);
   const mobileRecordingQrRef = useRef<SVGSVGElement | null>(null);
   const backingMixRequest = useRef(0);
@@ -410,6 +418,7 @@ export default function App() {
   const [mobileRecordingUrl, setMobileRecordingUrl] = useState("");
   const [exportingPdf, setExportingPdf] = useState(false);
   const [pdfIncludeAccompaniment, setPdfIncludeAccompaniment] = useState(false);
+  const [pdfPlaybackUrl, setPdfPlaybackUrl] = useState("");
   const [scoreExportDialogOpen, setScoreExportDialogOpen] = useState(false);
   const [exportingBacking, setExportingBacking] = useState(false);
   const [backingExportPhase, setBackingExportPhase] = useState<BackingExportPhase>("idle");
@@ -1433,10 +1442,20 @@ export default function App() {
       setShareStatus("PDF에 넣을 곡 제목과 작곡가 이름을 먼저 적어 주세요.");
       return;
     }
+    const composition = makeSharedComposition();
+    if (!composition) {
+      setShareStatus("QR 재생 링크를 만들려면 모든 마디를 먼저 완성해 주세요.");
+      return;
+    }
     setExportingPdf(true);
     setPdfIncludeAccompaniment(includeAccompaniment);
-    setShareStatus(includeAccompaniment ? "반주가 포함된 A4 악보를 만들고 있어요..." : "A4 악보를 만들고 있어요...");
+    setPdfPlaybackUrl("");
+    setShareStatus("QR 노래 링크를 준비하고 있어요...");
     try {
+      const { saveQrSong } = await import("./firebase/qrSongs");
+      const songId = await saveQrSong(composition);
+      setPdfPlaybackUrl(buildQrPlaybackUrl(songId, qrPlaybackLocation(window.location)));
+      setShareStatus(includeAccompaniment ? "반주가 포함된 A4 악보를 만들고 있어요..." : "A4 악보를 만들고 있어요...");
       // The hidden PDF sheet must re-render after the selected layout changes.
       await new Promise<void>((resolve) => window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve())));
       await document.fonts.ready;
@@ -1532,17 +1551,6 @@ export default function App() {
       showArrangement
     };
   }
-  function saveProjectFile() {
-    const blob = new Blob([JSON.stringify(currentProjectDraft(), null, 2)], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = safeSongFileName("maeum-melody.txt");
-    link.click();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-    setShareStatus("나중에 다시 고칠 수 있는 작품 파일을 저장했어요.");
-  }
-
   function applyProjectDraft(project: SavedDraft) {
     const preset = findHarmonyPreset(project.presetId);
     resetProjectHistory();
@@ -1727,31 +1735,9 @@ export default function App() {
   }
 
   function startNewProject() {
-    if (completedCount > 0 && !window.confirm("새 곡을 시작할까요? 지금 만든 곡은 작품 파일로 저장한 뒤 다시 불러올 수 있어요.")) return;
+    if (completedCount > 0 && !window.confirm("새 곡을 시작할까요? 지금 만든 곡은 자동 저장되어 있어요.")) return;
     window.localStorage.removeItem(DRAFT_STORAGE_KEY);
     window.location.assign(`${window.location.pathname}?start=new`);
-  }
-
-  async function loadProjectFile(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-    if (file.size > 1_500_000) {
-      setShareStatus("작품 파일이 너무 커요. 1.5MB 이하의 작품 파일을 골라 주세요.");
-      return;
-    }
-    try {
-      const parsed: unknown = JSON.parse(await file.text());
-      if (!isSavedDraft(parsed)) throw new Error("invalid-project");
-      if (completedCount > 0 && !window.confirm("지금 만든 곡 대신 불러온 작품을 열까요? 현재 곡은 자동 저장되어 있어요.")) return;
-      const project = parsed;
-      applyProjectDraft(project);
-      setActiveCloudScoreId(null);
-      setShareStatus("작품 파일을 불러왔어요. 이어서 고쳐 보세요!");
-    } catch (error) {
-      console.error(error);
-      setShareStatus("마음멜로디 작품 파일인지 확인해 주세요.");
-    }
   }
 
   function safeSongFileName(extension: string): string {
@@ -1969,10 +1955,10 @@ export default function App() {
     return karaokeMode === "practice" ? "연습 준비" : "녹음 준비";
   }
 
+  if (qrPlaybackMode) return <QrSongPlayback composition={incomingShare} songId={qrSongId} />;
+
   return (
     <div className="app-shell">
-      <input ref={projectFileInput} className="project-file-input" type="file"
-        accept="text/plain,.txt,application/json,.json" onChange={(event) => void loadProjectFile(event)} />
       {showOpening && (
         <section className="opening-screen" aria-label="마음멜로디 시작 화면">
           <picture className="opening-visual" aria-hidden="true">
@@ -2015,10 +2001,6 @@ export default function App() {
             </button>
             {showAppMenu && <div className="app-menu-panel" role="menu">
               <button type="button" role="menuitem" onClick={startNewProject}><WandSparkles size={16} /> 새로 시작하기</button>
-              <button type="button" role="menuitem" onClick={() => {
-                setShowAppMenu(false);
-                projectFileInput.current?.click();
-              }}><FileUp size={16} /> 악보 불러오기</button>
               <button type="button" role="menuitem" onClick={() => {
                 setShowAppMenu(false);
                 setCommunityAlbumOpen(true);
@@ -2999,14 +2981,6 @@ export default function App() {
                 <small>{songDescription.length}/600</small>
               </label>
               <div className="publish-actions">
-                <button type="button" className="project-save-button action-button" data-testid="save-project-file"
-                  onClick={saveProjectFile}>
-                  <FileDown size={18} /> 작품 파일 저장
-                </button>
-                <button type="button" className="project-load-button action-button" data-testid="load-project-file"
-                  onClick={() => projectFileInput.current?.click()}>
-                  <FileUp size={18} /> 작품 파일 불러오기
-                </button>
                 <button type="button" className="pdf-button action-button" data-testid="export-pdf"
                   disabled={exportingPdf} onClick={() => setScoreExportDialogOpen(true)}>
                   <FileDown size={18} /> {exportingPdf ? "악보 만드는 중..." : "악보 저장"}
@@ -3076,7 +3050,8 @@ export default function App() {
             {allValid && printableMeasures.length === songLength && (
               <PdfScoreSheet title={songTitle} description={songDescription} creator={creatorName} originalCreator={originalCreator}
                 meter={meter}
-                measures={printableMeasures} includeAccompaniment={pdfIncludeAccompaniment} />
+                measures={printableMeasures} includeAccompaniment={pdfIncludeAccompaniment}
+                playbackUrl={pdfPlaybackUrl} />
             )}
           </section>
         )}
