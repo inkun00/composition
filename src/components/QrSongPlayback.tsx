@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FileMusic, Music2, X } from "lucide-react";
-import { playComposition, stopPlayback, type PlaybackMeasure } from "../audio/player";
+import {
+  compositionIntroSeconds,
+  playComposition,
+  stopPlayback,
+  type PlaybackMeasure
+} from "../audio/player";
 import { findHarmonyPreset } from "../music/harmonyPresets";
 import { findAccompanimentStyle } from "../music/accompaniment";
 import { findInstrument } from "../music/instruments";
@@ -11,7 +16,7 @@ import PlayIcon from "./PlayIcon";
 import { activeQrLyrics, buildQrLyricLines } from "./qrSongLyrics";
 import "./QrSongPlayback.css";
 
-type PlaybackPhase = "idle" | "preparing" | "playing" | "ready" | "error";
+type PlaybackPhase = "idle" | "preparing" | "intro" | "playing" | "ready" | "error";
 
 function QrPageCloseButton() {
   return (
@@ -38,6 +43,7 @@ export default function QrSongPlayback({ composition, songId = "" }: Readonly<{
   const [activeMeasureIndex, setActiveMeasureIndex] = useState<number | null>(null);
   const [activeLyricId, setActiveLyricId] = useState<string | null>(null);
   const finishTimerRef = useRef<number | null>(null);
+  const introTimerRef = useRef<number | null>(null);
   const lyricTimerRef = useRef<number | null>(null);
   const lyricLineRefs = useRef(new Map<number, HTMLParagraphElement>());
   const activeComposition = composition ?? storedComposition;
@@ -80,6 +86,7 @@ export default function QrSongPlayback({ composition, songId = "" }: Readonly<{
 
   useEffect(() => () => {
     if (finishTimerRef.current !== null) window.clearTimeout(finishTimerRef.current);
+    if (introTimerRef.current !== null) window.clearTimeout(introTimerRef.current);
     if (lyricTimerRef.current !== null) window.clearInterval(lyricTimerRef.current);
     void stopPlayback();
   }, []);
@@ -96,9 +103,9 @@ export default function QrSongPlayback({ composition, songId = "" }: Readonly<{
     setActiveLyricId(null);
   }
 
-  function startLyricTracking() {
+  function startLyricTracking(introSeconds: number) {
     stopLyricTracking();
-    const startedAt = performance.now() + 80;
+    const startedAt = performance.now() + (introSeconds + .08) * 1000;
     const update = () => {
       const active = activeQrLyrics(lyricLines, (performance.now() - startedAt) / 1000);
       setActiveMeasureIndex(active.measureIndex);
@@ -110,9 +117,11 @@ export default function QrSongPlayback({ composition, songId = "" }: Readonly<{
 
   async function togglePlayback() {
     if (!activeComposition || phase === "preparing") return;
-    if (phase === "playing") {
+    if (phase === "intro" || phase === "playing") {
       if (finishTimerRef.current !== null) window.clearTimeout(finishTimerRef.current);
+      if (introTimerRef.current !== null) window.clearTimeout(introTimerRef.current);
       finishTimerRef.current = null;
+      introTimerRef.current = null;
       stopLyricTracking();
       await stopPlayback();
       setPhase("ready");
@@ -124,6 +133,7 @@ export default function QrSongPlayback({ composition, songId = "" }: Readonly<{
       const styleId = findAccompanimentStyle(activeComposition.accompanimentStyleId ?? "arpeggio").id;
       const instrumentIds = (activeComposition.accompanimentInstrumentIds ?? ["acoustic_grand_piano"])
         .map((id) => findInstrument(id).id);
+      const introSeconds = compositionIntroSeconds(playable, activeComposition.bpm ?? 96);
       const duration = await playComposition(
         playable,
         findInstrument(activeComposition.instrumentId).id,
@@ -134,13 +144,22 @@ export default function QrSongPlayback({ composition, songId = "" }: Readonly<{
           beatPattern: normalizeBeatPattern(activeComposition.beatPattern ?? [], activeComposition.meter),
           beatVolume: normalizeBeatVolume(activeComposition.beatVolume),
           meter: activeComposition.meter
-        }
+        },
+        { includeIntro: true }
       );
       if (duration === null) throw new Error("audio-busy");
-      setPhase("playing");
-      startLyricTracking();
+      setPhase(introSeconds > 0 ? "intro" : "playing");
+      startLyricTracking(introSeconds);
+      if (introSeconds > 0) {
+        introTimerRef.current = window.setTimeout(() => {
+          introTimerRef.current = null;
+          setPhase("playing");
+        }, (introSeconds + .08) * 1000);
+      }
       finishTimerRef.current = window.setTimeout(() => {
         finishTimerRef.current = null;
+        if (introTimerRef.current !== null) window.clearTimeout(introTimerRef.current);
+        introTimerRef.current = null;
         stopLyricTracking();
         setPhase("ready");
       }, duration * 1000);
@@ -197,7 +216,8 @@ export default function QrSongPlayback({ composition, songId = "" }: Readonly<{
           <section className="qr-playback-lyrics" aria-label="노래 가사">
             <div className="qr-playback-lyrics-heading">
               <strong>가사를 따라 불러요</strong>
-              <span>{activeMeasureIndex === null ? "준비" : `${activeMeasureIndex + 1}마디`}</span>
+              <span>{phase === "intro" ? "전주" : activeMeasureIndex === null
+                ? "준비" : `${activeMeasureIndex + 1}마디`}</span>
             </div>
             <div className="qr-playback-lyric-lines">
               {lyricLines.map((line) => {
@@ -228,12 +248,14 @@ export default function QrSongPlayback({ composition, songId = "" }: Readonly<{
 
         <button type="button" className="qr-playback-start" disabled={preparing}
           data-testid="qr-play-song" onClick={() => void togglePlayback()}>
-          <PlayIcon playing={phase === "playing"} />
-          {preparing ? "연주 준비 중..." : phase === "playing" ? "연주 멈추기" : "노래 연주하기"}
+          <PlayIcon playing={phase === "intro" || phase === "playing"} />
+          {preparing ? "연주 준비 중..." : phase === "intro" || phase === "playing"
+            ? "연주 멈추기" : "노래 연주하기"}
         </button>
 
         <p className="qr-playback-guide" role="status" aria-live="polite">
-          {preparing ? "악기를 준비하고 있어요." : phase === "playing"
+          {preparing ? "악기를 준비하고 있어요." : phase === "intro"
+            ? "4마디 전주를 들으며 노래를 준비해요." : phase === "playing"
             ? "가락과 반주를 함께 연주하고 있어요." : "버튼을 누르면 바로 연주해요."}
         </p>
         {error && <p className="qr-playback-error" role="alert">{error}</p>}

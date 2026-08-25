@@ -8,13 +8,15 @@ import QrSongPlayback from "./QrSongPlayback";
 
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-const { playComposition, stopPlayback, loadQrSong } = vi.hoisted(() => ({
+const { compositionIntroSeconds, playComposition, stopPlayback, loadQrSong } = vi.hoisted(() => ({
+  compositionIntroSeconds: vi.fn(() => 10),
   playComposition: vi.fn(),
   stopPlayback: vi.fn(),
   loadQrSong: vi.fn()
 }));
 
 vi.mock("../audio/player", () => ({
+  compositionIntroSeconds,
   playComposition,
   stopPlayback
 }));
@@ -46,7 +48,7 @@ let container: HTMLDivElement | null = null;
 
 beforeEach(() => {
   loadQrSong.mockResolvedValue(null);
-  playComposition.mockResolvedValue(8);
+  playComposition.mockResolvedValue(30.5);
   stopPlayback.mockResolvedValue(undefined);
   container = document.createElement("div");
   document.body.append(container);
@@ -70,10 +72,11 @@ describe("QR 악보 노래 재생", () => {
     });
 
     expect(playComposition).toHaveBeenCalledWith(
-      expect.any(Array), "acoustic_grand_piano", 96, expect.any(Object)
+      expect.any(Array), "acoustic_grand_piano", 96, expect.any(Object), { includeIntro: true }
     );
     expect(container?.textContent).toContain("연주 멈추기");
-    expect(container?.textContent).toContain("가락과 반주를 함께 연주하고 있어요.");
+    expect(container?.textContent).toContain("4마디 전주를 들으며 노래를 준비해요.");
+    expect(container?.textContent).toContain("전주");
     expect(container?.textContent).not.toContain("MP3");
     expect(container?.querySelectorAll(".qr-playback-lyric-lines p")).toHaveLength(8);
     expect(container?.querySelector<HTMLImageElement>(".qr-playback-art")?.src)

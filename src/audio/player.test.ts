@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   PREVIEW_MELODY_VOLUME_MULTIPLIER,
+  compositionIntroSeconds,
   karaokeBackingGainForRms,
-  recordingArrangementPlan
+  recordingArrangementPlan,
+  type PlaybackMeasure
 } from "./player";
 
 describe("녹음과 미리듣기 음량", () => {
@@ -23,5 +25,15 @@ describe("녹음과 미리듣기 음량", () => {
     expect(opening.energy).toBeGreaterThanOrEqual(.98);
     expect(secondPhrase.layerCount).toBeGreaterThanOrEqual(opening.layerCount);
     expect(secondPhrase.layerCount).toBeLessThanOrEqual(4);
+  });
+
+  it("QR 연주의 전주는 첫 마디 길이로 네 마디를 구성한다", () => {
+    const measures: PlaybackMeasure[] = [{
+      notes: [{ id: "intro-note", pitch: 60, duration: { numerator: 4, denominator: 1 } }],
+      harmony: "home",
+      chords: ["C"]
+    }];
+
+    expect(compositionIntroSeconds(measures, 120)).toBe(8);
   });
 });

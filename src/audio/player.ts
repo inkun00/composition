@@ -35,6 +35,10 @@ export type AccompanimentOptions = Readonly<{
   meter?: Meter;
 }>;
 
+export type CompositionPlaybackOptions = Readonly<{
+  includeIntro?: boolean;
+}>;
+
 export type KaraokeRecordingResult = Readonly<{
   blob: Blob;
   audioBuffer: AudioBuffer;
@@ -396,6 +400,15 @@ function buildIntroMeasures(measures: readonly PlaybackMeasure[]): PlaybackMeasu
   const [subdominant, dominant, tonic] = cadence;
   return [tonic, subdominant, dominant, dominant]
     .map((chord, measureIndex) => accompanimentMeasure(measures[0], chord, measureIndex));
+}
+
+export function compositionIntroSeconds(
+  measures: readonly PlaybackMeasure[],
+  bpm = 96
+): number {
+  const secondsPerBeat = 60 / bpm;
+  return buildIntroMeasures(measures)
+    .reduce((total, measure) => total + measureSeconds(measure, secondsPerBeat), 0);
 }
 
 function buildOutroMeasures(measures: readonly PlaybackMeasure[]): PlaybackMeasure[] {
@@ -828,7 +841,8 @@ export async function playComposition(
   measures: readonly PlaybackMeasure[],
   instrumentId: InstrumentId = "piano",
   bpm = 96,
-  accompaniment?: AccompanimentOptions
+  accompaniment?: AccompanimentOptions,
+  playbackOptions: CompositionPlaybackOptions = {}
 ): Promise<number | null> {
   const context = await claimPlayback();
   if (!context) return null;
@@ -845,6 +859,25 @@ export async function playComposition(
   const voiceState = createArrangementVoiceState();
   const start = context.currentTime + 0.08;
   let songCursor = 0;
+
+  if (playbackOptions.includeIntro) {
+    buildIntroMeasures(measures).forEach((measure, introIndex) => {
+      const introPlan = karaokeIntroArrangementPlan(introIndex, accompanimentLayers.length);
+      songCursor += scheduleMeasure(context, master, measure, start + songCursor, secondsPerBeat, {
+        instrument,
+        sampledInstrument: null,
+        accompaniment,
+        accompanimentLayers,
+        includeMelody: false,
+        includeEffects: false,
+        backingVolumeMultiplier: 1.12,
+        arrangementSection: "intro",
+        voiceState,
+        arrangementLayerCount: introPlan.layerCount,
+        arrangementEnergy: introPlan.energy
+      });
+    });
+  }
 
   measures.forEach((measure, measureIndex) => {
     const plan = songArrangementPlan(
