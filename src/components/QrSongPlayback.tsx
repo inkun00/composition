@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FileMusic, Music2, X } from "lucide-react";
-import { exportBackingCompositionMp3Offline, type PlaybackMeasure } from "../audio/player";
+import { playComposition, stopPlayback, type PlaybackMeasure } from "../audio/player";
 import { findHarmonyPreset } from "../music/harmonyPresets";
 import { findAccompanimentStyle } from "../music/accompaniment";
 import { findInstrument } from "../music/instruments";
@@ -10,7 +10,7 @@ import type { SharedComposition } from "../music/share";
 import PlayIcon from "./PlayIcon";
 import "./QrSongPlayback.css";
 
-type PlaybackPhase = "idle" | "generating" | "playing" | "ready" | "error";
+type PlaybackPhase = "idle" | "preparing" | "playing" | "ready" | "error";
 
 function QrPageCloseButton() {
   return (
@@ -33,12 +33,8 @@ export default function QrSongPlayback({ composition, songId = "" }: Readonly<{
   const [storedComposition, setStoredComposition] = useState<SharedComposition | null>(composition);
   const [loadingSong, setLoadingSong] = useState(!composition && Boolean(songId));
   const [phase, setPhase] = useState<PlaybackPhase>("idle");
-  const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const audioUrlRef = useRef("");
-  const playbackContextRef = useRef<AudioContext | null>(null);
-  const playbackSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  const finishTimerRef = useRef<number | null>(null);
   const activeComposition = composition ?? storedComposition;
   const playable = useMemo<PlaybackMeasure[]>(() => {
     if (!activeComposition) return [];
@@ -76,35 +72,26 @@ export default function QrSongPlayback({ composition, songId = "" }: Readonly<{
   }, [composition, songId]);
 
   useEffect(() => () => {
-    if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current);
-    try {
-      playbackSourceRef.current?.stop();
-    } catch {
-      // 이미 끝난 재생 소스는 다시 멈출 필요가 없어요.
-    }
-    void playbackContextRef.current?.close();
+    if (finishTimerRef.current !== null) window.clearTimeout(finishTimerRef.current);
+    void stopPlayback();
   }, []);
 
-  async function createAndPlay() {
-    if (!activeComposition || phase === "generating") return;
-    if (audioUrlRef.current && audioRef.current) {
-      setPhase("playing");
-      await audioRef.current.play();
+  async function togglePlayback() {
+    if (!activeComposition || phase === "preparing") return;
+    if (phase === "playing") {
+      if (finishTimerRef.current !== null) window.clearTimeout(finishTimerRef.current);
+      finishTimerRef.current = null;
+      await stopPlayback();
+      setPhase("ready");
       return;
     }
-    const AudioContextClass = window.AudioContext ||
-      (window as Window & typeof globalThis & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    const unlockedContext = AudioContextClass ? new AudioContextClass() : null;
-    playbackContextRef.current = unlockedContext;
-    if (unlockedContext?.state === "suspended") await unlockedContext.resume();
-    setPhase("generating");
-    setProgress(1);
+    setPhase("preparing");
     setError("");
     try {
       const styleId = findAccompanimentStyle(activeComposition.accompanimentStyleId ?? "arpeggio").id;
       const instrumentIds = (activeComposition.accompanimentInstrumentIds ?? ["acoustic_grand_piano"])
         .map((id) => findInstrument(id).id);
-      const blob = await exportBackingCompositionMp3Offline(
+      const duration = await playComposition(
         playable,
         findInstrument(activeComposition.instrumentId).id,
         activeComposition.bpm ?? 96,
@@ -114,36 +101,18 @@ export default function QrSongPlayback({ composition, songId = "" }: Readonly<{
           beatPattern: normalizeBeatPattern(activeComposition.beatPattern ?? [], activeComposition.meter),
           beatVolume: normalizeBeatVolume(activeComposition.beatVolume),
           meter: activeComposition.meter
-        },
-        { includeMelody: true, onProgress: setProgress }
+        }
       );
-      if (!blob) throw new Error("audio-busy");
-      if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current);
-      const url = URL.createObjectURL(blob);
-      audioUrlRef.current = url;
-      const audio = audioRef.current;
-      if (!audio) throw new Error("audio-unavailable");
-      audio.src = url;
-      setProgress(100);
+      if (duration === null) throw new Error("audio-busy");
       setPhase("playing");
-      try {
-        await audio.play();
-        if (unlockedContext && unlockedContext.state !== "closed") await unlockedContext.close();
-        playbackContextRef.current = null;
-      } catch (autoplayError) {
-        if (!unlockedContext) throw autoplayError;
-        const decoded = await unlockedContext.decodeAudioData(await blob.arrayBuffer());
-        const source = unlockedContext.createBufferSource();
-        source.buffer = decoded;
-        source.connect(unlockedContext.destination);
-        source.addEventListener("ended", () => setPhase("ready"), { once: true });
-        playbackSourceRef.current = source;
-        source.start();
-      }
+      finishTimerRef.current = window.setTimeout(() => {
+        finishTimerRef.current = null;
+        setPhase("ready");
+      }, duration * 1000);
     } catch (caught) {
       console.error(caught);
       setPhase("error");
-      setError("음악을 만들지 못했어요. 잠시 뒤 다시 눌러 주세요.");
+      setError("노래를 연주하지 못했어요. 잠시 뒤 다시 눌러 주세요.");
     }
   }
 
@@ -173,7 +142,7 @@ export default function QrSongPlayback({ composition, songId = "" }: Readonly<{
     );
   }
 
-  const generating = phase === "generating";
+  const preparing = phase === "preparing";
   return (
     <main className="qr-playback-page">
       <section className="qr-playback-card" aria-label="QR 악보 노래 재생">
@@ -188,23 +157,16 @@ export default function QrSongPlayback({ composition, songId = "" }: Readonly<{
           <span>{activeComposition.bpm ?? 96} BPM</span>
         </div>
 
-        <button type="button" className="qr-playback-start" disabled={generating}
-          data-testid="qr-create-play" onClick={() => void createAndPlay()}>
+        <button type="button" className="qr-playback-start" disabled={preparing}
+          data-testid="qr-play-song" onClick={() => void togglePlayback()}>
           <PlayIcon playing={phase === "playing"} />
-          {generating ? "음악 생성 중..." : phase === "playing" ? "재생 중" : "노래 재생"}
+          {preparing ? "연주 준비 중..." : phase === "playing" ? "연주 멈추기" : "노래 연주하기"}
         </button>
 
-        {(generating || progress === 100) && (
-          <div className="qr-playback-progress" role="status" aria-live="polite">
-            <div><strong>{generating ? "음악 생성 중" : "음악 생성 완료"}</strong><span>{progress}%</span></div>
-            <progress max="100" value={progress} aria-label="음악 생성 진행률" />
-            <small>{generating ? "가락과 반주를 하나의 MP3로 만들고 있어요." : "100% 완료되어 노래를 재생합니다."}</small>
-          </div>
-        )}
-
-        <audio ref={audioRef} className={progress === 100 ? "qr-playback-audio is-ready" : "qr-playback-audio"}
-          controls onPlay={() => setPhase("playing")} onPause={() => setPhase("ready")}
-          onEnded={() => setPhase("ready")} />
+        <p className="qr-playback-guide" role="status" aria-live="polite">
+          {preparing ? "악기를 준비하고 있어요." : phase === "playing"
+            ? "가락과 반주를 함께 연주하고 있어요." : "버튼을 누르면 바로 연주해요."}
+        </p>
         {error && <p className="qr-playback-error" role="alert">{error}</p>}
       </section>
     </main>

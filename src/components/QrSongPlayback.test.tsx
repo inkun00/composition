@@ -8,13 +8,15 @@ import QrSongPlayback from "./QrSongPlayback";
 
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-const { renderMp3, loadQrSong } = vi.hoisted(() => ({
-  renderMp3: vi.fn(),
+const { playComposition, stopPlayback, loadQrSong } = vi.hoisted(() => ({
+  playComposition: vi.fn(),
+  stopPlayback: vi.fn(),
   loadQrSong: vi.fn()
 }));
 
 vi.mock("../audio/player", () => ({
-  exportBackingCompositionMp3Offline: renderMp3
+  playComposition,
+  stopPlayback
 }));
 
 vi.mock("../firebase/qrSongs", () => ({ loadQrSong }));
@@ -44,18 +46,8 @@ let container: HTMLDivElement | null = null;
 
 beforeEach(() => {
   loadQrSong.mockResolvedValue(null);
-  renderMp3.mockImplementation(async (_measures, _instrument, _bpm, _accompaniment, options) => {
-    options.onProgress(28);
-    options.onProgress(88);
-    options.onProgress(100);
-    return new Blob(["mp3"], { type: "audio/mpeg" });
-  });
-  vi.stubGlobal("URL", {
-    ...URL,
-    createObjectURL: vi.fn(() => "blob:qr-song"),
-    revokeObjectURL: vi.fn()
-  });
-  vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
+  playComposition.mockResolvedValue(8);
+  stopPlayback.mockResolvedValue(undefined);
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
@@ -71,19 +63,31 @@ afterEach(() => {
 });
 
 describe("QR 악보 노래 재생", () => {
-  it("재생 버튼을 누르면 가락과 반주 MP3를 만들고 자동 재생한다", async () => {
+  it("연주 버튼을 누르면 가락과 반주를 실시간으로 연주한다", async () => {
     act(() => root?.render(<QrSongPlayback composition={composition} />));
     await act(async () => {
-      container?.querySelector<HTMLButtonElement>('[data-testid="qr-create-play"]')?.click();
+      container?.querySelector<HTMLButtonElement>('[data-testid="qr-play-song"]')?.click();
     });
 
-    expect(renderMp3).toHaveBeenCalledWith(
-      expect.any(Array), "acoustic_grand_piano", 96, expect.any(Object),
-      expect.objectContaining({ includeMelody: true, onProgress: expect.any(Function) })
+    expect(playComposition).toHaveBeenCalledWith(
+      expect.any(Array), "acoustic_grand_piano", 96, expect.any(Object)
     );
-    expect(container?.textContent).toContain("100%");
-    expect(container?.textContent).toContain("100% 완료되어 노래를 재생합니다.");
-    expect(HTMLMediaElement.prototype.play).toHaveBeenCalled();
+    expect(container?.textContent).toContain("연주 멈추기");
+    expect(container?.textContent).toContain("가락과 반주를 함께 연주하고 있어요.");
+    expect(container?.textContent).not.toContain("MP3");
+  });
+
+  it("연주 중 버튼을 다시 누르면 바로 멈춘다", async () => {
+    act(() => root?.render(<QrSongPlayback composition={composition} />));
+    await act(async () => {
+      container?.querySelector<HTMLButtonElement>('[data-testid="qr-play-song"]')?.click();
+    });
+    await act(async () => {
+      container?.querySelector<HTMLButtonElement>('[data-testid="qr-play-song"]')?.click();
+    });
+
+    expect(stopPlayback).toHaveBeenCalled();
+    expect(container?.textContent).toContain("노래 연주하기");
   });
 
   it("곡 데이터가 없으면 QR을 다시 스캔하라고 안내한다", () => {
@@ -98,6 +102,6 @@ describe("QR 악보 노래 재생", () => {
     });
     expect(loadQrSong).toHaveBeenCalledWith("AbCdEfGhIjKlMnOpQrSt");
     expect(container?.textContent).toContain("QR 노래");
-    expect(container?.textContent).toContain("노래 재생");
+    expect(container?.textContent).toContain("노래 연주하기");
   });
 });
