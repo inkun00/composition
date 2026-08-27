@@ -30,7 +30,7 @@ import { ACCOMPANIMENT_MODES, ACCOMPANIMENT_PLAYING_STYLES, MAX_ACCOMPANIMENT_IN
 import { getCandidates, MELODY_CANDIDATE_COUNT, MELODY_FEELING_GROUPS } from "./music/candidates";
 import { rankRecommendedCandidates } from "./music/recommendation";
 import { chordMidiPitches, chordPitchClasses } from "./music/chord";
-import { DRAFT_STORAGE_KEY, readDraft, writeDraft, type SavedDraft } from "./music/draft";
+import { readDraft, writeDraft, type SavedDraft } from "./music/draft";
 import { findHarmonyPreset, HARMONY_PRESETS, type HarmonyPreset } from "./music/harmonyPresets";
 import { findInstrument, INSTRUMENTS, type InstrumentId } from "./music/instruments";
 import { measureCapacity, meterKey, SUPPORTED_METERS, validateMeasure, type Meter } from "./music/meter";
@@ -43,6 +43,7 @@ import { normalizeBeatPattern, type BeatPatternEvent } from "./music/beatPattern
 import { buildQrPlaybackUrl, buildShareUrl, readCompositionFromHash, type SharedComposition } from "./music/share";
 import type { HarmonyStory, MelodyCandidate, NoteEvent, SoundEffectEvent } from "./music/types";
 import { useKaraokeAutoFocus } from "./hooks/useKaraokeAutoFocus";
+import { useDraftAutosave } from "./hooks/useDraftAutosave";
 import { useProjectHistory } from "./hooks/useProjectHistory";
 type MeasureDraft = {
   story: HarmonyStory;
@@ -183,6 +184,19 @@ function firebaseAuthMessage(error: unknown, action: "signin" | "signup" | "rese
   if (action === "signup") return "회원가입에 실패했어요. 입력 내용을 확인해 주세요.";
   if (action === "reset") return "비밀번호 재설정 메일을 보내지 못했어요. 다시 시도해 주세요.";
   return "이메일 로그인에 실패했어요. 다시 시도해 주세요.";
+}
+
+function cloudSaveMessage(error: unknown): string {
+  const code = typeof error === "object" && error !== null && "code" in error
+    ? String((error as { code: unknown }).code).replace("firestore/", "")
+    : "";
+  if (code === "unauthenticated") return "로그인이 풀렸어요. 다시 로그인한 뒤 저장해 주세요.";
+  if (code === "permission-denied") return "이 계정에는 저장 권한이 없어요. 다시 로그인해 주세요.";
+  if (code === "unavailable" || code === "deadline-exceeded") {
+    return "인터넷 연결이 불안정해요. 연결을 확인하고 다시 저장해 주세요.";
+  }
+  if (code === "resource-exhausted") return "클라우드 저장 공간을 확인해 주세요.";
+  return "클라우드 저장에 실패했어요. 잠시 뒤 다시 시도해 주세요.";
 }
 
 type ProjectSnapshot = Readonly<{
@@ -342,6 +356,7 @@ export default function App() {
   const [cloudLoading, setCloudLoading] = useState(false);
   const [cloudBusy, setCloudBusy] = useState(false);
   const [cloudError, setCloudError] = useState("");
+  const [cloudNotice, setCloudNotice] = useState("");
   const [activeCloudScoreId, setActiveCloudScoreId] = useState<string | null>(null);
   const resumableDraft = savedDraft && (!incomingShare || savedDraft.sourceHash === window.location.hash)
     ? savedDraft : null;
@@ -647,6 +662,7 @@ export default function App() {
         setAuthReady(true);
         setActiveCloudScoreId(null);
         setCloudError("");
+        setCloudNotice("");
       });
     }).catch((error) => {
       console.error(error);
@@ -699,35 +715,35 @@ export default function App() {
     });
   }, [accompanimentInstrumentIds]);
 
-  useEffect(() => {
-    setSaveStatus("저장 중…");
-    const timer = window.setTimeout(() => {
-      const draft: SavedDraft = {
-        version: 1,
-        updatedAt: Date.now(),
-        sourceHash,
-        title: songTitle,
-        description: songDescription,
-        creator: creatorName,
-        originalCreator,
-        presetId: selectedPresetId,
-        meter,
-        songLength,
-        instrumentId: selectedInstrumentId,
-        accompanimentStyleId,
-        accompanimentInstrumentIds,
-        beatPattern,
-        beatVolume,
-        bpm,
-        lyrics,
-        measures: measures.map(({ candidateId, candidateName, notes, chords, effects, keyFifths }) => ({ candidateId, candidateName, notes, chords, effects, keyFifths })),
-        showArrangement
-      };
-      setSaveStatus(writeDraft(window.localStorage, draft) ? "저장됨 ✓" : "저장하지 못했어요");
-    }, 800);
-    return () => window.clearTimeout(timer);
-  }, [accompanimentInstrumentIds, accompanimentStyleId, beatPattern, beatVolume, bpm, creatorName, measures, meter,
-    originalCreator, selectedInstrumentId, selectedPresetId, songDescription, sourceHash, showArrangement, songLength, songTitle]);
+  const autosaveDraft = useMemo<SavedDraft>(() => ({
+    version: 1,
+    updatedAt: Date.now(),
+    sourceHash,
+    title: songTitle,
+    description: songDescription,
+    creator: creatorName,
+    originalCreator,
+    presetId: selectedPresetId,
+    meter,
+    songLength,
+    instrumentId: selectedInstrumentId,
+    accompanimentStyleId,
+    accompanimentInstrumentIds,
+    beatPattern,
+    beatVolume,
+    bpm,
+    lyrics: measures.map((measure) => lyricText(measure.notes)),
+    measures: measures.map(({ candidateId, candidateName, notes, chords, effects, keyFifths }) =>
+      ({ candidateId, candidateName, notes, chords, effects, keyFifths })),
+    showArrangement
+  }), [accompanimentInstrumentIds, accompanimentStyleId, beatPattern, beatVolume, bpm, creatorName,
+    measures, meter, originalCreator, selectedInstrumentId, selectedPresetId, showArrangement, songDescription,
+    songLength, songTitle, sourceHash]);
+  const { discardDraft: discardAutosavedDraft, saveNow: saveDraftNow } = useDraftAutosave({
+    draft: autosaveDraft,
+    storage: window.localStorage,
+    onStatus: setSaveStatus
+  });
 
   function restoreProjectSnapshot(snapshot: ProjectSnapshot) {
     setSelectedPresetId(snapshot.presetId);
@@ -1529,27 +1545,7 @@ export default function App() {
   }
 
   function currentProjectDraft(): SavedDraft {
-    return {
-      version: 1,
-      updatedAt: Date.now(),
-      sourceHash,
-      title: songTitle,
-      description: songDescription,
-      creator: creatorName,
-      originalCreator,
-      presetId: selectedPresetId,
-      meter,
-      songLength,
-      instrumentId: selectedInstrumentId,
-      accompanimentStyleId,
-      accompanimentInstrumentIds,
-      beatPattern,
-      beatVolume,
-      bpm,
-      lyrics,
-      measures: measures.map(({ candidateId, candidateName, notes, chords, effects, keyFifths }) => ({ candidateId, candidateName, notes, chords, effects, keyFifths })),
-      showArrangement
-    };
+    return { ...autosaveDraft, updatedAt: Date.now() };
   }
   function applyProjectDraft(project: SavedDraft) {
     const preset = findHarmonyPreset(project.presetId);
@@ -1650,18 +1646,31 @@ export default function App() {
   }
 
   async function handleCloudSave(asCopy: boolean) {
-    if (!authUser) return;
+    if (!authUser) {
+      setCloudNotice("");
+      setCloudError("로그인이 풀렸어요. 다시 로그인한 뒤 저장해 주세요.");
+      return;
+    }
     setCloudBusy(true);
     setCloudError("");
+    setCloudNotice("클라우드에 저장 중...");
+    saveDraftNow();
     try {
       const { saveCloudScore } = await import("./firebase/scores");
       const scoreId = await saveCloudScore(authUser.uid, currentProjectDraft(), asCopy ? undefined : activeCloudScoreId ?? undefined);
       setActiveCloudScoreId(scoreId);
-      await refreshCloudScores(authUser.uid);
+      setCloudNotice(asCopy ? "새 악보로 저장됐어요 ✓" : "현재 악보가 저장됐어요 ✓");
       setShareStatus(asCopy ? "현재 악보를 새 클라우드 악보로 저장했어요." : "내 악보함에 저장했어요.");
+      try {
+        await refreshCloudScores(authUser.uid);
+      } catch (refreshError) {
+        console.error(refreshError);
+        setCloudError("저장은 완료됐지만 목록을 새로 불러오지 못했어요. 창을 닫았다 다시 열어 주세요.");
+      }
     } catch (error) {
       console.error(error);
-      setCloudError("클라우드 저장에 실패했어요. 잠시 뒤 다시 시도해 주세요.");
+      setCloudNotice("");
+      setCloudError(cloudSaveMessage(error));
     } finally {
       setCloudBusy(false);
     }
@@ -1736,7 +1745,7 @@ export default function App() {
 
   function startNewProject() {
     if (completedCount > 0 && !window.confirm("새 곡을 시작할까요? 지금 만든 곡은 자동 저장되어 있어요.")) return;
-    window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+    discardAutosavedDraft();
     window.location.assign(`${window.location.pathname}?start=new`);
   }
 
@@ -1974,7 +1983,7 @@ export default function App() {
             <p><strong>네 마음속 장면이 노래가 되는 곳</strong><br />친구들과 함께 첫 멜로디를 만들어 봐요.</p>
             <div className="opening-actions">
               <button type="button" className="opening-start action-button" onClick={() => {
-                window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+                discardAutosavedDraft();
                 window.location.assign(`${window.location.pathname}?start=new`);
               }}>
                 <WandSparkles size={20} /> 시작하기 <ArrowRight size={18} />
@@ -2015,7 +2024,11 @@ export default function App() {
         <div className="topbar-actions">
           <div className="save-button" role="status" aria-live="polite" data-testid="save-status">{saveStatus}</div>
           <button type="button" className={authUser ? "account-trigger signed-in" : "account-trigger"}
-            data-testid="account-library-button" onClick={() => setAccountLibraryOpen(true)}>
+            data-testid="account-library-button" onClick={() => {
+              setCloudNotice("");
+              setCloudError("");
+              setAccountLibraryOpen(true);
+            }}>
             {authUser?.photoURL
               ? <img src={authUser.photoURL} alt="" referrerPolicy="no-referrer" />
               : <UserRound size={18} aria-hidden="true" />}
@@ -2026,7 +2039,7 @@ export default function App() {
 
       {accountLibraryOpen && !mobileRecordMode && (
         <AccountLibrary configured={firebaseConfigured} user={authUser} authReady={authReady}
-          scores={cloudScores} loading={cloudLoading} busy={cloudBusy} error={cloudError}
+          scores={cloudScores} loading={cloudLoading} busy={cloudBusy} error={cloudError} notice={cloudNotice}
           currentScoreId={activeCloudScoreId} onClose={() => setAccountLibraryOpen(false)}
           onGoogleSignIn={() => void handleGoogleSignIn()} onEmailAuth={handleEmailAuth}
           onPasswordReset={handlePasswordReset} onClearError={() => setCloudError("")}
