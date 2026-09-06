@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Cloud, Copy, Eye, EyeOff, FileMusic, Library, LogIn, LogOut, Mail, Save, Share2, Trash2, UserRound, X } from "lucide-react";
 import type { User } from "../firebase/client";
 import type { CloudScore } from "../firebase/scores";
+import "./AccountLibrary.css";
 
 type AccountLibraryProps = Readonly<{
   configured: boolean;
@@ -11,6 +12,7 @@ type AccountLibraryProps = Readonly<{
   loading: boolean;
   busy: boolean;
   error: string;
+  notice: string;
   currentScoreId: string | null;
   onClose: () => void;
   onGoogleSignIn: () => void;
@@ -35,7 +37,7 @@ function isPublishableScore(score: CloudScore): boolean {
   return score.draft.measures.every((measure) => Array.isArray(measure.notes) && measure.notes.length > 0);
 }
 
-export default function AccountLibrary({ configured, user, authReady, scores, loading, busy, error,
+export default function AccountLibrary({ configured, user, authReady, scores, loading, busy, error, notice,
   currentScoreId, onClose, onGoogleSignIn, onEmailAuth, onPasswordReset, onClearError,
   onSignOut, onSave, onLoad, onPublish, onDelete }: AccountLibraryProps) {
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
@@ -185,7 +187,8 @@ export default function AccountLibrary({ configured, user, authReady, scores, lo
             </div>
             <div className="cloud-save-actions">
               <button type="button" className="account-primary" onClick={() => onSave(false)} disabled={busy}>
-                <Save size={18} aria-hidden="true" /> {currentScoreId ? "현재 악보 업데이트" : "현재 악보 저장"}
+                <Save size={18} aria-hidden="true" /> {busy ? "저장 중..." : currentScoreId
+                  ? "현재 악보 업데이트" : "현재 악보 저장"}
               </button>
               {currentScoreId && (
                 <button type="button" className="account-secondary" onClick={() => onSave(true)} disabled={busy}>
@@ -193,6 +196,7 @@ export default function AccountLibrary({ configured, user, authReady, scores, lo
                 </button>
               )}
             </div>
+            {notice && <p className="account-notice cloud-save-notice" role="status">{notice}</p>}
             {error && <p className="account-error" role="status">{error}</p>}
             <div className="account-score-heading"><strong>저장된 악보</strong><span>{scores.length}개</span></div>
             {loading ? (

@@ -14,21 +14,21 @@ const RHYTHM_CHOICES = [
     id: "short",
     Icon: Rabbit,
     name: "짧게 통통",
-    description: "짧은 소리가 이어져 빠르고 신나게 느껴져요",
+    description: "짧은 소리가 이어져 빠르고 신나요",
     styleId: "children_song",
   },
   {
     id: "medium",
     Icon: Footprints,
     name: "고르게 또박",
-    description: "한 박자씩 고르게 나와 자연스럽게 느껴져요",
+    description: "한 박자씩 고르게 나와 자연스러워요",
     styleId: "folk",
   },
   {
     id: "long",
     Icon: Turtle,
     name: "길게 여유롭게",
-    description: "긴 소리가 이어져 천천히 편안하게 느껴져요",
+    description: "긴 소리가 이어져 천천히 편안해요",
     styleId: "opera",
   }
 ] as const satisfies readonly {

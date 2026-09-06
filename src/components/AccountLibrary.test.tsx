@@ -18,7 +18,7 @@ function renderAccountLibrary(onEmailAuth = vi.fn().mockResolvedValue(true)) {
   document.body.append(container);
   root = createRoot(container);
   act(() => root?.render(<AccountLibrary configured user={null} authReady scores={[]} loading={false}
-    busy={false} error="" currentScoreId={null} onClose={() => undefined}
+    busy={false} error="" notice="" currentScoreId={null} onClose={() => undefined}
     onGoogleSignIn={() => undefined} onEmailAuth={onEmailAuth}
     onPasswordReset={vi.fn().mockResolvedValue(true)} onClearError={() => undefined} onSignOut={() => undefined}
     onSave={() => undefined} onLoad={() => undefined} onPublish={() => undefined} onDelete={() => undefined} />));
@@ -95,7 +95,7 @@ describe("이메일 계정 화면", () => {
     document.body.append(container);
     root = createRoot(container);
     act(() => root?.render(<AccountLibrary configured user={user} authReady scores={[score]} loading={false}
-      busy={false} error="" currentScoreId={null} onClose={() => undefined}
+      busy={false} error="" notice="" currentScoreId={null} onClose={() => undefined}
       onGoogleSignIn={() => undefined} onEmailAuth={vi.fn().mockResolvedValue(true)}
       onPasswordReset={vi.fn().mockResolvedValue(true)} onClearError={() => undefined} onSignOut={() => undefined}
       onSave={() => undefined} onLoad={() => undefined} onPublish={onPublish} onDelete={() => undefined} />));
@@ -104,5 +104,30 @@ describe("이메일 계정 화면", () => {
       .find((button) => button.textContent?.includes("앨범에 공개"));
     await act(async () => publishButton?.click());
     expect(onPublish).toHaveBeenCalledWith(score);
+  });
+
+  it("클라우드 저장 진행과 완료 결과를 팝업 안에서 보여 준다", () => {
+    const user = { uid: "user-1", email: "student@example.com", displayName: "민준" } as User;
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    act(() => root?.render(<AccountLibrary configured user={user} authReady scores={[]} loading={false}
+      busy notice="클라우드에 저장 중..." error="" currentScoreId={null} onClose={() => undefined}
+      onGoogleSignIn={() => undefined} onEmailAuth={vi.fn().mockResolvedValue(true)}
+      onPasswordReset={vi.fn().mockResolvedValue(true)} onClearError={() => undefined} onSignOut={() => undefined}
+      onSave={() => undefined} onLoad={() => undefined} onPublish={() => undefined} onDelete={() => undefined} />));
+
+    const saveButton = [...container.querySelectorAll<HTMLButtonElement>("button")]
+      .find((button) => button.textContent?.includes("저장 중"));
+    expect(saveButton?.disabled).toBe(true);
+    expect(container.textContent).toContain("클라우드에 저장 중...");
+
+    act(() => root?.render(<AccountLibrary configured user={user} authReady scores={[]} loading={false}
+      busy={false} notice="현재 악보가 저장됐어요 ✓" error="" currentScoreId="score-1" onClose={() => undefined}
+      onGoogleSignIn={() => undefined} onEmailAuth={vi.fn().mockResolvedValue(true)}
+      onPasswordReset={vi.fn().mockResolvedValue(true)} onClearError={() => undefined} onSignOut={() => undefined}
+      onSave={() => undefined} onLoad={() => undefined} onPublish={() => undefined} onDelete={() => undefined} />));
+    expect(container.textContent).toContain("현재 악보가 저장됐어요 ✓");
+    expect(container.textContent).toContain("현재 악보 업데이트");
   });
 });

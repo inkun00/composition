@@ -76,3 +76,40 @@
     justify-content: center;
   }
 }
+
+.preset-score-import-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 16px;
+  padding: 14px 18px;
+  border: 1px dashed #c4b8eb;
+  border-radius: 16px;
+  background: rgba(246, 243, 255, 0.7);
+}
+
+.preset-score-import-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.preset-score-import-info strong {
+  color: #433580;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.preset-score-import-info span {
+  color: #6c6393;
+  font-size: 12px;
+}
+
+@media (max-width: 720px) {
+  .preset-score-import-bar {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
+}

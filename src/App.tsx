@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, CheckCircle2, ExternalLink, FileDown, FileMusic, FileUp, Library, Menu, Mic2, Music2, Plus, QrCode, Redo2, SlidersHorizontal, Smartphone, Square, Undo2, UserRound, Volume2, WandSparkles, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, ExternalLink, FileDown, Library, Menu, Mic2, Music2, Plus, QrCode, Redo2, SlidersHorizontal, Smartphone, Square, Undo2, UserRound, Volume2, WandSparkles, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { exportBackingCompositionMp3, pausePlayback, playComposition, playMeasure, practiceKaraokeComposition, recordKaraokeComposition, renderKaraokePreviewMix, renderProcessedKaraokeMp3, resumePlayback, stopPlayback,
   type KaraokePostProcessPreset } from "./audio/player";
@@ -13,32 +13,44 @@ import type { KaraokeGuideMode } from "./audio/karaokeGuide";
 import type { RecordingCaptureMode } from "./audio/vocalCapture";
 import NoteLyrics from "./components/NoteLyrics";
 import MeasureSoundEffectDialog from "./components/MeasureSoundEffectDialog";
+import BeatInstrumentChooser from "./components/BeatInstrumentChooser";
 import AccountLibrary from "./components/AccountLibrary";
 import CommunityAlbum from "./components/CommunityAlbum";
 import HarmonyPresetChooser from "./components/HarmonyPresetChooser";
 import SongMoodSetup from "./components/SongMoodSetup";
 import PublishScoreDialog from "./components/PublishScoreDialog";
+import ScoreExportDialog from "./components/ScoreExportDialog";
+import QrSongPlayback from "./components/QrSongPlayback";
 import { firebaseConfigured } from "./firebase/config";
 import type { User } from "./firebase/client";
 import type { PublishedSong } from "./firebase/communityAlbums";
 import type { CloudScore } from "./firebase/scores";
+import { clearCloudSaveBinding, createLocalProjectId, readCloudSaveBinding, writeCloudSaveBinding } from "./firebase/cloudSaveBinding";
+import {
+  cloudSaveErrorMessage,
+  cloudScoreIdForSave,
+  saveCloudScoreReliably
+} from "./firebase/cloudSaveReliability";
 import { ACCOMPANIMENT_MODES, ACCOMPANIMENT_PLAYING_STYLES, MAX_ACCOMPANIMENT_INSTRUMENTS, accompanimentInstrumentPart, createAccompanimentPattern, findAccompanimentStyle, isAccompanimentInstrument,
   type AccompanimentStyleId } from "./music/accompaniment";
 import { getCandidates, MELODY_CANDIDATE_COUNT, MELODY_FEELING_GROUPS } from "./music/candidates";
 import { rankRecommendedCandidates } from "./music/recommendation";
 import { chordMidiPitches, chordPitchClasses } from "./music/chord";
-import { DRAFT_STORAGE_KEY, isSavedDraft, readDraft, writeDraft, type SavedDraft } from "./music/draft";
+import { readDraft, writeDraft, type SavedDraft } from "./music/draft";
 import { findHarmonyPreset, HARMONY_PRESETS, type HarmonyPreset } from "./music/harmonyPresets";
 import { findInstrument, INSTRUMENTS, type InstrumentId } from "./music/instruments";
 import { measureCapacity, meterKey, SUPPORTED_METERS, validateMeasure, type Meter } from "./music/meter";
 import { rational, toNumber } from "./music/rational";
 import { prioritizeCandidatesForRhythm, RHYTHM_PREFERENCE_LABELS, rhythmPreferenceForStyle } from "./music/rhythmPreference";
-import { pitchName, positionNotes } from "./music/score";
+import { pitchName, positionNotes, withEditedPitch } from "./music/score";
 import { findSoundEffect, type SoundEffectId } from "./music/soundEffects";
-import { buildShareUrl, readCompositionFromHash, type SharedComposition } from "./music/share";
+import { normalizeBeatVolume } from "./music/beatInstruments";
+import { normalizeBeatPattern, type BeatPatternEvent } from "./music/beatPattern";
+import { buildQrPlaybackUrl, buildShareUrl, readCompositionFromHash, type SharedComposition } from "./music/share";
 import type { HarmonyStory, MelodyCandidate, NoteEvent, SoundEffectEvent } from "./music/types";
 import { useKaraokeAutoFocus } from "./hooks/useKaraokeAutoFocus";
-
+import { useDraftAutosave } from "./hooks/useDraftAutosave";
+import { useProjectHistory } from "./hooks/useProjectHistory";
 type MeasureDraft = {
   story: HarmonyStory;
   storyHint: string;
@@ -47,8 +59,8 @@ type MeasureDraft = {
   candidateName: string | null;
   notes: readonly NoteEvent[] | null;
   effects: readonly SoundEffectEvent[];
+  keyFifths?: number;
 };
-
 function uniqueAccompanimentInstrumentIds(ids: readonly InstrumentId[]): InstrumentId[] {
   const unique: InstrumentId[] = [];
   ids.forEach((id) => {
@@ -127,7 +139,7 @@ function backingDisplayNotes(measure: MeasureDraft, meter: Meter, styleId: Accom
   return notes;
 }
 
-type SongLength = 8 | 12 | 16;
+type SongLength = 8 | 12 | 16 | 20 | 24 | 28 | 32;
 type SongPlaybackState = "idle" | "playing" | "paused";
 type KaraokePhase = "idle" | "intro" | "song" | "outro" | "encoding" | "done" | "error";
 type KaraokeMode = "recording" | "practice";
@@ -180,11 +192,18 @@ function firebaseAuthMessage(error: unknown, action: "signin" | "signup" | "rese
   return "이메일 로그인에 실패했어요. 다시 시도해 주세요.";
 }
 
-type CompositionSnapshot = Readonly<{
+type ProjectSnapshot = Readonly<{
   presetId: string;
   meter: Meter;
   songLength: SongLength;
   measures: readonly MeasureDraft[];
+  selectedInstrumentId: InstrumentId;
+  accompanimentStyleId: AccompanimentStyleId;
+  accompanimentInstrumentIds: readonly InstrumentId[];
+  beatPattern: readonly BeatPatternEvent[];
+  beatVolume: number;
+  bpm: number;
+  showArrangement: boolean;
 }>;
 
 type HarmonyFit = "chord" | "passing" | "color";
@@ -252,16 +271,19 @@ function applyLegacyLyric(notes: readonly NoteEvent[], lyric: string | undefined
 function compositionFromShare(shared: SharedComposition, preset: HarmonyPreset): MeasureDraft[] {
   return emptyComposition(preset, shared.songLength).map((measure, index) => ({
     ...measure,
+    chords: shared.measures[index].chords ?? measure.chords,
+    keyFifths: shared.measures[index].keyFifths,
     candidateId: "shared",
     candidateName: shared.measures[index].candidateName,
     notes: applyLegacyLyric(shared.measures[index].notes, shared.lyrics[index]),
     effects: shared.measures[index].effects ?? []
   }));
 }
-
 function compositionFromDraft(draft: SavedDraft, preset: HarmonyPreset): MeasureDraft[] {
   return emptyComposition(preset, draft.songLength).map((measure, index) => ({
     ...measure,
+    chords: draft.measures[index].chords ?? measure.chords,
+    keyFifths: draft.measures[index].keyFifths,
     candidateId: draft.measures[index].candidateId,
     candidateName: draft.measures[index].candidateName,
     notes: draft.measures[index].notes
@@ -269,7 +291,6 @@ function compositionFromDraft(draft: SavedDraft, preset: HarmonyPreset): Measure
     effects: draft.measures[index].effects ?? []
   }));
 }
-
 function isRecordingLink(search: string, hash: string): boolean {
   return new URLSearchParams(search).get("record") === "1" || /(?:^#|&)record=1(?:&|$)/.test(hash);
 }
@@ -282,6 +303,12 @@ function buildMobileRecordingUrl(shareUrl: string): string {
 
 function isLocalHost(location: Pick<Location, "hostname">): boolean {
   return ["localhost", "127.0.0.1", "::1"].includes(location.hostname);
+}
+
+function qrPlaybackLocation(location: Location): Pick<Location, "origin" | "pathname"> {
+  return isLocalHost(location)
+    ? { origin: "https://maeum-melody.vercel.app", pathname: "/" }
+    : location;
 }
 
 function replaceNote(
@@ -306,10 +333,12 @@ function sanitizeNoteLinks(notes: readonly NoteEvent[]): NoteEvent[] {
 
 export default function App() {
   const mobileRecordMode = isRecordingLink(window.location.search, window.location.hash);
+  const qrPlaybackMode = new URLSearchParams(window.location.search).get("play") === "qr";
+  const qrSongId = new URLSearchParams(window.location.search).get("song") ?? "";
   const [incomingShare] = useState(() => readCompositionFromHash(window.location.hash));
   const [savedDraft] = useState(() => readDraft(window.localStorage));
   const [showOpening, setShowOpening] = useState(() =>
-    !mobileRecordMode && new URLSearchParams(window.location.search).get("start") !== "new");
+    !mobileRecordMode && !qrPlaybackMode && new URLSearchParams(window.location.search).get("start") !== "new");
   const [showAppMenu, setShowAppMenu] = useState(false);
   const [accountLibraryOpen, setAccountLibraryOpen] = useState(false);
   const [communityAlbumOpen, setCommunityAlbumOpen] = useState(false);
@@ -320,9 +349,11 @@ export default function App() {
   const [cloudLoading, setCloudLoading] = useState(false);
   const [cloudBusy, setCloudBusy] = useState(false);
   const [cloudError, setCloudError] = useState("");
+  const [cloudNotice, setCloudNotice] = useState("");
   const [activeCloudScoreId, setActiveCloudScoreId] = useState<string | null>(null);
   const resumableDraft = savedDraft && (!incomingShare || savedDraft.sourceHash === window.location.hash)
     ? savedDraft : null;
+  const [localProjectId, setLocalProjectId] = useState(() => resumableDraft?.projectId ?? createLocalProjectId());
   const initialPreset = findHarmonyPreset(resumableDraft?.presetId ?? incomingShare?.presetId ?? HARMONY_PRESETS[0].id);
   const initialLength = resumableDraft?.songLength ?? incomingShare?.songLength ?? 8;
   const initialAccompanimentStyleId = resumableDraft?.accompanimentStyleId ?? incomingShare?.accompanimentStyleId ?? "children_song";
@@ -339,16 +370,13 @@ export default function App() {
   const [showMoreCandidates, setShowMoreCandidates] = useState(false);
   const [soundEffectDialogOpen, setSoundEffectDialogOpen] = useState(false);
   const [editStatus, setEditStatus] = useState("");
-  const [undoStack, setUndoStack] = useState<readonly CompositionSnapshot[]>([]);
-  const [redoStack, setRedoStack] = useState<readonly CompositionSnapshot[]>([]);
-  const historyCurrent = useRef<CompositionSnapshot | null>(null);
-  const restoringHistory = useRef(false);
   const splitCounter = useRef(0);
   const completionAnimationTimer = useRef<number | null>(null);
   const [recentCompletedIndex, setRecentCompletedIndex] = useState<number | null>(null);
   const [rhythmChecks, setRhythmChecks] = useState<Record<number, "valid" | "invalid">>({});
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [presetPreviewing, setPresetPreviewing] = useState(false);
+  const [beatPreviewing, setBeatPreviewing] = useState(false);
   const [songPlaybackState, setSongPlaybackState] = useState<SongPlaybackState>("idle");
   const [playingMeasureIndex, setPlayingMeasureIndex] = useState<number | null>(null);
   const [playingNoteId, setPlayingNoteId] = useState<string | null>(null);
@@ -364,11 +392,12 @@ export default function App() {
   const playbackSegments = useRef<readonly PlaybackSegment[]>([]);
   const playbackNoteSegments = useRef<readonly PlaybackNoteSegment[]>([]);
   const noteAnimationTimers = useRef<number[]>([]);
-  const projectFileInput = useRef<HTMLInputElement | null>(null);
   const recordingPreviewRef = useRef<HTMLAudioElement | null>(null);
   const mobileRecordingQrRef = useRef<SVGSVGElement | null>(null);
   const backingMixRequest = useRef(0);
   const karaokeAbortController = useRef<AbortController | null>(null);
+  const pendingCloudSave = useRef<{ scoreId: string; asCopy: boolean } | null>(null);
+  const cloudSaveInFlight = useRef(false);
   const [selectedInstrumentId, setSelectedInstrumentId] = useState<InstrumentId>(
     findInstrument(resumableDraft?.instrumentId ?? incomingShare?.instrumentId ?? "piano").id
   );
@@ -380,6 +409,10 @@ export default function App() {
   const [accompanimentInstrumentIds, setAccompanimentInstrumentIds] = useState<InstrumentId[]>(() =>
     uniqueAccompanimentInstrumentIds(resumableDraft?.accompanimentInstrumentIds ?? incomingShare?.accompanimentInstrumentIds ?? ["acoustic_grand_piano"])
   );
+  const [beatPattern, setBeatPattern] = useState<BeatPatternEvent[]>(() =>
+    normalizeBeatPattern(resumableDraft?.beatPattern ?? incomingShare?.beatPattern ?? [], meter));
+  const [beatVolume, setBeatVolume] = useState(() =>
+    normalizeBeatVolume(resumableDraft?.beatVolume ?? incomingShare?.beatVolume));
   const [bpm, setBpm] = useState(resumableDraft?.bpm ?? incomingShare?.bpm ?? 96);
   const [showArrangement, setShowArrangement] = useState(resumableDraft?.showArrangement === true || incomingShare !== null);
   const [completionCelebration, setCompletionCelebration] = useState(false);
@@ -396,6 +429,8 @@ export default function App() {
   const [mobileRecordingUrl, setMobileRecordingUrl] = useState("");
   const [exportingPdf, setExportingPdf] = useState(false);
   const [pdfIncludeAccompaniment, setPdfIncludeAccompaniment] = useState(false);
+  const [pdfPlaybackUrl, setPdfPlaybackUrl] = useState("");
+  const [scoreExportDialogOpen, setScoreExportDialogOpen] = useState(false);
   const [exportingBacking, setExportingBacking] = useState(false);
   const [backingExportPhase, setBackingExportPhase] = useState<BackingExportPhase>("idle");
   const [recordingSong, setRecordingSong] = useState(false);
@@ -428,12 +463,21 @@ export default function App() {
   const [originalCreator, setOriginalCreator] = useState(resumableDraft?.originalCreator ??
     (incomingShare ? incomingShare.originalCreator || incomingShare.creator : ""));
   const [sourceHash, setSourceHash] = useState(incomingShare ? window.location.hash : resumableDraft?.sourceHash ?? "");
+  const historySnapshot = useMemo<ProjectSnapshot>(() => ({
+    presetId: selectedPresetId, meter, songLength, measures, selectedInstrumentId, accompanimentStyleId,
+    accompanimentInstrumentIds, beatPattern, beatVolume, bpm, showArrangement
+  }), [accompanimentInstrumentIds, accompanimentStyleId, beatPattern, beatVolume, bpm, measures, meter,
+    selectedInstrumentId, selectedPresetId, showArrangement, songLength]);
+  const { canUndo, canRedo, undo: undoProjectChange, redo: redoProjectChange, reset: resetProjectHistory } =
+    useProjectHistory({ current: historySnapshot, onRestore: restoreProjectSnapshot });
   const selectedPreset = findHarmonyPreset(selectedPresetId);
   const selectedInstrument = findInstrument(selectedInstrumentId);
   const selectedAccompanimentStyle = findAccompanimentStyle(accompanimentStyleId);
   const activeAccompanimentMode = ACCOMPANIMENT_MODES.find((mode) =>
     mode.styleId === accompanimentStyleId &&
     sameInstrumentOrder(mode.instrumentIds, accompanimentInstrumentIds)) ?? null;
+  const accompanimentOptions = { styleId: accompanimentStyleId,
+    instrumentIds: accompanimentInstrumentIds, beatPattern, beatVolume, meter };
   const canRenderMobileRecordingQr = mobileRecordingUrl.length > 0 && mobileRecordingUrl.length <= QR_RENDER_LIMIT;
 
   const activeMeasure = measures[activeIndex];
@@ -489,7 +533,8 @@ export default function App() {
   const activeStep = showArrangement ? 3 : 2;
   const playingSong = songPlaybackState !== "idle";
   const karaokeRunning = recordingSong || practicingSong;
-  const isAnyPlaying = playingId !== null || playingSong || playingMeasure || karaokeRunning || presetPreviewing;
+  const isAnyPlaying = playingId !== null || playingSong || playingMeasure ||
+    karaokeRunning || presetPreviewing || beatPreviewing;
   useKaraokeAutoFocus(karaokeOpen, karaokeRunning, karaokeHighlight);
   const updateLyricNotePositions = useCallback((index: number, positions: Record<string, { x: number; y: number }>) => {
     setLyricNotePositions((current) => {
@@ -535,11 +580,11 @@ export default function App() {
     candidateName: measure.candidateName ?? "나만의 가락",
     notes: measure.notes,
     chords: measure.chords,
+    keyFifths: measure.keyFifths,
     effects: measure.effects
   }] : []);
   const karaokeIntroMeasures = repeatFourMeasures(measures, false);
   const karaokeOutroMeasures = repeatFourMeasures(measures, true);
-
   function clearPlaybackTicker() {
     if (playbackTicker.current !== null) window.clearInterval(playbackTicker.current);
     playbackTicker.current = null;
@@ -611,8 +656,11 @@ export default function App() {
       unsubscribe = observeAuth((user) => {
         setAuthUser(user);
         setAuthReady(true);
-        setActiveCloudScoreId(null);
+        const binding = user ? readCloudSaveBinding(window.localStorage, user.uid, localProjectId) : null;
+        setActiveCloudScoreId(binding?.scoreId ?? null);
+        pendingCloudSave.current = null;
         setCloudError("");
+        setCloudNotice("");
       });
     }).catch((error) => {
       console.error(error);
@@ -625,7 +673,7 @@ export default function App() {
       active = false;
       unsubscribe?.();
     };
-  }, []);
+  }, [localProjectId]);
 
   useEffect(() => {
     if (!authUser) {
@@ -665,82 +713,54 @@ export default function App() {
     });
   }, [accompanimentInstrumentIds]);
 
-  useEffect(() => {
-    const next: CompositionSnapshot = { presetId: selectedPresetId, meter, songLength, measures };
-    const previous = historyCurrent.current;
-    if (!previous) {
-      historyCurrent.current = next;
-      return;
-    }
-    if (restoringHistory.current) {
-      restoringHistory.current = false;
-      historyCurrent.current = next;
-      return;
-    }
-    if (previous.presetId === next.presetId && previous.meter === next.meter &&
-      previous.songLength === next.songLength && previous.measures === next.measures) return;
-    setUndoStack((stack) => [...stack, previous].slice(-40));
-    setRedoStack([]);
-    historyCurrent.current = next;
-  }, [measures, meter, selectedPresetId, songLength]);
+  const autosaveDraft = useMemo<SavedDraft>(() => ({
+    version: 1,
+    projectId: localProjectId,
+    updatedAt: Date.now(),
+    sourceHash,
+    title: songTitle,
+    description: songDescription,
+    creator: creatorName,
+    originalCreator,
+    presetId: selectedPresetId,
+    meter,
+    songLength,
+    instrumentId: selectedInstrumentId,
+    accompanimentStyleId,
+    accompanimentInstrumentIds,
+    beatPattern,
+    beatVolume,
+    bpm,
+    lyrics: measures.map((measure) => lyricText(measure.notes)),
+    measures: measures.map(({ candidateId, candidateName, notes, chords, effects, keyFifths }) =>
+      ({ candidateId, candidateName, notes, chords, effects, keyFifths })),
+    showArrangement
+  }), [accompanimentInstrumentIds, accompanimentStyleId, beatPattern, beatVolume, bpm, creatorName, localProjectId,
+    measures, meter, originalCreator, selectedInstrumentId, selectedPresetId, showArrangement, songDescription,
+    songLength, songTitle, sourceHash]);
+  const { discardDraft: discardAutosavedDraft, saveNow: saveDraftNow } = useDraftAutosave({
+    draft: autosaveDraft,
+    storage: window.localStorage,
+    onStatus: setSaveStatus
+  });
 
-  useEffect(() => {
-    setSaveStatus("저장 중…");
-    const timer = window.setTimeout(() => {
-      const draft: SavedDraft = {
-        version: 1,
-        updatedAt: Date.now(),
-        sourceHash,
-        title: songTitle,
-        description: songDescription,
-        creator: creatorName,
-        originalCreator,
-        presetId: selectedPresetId,
-        meter,
-        songLength,
-        instrumentId: selectedInstrumentId,
-        accompanimentStyleId,
-        accompanimentInstrumentIds,
-        bpm,
-        lyrics,
-        measures: measures.map(({ candidateId, candidateName, notes, effects }) => ({ candidateId, candidateName, notes, effects })),
-        showArrangement
-      };
-      setSaveStatus(writeDraft(window.localStorage, draft) ? "저장됨 ✓" : "저장하지 못했어요");
-    }, 800);
-    return () => window.clearTimeout(timer);
-  }, [accompanimentInstrumentIds, accompanimentStyleId, bpm, creatorName, measures, meter,
-    originalCreator, selectedInstrumentId, selectedPresetId, songDescription, sourceHash, showArrangement, songLength, songTitle]);
-
-  function restoreComposition(snapshot: CompositionSnapshot) {
-    restoringHistory.current = true;
+  function restoreProjectSnapshot(snapshot: ProjectSnapshot) {
     setSelectedPresetId(snapshot.presetId);
     setMeter(snapshot.meter);
     setSongLength(snapshot.songLength);
     setMeasures(snapshot.measures as MeasureDraft[]);
+    setSelectedInstrumentId(snapshot.selectedInstrumentId);
+    setAccompanimentStyleId(snapshot.accompanimentStyleId);
+    setAccompanimentStyleView(findAccompanimentStyle(snapshot.accompanimentStyleId).category === "playing" ? "playing" : "mode");
+    setAccompanimentInstrumentIds(snapshot.accompanimentInstrumentIds as InstrumentId[]);
+    setBeatPattern(snapshot.beatPattern as BeatPatternEvent[]);
+    setBeatVolume(snapshot.beatVolume);
+    setBpm(snapshot.bpm);
+    setShowArrangement(snapshot.showArrangement);
     setRhythmChecks({});
     setActiveIndex((index) => Math.min(index, snapshot.measures.length - 1));
     setSelectedNoteId("");
     setSelectedNoteIds([]);
-    setShowArrangement(false);
-  }
-
-  function undoCompositionChange() {
-    const previous = undoStack.at(-1);
-    const current = historyCurrent.current;
-    if (!previous || !current) return;
-    setUndoStack((stack) => stack.slice(0, -1));
-    setRedoStack((stack) => [...stack, current].slice(-40));
-    restoreComposition(previous);
-  }
-
-  function redoCompositionChange() {
-    const next = redoStack.at(-1);
-    const current = historyCurrent.current;
-    if (!next || !current) return;
-    setRedoStack((stack) => stack.slice(0, -1));
-    setUndoStack((stack) => [...stack, current].slice(-40));
-    restoreComposition(next);
   }
 
   function confirmNewStructure(message: string): boolean {
@@ -751,6 +771,7 @@ export default function App() {
     if (meterKey(next) === meterKey(meter)) return;
     if (!confirmNewStructure("박자를 바꾸면 새 노래를 만들어요.")) return;
     setMeter(next);
+    setBeatPattern([]);
     setMeasures(emptyComposition(selectedPreset, songLength));
     setRhythmChecks({});
     setActiveIndex(0);
@@ -904,11 +925,8 @@ export default function App() {
       measureIndex: startMeasureIndex + relativeIndex
     }] : []);
     if (playable.length === 0) return;
-    const duration = await playComposition(playable, selectedInstrumentId, bpm, accompanimentReady ? {
-      styleId: accompanimentStyleId,
-      instrumentIds: accompanimentInstrumentIds,
-      meter
-    } : undefined);
+    const duration = await playComposition(playable, selectedInstrumentId, bpm,
+      accompanimentReady ? accompanimentOptions : undefined);
     if (duration === null) return;
     const secondsPerBeat = 60 / bpm;
     let offsetSeconds = 0.08;
@@ -974,11 +992,7 @@ export default function App() {
       chords: activeMeasure.chords,
       effects: activeMeasure.effects,
       measureIndex: activeIndex
-    }], selectedInstrumentId, bpm, accompanimentReady ? {
-      styleId: accompanimentStyleId,
-      instrumentIds: accompanimentInstrumentIds,
-      meter
-    } : undefined);
+    }], selectedInstrumentId, bpm, accompanimentReady ? accompanimentOptions : undefined);
     if (duration === null) return;
     setPlayingMeasure(true);
     animateSingleMeasureNotes(notes, bpm);
@@ -992,7 +1006,7 @@ export default function App() {
       candidateId: "custom",
       candidateName: measure.candidateName ? measure.candidateName + " · 나만의 변화" : "나만의 가락",
       notes: (measure.notes ?? []).map((note) => selectedNoteIds.includes(note.id) && note.pitch !== null
-        ? { ...note, pitch: Math.max(48, Math.min(84, note.pitch + amount)) }
+        ? withEditedPitch(note, Math.max(48, Math.min(84, note.pitch + amount)), measure.keyFifths)
         : note)
     }));
   }
@@ -1002,7 +1016,7 @@ export default function App() {
       ...measure,
       candidateId: "custom",
       candidateName: "직접 다듬은 가락",
-      notes: replaceNote(measure.notes ?? [], id, (note) => note.pitch === null ? note : { ...note, pitch: value })
+      notes: replaceNote(measure.notes ?? [], id, (note) => withEditedPitch(note, value, measure.keyFifths))
     }));
   }
 
@@ -1367,9 +1381,11 @@ export default function App() {
       instrumentId: selectedInstrumentId,
       accompanimentStyleId,
       accompanimentInstrumentIds,
+      beatPattern,
+      beatVolume,
       bpm,
       lyrics,
-      measures: printableMeasures.map(({ candidateName, notes, effects }) => ({ candidateName, notes, effects }))
+      measures: printableMeasures.map(({ candidateName, notes, chords, effects, keyFifths }) => ({ candidateName, notes, chords, effects, keyFifths }))
     };
   }
 
@@ -1441,10 +1457,20 @@ export default function App() {
       setShareStatus("PDF에 넣을 곡 제목과 작곡가 이름을 먼저 적어 주세요.");
       return;
     }
+    const composition = makeSharedComposition();
+    if (!composition) {
+      setShareStatus("QR 재생 링크를 만들려면 모든 마디를 먼저 완성해 주세요.");
+      return;
+    }
     setExportingPdf(true);
     setPdfIncludeAccompaniment(includeAccompaniment);
-    setShareStatus(includeAccompaniment ? "반주가 포함된 A4 악보를 만들고 있어요..." : "A4 악보를 만들고 있어요...");
+    setPdfPlaybackUrl("");
+    setShareStatus("QR 노래 링크를 준비하고 있어요...");
     try {
+      const { saveQrSong } = await import("./firebase/qrSongs");
+      const songId = await saveQrSong(composition);
+      setPdfPlaybackUrl(buildQrPlaybackUrl(songId, qrPlaybackLocation(window.location)));
+      setShareStatus(includeAccompaniment ? "반주가 포함된 A4 악보를 만들고 있어요..." : "A4 악보를 만들고 있어요...");
       // The hidden PDF sheet must re-render after the selected layout changes.
       await new Promise<void>((resolve) => window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve())));
       await document.fonts.ready;
@@ -1489,11 +1515,8 @@ export default function App() {
       measureIndex: index
     }] : []);
     try {
-      const blob = await exportBackingCompositionMp3(playable, selectedInstrumentId, bpm, {
-        styleId: accompanimentStyleId,
-        instrumentIds: accompanimentInstrumentIds,
-        meter
-      });
+      const blob = await exportBackingCompositionMp3(
+        playable, selectedInstrumentId, bpm, accompanimentOptions);
       if (!blob) {
         setShareStatus("다른 연주나 녹음이 끝난 뒤에 다시 저장해 주세요.");
         setBackingExportPhase("error");
@@ -1521,43 +1544,13 @@ export default function App() {
   }
 
   function currentProjectDraft(): SavedDraft {
-    return {
-      version: 1,
-      updatedAt: Date.now(),
-      sourceHash,
-      title: songTitle,
-      description: songDescription,
-      creator: creatorName,
-      originalCreator,
-      presetId: selectedPresetId,
-      meter,
-      songLength,
-      instrumentId: selectedInstrumentId,
-      accompanimentStyleId,
-      accompanimentInstrumentIds,
-      bpm,
-      lyrics,
-      measures: measures.map(({ candidateId, candidateName, notes, effects }) => ({ candidateId, candidateName, notes, effects })),
-      showArrangement
-    };
+    return { ...autosaveDraft, updatedAt: Date.now() };
   }
-
-  function saveProjectFile() {
-    const blob = new Blob([JSON.stringify(currentProjectDraft(), null, 2)], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = safeSongFileName("maeum-melody.txt");
-    link.click();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-    setShareStatus("나중에 다시 고칠 수 있는 작품 파일을 저장했어요.");
-  }
-
   function applyProjectDraft(project: SavedDraft) {
     const preset = findHarmonyPreset(project.presetId);
-    historyCurrent.current = null;
-    setUndoStack([]);
-    setRedoStack([]);
+    const nextProjectId = project.projectId ?? createLocalProjectId();
+    setLocalProjectId(nextProjectId);
+    resetProjectHistory();
     setSelectedPresetId(preset.id);
     setMeter(project.meter);
     setSongLength(project.songLength);
@@ -1568,6 +1561,8 @@ export default function App() {
     setAccompanimentStyleId(nextAccompanimentStyle.id);
     setAccompanimentStyleView(nextAccompanimentStyle.category === "playing" ? "playing" : "mode");
     setAccompanimentInstrumentIds(uniqueAccompanimentInstrumentIds(project.accompanimentInstrumentIds ?? ["piano"]));
+    setBeatPattern(normalizeBeatPattern(project.beatPattern ?? [], project.meter));
+    setBeatVolume(normalizeBeatVolume(project.beatVolume));
     setBpm(project.bpm ?? 96);
     setShowArrangement(project.showArrangement);
     setSongTitle(project.title);
@@ -1579,7 +1574,7 @@ export default function App() {
     setSelectedNoteId("");
     setSelectedNoteIds([]);
     setEditStatus("");
-    writeDraft(window.localStorage, project);
+    writeDraft(window.localStorage, { ...project, projectId: nextProjectId });
   }
 
   async function refreshCloudScores(uid: string) {
@@ -1652,26 +1647,61 @@ export default function App() {
   }
 
   async function handleCloudSave(asCopy: boolean) {
-    if (!authUser) return;
+    if (!authUser) {
+      setCloudNotice("");
+      setCloudError("로그인이 풀렸어요. 다시 로그인한 뒤 저장해 주세요.");
+      return;
+    }
+    if (cloudSaveInFlight.current) return;
+    cloudSaveInFlight.current = true;
     setCloudBusy(true);
     setCloudError("");
+    setCloudNotice("클라우드에 저장 중...");
+    const draft = currentProjectDraft();
+    const locallySaved = saveDraftNow();
     try {
-      const { saveCloudScore } = await import("./firebase/scores");
-      const scoreId = await saveCloudScore(authUser.uid, currentProjectDraft(), asCopy ? undefined : activeCloudScoreId ?? undefined);
-      setActiveCloudScoreId(scoreId);
-      await refreshCloudScores(authUser.uid);
+      const { createCloudScoreId, saveCloudScore } = await import("./firebase/scores");
+      const pendingScoreId = pendingCloudSave.current?.asCopy === asCopy
+        ? pendingCloudSave.current.scoreId
+        : null;
+      const scoreId = cloudScoreIdForSave({
+        asCopy,
+        activeScoreId: activeCloudScoreId,
+        pendingScoreId,
+        createScoreId: () => createCloudScoreId(authUser.uid)
+      });
+      pendingCloudSave.current = { scoreId, asCopy };
+      writeCloudSaveBinding(window.localStorage, { uid: authUser.uid, projectId: localProjectId, scoreId });
+      const result = await saveCloudScoreReliably({
+        online: navigator.onLine !== false,
+        save: () => saveCloudScore(authUser.uid, draft, scoreId),
+        refresh: () => refreshCloudScores(authUser.uid)
+      });
+      setActiveCloudScoreId(result.scoreId);
+      pendingCloudSave.current = null;
+      setCloudNotice(asCopy ? "새 악보로 저장됐어요 ✓" : "현재 악보가 저장됐어요 ✓");
       setShareStatus(asCopy ? "현재 악보를 새 클라우드 악보로 저장했어요." : "내 악보함에 저장했어요.");
+      if (result.refreshFailed) {
+        setCloudError("저장은 완료됐지만 목록을 새로 불러오지 못했어요. 창을 닫았다 다시 열어 주세요.");
+      }
     } catch (error) {
       console.error(error);
-      setCloudError("클라우드 저장에 실패했어요. 잠시 뒤 다시 시도해 주세요.");
+      setCloudNotice("");
+      setCloudError(cloudSaveErrorMessage(error, locallySaved));
     } finally {
+      cloudSaveInFlight.current = false;
       setCloudBusy(false);
     }
   }
 
   function handleCloudLoad(score: CloudScore) {
-    if (completedCount > 0 && !window.confirm(`지금 만든 곡 대신 '${score.title}' 악보를 열까요? 현재 곡은 로컬에 자동 저장되어 있어요.`)) return;
-    applyProjectDraft(score.draft);
+    if (completedCount > 0 && !window.confirm(`지금 만든 곡 대신 '${score.title}' 악보를 열까요? 현재 곡은 이 컴퓨터에 자동 저장되어 있어요.`)) return;
+    const loadedProjectId = score.draft.projectId ?? createLocalProjectId();
+    applyProjectDraft({ ...score.draft, projectId: loadedProjectId });
+    if (authUser) writeCloudSaveBinding(window.localStorage, {
+      uid: authUser.uid, projectId: loadedProjectId, scoreId: score.id
+    });
+    pendingCloudSave.current = null;
     setActiveCloudScoreId(score.id);
     setAccountLibraryOpen(false);
     setShareStatus("내 악보함에서 작품을 불러왔어요.");
@@ -1692,6 +1722,8 @@ export default function App() {
       song.draft.bpm ?? 96, song.draft.showArrangement ? {
         styleId: findAccompanimentStyle(song.draft.accompanimentStyleId ?? "arpeggio").id,
         instrumentIds: uniqueAccompanimentInstrumentIds(song.draft.accompanimentInstrumentIds ?? ["piano"]),
+        beatPattern: normalizeBeatPattern(song.draft.beatPattern ?? [], song.draft.meter),
+        beatVolume: normalizeBeatVolume(song.draft.beatVolume),
         meter: song.draft.meter
       } : undefined);
     return duration !== null;
@@ -1699,10 +1731,11 @@ export default function App() {
 
   function openPublishedProjectCopy(song: PublishedSong) {
     if (song.access !== "project") return;
-    if (completedCount > 0 && !window.confirm(`지금 만든 곡 대신 '${song.title}' 프로젝트의 사본을 열까요? 현재 곡은 로컬에 자동 저장되어 있어요.`)) return;
+    if (completedCount > 0 && !window.confirm(`지금 만든 곡 대신 '${song.title}' 프로젝트의 사본을 열까요? 현재 곡은 이 컴퓨터에 자동 저장되어 있어요.`)) return;
     const copyTitle = `${song.title.trim().slice(0, 56) || "제목 없는 노래"} 사본`;
     const copy: SavedDraft = {
       ...JSON.parse(JSON.stringify(song.draft)) as SavedDraft,
+      projectId: createLocalProjectId(),
       updatedAt: Date.now(),
       sourceHash: "",
       title: copyTitle,
@@ -1710,6 +1743,7 @@ export default function App() {
       originalCreator: song.draft.originalCreator || song.draft.creator || song.creator
     };
     applyProjectDraft(copy);
+    clearCloudSaveBinding(window.localStorage);
     setActiveCloudScoreId(null);
     setCommunityAlbumOpen(false);
     setShowOpening(false);
@@ -1724,7 +1758,10 @@ export default function App() {
     try {
       const { deleteCloudScore } = await import("./firebase/scores");
       await deleteCloudScore(authUser.uid, score.id);
-      if (activeCloudScoreId === score.id) setActiveCloudScoreId(null);
+      if (activeCloudScoreId === score.id) {
+        setActiveCloudScoreId(null);
+        clearCloudSaveBinding(window.localStorage);
+      }
       await refreshCloudScores(authUser.uid);
     } catch (error) {
       console.error(error);
@@ -1735,31 +1772,10 @@ export default function App() {
   }
 
   function startNewProject() {
-    if (completedCount > 0 && !window.confirm("새 곡을 시작할까요? 지금 만든 곡은 작품 파일로 저장한 뒤 다시 불러올 수 있어요.")) return;
-    window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+    if (completedCount > 0 && !window.confirm("새 곡을 시작할까요? 지금 만든 곡은 자동 저장되어 있어요.")) return;
+    discardAutosavedDraft();
+    clearCloudSaveBinding(window.localStorage);
     window.location.assign(`${window.location.pathname}?start=new`);
-  }
-
-  async function loadProjectFile(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-    if (file.size > 1_500_000) {
-      setShareStatus("작품 파일이 너무 커요. 1.5MB 이하의 작품 파일을 골라 주세요.");
-      return;
-    }
-    try {
-      const parsed: unknown = JSON.parse(await file.text());
-      if (!isSavedDraft(parsed)) throw new Error("invalid-project");
-      if (completedCount > 0 && !window.confirm("지금 만든 곡 대신 불러온 작품을 열까요? 현재 곡은 자동 저장되어 있어요.")) return;
-      const project = parsed;
-      applyProjectDraft(project);
-      setActiveCloudScoreId(null);
-      setShareStatus("작품 파일을 불러왔어요. 이어서 고쳐 보세요!");
-    } catch (error) {
-      console.error(error);
-      setShareStatus("마음멜로디 작품 파일인지 확인해 주세요.");
-    }
   }
 
   function safeSongFileName(extension: string): string {
@@ -1805,11 +1821,7 @@ export default function App() {
       measureIndex: index
     }] : []);
     try {
-      const result = await recordKaraokeComposition(playable, selectedInstrumentId, bpm, {
-        styleId: accompanimentStyleId,
-        instrumentIds: accompanimentInstrumentIds,
-        meter
-      }, {
+      const result = await recordKaraokeComposition(playable, selectedInstrumentId, bpm, accompanimentOptions, {
         guideMelodyMode: guideMode,
         recordingMode: captureMode,
         onStatus: setRecordingStatus,
@@ -1884,11 +1896,7 @@ export default function App() {
       measureIndex: index
     }] : []);
     try {
-      const duration = await practiceKaraokeComposition(playable, selectedInstrumentId, bpm, {
-        styleId: accompanimentStyleId,
-        instrumentIds: accompanimentInstrumentIds,
-        meter
-      }, {
+      const duration = await practiceKaraokeComposition(playable, selectedInstrumentId, bpm, accompanimentOptions, {
         onStatus: setRecordingStatus,
         onPhase: setKaraokePhase,
         onCount: setKaraokeCount,
@@ -1985,10 +1993,10 @@ export default function App() {
     return karaokeMode === "practice" ? "연습 준비" : "녹음 준비";
   }
 
+  if (qrPlaybackMode) return <QrSongPlayback composition={incomingShare} songId={qrSongId} />;
+
   return (
     <div className="app-shell">
-      <input ref={projectFileInput} className="project-file-input" type="file"
-        accept="text/plain,.txt,application/json,.json" onChange={(event) => void loadProjectFile(event)} />
       {showOpening && (
         <section className="opening-screen" aria-label="마음멜로디 시작 화면">
           <picture className="opening-visual" aria-hidden="true">
@@ -2004,7 +2012,8 @@ export default function App() {
             <p><strong>네 마음속 장면이 노래가 되는 곳</strong><br />친구들과 함께 첫 멜로디를 만들어 봐요.</p>
             <div className="opening-actions">
               <button type="button" className="opening-start action-button" onClick={() => {
-                window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+                discardAutosavedDraft();
+                clearCloudSaveBinding(window.localStorage);
                 window.location.assign(`${window.location.pathname}?start=new`);
               }}>
                 <WandSparkles size={20} /> 시작하기 <ArrowRight size={18} />
@@ -2033,10 +2042,6 @@ export default function App() {
               <button type="button" role="menuitem" onClick={startNewProject}><WandSparkles size={16} /> 새로 시작하기</button>
               <button type="button" role="menuitem" onClick={() => {
                 setShowAppMenu(false);
-                projectFileInput.current?.click();
-              }}><FileUp size={16} /> 악보 불러오기</button>
-              <button type="button" role="menuitem" onClick={() => {
-                setShowAppMenu(false);
                 setCommunityAlbumOpen(true);
               }}><Library size={16} /> 모두의 앨범</button>
             </div>}
@@ -2049,7 +2054,11 @@ export default function App() {
         <div className="topbar-actions">
           <div className="save-button" role="status" aria-live="polite" data-testid="save-status">{saveStatus}</div>
           <button type="button" className={authUser ? "account-trigger signed-in" : "account-trigger"}
-            data-testid="account-library-button" onClick={() => setAccountLibraryOpen(true)}>
+            data-testid="account-library-button" onClick={() => {
+              setCloudNotice("");
+              setCloudError("");
+              setAccountLibraryOpen(true);
+            }}>
             {authUser?.photoURL
               ? <img src={authUser.photoURL} alt="" referrerPolicy="no-referrer" />
               : <UserRound size={18} aria-hidden="true" />}
@@ -2060,7 +2069,7 @@ export default function App() {
 
       {accountLibraryOpen && !mobileRecordMode && (
         <AccountLibrary configured={firebaseConfigured} user={authUser} authReady={authReady}
-          scores={cloudScores} loading={cloudLoading} busy={cloudBusy} error={cloudError}
+          scores={cloudScores} loading={cloudLoading} busy={cloudBusy} error={cloudError} notice={cloudNotice}
           currentScoreId={activeCloudScoreId} onClose={() => setAccountLibraryOpen(false)}
           onGoogleSignIn={() => void handleGoogleSignIn()} onEmailAuth={handleEmailAuth}
           onPasswordReset={handlePasswordReset} onClearError={() => setCloudError("")}
@@ -2074,7 +2083,7 @@ export default function App() {
         <CommunityAlbum configured={firebaseConfigured} user={authUser}
           onClose={() => setCommunityAlbumOpen(false)}
           onRequestLogin={() => { setCommunityAlbumOpen(false); setAccountLibraryOpen(true); }}
-          onPlay={playPublishedSong} onOpenProject={openPublishedProjectCopy} />
+          onPlay={playPublishedSong} onStop={stopPlayback} onOpenProject={openPublishedProjectCopy} />
       )}
 
       {publishingScore && authUser && !mobileRecordMode && (
@@ -2212,7 +2221,7 @@ export default function App() {
                           tabIndex={-1} data-karaoke-section="song" data-karaoke-measure-index={measureIndex}>
                           <span>{measureIndex + 1}마디</span>
                           <em>{measure.chords.join(" · ")}</em>
-                          <ScoreMeasure notes={measure.notes ?? []} meter={meter} compact systemMeasure
+                           <ScoreMeasure notes={measure.notes ?? []} meter={meter} keyFifths={measure.keyFifths} compact systemMeasure
                             showSignature={columnIndex === 0}
                             onNoteLayout={(positions) => updateKaraokeLyricNotePositions(measureIndex, positions)}
                             playingNoteId={reviewPlaybackNoteId ?? (active ? karaokeHighlight.noteId : null)}
@@ -2329,6 +2338,12 @@ export default function App() {
           }} />
       )}
 
+      {scoreExportDialogOpen && (
+        <ScoreExportDialog onCancel={() => setScoreExportDialogOpen(false)} onSelect={(includeAccompaniment) => {
+          setScoreExportDialogOpen(false); void exportPdf(includeAccompaniment);
+        }} />
+      )}
+
       {soundEffectDialogOpen && activeMeasure.notes && (
         <MeasureSoundEffectDialog measureIndex={activeIndex} notes={activeMeasure.notes} meter={meter}
           capacity={capacity} events={activeMeasure.effects} playing={playingMeasure}
@@ -2403,7 +2418,8 @@ export default function App() {
         <HarmonyPresetChooser preset={selectedPreset} meter={meter}
           bpm={bpm} accompanimentStyleId={accompanimentStyleId}
           disabled={isAnyPlaying} playing={presetPreviewing}
-          onPlayingChange={setPresetPreviewing} onSelect={choosePreset} />
+          onPlayingChange={setPresetPreviewing} onSelect={choosePreset}
+          baseDraft={currentProjectDraft()} onImportScore={applyProjectDraft} />
 
         <section className="meter-chooser meter-with-guide" aria-labelledby="meter-heading">
           <div className="compact-heading">
@@ -2432,14 +2448,14 @@ export default function App() {
         <section className="length-chooser" aria-labelledby="length-heading">
           <div className="compact-heading">
             <span className="number-badge">4</span>
-            <div><h2 id="length-heading">노래 길이를 골라요</h2><p>처음에는 8마디, 긴 이야기는 12·16마디가 좋아요.</p></div>
+            <div><h2 id="length-heading">노래 길이를 골라요</h2><p>8마디부터 32마디까지, 4마디씩 늘려 고를 수 있어요.</p></div>
           </div>
           <div className="length-options">
-            {([8, 12, 16] as const).map((length) => (
+            {([8, 12, 16, 20, 24, 28, 32] as const).map((length) => (
               <button key={length} type="button" data-testid={`length-${length}`}
                 className={songLength === length ? "length-option active" : "length-option"}
                 aria-pressed={songLength === length} onClick={() => chooseLength(length)}>
-                <strong>{length}마디</strong><span>{length / 4}개의 이야기 묶음</span>
+                <strong>{length}마디</strong>
               </button>
             ))}
           </div>
@@ -2504,7 +2520,7 @@ export default function App() {
                       <span className="measure-story-label">{storyInfo[measure.story].icon} {measure.storyHint}</span>
                     </span>
                   </span>
-                  <ScoreMeasure notes={measure.notes ?? []} meter={meter} compact wide
+                  <ScoreMeasure notes={measure.notes ?? []} meter={meter} keyFifths={measure.keyFifths} compact wide
                     playingNoteId={playingMeasureIndex === index ? playingNoteId : null}
                     showSignature={index % 4 === 0} systemMeasure
                     onNoteLayout={(positions) => updateTimelineLyricNotePositions(index, positions)} />
@@ -2548,9 +2564,9 @@ export default function App() {
                 onClick={() => void playActiveMeasure()}>
                 <PlayIcon playing={playingMeasure} /> 이 마디 듣기
               </button>
-              <div className="history-actions" aria-label="작곡 되돌리기">
-                <button type="button" disabled={undoStack.length === 0} onClick={undoCompositionChange}><Undo2 size={16} /> 되돌리기</button>
-                <button type="button" disabled={redoStack.length === 0} onClick={redoCompositionChange}><Redo2 size={16} /> 다시 하기</button>
+              <div className="history-actions" aria-label="편집 되돌리기">
+                <button type="button" disabled={!canUndo} onClick={undoProjectChange} aria-keyshortcuts="Control+Z Meta+Z" title="되돌리기 (Ctrl+Z)"><Undo2 size={16} /> 되돌리기</button>
+                <button type="button" disabled={!canRedo} onClick={redoProjectChange} aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z Control+Y" title="다시 하기 (Ctrl+Shift+Z)"><Redo2 size={16} /> 다시 하기</button>
               </div>
             </div>
           </div>
@@ -2558,7 +2574,7 @@ export default function App() {
           <div className={activeMeasure.notes ? "editor-card" : "editor-card empty-editor"}>
             {activeMeasure.notes ? (
               <>
-                <ScoreMeasure notes={activeNotes} meter={meter}
+                <ScoreMeasure notes={activeNotes} meter={meter} keyFifths={activeMeasure.keyFifths}
                   playingNoteId={playingMeasure || playingMeasureIndex === activeIndex ? playingNoteId : null}
                   selectedNoteId={selectedNoteId} selectedNoteIds={selectedNoteIds}
                   onSelectNote={selectNote} onMoveNote={moveNotePitch} onMovePosition={moveNotePosition}
@@ -2592,7 +2608,7 @@ export default function App() {
                   </strong>}
                 </div>
                 <div className="note-tools" onMouseDown={keepEditorFocus} onClickCapture={preserveViewportAfterButtonClick}>
-                  <div><span>고른 음표</span><strong>{selectedNoteIds.length > 1 ? `${selectedNoteIds.length}개 선택` : selectedNote ? pitchName(selectedNote.pitch) : "음표를 골라 주세요"}</strong></div>
+                  <div><span>고른 음표</span><strong>{selectedNoteIds.length > 1 ? `${selectedNoteIds.length}개 선택` : selectedNote ? pitchName(selectedNote.pitch, selectedNote.accidental) : "음표를 골라 주세요"}</strong></div>
                   <button type="button" onClick={() => changePitch(1)}
                     disabled={selectedNoteIds.length === 0 || selectedNotes.every((note) => note.pitch === null)}>↑<span>높게</span></button>
                   <button type="button" onClick={() => changePitch(-1)}
@@ -2846,27 +2862,6 @@ export default function App() {
                           onClick={() => setShowAllAccompanimentModes((current) => !current)}>
                           {showAllAccompanimentModes ? "자주 쓰는 6가지만 보기" : "다른 느낌 4개 더 보기"}
                         </button>
-                        <div className="easy-accompaniment-result">
-                          <div>
-                            <strong>{activeAccompanimentMode
-                              ? `${activeAccompanimentMode.icon} ${activeAccompanimentMode.name} 반주가 준비됐어요`
-                              : "카드를 눌러 반주를 골라 보세요"}</strong>
-                            <span>{activeAccompanimentMode?.description ?? "어려운 설정은 하지 않아도 괜찮아요."}</span>
-                          </div>
-                          <div className="easy-accompaniment-instruments" aria-label="함께 연주하는 악기">
-                            {accompanimentInstrumentIds.map((instrumentId) => {
-                              const instrument = findInstrument(instrumentId);
-                              return <span key={`easy-${instrument.id}`}>{instrument.icon} {instrument.name}</span>;
-                            })}
-                          </div>
-                          <button type="button" className="easy-accompaniment-listen" data-testid="listen-selected-accompaniment"
-                            disabled={playingId !== null || playingMeasure}
-                            onClick={() => toggleWholeSong(0)}>
-                            <PlayIcon playing={songPlaybackState === "playing"} />
-                            {songPlaybackState === "playing" ? "잠깐 멈추기"
-                              : songPlaybackState === "paused" ? "계속 들어보기" : "지금 들어보기"}
-                          </button>
-                        </div>
                       </>
                     ) : (
                       <>
@@ -2891,6 +2886,32 @@ export default function App() {
                 <img className="workspace-guide accompaniment-guide-recorder"
                   src="/illustrations/character-music-tip-recorder-boy-v1.webp"
                   alt="" aria-hidden="true" draggable="false" />
+                {accompanimentStyleView === "mode" && <div className="easy-accompaniment-result">
+                  <div>
+                    <strong>{activeAccompanimentMode
+                      ? `${activeAccompanimentMode.icon} ${activeAccompanimentMode.name} 반주가 준비됐어요`
+                      : "카드를 눌러 반주를 골라 보세요"}</strong>
+                    <span>{activeAccompanimentMode?.description ?? "어려운 설정은 하지 않아도 괜찮아요."}</span>
+                  </div>
+                  <div className="easy-accompaniment-instruments" aria-label="함께 연주하는 악기">
+                    {accompanimentInstrumentIds.map((instrumentId) => {
+                      const instrument = findInstrument(instrumentId);
+                      return <span key={`easy-${instrument.id}`}>{instrument.icon} {instrument.name}</span>;
+                    })}
+                  </div>
+                  <div className="easy-accompaniment-actions">
+                    <button type="button" className="easy-accompaniment-listen" data-testid="listen-selected-accompaniment"
+                      disabled={playingId !== null || playingMeasure} onClick={() => toggleWholeSong(0)}>
+                      <PlayIcon playing={songPlaybackState === "playing"} />
+                      {songPlaybackState === "playing" ? "잠깐 멈추기"
+                        : songPlaybackState === "paused" ? "계속 들어보기" : "지금 들어보기"}
+                    </button>
+                    {playingSong && <button type="button" className="song-stop easy-accompaniment-stop"
+                      data-testid="stop-selected-accompaniment" onClick={() => void stopWholeSong()}>
+                      <Square size={13} fill="currentColor" aria-hidden="true" /> 중지하기
+                    </button>}
+                  </div>
+                </div>}
               </div>
 
               {accompanimentStyleView === "playing" && (<>
@@ -2949,6 +2970,11 @@ export default function App() {
               {accompanimentInstrumentIds.length === 0 &&
                 <p className="accompaniment-warning">반주 악기를 하나 이상 골라 주세요. 지금은 가락만 연주돼요.</p>}
               </>)}
+
+              <BeatInstrumentChooser events={beatPattern}
+                meter={meter} bpm={bpm} volume={beatVolume} disabled={isAnyPlaying} playing={beatPreviewing}
+                onChange={setBeatPattern} onVolumeChange={setBeatVolume}
+                onPlayingChange={setBeatPreviewing} />
             </section>
 
             <div className="lyrics-heading">
@@ -2959,7 +2985,7 @@ export default function App() {
               {measures.map((measure, index) => (
                 <div key={index} className={lyrics[index].trim() ? "lyric-card filled" : "lyric-card"}>
                   <span>{index + 1}마디</span>
-                  <ScoreMeasure notes={measure.notes ?? []} meter={meter} compact
+                  <ScoreMeasure notes={measure.notes ?? []} meter={meter} keyFifths={measure.keyFifths} compact
                     onNoteLayout={(positions) => updateLyricNotePositions(index, positions)} />
                   <NoteLyrics notes={measure.notes ?? []} meter={meter} measureIndex={index} compact
                     notePositions={lyricNotePositions[index]}
@@ -2998,21 +3024,9 @@ export default function App() {
                 <small>{songDescription.length}/600</small>
               </label>
               <div className="publish-actions">
-                <button type="button" className="project-save-button action-button" data-testid="save-project-file"
-                  onClick={saveProjectFile}>
-                  <FileDown size={18} /> 작품 파일 저장
-                </button>
-                <button type="button" className="project-load-button action-button" data-testid="load-project-file"
-                  onClick={() => projectFileInput.current?.click()}>
-                  <FileUp size={18} /> 작품 파일 불러오기
-                </button>
                 <button type="button" className="pdf-button action-button" data-testid="export-pdf"
-                  disabled={exportingPdf} onClick={() => void exportPdf(false)}>
+                  disabled={exportingPdf} onClick={() => setScoreExportDialogOpen(true)}>
                   <FileDown size={18} /> {exportingPdf ? "악보 만드는 중..." : "악보 저장"}
-                </button>
-                <button type="button" className="pdf-button action-button" data-testid="export-pdf-with-accompaniment"
-                  disabled={exportingPdf} onClick={() => void exportPdf(true)}>
-                  <FileMusic size={18} /> {exportingPdf ? "악보 만드는 중..." : "악보 저장(반주 포함)"}
                 </button>
                 <button type="button" className="backing-mp3-button action-button" data-testid="export-backing-mp3"
                   disabled={exportingBacking || !allValid} onClick={() => void exportBackingMp3()}>
@@ -3079,7 +3093,8 @@ export default function App() {
             {allValid && printableMeasures.length === songLength && (
               <PdfScoreSheet title={songTitle} description={songDescription} creator={creatorName} originalCreator={originalCreator}
                 meter={meter}
-                measures={printableMeasures} includeAccompaniment={pdfIncludeAccompaniment} />
+                measures={printableMeasures} includeAccompaniment={pdfIncludeAccompaniment}
+                playbackUrl={pdfPlaybackUrl} />
             )}
           </section>
         )}

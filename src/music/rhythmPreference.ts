@@ -11,7 +11,7 @@ export const RHYTHM_PREFERENCE_LABELS: Readonly<Record<RhythmPreferenceId, strin
 };
 
 const SHORT_STYLES: readonly AccompanimentStyleId[] = [
-  "arpeggio", "riff", "bossa", "shuffle", "kpop", "children_song", "animation_ost", "musical"
+  "arpeggio", "riff", "bossa", "shuffle", "kpop", "anime_rock", "children_song", "animation_ost", "musical"
 ];
 const MEDIUM_STYLES: readonly AccompanimentStyleId[] = ["strum", "folk", "comping"];
 

@@ -127,8 +127,9 @@ afterEach(() => {
 describe("모두의 앨범", () => {
   it("앨범 폴더를 열고 공개 범위에 맞는 음악 버튼을 보여준다", async () => {
     const onPlay = vi.fn().mockResolvedValue(true);
+    const onStop = vi.fn().mockResolvedValue(undefined);
     mount(<CommunityAlbum configured user={user} onClose={() => undefined} onRequestLogin={() => undefined}
-      onPlay={onPlay} onOpenProject={() => undefined} />);
+      onPlay={onPlay} onStop={onStop} onOpenProject={() => undefined} />);
     await flush();
 
     await act(async () => buttonContaining(album.name)?.click());
@@ -140,12 +141,17 @@ describe("모두의 앨범", () => {
     expect(buttonNamed("프로젝트 보기")?.disabled).toBe(true);
     await act(async () => buttonNamed("재생하기")?.click());
     expect(onPlay).toHaveBeenCalledWith(song);
+    expect(container?.querySelector(`[aria-label="${song.title} 가사와 재생"]`)).not.toBeNull();
+
+    await act(async () => container?.querySelector<HTMLButtonElement>('[aria-label="재생 가사 창 닫기"]')?.click());
+    expect(onStop).toHaveBeenCalledOnce();
+    expect(container?.querySelector(`[aria-label="${song.title} 가사와 재생"]`)).toBeNull();
   });
 
   it("앨범 만들기 창에서 입력한 이름으로 앨범을 생성한다", async () => {
     firebaseMocks.listCommunityAlbums.mockResolvedValue([]);
     mount(<CommunityAlbum configured user={user} onClose={() => undefined} onRequestLogin={() => undefined}
-      onPlay={vi.fn().mockResolvedValue(true)} onOpenProject={() => undefined} />);
+      onPlay={vi.fn().mockResolvedValue(true)} onStop={vi.fn()} onOpenProject={() => undefined} />);
     await flush();
 
     await act(async () => buttonNamed("앨범 만들기")?.click());
@@ -165,7 +171,7 @@ describe("모두의 앨범", () => {
   it("앨범 소유자가 앨범과 내부 음악을 삭제할 수 있다", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
     mount(<CommunityAlbum configured user={user} onClose={() => undefined} onRequestLogin={() => undefined}
-      onPlay={vi.fn().mockResolvedValue(true)} onOpenProject={() => undefined} />);
+      onPlay={vi.fn().mockResolvedValue(true)} onStop={vi.fn()} onOpenProject={() => undefined} />);
     await flush();
 
     const deleteButton = container?.querySelector<HTMLButtonElement>(`[aria-label="${album.name} 앨범 삭제"]`);
@@ -179,7 +185,7 @@ describe("모두의 앨범", () => {
   it("관리자 계정에도 다른 사용자의 앨범 삭제 버튼을 보여준다", async () => {
     const admin = { uid: "admin-1", email: "inkun00@hanmail.net", displayName: "관리자" } as User;
     mount(<CommunityAlbum configured user={admin} onClose={() => undefined} onRequestLogin={() => undefined}
-      onPlay={vi.fn().mockResolvedValue(true)} onOpenProject={() => undefined} />);
+      onPlay={vi.fn().mockResolvedValue(true)} onStop={vi.fn()} onOpenProject={() => undefined} />);
     await flush();
 
     expect(container?.querySelector(`[aria-label="${album.name} 앨범 삭제"]`)).not.toBeNull();

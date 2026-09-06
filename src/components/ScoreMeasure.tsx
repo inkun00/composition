@@ -5,6 +5,7 @@ import { toNumber } from "../music/rational";
 import { scoreLayout } from "../music/scoreLayout";
 import { loadVexFlow } from "../music/vexflow";
 import type { NoteEvent } from "../music/types";
+import { displayedAccidentalSymbol, keySignatureName, midiToVexKey, staffDegreeForPitch } from "../music/accidental";
 
 type ScoreMeasureProps = {
   notes: readonly NoteEvent[];
@@ -21,6 +22,7 @@ type ScoreMeasureProps = {
   plain?: boolean;
   meter?: Meter;
   showSignature?: boolean;
+  keyFifths?: number;
   systemMeasure?: boolean;
   expandedStaff?: boolean;
   renderBackend?: "svg" | "canvas";
@@ -29,11 +31,6 @@ type ScoreMeasureProps = {
 };
 
 const trebleMiddleLineMidi = 71;
-
-function midiToVexKey(pitch: number): string {
-  const names = ["c", "c#", "d", "d#", "e", "f", "f#", "g", "g#", "a", "a#", "b"];
-  return `${names[((pitch % 12) + 12) % 12]}/${Math.floor(pitch / 12) - 1}`;
-}
 
 function vexDuration(duration: number, dotted?: boolean): string {
   const undotted = dotted ? duration / 1.5 : duration;
@@ -48,11 +45,9 @@ function noteY(pitch: number): number {
   return 42 - (pitch - 60) * 3;
 }
 
-function expandedStaffNoteY(pitch: number): number {
+function expandedStaffNoteY(pitch: number, accidental?: NoteEvent["accidental"]): number {
   // A sharp or flat sits on the same staff position as its natural letter.
-  const degreeByPitchClass = [0, 0, 1, 1, 2, 3, 3, 4, 4, 5, 5, 6];
-  const octave = Math.floor(pitch / 12) - 1;
-  const staffStep = octave * 7 + degreeByPitchClass[((pitch % 12) + 12) % 12];
+  const staffStep = staffDegreeForPitch(pitch, accidental);
   const e4Step = 4 * 7 + 2;
   // E4 is the bottom line (y 84); one staff step is half a line gap.
   return Math.max(10, Math.min(138, 84 - (staffStep - e4Step) * 9));
@@ -110,6 +105,7 @@ export default function ScoreMeasure({
   plain = false,
   meter = { beats: 4, beatUnit: 4 },
   showSignature = true,
+  keyFifths = 0,
   systemMeasure = false,
   expandedStaff = false,
   renderBackend = "svg",
@@ -137,13 +133,14 @@ export default function ScoreMeasure({
     wide,
     showSignature
   });
+  const signatureNoteStartX = noteStartX + (showSignature ? Math.abs(keyFifths) * 7 : 0);
   // 4마디 전체 악보는 칸의 크기를 바꾸지 않고 표기만 두 배 크게 보여 준다.
   // 후보 카드와 PDF용 작은 악보는 기존 비율을 유지한다.
   const notationScale = compact && wide ? 2 : 1;
   const capacity = toNumber(measureCapacity(meter));
   const drawnNotes = positioned.map((note) => {
     const vexPosition = useVexLayer ? vexPositions[note.id] : undefined;
-    const logicalX = noteStartX + (note.onset / capacity) * (width - noteStartX - 8) + 10;
+    const logicalX = signatureNoteStartX + (note.onset / capacity) * (width - signatureNoteStartX - 8) + 10;
     return ({
     ...note,
     x: vexPosition?.x ?? logicalX,
@@ -151,7 +148,7 @@ export default function ScoreMeasure({
     durationValue: toNumber(note.duration),
       y: vexPosition?.y ?? (note.pitch === null
       ? note.restY ?? (expandedStaff ? 48 : defaultRestY(toNumber(note.duration)))
-      : expandedStaff ? expandedStaffNoteY(note.pitch) : noteY(note.pitch))
+      : expandedStaff ? expandedStaffNoteY(note.pitch, note.accidental) : noteY(note.pitch))
     });
   });
   const beamUnit = meter.beatUnit === 8 ? 1.5 : 1;
@@ -232,7 +229,9 @@ export default function ScoreMeasure({
     note.beamGroup ?? "",
     note.beamBreak ? "b" : "",
     note.linkToNext ? "l" : "",
-    note.restY ?? ""
+    note.restY ?? "",
+    note.accidental ?? "",
+    keyFifths
   ].join(":")).join("|");
 
   useEffect(() => {
@@ -248,7 +247,7 @@ export default function ScoreMeasure({
       setVexPositions({});
       return;
     }
-    void loadVexFlow().then(({ BarlineType, Beam, Dot, Formatter, Renderer, Stave, StaveNote, Stem, Voice }) => {
+    void loadVexFlow().then(({ Accidental, BarlineType, Beam, Dot, Formatter, Renderer, Stave, StaveNote, Stem, Voice }) => {
       if (cancelled || !vexHost.current) return;
       host.innerHTML = "";
       const renderTarget = renderBackend === "canvas" ? document.createElement("canvas") : host;
@@ -279,11 +278,13 @@ export default function ScoreMeasure({
       });
       if (showSignature) {
         stave.addClef("treble");
+        const signatureName = keySignatureName(keyFifths);
+        if (signatureName && keyFifths !== 0) stave.addKeySignature(signatureName);
         stave.addTimeSignature(`${meter.beats}/${meter.beatUnit}`);
       }
       stave.setEndBarType(endBarline === "final" ? BarlineType.END : BarlineType.SINGLE);
       stave.setStyle({ strokeStyle: "#9caab4", fillStyle: "#243647" });
-      stave.setNoteStartX(showSignature ? noteStartX / notationScale : staveX + 28 / notationScale);
+      stave.setNoteStartX(showSignature ? signatureNoteStartX / notationScale : staveX + 28 / notationScale);
       stave.setContext(context).draw();
 
       if (drawnNotes.length === 0) {
@@ -309,10 +310,12 @@ export default function ScoreMeasure({
           : stemDirectionById.get(note.id) ?? (note.pitch < trebleMiddleLineMidi ? Stem.UP : Stem.DOWN);
         const staveNote = new StaveNote({
           clef: "treble",
-          keys: [note.pitch === null ? "b/4" : midiToVexKey(note.pitch)],
+          keys: [note.pitch === null ? "b/4" : midiToVexKey(note.pitch, note.accidental)],
           duration,
           ...stemDirection === undefined ? {} : { stemDirection }
         });
+        const symbol = note.pitch === null ? "" : displayedAccidentalSymbol(note.pitch, note.accidental, keyFifths);
+        if (symbol) staveNote.addModifier(new Accidental(symbol === "♭" ? "b" : symbol === "♮" ? "n" : "#"));
         if (note.dotted || note.durationValue === 1.5 || note.durationValue === 3 || note.durationValue === 0.75) {
           Dot.buildAndAttach([staveNote], { all: true });
         }
@@ -324,7 +327,7 @@ export default function ScoreMeasure({
 
       const voice = new Voice({ numBeats: meter.beats, beatValue: meter.beatUnit }).setMode(Voice.Mode.SOFT);
       voice.addTickables(vexNotes);
-      const naturalFormatWidth = Math.max(120, width - (compact ? 8 : 12) - noteStartX - (compact ? 34 : 44));
+      const naturalFormatWidth = Math.max(120, width - (compact ? 8 : 12) - signatureNoteStartX - (compact ? 34 : 44));
       // 사용 가능한 마디 폭 전체에 음표 수와 길이에 맞춰 배분한다.
       // Formatter가 짧은 음표가 많은 마디와 긴 음표가 많은 마디의 간격을 각각 조절한다.
       const formatWidth = Math.max(64 / notationScale, naturalFormatWidth / notationScale);
@@ -407,7 +410,7 @@ export default function ScoreMeasure({
       cancelled = true;
       if (layoutFrame !== null) window.cancelAnimationFrame(layoutFrame);
     };
-  }, [connectedSystem, endBarline, meter.beatUnit, meter.beats, notationScale, noteStartX, renderBackend, reviewIssueNoteIds, scoreHeight, showSignature, systemMeasure, useVexLayer, vexRenderKey, width]);
+  }, [connectedSystem, endBarline, keyFifths, meter.beatUnit, meter.beats, notationScale, renderBackend, reviewIssueNoteIds, scoreHeight, showSignature, signatureNoteStartX, systemMeasure, useVexLayer, vexRenderKey, width]);
 
   useEffect(() => {
     const host = vexHost.current;
@@ -561,12 +564,14 @@ export default function ScoreMeasure({
             role={onSelectNote ? "button" : undefined}
             tabIndex={onSelectNote ? 0 : undefined} onKeyDown={handleNoteKeyDown}
             aria-label={onSelectNote
-              ? `${noteIndex + 1}번째 ${pitchName(note.pitch)} 음표 선택`
-              : `${noteIndex + 1}번째 ${pitchName(note.pitch)} 음표`}>
+              ? `${noteIndex + 1}번째 ${pitchName(note.pitch, note.accidental)} 음표 선택`
+              : `${noteIndex + 1}번째 ${pitchName(note.pitch, note.accidental)} 음표`}>
             <rect x={displayX - 12} y={y - 23} width="28" height="48" rx="9"
               className={selected ? "note-hit selected" : "note-hit"} />
             {!useVexLayer && <ellipse cx={displayX} cy={y} rx="7" ry="5" className={isHalf ? "note-head hollow" : "note-head"}
               transform={`rotate(-14 ${displayX} ${y})`} />}
+            {!useVexLayer && displayedAccidentalSymbol(note.pitch, note.accidental, keyFifths) && <text x={displayX - 16} y={y + 5}
+              fill="#263b4d" fontSize="17" fontWeight="700">{displayedAccidentalSymbol(note.pitch, note.accidental, keyFifths)}</text>}
             {!useVexLayer && duration < 4 && <line x1={stemX} x2={stemX} y1={y}
               y2={stemEndY} className="stem" />}
             {!useVexLayer && (note.dotted || duration === 1.5 || duration === 3) &&

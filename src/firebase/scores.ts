@@ -17,7 +17,7 @@ export type CloudScore = Readonly<{
   id: string;
   title: string;
   creator: string;
-  songLength: 8 | 12 | 16;
+  songLength: 8 | 12 | 16 | 20 | 24 | 28 | 32;
   updatedAt: number;
   draft: SavedDraft;
 }>;
@@ -69,6 +69,10 @@ export async function saveCloudScore(uid: string, draft: SavedDraft, scoreId?: s
     draft: savedDraft
   }, { merge: true });
   return scoreRef.id;
+}
+
+export function createCloudScoreId(uid: string): string {
+  return doc(collection(requireFirestore(), "users", uid, "scores")).id;
 }
 
 export async function deleteCloudScore(uid: string, scoreId: string): Promise<void> {

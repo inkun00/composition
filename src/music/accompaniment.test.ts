@@ -7,11 +7,11 @@ describe("자동 반주", () => {
     expect(MAX_ACCOMPANIMENT_INSTRUMENTS).toBe(4);
   });
 
-  it("장르 다섯 가지와 연주 방식 일곱 가지를 제공한다", () => {
-    expect(ACCOMPANIMENT_STYLES).toHaveLength(12);
-    expect(ACCOMPANIMENT_GENRE_STYLES).toHaveLength(5);
+  it("장르 여섯 가지와 연주 방식 일곱 가지를 제공한다", () => {
+    expect(ACCOMPANIMENT_STYLES).toHaveLength(13);
+    expect(ACCOMPANIMENT_GENRE_STYLES).toHaveLength(6);
     expect(ACCOMPANIMENT_PLAYING_STYLES).toHaveLength(7);
-    expect(new Set(ACCOMPANIMENT_STYLES.map((style) => style.id)).size).toBe(12);
+    expect(new Set(ACCOMPANIMENT_STYLES.map((style) => style.id)).size).toBe(13);
   });
 
   it("모든 반주 음은 주어진 화음 구간 안에 놓인다", () => {
@@ -23,8 +23,8 @@ describe("자동 반주", () => {
     }
   });
 
-  it("서로 다른 리듬과 편성으로 구성된 빠른 반주 모드 열 가지를 제공한다", () => {
-    expect(ACCOMPANIMENT_MODES).toHaveLength(10);
+  it("서로 다른 리듬과 편성으로 구성된 빠른 반주 모드 열한 가지를 제공한다", () => {
+    expect(ACCOMPANIMENT_MODES).toHaveLength(11);
     expect(ENSEMBLE_PRESETS).toBe(ACCOMPANIMENT_MODES);
     expect(new Set(ACCOMPANIMENT_MODES.map((mode) =>
       `${mode.styleId}:${mode.instrumentIds.join(",")}`)).size).toBe(ACCOMPANIMENT_MODES.length);
@@ -111,5 +111,22 @@ describe("자동 반주", () => {
         expect(((transposeOctaves(pitch, octaves) - pitch) % 12 + 12) % 12).toBe(0);
       }
     }
+  });
+});
+
+describe("애니 오프닝 록 반주", () => {
+  it("피크 베이스와 파워 기타를 빠른 박자로 연주한다", () => {
+    const mode = ACCOMPANIMENT_MODES.find((candidate) => candidate.id === "anime_opening_rock");
+    expect(mode?.instrumentIds).toEqual([
+      "electric_bass_pick", "distortion_guitar", "bright_acoustic_piano", "string_ensemble_1"
+    ]);
+    expect(accompanimentInstrumentPart("distortion_guitar", 1).id).toBe("guitar");
+    expect(isAccompanimentInstrument("distortion_guitar")).toBe(true);
+    expect(createInstrumentAccompanimentPattern(
+      "anime_rock", 4, "electric_bass_pick", 0
+    )).toHaveLength(8);
+    expect(createInstrumentAccompanimentPattern(
+      "anime_rock", 4, "distortion_guitar", 1
+    )).toHaveLength(8);
   });
 });

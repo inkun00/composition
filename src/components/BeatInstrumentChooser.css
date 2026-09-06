@@ -1,0 +1,789 @@
+.beat-instrument-chooser {
+  margin: 18px 0 2px;
+  padding: 22px;
+  border: 1px solid #dcd7f3;
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 95% 0, rgba(120, 91, 214, .1), transparent 27%),
+    linear-gradient(135deg, #fff 0%, #fbfaff 54%, #f7fbf8 100%);
+  box-shadow: 0 14px 38px rgba(61, 47, 111, .08);
+}
+
+.beat-instrument-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 18px;
+}
+
+.beat-instrument-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+}
+
+.beat-instrument-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  place-items: center;
+  border-radius: 13px;
+  color: #654bd2;
+  background: #eee9ff;
+}
+
+.beat-instrument-title small {
+  display: block;
+  margin-bottom: 3px;
+  color: #765ddb;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.beat-instrument-title h3 {
+  margin: 0;
+  color: #29283a;
+  font-size: 20px;
+  letter-spacing: -.03em;
+}
+
+.beat-instrument-title p {
+  margin: 5px 0 0;
+  color: #777489;
+  font-size: 13px;
+}
+
+.beat-event-count {
+  display: grid;
+  min-width: 110px;
+  padding: 10px 15px;
+  border: 1px solid #e2def0;
+  border-radius: 15px;
+  background: rgba(255, 255, 255, .9);
+  text-align: center;
+}
+
+.beat-event-count span {
+  color: #898398;
+  font-size: 10px;
+}
+
+.beat-event-count strong {
+  margin-top: 2px;
+  color: #5942bd;
+  font-size: 17px;
+}
+
+.beat-event-count small {
+  margin-top: 3px;
+  color: #918b9d;
+  font-size: 9px;
+}
+
+.beat-palette,
+.beat-track-picker,
+.beat-pattern-editor {
+  padding: 16px;
+  border: 1px solid #e4e0ef;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, .78);
+}
+
+.beat-track-picker-heading,
+.beat-palette-heading,
+.beat-pattern-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.beat-track-picker-heading > div,
+.beat-pattern-heading > div {
+  display: grid;
+}
+
+.beat-track-picker-heading strong,
+.beat-palette-heading > strong,
+.beat-pattern-heading strong {
+  color: #37344a;
+  font-size: 14px;
+}
+
+.beat-track-picker-heading span,
+.beat-pattern-heading span {
+  margin-top: 2px;
+  color: #8a8697;
+  font-size: 10px;
+}
+
+.beat-add-track {
+  display: inline-flex;
+  min-height: 36px;
+  padding: 7px 12px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid #765ee0;
+  border-radius: 10px;
+  color: #5b43c4;
+  background: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.beat-add-track:hover:not(:disabled) {
+  color: #fff;
+  background: #6952d2;
+}
+
+.beat-add-track:disabled {
+  border-color: #dcd7e7;
+  color: #9d97aa;
+  background: #f5f3f8;
+  cursor: default;
+}
+
+.beat-track-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.beat-track-tab {
+  position: relative;
+  min-width: 0;
+  border: 1px solid #e3deed;
+  border-radius: 13px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.beat-track-tab.active {
+  border-color: #765ee0;
+  background: #f5f2ff;
+  box-shadow: inset 0 0 0 1px #765ee0;
+}
+
+.beat-track-tab > [role="tab"] {
+  width: 100%;
+  min-height: 68px;
+  padding: 10px 42px 10px 12px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  border: 0;
+  color: #494455;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.beat-track-tab > [role="tab"] > span:first-child {
+  font-size: 23px;
+}
+
+.beat-track-tab > [role="tab"] > span:nth-child(2) {
+  display: grid;
+  min-width: 0;
+}
+
+.beat-track-tab > [role="tab"] small {
+  color: #8d8699;
+  font-size: 9px;
+}
+
+.beat-track-tab > [role="tab"] strong {
+  margin-top: 2px;
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.beat-track-tab > [role="tab"] em {
+  padding: 4px 6px;
+  border-radius: 7px;
+  color: #6550bd;
+  background: #eee9ff;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.beat-remove-track {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #ead4d1;
+  border-radius: 8px;
+  color: #a6534a;
+  background: #fff;
+  cursor: pointer;
+}
+
+.beat-remove-track:hover:not(:disabled) {
+  background: #fff0ee;
+}
+
+.beat-palette {
+  margin-top: 12px;
+}
+
+.beat-palette-heading > span {
+  padding: 7px 11px;
+  border-radius: 10px;
+  color: #6551bd;
+  background: #f0ecff;
+  font-size: 12px;
+}
+
+.beat-role-groups {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.beat-role-group {
+  min-width: 0;
+  margin: 0;
+  padding: 10px;
+  border: 1px solid #ebe7f3;
+  border-radius: 14px;
+  background: #fbfaff;
+}
+
+.beat-role-group legend {
+  padding: 0 4px;
+  color: #6a5ab4;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.beat-instrument-options {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 5px;
+}
+
+.beat-role-group:first-child .beat-instrument-options {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.beat-instrument-options button {
+  display: grid;
+  min-width: 0;
+  min-height: 64px;
+  padding: 8px 4px 7px;
+  place-items: center;
+  border: 1px solid #e5e1ed;
+  border-radius: 11px;
+  color: #4a4756;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+
+.beat-instrument-options button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: #a895ed;
+  box-shadow: 0 8px 18px rgba(80, 58, 156, .12);
+}
+
+.beat-instrument-options button.active {
+  border-color: #765ee0;
+  color: #4d38b3;
+  background: linear-gradient(145deg, #f0ecff, #fff);
+  box-shadow: inset 0 0 0 1px #765ee0, 0 7px 16px rgba(79, 55, 168, .11);
+}
+
+.beat-instrument-options button:disabled {
+  cursor: default;
+  opacity: .58;
+}
+
+.beat-instrument-options button > span {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.beat-instrument-options button strong {
+  overflow: hidden;
+  max-width: 100%;
+  margin-top: 5px;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.beat-pattern-editor {
+  padding: 12px;
+  background: linear-gradient(145deg, #fff, #f9fffC);
+}
+
+.beat-pattern-section-heading {
+  margin: 16px 2px 9px;
+  display: grid;
+}
+
+.beat-pattern-section-heading strong {
+  color: #37344a;
+  font-size: 14px;
+}
+
+.beat-pattern-section-heading span {
+  margin-top: 3px;
+  color: #8a8697;
+  font-size: 10px;
+}
+
+.beat-pattern-stack {
+  display: grid;
+  gap: 10px;
+}
+
+.beat-pattern-track-editor.active {
+  border-color: #8b74e8;
+  box-shadow: inset 0 0 0 1px #8b74e8, 0 8px 20px rgba(86, 63, 169, .08);
+}
+
+.beat-pattern-track-summary {
+  display: flex !important;
+  min-width: 0;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.beat-pattern-track-summary > span:first-child {
+  margin: 0;
+  color: inherit;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.beat-pattern-track-summary > span:nth-child(2) {
+  display: grid;
+  margin: 0;
+}
+
+.beat-pattern-track-summary small {
+  margin-top: 2px;
+  color: #8a8697;
+  font-size: 9px;
+}
+
+.beat-pattern-heading > .beat-clear-track {
+  display: inline-flex;
+  min-height: 29px;
+  padding: 5px 8px;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid #ddd6ed;
+  border-radius: 8px;
+  color: #725f94;
+  background: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.beat-pattern-heading > .beat-clear-track:disabled {
+  cursor: default;
+  opacity: .45;
+}
+
+.beat-pattern-heading > .beat-rhythm-controls {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.beat-rhythm-controls > span {
+  margin: 0 3px 0 0;
+  padding: 5px 7px;
+  border-radius: 7px;
+  color: #5f4bb6;
+  background: #eee9ff;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.beat-rhythm-controls > button {
+  display: inline-flex;
+  min-height: 29px;
+  padding: 5px 8px;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid #ddd6ed;
+  border-radius: 9px;
+  color: #725f94;
+  background: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.beat-rhythm-controls > button:hover:not(:disabled) {
+  border-color: #9784df;
+  color: #5a43b9;
+  background: #f5f2ff;
+}
+
+.beat-rhythm-controls > .beat-delete-event {
+  border-color: #e2b9b4;
+  color: #a24c44;
+}
+
+.beat-rhythm-controls > button:disabled {
+  cursor: default;
+  opacity: .45;
+}
+
+.beat-measure-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.beat-pattern-measure {
+  min-width: 0;
+  padding: 7px;
+  border: 1px solid #dfe9e4;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .92);
+}
+
+.beat-pattern-measure > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+
+.beat-pattern-measure > header strong {
+  color: #3d3a4c;
+  font-size: 10px;
+}
+
+.beat-pattern-measure > header span {
+  color: #8b8795;
+  font-size: 9px;
+}
+
+.beat-pattern-measure > .beat-measure-header {
+  display: grid;
+  align-items: stretch;
+  gap: 5px;
+}
+
+.beat-measure-controls {
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 3px;
+}
+
+.beat-measure-controls > span {
+  display: grid;
+  min-width: 0;
+  margin: 0;
+  min-height: 42px;
+  padding: 7px 4px;
+  place-items: center;
+  border: 1px solid #d9d0f7;
+  border-radius: 9px;
+  color: #5f4bb6;
+  background: #eee9ff;
+  font-size: 11px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.beat-measure-controls > button {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 7px 3px;
+  border: 1px solid #ddd6ed;
+  border-radius: 9px;
+  color: #725f94;
+  background: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.beat-pattern-measure > .beat-measure-header .beat-measure-controls > span {
+  font-size: 11px;
+}
+
+.beat-measure-controls > button:hover:not(:disabled) {
+  border-color: #9784df;
+  color: #5a43b9;
+  background: #f5f2ff;
+}
+
+.beat-measure-controls > .beat-delete-event {
+  border-color: #e2b9b4;
+  color: #a24c44;
+}
+
+.beat-measure-controls > button:disabled {
+  cursor: default;
+  opacity: .4;
+}
+
+.beat-slot-grid {
+  display: grid;
+  gap: 3px;
+}
+
+.beat-slot {
+  min-width: 0;
+  padding: 2px;
+  border: 1px dashed #cfc9dc;
+  border-radius: 7px;
+  background: #fbfafc;
+}
+
+.beat-slot.filled {
+  border-style: solid;
+  border-color: #a8d9c4;
+  background: #f4fcf8;
+}
+
+.beat-slot.beat-start {
+  border-left-color: #8e85a0;
+}
+
+.beat-slot.selected {
+  border-color: #735add;
+  box-shadow: 0 0 0 2px rgba(115, 90, 221, .22);
+}
+
+.beat-slot > button {
+  display: flex;
+  width: 100%;
+  min-height: 27px;
+  padding: 2px 4px;
+  align-items: center;
+  justify-content: space-between;
+  border: 0;
+  border-radius: 7px;
+  color: #746e80;
+  background: transparent;
+  cursor: pointer;
+}
+
+.beat-slot > button > span {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.beat-slot > button:hover:not(:disabled),
+.beat-slot > button.selected-sound {
+  color: #5941bb;
+  background: #eee9ff;
+}
+
+.beat-slot > button b {
+  font-size: 9px;
+}
+
+.beat-slot > button small {
+  font-size: 10px;
+}
+
+.beat-slot-grid.subdivision-2 {
+  gap: 2px;
+}
+
+.beat-slot-grid.subdivision-2 .beat-slot {
+  padding: 1px;
+  border-radius: 6px;
+}
+
+.beat-slot-grid.subdivision-2 .beat-slot > button {
+  min-height: 25px;
+  padding: 1px 2px;
+}
+
+.beat-slot-grid.subdivision-4 {
+  gap: 1px;
+}
+
+.beat-slot-grid.subdivision-4 .beat-slot {
+  padding: 0;
+  border-radius: 4px;
+}
+
+.beat-slot-grid.subdivision-4 .beat-slot > button {
+  min-height: 23px;
+  padding: 1px;
+}
+
+.beat-slot-grid.subdivision-4 .beat-slot > button b {
+  font-size: 7px;
+}
+
+.beat-slot-grid.subdivision-4 .beat-slot > button > span {
+  font-size: 9px;
+}
+
+.beat-slot-grid.subdivision-4 .beat-slot > button small {
+  font-size: 8px;
+}
+
+.beat-slot-sounds {
+  display: grid;
+  gap: 3px;
+  margin-top: 3px;
+}
+
+.beat-slot-sounds button {
+  display: flex;
+  min-width: 0;
+  padding: 4px;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border: 1px solid #bee4d3;
+  border-radius: 7px;
+  color: #247557;
+  background: #eaf9f1;
+  cursor: pointer;
+}
+
+.beat-slot-sounds button:hover:not(:disabled) {
+  border-color: #e2afa9;
+  color: #a84e45;
+  background: #fff1ef;
+}
+
+.beat-slot-sounds button span {
+  font-size: 13px;
+}
+
+.beat-slot-sounds button small {
+  overflow: hidden;
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.beat-volume-control {
+  display: grid;
+  grid-template-columns: minmax(205px, .8fr) minmax(240px, 1.6fr) 58px;
+  align-items: center;
+  gap: 16px;
+  margin-top: 14px;
+  padding: 13px 16px;
+  border: 1px solid #e5e0f3;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .86);
+}
+
+.beat-volume-control label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #5e49c0;
+}
+
+.beat-volume-control label span {
+  display: grid;
+}
+
+.beat-volume-control label strong {
+  color: #3e3a50;
+  font-size: 13px;
+}
+
+.beat-volume-control label small {
+  margin-top: 2px;
+  color: #8b8798;
+  font-size: 10px;
+}
+
+.beat-volume-control input {
+  width: 100%;
+  accent-color: #7058d9;
+  cursor: pointer;
+}
+
+.beat-volume-control input:disabled {
+  cursor: default;
+  opacity: .55;
+}
+
+.beat-volume-control output {
+  padding: 7px 8px;
+  border-radius: 10px;
+  color: #5943bb;
+  background: #eee9ff;
+  font-size: 13px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.beat-listen-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 14px;
+  padding: 11px 12px 11px 16px;
+  border-radius: 14px;
+  background: #f4f2fa;
+}
+
+.beat-listen-row p {
+  margin: 0;
+  color: #716d7e;
+  font-size: 12px;
+}
+
+.beat-preview-button {
+  display: inline-flex;
+  min-width: 170px;
+  padding: 10px 15px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid #765ee0;
+  border-radius: 11px;
+  color: #5b43c4;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.beat-preview-button:hover:not(:disabled) {
+  color: #fff;
+  background: #6952d2;
+}
+
+.beat-preview-button:disabled {
+  border-color: #dad6e5;
+  color: #aaa5b7;
+  background: #f9f8fb;
+  cursor: default;
+}

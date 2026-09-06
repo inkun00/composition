@@ -47,6 +47,26 @@ describe("ScoreMeasure VexFlow 좌표 오버레이", () => {
     expect(markup).toContain("rest-image");
   });
 
+  it("반음 올림과 내림의 임시표를 각각 샵과 플랫으로 표시한다", () => {
+    const markup = renderToStaticMarkup(<ScoreMeasure plain notes={[
+      { id: "sharp", pitch: 61, accidental: "sharp", duration: { numerator: 1, denominator: 1 } },
+      { id: "flat", pitch: 63, accidental: "flat", duration: { numerator: 1, denominator: 1 } }
+    ]} onSelectNote={() => undefined} />);
+    expect(markup).toContain(">♯</text>");
+    expect(markup).toContain(">♭</text>");
+    expect(markup).toContain("도♯ 음표 선택");
+    expect(markup).toContain("미♭ 음표 선택");
+  });
+
+  it("조표에 든 플랫은 반복하지 않고 조표를 취소한 음에는 제자리표를 표시한다", () => {
+    const markup = renderToStaticMarkup(<ScoreMeasure plain keyFifths={-1} notes={[
+      { id: "key-flat", pitch: 70, accidental: "flat", duration: { numerator: 1, denominator: 1 } },
+      { id: "natural", pitch: 71, accidental: "natural", duration: { numerator: 1, denominator: 1 } }
+    ]} />);
+    expect(markup).not.toContain(">♭</text>");
+    expect(markup).toContain(">♮</text>");
+  });
+
   it("분리 표시가 있는 짧은 음표는 레거시 자동 기둥으로 묶지 않는다", () => {
     const markup = renderToStaticMarkup(<ScoreMeasure plain notes={[
       { id: "a", pitch: 60, duration: { numerator: 1, denominator: 2 }, beamBreak: true },

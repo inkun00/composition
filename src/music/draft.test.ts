@@ -3,6 +3,7 @@ import { DRAFT_STORAGE_KEY, readDraft, writeDraft, type SavedDraft } from "./dra
 
 const draft: SavedDraft = {
   version: 1,
+  projectId: "project-1",
   updatedAt: 123,
   sourceHash: "#song=sample",
   title: "구름 산책",
@@ -10,16 +11,24 @@ const draft: SavedDraft = {
   originalCreator: "첫봄",
   presetId: "H001",
   meter: { beats: 6, beatUnit: 8 },
-  songLength: 8,
+  songLength: 32,
   instrumentId: "acoustic_grand_piano",
   accompanimentStyleId: "folk",
   accompanimentInstrumentIds: ["guitar", "violin"],
+  beatInstrumentIds: ["soft-kick", "clap", "shaker"],
+  beatPattern: [
+    { id: "beat-a", instrumentId: "timpani", measureIndex: 0, offsetBeats: 0 },
+    { id: "beat-b", instrumentId: "clap", measureIndex: 2, offsetBeats: 2.5 }
+  ],
+  beatVolume: 135,
   bpm: 82,
-  lyrics: Array(8).fill("랄라"),
-  measures: Array.from({ length: 8 }, (_, index) => ({
+  lyrics: Array(32).fill("랄라"),
+  measures: Array.from({ length: 32 }, (_, index) => ({
     candidateId: "custom",
     candidateName: "가사 가락",
-    notes: [{ id: `note-${index}`, pitch: 60, duration: { numerator: 3, denominator: 1 }, lyric: "랄" }],
+    notes: [{ id: `note-${index}`, pitch: 61, accidental: "flat", duration: { numerator: 3, denominator: 1 }, lyric: "랄" }],
+    chords: [index % 2 === 0 ? "C" : "G7"],
+    keyFifths: -1,
     effects: [{ id: `effect-${index}`, effectId: "clock", offsetBeats: 0.5 }]
   })),
   showArrangement: false
@@ -49,6 +58,26 @@ describe("브라우저 임시 저장", () => {
     expect(readDraft({ getItem: () => JSON.stringify({
       ...draft,
       accompanimentInstrumentIds: [...tenInstruments, "trombone"]
+    }) })).toBeNull();
+  });
+
+  it("직접 고른 비트 악기 세 개를 저장하고 같은 역할 중복은 거부한다", () => {
+    const storage = { getItem: () => JSON.stringify(draft) };
+    expect(readDraft(storage)?.beatInstrumentIds).toEqual(["soft-kick", "clap", "shaker"]);
+    expect(readDraft(storage)?.beatVolume).toBe(135);
+    expect(readDraft({ getItem: () => JSON.stringify({
+      ...draft,
+      beatInstrumentIds: ["kick", "soft-kick"]
+    }) })).toBeNull();
+    expect(readDraft({ getItem: () => JSON.stringify({ ...draft, beatVolume: 137 }) })).toBeNull();
+  });
+
+  it("네 마디에 직접 놓은 비트 위치를 저장하고 잘못된 칸은 거부한다", () => {
+    const storage = { getItem: () => JSON.stringify(draft) };
+    expect(readDraft(storage)?.beatPattern).toEqual(draft.beatPattern);
+    expect(readDraft({ getItem: () => JSON.stringify({
+      ...draft,
+      beatPattern: [{ id: "bad", instrumentId: "kick", measureIndex: 4, offsetBeats: .25 }]
     }) })).toBeNull();
   });
 

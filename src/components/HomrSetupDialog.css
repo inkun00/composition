@@ -1,0 +1,156 @@
+.homr-setup-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 11000;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background: rgba(38, 34, 53, 0.58);
+  backdrop-filter: blur(5px);
+}
+
+.homr-setup-dialog {
+  width: min(480px, 100%);
+  max-height: min(760px, calc(100vh - 32px));
+  overflow: auto;
+  border: 1px solid #ded6f0;
+  border-radius: 24px;
+  background: #fffdfb;
+  box-shadow: 0 28px 80px rgba(43, 35, 67, 0.28);
+}
+
+.homr-setup-dialog > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 22px 24px;
+  color: #fff;
+  background: linear-gradient(135deg, #6750a4, #8164c3);
+}
+
+.homr-setup-dialog > header h2 {
+  margin: 0;
+  font-size: 1.35rem;
+  line-height: 1.25;
+}
+
+.homr-setup-dialog > header button {
+  display: grid;
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 12px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+}
+
+.homr-setup-dialog > header button:disabled {
+  cursor: wait;
+  opacity: 0.5;
+}
+
+.homr-setup-body {
+  display: grid;
+  padding: 22px 24px;
+}
+
+.homr-setup-state {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 78px;
+  padding: 16px 18px;
+  border: 1px solid #e7e0f2;
+  border-radius: 16px;
+  color: #543e89;
+  background: #f8f4ff;
+}
+
+.homr-setup-state.state-ready {
+  border-color: #bee1ca;
+  color: #23663e;
+  background: #f1fbf4;
+}
+
+.homr-setup-state.state-error {
+  border-color: #efc5c5;
+  color: #9a3434;
+  background: #fff5f5;
+}
+
+.homr-setup-state div {
+  display: grid;
+  gap: 3px;
+}
+
+.homr-setup-state strong {
+  font-size: 0.94rem;
+}
+
+.homr-setup-state span {
+  color: #6d6678;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.homr-setup-dialog > footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 24px 20px;
+  border-top: 1px solid #eee8f3;
+}
+
+.homr-setup-dialog > footer button,
+.homr-setup-dialog > footer a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 42px;
+  padding: 0 17px;
+  border: 1px solid #d9d1e5;
+  border-radius: 12px;
+  color: #554d61;
+  background: #fff;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.homr-setup-dialog > footer button.primary {
+  border-color: #6750a4;
+  color: #fff;
+  background: #6750a4;
+}
+
+@media (max-width: 600px) {
+  .homr-setup-overlay {
+    align-items: end;
+    padding: 0;
+  }
+
+  .homr-setup-dialog {
+    max-height: 92vh;
+    border-radius: 22px 22px 0 0;
+  }
+
+  .homr-setup-dialog > header,
+  .homr-setup-body {
+    padding-right: 20px;
+    padding-left: 20px;
+  }
+
+  .homr-setup-dialog > footer {
+    padding-right: 20px;
+    padding-left: 20px;
+  }
+
+  .homr-setup-dialog > footer button.primary {
+    flex: 1;
+  }
+}

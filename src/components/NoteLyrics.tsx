@@ -45,7 +45,7 @@ export default function NoteLyrics({
         const x = notePositions?.[note.id]?.x ?? noteStartX + (note.onset / capacity) * usable + 10;
         const durationWidth = toNumber(note.duration) / capacity * usable;
         return (
-          <input key={note.id} data-testid={`note-lyric-${measureIndex + 1}-${noteIndex + 1}`}
+          <input key={note.id} data-testid={`note-lyric-${measureIndex + 1}-${noteIndex + 1}`} data-project-history="true"
             value={note.lyric ?? ""} maxLength={1} readOnly={readOnly}
             className={playingNoteId === note.id ? "lyric-note-active" : selectedNoteId === note.id ? "lyric-note-selected" : undefined}
             aria-label={`${measureIndex + 1}마디 ${noteIndex + 1}번째 음표 가사`}

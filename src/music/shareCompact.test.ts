@@ -13,6 +13,13 @@ const compactSample: SharedComposition = {
   instrumentId: "piano",
   accompanimentStyleId: "arpeggio",
   accompanimentInstrumentIds: ["piano", "violin", "flute"],
+  beatInstrumentIds: ["soft-kick", "woodblock", "tambourine"],
+  beatPattern: [
+    { id: "beat-a", instrumentId: "kick", measureIndex: 0, offsetBeats: 0 },
+    { id: "beat-b", instrumentId: "clap", measureIndex: 1, offsetBeats: 1 },
+    { id: "beat-c", instrumentId: "ride", measureIndex: 3, offsetBeats: 3 }
+  ],
+  beatVolume: 145,
   bpm: 124,
   lyrics: Array(16).fill("la"),
   measures: Array.from({ length: 16 }, (_, measureIndex) => ({
@@ -67,6 +74,7 @@ function normalizeTransientIds(composition: SharedComposition | null): unknown {
   if (!composition) return composition;
   const normalized = {
     ...composition,
+    beatPattern: composition.beatPattern?.map(({ id: _id, ...event }) => event),
     measures: composition.measures.map((measure) => {
       const beamGroups = new Map<string, number>();
       return {
@@ -88,6 +96,24 @@ describe("compact share encoding", () => {
       .toEqual(normalizeTransientIds(compactSample));
   });
 
+  it("round-trips newly added beat instruments without changing old indexes", () => {
+    const addedBeatSample = {
+      ...compactSample,
+      beatInstrumentIds: ["djembe", "cowbell", "triangle"] as const
+    };
+    expect(normalizeTransientIds(decodeSharedComposition(encodeSharedComposition(addedBeatSample))))
+      .toEqual(normalizeTransientIds(addedBeatSample));
+  });
+
+  it("round-trips the expanded percussion set", () => {
+    const expandedBeatSample = {
+      ...compactSample,
+      beatInstrumentIds: ["timpani", "claves", "ride"] as const
+    };
+    expect(normalizeTransientIds(decodeSharedComposition(encodeSharedComposition(expandedBeatSample))))
+      .toEqual(normalizeTransientIds(expandedBeatSample));
+  });
+
   it("keeps QR payloads below the guarded render limit", () => {
     expect(encodeSharedComposition(compactSample).length).toBeLessThan(1800);
   });
@@ -98,6 +124,11 @@ describe("compact share encoding", () => {
 
   it("continues to decode version 1 compact share data", () => {
     expect(normalizeTransientIds(decodeSharedComposition(compactV1Encode(compactSample))))
-      .toEqual(normalizeTransientIds(compactSample));
+      .toEqual(normalizeTransientIds({
+        ...compactSample,
+        beatInstrumentIds: undefined,
+        beatPattern: undefined,
+        beatVolume: undefined
+      }));
   });
 });

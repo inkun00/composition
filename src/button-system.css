@@ -1,0 +1,361 @@
+@media (min-width: 901px) {
+  :root {
+    --button-ring: rgba(109, 92, 231, .14);
+    --button-border: rgba(70, 57, 120, .15);
+    --button-shadow-rest: 0 6px 16px rgba(45, 35, 84, .08);
+    --button-shadow-hover: 0 12px 24px rgba(45, 35, 84, .14);
+    --button-shadow-pressed: 0 3px 9px rgba(45, 35, 84, .1);
+    --button-ease: cubic-bezier(.2, .8, .2, 1);
+  }
+
+  button,
+  [role="button"] {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: geometricPrecision;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+    transition:
+      transform .18s var(--button-ease),
+      box-shadow .2s var(--button-ease),
+      border-color .18s ease,
+      background-color .18s ease,
+      color .18s ease,
+      filter .18s ease;
+  }
+
+  button:not(:disabled):active,
+  [role="button"]:not([aria-disabled="true"]):active {
+    transform: translateY(1px) scale(.985);
+    box-shadow: var(--button-shadow-pressed);
+  }
+
+  .opening-actions button,
+  .app-menu-trigger,
+  .account-trigger,
+  .community-create-button,
+  .preset-preview-button,
+  .ghost-button,
+  .song-play,
+  .song-stop,
+  .listen-all,
+  .history-actions button,
+  .selected-instrument button,
+  .accompaniment-more-modes,
+  .easy-accompaniment-actions button,
+  .beat-add-track,
+  .beat-preview-button,
+  .sound-effect-palette .effect-preview-button,
+  .publish-actions button,
+  .publish-actions .samboard-share-button,
+  .practice-song-button,
+  .record-mp3-button,
+  .bottom-bar button,
+  .recording-guide-dialog footer button,
+  .measure-sound-dialog footer button,
+  .score-export-dialog footer button,
+  .community-playback-dialog footer button {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border-color: var(--button-border);
+    background-clip: padding-box;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, .58),
+      var(--button-shadow-rest);
+  }
+
+  .opening-actions button::before,
+  .action-button::before,
+  .preset-preview-button::before,
+  .ghost-button::before,
+  .song-play::before,
+  .song-stop::before,
+  .listen-all::before,
+  .selected-instrument button::before,
+  .easy-accompaniment-actions button::before,
+  .beat-preview-button::before,
+  .bottom-bar button::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 48% 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: linear-gradient(180deg, rgba(255, 255, 255, .3), rgba(255, 255, 255, 0));
+    pointer-events: none;
+  }
+
+  .opening-actions button:hover:not(:disabled),
+  .app-menu-trigger:hover:not(:disabled),
+  .account-trigger:hover:not(:disabled),
+  .community-create-button:hover:not(:disabled),
+  .preset-preview-button:hover:not(:disabled),
+  .ghost-button:hover:not(:disabled),
+  .song-play:hover:not(:disabled),
+  .song-stop:hover:not(:disabled),
+  .listen-all:hover:not(:disabled),
+  .history-actions button:hover:not(:disabled),
+  .selected-instrument button:hover:not(:disabled),
+  .accompaniment-more-modes:hover:not(:disabled),
+  .easy-accompaniment-actions button:hover:not(:disabled),
+  .beat-add-track:hover:not(:disabled),
+  .beat-preview-button:hover:not(:disabled),
+  .publish-actions button:hover:not(:disabled),
+  .publish-actions .samboard-share-button:hover,
+  .practice-song-button:hover:not(:disabled),
+  .record-mp3-button:hover:not(:disabled),
+  .bottom-bar button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, .72),
+      var(--button-shadow-hover);
+    filter: saturate(1.04);
+  }
+
+  .action-button svg,
+  .preset-preview-button svg,
+  .song-play svg,
+  .song-stop svg,
+  .listen-all svg,
+  .history-actions button svg,
+  .selected-instrument button svg,
+  .beat-preview-button svg,
+  .bottom-bar button svg {
+    flex: 0 0 auto;
+    filter: drop-shadow(0 1px 1px rgba(25, 19, 48, .12));
+  }
+
+  .app-menu-trigger,
+  .account-trigger,
+  .history-actions button,
+  .ghost-button,
+  .accompaniment-more-modes {
+    background: linear-gradient(180deg, #fff, #faf9fd);
+  }
+
+  .song-stop,
+  .easy-accompaniment-actions .easy-accompaniment-stop {
+    border-color: #efc2ba;
+    background: linear-gradient(180deg, #fff8f6, #ffebe7);
+    color: #b63f2e;
+  }
+
+  .song-play {
+    border-color: #bfe1d3;
+    background: linear-gradient(180deg, #f3fcf8, #e4f6ee);
+  }
+
+  .tempo-mood-options button,
+  .rhythm-mood-options button,
+  .meter-option,
+  .length-option,
+  .candidate-card,
+  .preview-instrument-options button,
+  .instrument-card,
+  .accompaniment-mode-grid button,
+  .accompaniment-style,
+  .album-access-options > button,
+  .publish-album-grid button,
+  .beat-instrument-options button {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border-color: rgba(76, 63, 120, .12);
+    background:
+      linear-gradient(145deg, rgba(255, 255, 255, .98), rgba(248, 247, 251, .96));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, .8),
+      0 5px 14px rgba(42, 33, 75, .055);
+  }
+
+  .tempo-mood-options button:hover:not(:disabled),
+  .rhythm-mood-options button:hover:not(:disabled),
+  .meter-option:hover:not(:disabled),
+  .length-option:hover:not(:disabled),
+  .candidate-card:hover,
+  .preview-instrument-options button:hover:not(:disabled),
+  .instrument-card:hover:not(:disabled),
+  .accompaniment-mode-grid button:hover:not(:disabled),
+  .accompaniment-style:hover:not(:disabled),
+  .album-access-options > button:hover:not(:disabled),
+  .publish-album-grid button:hover:not(:disabled),
+  .beat-instrument-options button:hover:not(:disabled) {
+    border-color: #cfc7ed;
+    background:
+      linear-gradient(145deg, #fff, #f5f2ff);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, .9),
+      0 12px 25px rgba(52, 39, 106, .12);
+    transform: translateY(-3px);
+  }
+
+  .tempo-mood-options button.active,
+  .rhythm-mood-options button.active,
+  .meter-option.active,
+  .length-option.active,
+  .candidate-card.selected,
+  .preview-instrument-options button.active,
+  .instrument-card.active,
+  .accompaniment-mode-grid button.active,
+  .accompaniment-style.active,
+  .album-access-options > button.active,
+  .beat-instrument-options button.active {
+    border-color: #6f5ad7;
+    background:
+      linear-gradient(145deg, #f8f6ff, #eeeaff);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, .9),
+      0 0 0 3px var(--button-ring),
+      0 10px 23px rgba(76, 57, 168, .13);
+  }
+
+  .tempo-mood-options button > *,
+  .rhythm-mood-options button > *,
+  .meter-option > *,
+  .length-option > *,
+  .accompaniment-mode-grid button > *,
+  .preset-summary > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .tempo-mood-options button::after,
+  .rhythm-mood-options button::after,
+  .meter-option::after,
+  .length-option::after,
+  .accompaniment-mode-grid button::after,
+  .preset-summary::after {
+    content: "";
+    position: absolute;
+    z-index: 0;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: contain;
+    pointer-events: none;
+    transition: opacity .2s ease, transform .2s var(--button-ease);
+  }
+
+  .tempo-mood-options button::after {
+    right: -10px;
+    bottom: -15px;
+    width: 76px;
+    height: 76px;
+    opacity: .09;
+    background-image: url("/illustrations/ui/rhythm-metronome-v1.webp");
+  }
+
+  .rhythm-mood-options button::after {
+    right: -12px;
+    bottom: -17px;
+    width: 82px;
+    height: 82px;
+    opacity: .09;
+    background-image: url("/illustrations/ui/music-notes-v1.webp");
+  }
+
+  .meter-option::after,
+  .length-option::after {
+    right: -16px;
+    bottom: -18px;
+    width: 78px;
+    height: 78px;
+    opacity: .06;
+    background-image: url("/illustrations/ui/rhythm-metronome-v1.webp");
+  }
+
+  .accompaniment-mode-grid button::after {
+    right: -17px;
+    bottom: -21px;
+    width: 92px;
+    height: 92px;
+    opacity: .1;
+  }
+
+  .accompaniment-mode-grid button:nth-child(3n + 1)::after {
+    background-image: url("/illustrations/ui/harmony-piano-v1.webp");
+  }
+
+  .accompaniment-mode-grid button:nth-child(3n + 2)::after {
+    background-image: url("/illustrations/ui/music-notes-v1.webp");
+  }
+
+  .accompaniment-mode-grid button:nth-child(3n)::after {
+    background-image: url("/illustrations/ui/rhythm-metronome-v1.webp");
+  }
+
+  .preset-summary {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    padding-right: 116px;
+  }
+
+  .preset-summary::after {
+    right: 12px;
+    bottom: -22px;
+    width: 106px;
+    height: 106px;
+    opacity: .18;
+    background-image: url("/illustrations/ui/harmony-piano-v1.webp");
+  }
+
+  .tempo-mood-options button:hover::after,
+  .rhythm-mood-options button:hover::after,
+  .meter-option:hover::after,
+  .length-option:hover::after,
+  .accompaniment-mode-grid button:hover::after {
+    opacity: .2;
+    transform: translate(-4px, -4px) rotate(-2deg) scale(1.04);
+  }
+
+  .tempo-mood-options button.active::after,
+  .rhythm-mood-options button.active::after,
+  .meter-option.active::after,
+  .length-option.active::after,
+  .accompaniment-mode-grid button.active::after {
+    opacity: .24;
+    transform: translate(-3px, -3px) scale(1.03);
+  }
+
+  .mood-option-icon,
+  .accompaniment-mode-grid button > span,
+  .instrument-card .instrument-icon,
+  .beat-instrument-options button > span {
+    border: 1px solid rgba(102, 83, 179, .1);
+    background:
+      linear-gradient(145deg, rgba(255, 255, 255, .88), rgba(231, 226, 248, .94));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, .8),
+      0 5px 12px rgba(55, 42, 102, .1);
+  }
+
+  .tempo-mood-options button.active .mood-option-icon,
+  .rhythm-mood-options button.active .mood-option-icon,
+  .accompaniment-mode-grid button.active > span {
+    border-color: rgba(91, 70, 190, .22);
+    background: linear-gradient(145deg, #765fe0, #5d4cc2);
+    color: #fff;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, .26),
+      0 7px 15px rgba(78, 59, 172, .24);
+  }
+}
+
+@media (min-width: 901px) and (prefers-reduced-motion: reduce) {
+  button,
+  [role="button"],
+  .tempo-mood-options button::after,
+  .rhythm-mood-options button::after,
+  .meter-option::after,
+  .length-option::after,
+  .accompaniment-mode-grid button::after {
+    transition: none;
+  }
+
+  button:not(:disabled):active,
+  button:not(:disabled):hover {
+    transform: none;
+  }
+}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import {
   ArrowLeft,
   Copy,
@@ -9,6 +9,7 @@ import {
   Play,
   Plus,
   Save,
+  Square,
   Trash2,
   X
 } from "lucide-react";
@@ -20,7 +21,14 @@ import type {
 } from "../firebase/communityAlbums";
 import { findHarmonyPreset } from "../music/harmonyPresets";
 import type { NoteEvent } from "../music/types";
+import CommunityPlaybackDialog from "./CommunityPlaybackDialog";
+import {
+  publishedPlaybackDurationMs,
+  publishedPlaybackPosition,
+  type PublishedPlaybackPosition
+} from "./communityPlaybackTiming";
 import PdfScoreSheet from "./PdfScoreSheet";
+import "./CommunityAlbum.css";
 
 type CommunityAlbumProps = Readonly<{
   configured: boolean;
@@ -28,6 +36,7 @@ type CommunityAlbumProps = Readonly<{
   onClose: () => void;
   onRequestLogin: () => void;
   onPlay: (song: PublishedSong) => Promise<boolean>;
+  onStop: () => Promise<void>;
   onOpenProject: (song: PublishedSong) => void;
 }>;
 
@@ -62,13 +71,49 @@ function notesWithLegacyLyrics(notes: readonly NoteEvent[], lyric: string | unde
   return notes.map((note) => note.pitch === null ? note : { ...note, lyric: syllables[lyricIndex++] ?? "" });
 }
 
-function PublicScorePreview({ song, onClose }: Readonly<{ song: PublishedSong; onClose: () => void }>) {
+function PublicScorePreview({ song, loading, startedAt, error, onPlay, onStop, onEnded, onClose }: Readonly<{
+  song: PublishedSong;
+  loading: boolean;
+  startedAt: number | null;
+  error: string;
+  onPlay: () => void;
+  onStop: () => void;
+  onEnded: () => void;
+  onClose: () => void;
+}>) {
   const preset = findHarmonyPreset(song.draft.presetId);
+  const previewRef = useRef<HTMLDivElement | null>(null);
+  const [position, setPosition] = useState<PublishedPlaybackPosition | null>(() =>
+    publishedPlaybackPosition(song, startedAt)
+  );
   const printableMeasures = song.draft.measures.flatMap((measure, index) => measure.notes ? [{
     candidateName: measure.candidateName ?? "나만의 가락",
     notes: notesWithLegacyLyrics(measure.notes, song.draft.lyrics[index]),
     chords: preset.bars[index % preset.bars.length]
   }] : []);
+
+  useEffect(() => {
+    const playbackEndsAt = startedAt === null ? null : startedAt + publishedPlaybackDurationMs(song);
+    const updatePosition = () => {
+      const now = Date.now();
+      setPosition(publishedPlaybackPosition(song, startedAt, now));
+      if (playbackEndsAt !== null && now >= playbackEndsAt) onEnded();
+    };
+    updatePosition();
+    if (startedAt === null) return;
+    const timer = window.setInterval(updatePosition, 70);
+    return () => window.clearInterval(timer);
+  }, [onEnded, song, startedAt]);
+
+  const activeSystemIndex = position === null ? null : Math.floor(position.measureIndex / 4);
+  useEffect(() => {
+    if (activeSystemIndex === null) return;
+    const system = previewRef.current?.querySelector<HTMLElement>(
+      `[data-score-system-index="${activeSystemIndex}"]`
+    );
+    system?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [activeSystemIndex]);
+
   return (
     <div className="album-subdialog-overlay" role="dialog" aria-modal="true" aria-label={`${song.title} 악보`}
       onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
@@ -77,27 +122,50 @@ function PublicScorePreview({ song, onClose }: Readonly<{ song: PublishedSong; o
           <div><FileMusic size={20} /><span><strong>{song.title}</strong><small>{song.creator} 작곡 · {song.draft.songLength}마디</small></span></div>
           <button type="button" aria-label="악보 닫기" onClick={onClose}><X size={20} /></button>
         </header>
-        <div className="community-score-preview">
+        <div className="score-preview-playback-toolbar">
+          <div className={`score-preview-playback-status${startedAt !== null ? " is-playing" : ""}`} role="status">
+            <span aria-hidden="true" />
+            {loading ? "노래를 준비하고 있어요…" : error ? "노래를 재생하지 못했어요." :
+              startedAt !== null && position ? `${position.measureIndex + 1}마디를 연주하고 있어요.` :
+                "악보를 보며 노래를 들어 보세요."}
+          </div>
+          {startedAt !== null ? (
+            <button type="button" className="score-preview-stop" onClick={onStop}>
+              <Square size={15} fill="currentColor" aria-hidden="true" /> 중지
+            </button>
+          ) : (
+            <button type="button" className="score-preview-play" disabled={loading} onClick={onPlay}>
+              <Play size={17} fill="currentColor" aria-hidden="true" />
+              {loading ? "준비 중…" : "악보와 함께 재생"}
+            </button>
+          )}
+        </div>
+        <div className="community-score-preview" ref={previewRef}>
           <PdfScoreSheet title={song.title} description={song.draft.description ?? ""} creator={song.creator}
             originalCreator={song.draft.originalCreator} meter={song.draft.meter}
-            measures={printableMeasures} includeAccompaniment={false} preview />
+            measures={printableMeasures} includeAccompaniment={false} preview
+            activeMeasureIndex={position?.measureIndex} activeNoteId={position?.noteId} />
         </div>
       </section>
     </div>
   );
 }
 
-export default function CommunityAlbum({ configured, user, onClose, onRequestLogin, onPlay, onOpenProject }: CommunityAlbumProps) {
+export default function CommunityAlbum({ configured, user, onClose, onRequestLogin, onPlay, onStop, onOpenProject }: CommunityAlbumProps) {
   const [albums, setAlbums] = useState<CommunityAlbumItem[]>([]);
   const [selectedAlbum, setSelectedAlbum] = useState<CommunityAlbumItem | null>(null);
   const [songs, setSongs] = useState<PublishedSong[]>([]);
   const [selectedSong, setSelectedSong] = useState<PublishedSong | null>(null);
+  const [playbackSong, setPlaybackSong] = useState<PublishedSong | null>(null);
   const [scoreSong, setScoreSong] = useState<PublishedSong | null>(null);
+  const [scorePlaybackStartedAt, setScorePlaybackStartedAt] = useState<number | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [albumName, setAlbumName] = useState("");
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [playingSongId, setPlayingSongId] = useState<string | null>(null);
+  const [playbackStartedAt, setPlaybackStartedAt] = useState<number | null>(null);
+  const playbackRequest = useRef(0);
   const [manageAccess, setManageAccess] = useState<PublicationAccess>("audio");
   const [error, setError] = useState("");
 
@@ -124,7 +192,8 @@ export default function CommunityAlbum({ configured, user, onClose, onRequestLog
     const previousOverflow = document.body.style.overflow;
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
-      if (scoreSong) setScoreSong(null);
+      if (playbackSong) closePlayback();
+      else if (scoreSong) closeScorePreview();
       else if (selectedSong) setSelectedSong(null);
       else if (createOpen) setCreateOpen(false);
       else onClose();
@@ -135,7 +204,7 @@ export default function CommunityAlbum({ configured, user, onClose, onRequestLog
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", closeOnEscape);
     };
-  }, [createOpen, onClose, scoreSong, selectedSong]);
+  }, [createOpen, onClose, playbackSong, scoreSong, selectedSong]);
 
   async function openAlbum(album: CommunityAlbumItem) {
     setSelectedAlbum(album);
@@ -199,13 +268,75 @@ export default function CommunityAlbum({ configured, user, onClose, onRequestLog
 
   async function playSelectedSong(song: PublishedSong) {
     if (playingSongId) return;
+    const requestId = ++playbackRequest.current;
+    setPlaybackSong(song);
     setPlayingSongId(song.id);
+    setPlaybackStartedAt(null);
     setError("");
     try {
-      if (!await onPlay(song)) setError("다른 음악이 끝난 뒤 다시 재생해 주세요.");
+      if (await onPlay(song) && playbackRequest.current === requestId) {
+        setPlaybackStartedAt(Date.now() + 80);
+      } else if (playbackRequest.current === requestId) {
+        setError("다른 음악이 끝난 뒤 다시 재생해 주세요.");
+      }
+    } catch (playError) {
+      if (playbackRequest.current === requestId) {
+        console.error(playError);
+        setError("노래 재생을 중지했어요.");
+      }
     } finally {
-      setPlayingSongId(null);
+      if (playbackRequest.current === requestId) setPlayingSongId(null);
     }
+  }
+
+  function closePlayback() {
+    playbackRequest.current += 1;
+    setPlaybackSong(null);
+    setPlaybackStartedAt(null);
+    setPlayingSongId(null);
+    void onStop();
+  }
+
+  function openScorePreview(song: PublishedSong) {
+    setScoreSong(song);
+    setScorePlaybackStartedAt(null);
+    setError("");
+  }
+
+  async function playScorePreview() {
+    if (!scoreSong || playingSongId) return;
+    const requestId = ++playbackRequest.current;
+    setPlayingSongId(scoreSong.id);
+    setScorePlaybackStartedAt(null);
+    setError("");
+    try {
+      if (await onPlay(scoreSong) && playbackRequest.current === requestId) {
+        setScorePlaybackStartedAt(Date.now() + 80);
+      } else if (playbackRequest.current === requestId) {
+        setError("다른 음악이 끝난 뒤 다시 재생해 주세요.");
+      }
+    } catch (playError) {
+      if (playbackRequest.current === requestId) {
+        console.error(playError);
+        setError("노래 재생을 중지했어요.");
+      }
+    } finally {
+      if (playbackRequest.current === requestId) setPlayingSongId(null);
+    }
+  }
+
+  function stopScorePreview() {
+    const shouldStop = scorePlaybackStartedAt !== null ||
+      (scoreSong !== null && playingSongId === scoreSong.id);
+    playbackRequest.current += 1;
+    setScorePlaybackStartedAt(null);
+    setPlayingSongId(null);
+    if (shouldStop) void onStop();
+  }
+
+  function closeScorePreview() {
+    stopScorePreview();
+    setScoreSong(null);
   }
 
   async function saveAccess() {
@@ -293,6 +424,7 @@ export default function CommunityAlbum({ configured, user, onClose, onRequestLog
             {albums.map((album) => (
               <article className="community-album-folder-card" key={album.id}>
                 <button type="button" className="community-album-folder" disabled={busy}
+                  aria-label={`${album.name} ${album.ownerName}의 앨범`}
                   onClick={() => void openAlbum(album)}>
                   <Folder size={45} strokeWidth={1.7} aria-hidden="true" />
                   <span><strong>{album.name}</strong><small>{album.ownerName}의 앨범</small></span>
@@ -339,7 +471,7 @@ export default function CommunityAlbum({ configured, user, onClose, onRequestLog
               <button type="button" onClick={() => void playSelectedSong(selectedSong)} disabled={playingSongId !== null}>
                 <Play size={19} fill="currentColor" /> {playingSongId === selectedSong.id ? "재생 중" : "재생하기"}
               </button>
-              <button type="button" onClick={() => setScoreSong(selectedSong)} disabled={selectedSong.access === "audio"}
+              <button type="button" onClick={() => openScorePreview(selectedSong)} disabled={selectedSong.access === "audio"}
                 title={selectedSong.access === "audio" ? "악보가 공개되지 않은 노래예요." : undefined}>
                 {selectedSong.access === "audio" ? <Lock size={18} /> : <FileMusic size={19} />} 악보 보기
               </button>
@@ -372,7 +504,19 @@ export default function CommunityAlbum({ configured, user, onClose, onRequestLog
         </div>
       )}
 
-      {scoreSong && <PublicScorePreview song={scoreSong} onClose={() => setScoreSong(null)} />}
+      {scoreSong && <PublicScorePreview song={scoreSong}
+        loading={playingSongId === scoreSong.id} startedAt={scorePlaybackStartedAt} error={error}
+        onPlay={() => void playScorePreview()} onStop={stopScorePreview}
+        onEnded={() => setScorePlaybackStartedAt(null)} onClose={closeScorePreview} />}
+      {playbackSong && (
+        <CommunityPlaybackDialog
+          song={playbackSong}
+          loading={playingSongId === playbackSong.id}
+          startedAt={playbackStartedAt}
+          error={error}
+          onClose={closePlayback}
+        />
+      )}
     </div>
   );
 }

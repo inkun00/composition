@@ -1,0 +1,181 @@
+.qr-playback-page {
+  min-height: 100vh;
+  padding: 24px;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 15% 15%, rgba(124, 91, 210, .2), transparent 30%),
+    radial-gradient(circle at 85% 85%, rgba(54, 171, 139, .18), transparent 32%),
+    #f5f1fb;
+}
+
+.qr-playback-card {
+  position: relative;
+  width: min(460px, 100%);
+  padding: 30px;
+  border: 1px solid rgba(105, 79, 183, .18);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, .96);
+  box-shadow: 0 24px 70px rgba(58, 40, 106, .16);
+  text-align: center;
+}
+
+.qr-playback-close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  min-height: 38px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  border-radius: 12px;
+  color: #fff;
+  background: #302a3d;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.qr-playback-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #6951bd;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.qr-playback-art {
+  width: 142px;
+  height: 142px;
+  margin: 10px auto 4px;
+  display: block;
+  object-fit: contain;
+  filter: drop-shadow(0 12px 18px rgba(91, 65, 177, .2));
+}
+
+.qr-playback-card h1 {
+  margin: 0;
+  color: #29243a;
+  font-size: clamp(25px, 7vw, 34px);
+  line-height: 1.25;
+}
+
+.qr-playback-creator {
+  margin: 7px 0 0;
+  color: #777083;
+  font-size: 13px;
+}
+
+.qr-playback-summary {
+  margin: 18px 0;
+  display: flex;
+  justify-content: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.qr-playback-summary span {
+  padding: 6px 9px;
+  border-radius: 999px;
+  color: #5e536d;
+  background: #f2eef8;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.qr-playback-lyrics {
+  margin: 16px 0;
+  padding: 13px;
+  border: 1px solid #e8e0f6;
+  border-radius: 17px;
+  background: #fbf9ff;
+  text-align: left;
+}
+
+.qr-playback-lyrics-heading {
+  margin-bottom: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #5d477f;
+  font-size: 12px;
+}
+
+.qr-playback-lyrics-heading span {
+  padding: 4px 8px;
+  border-radius: 999px;
+  color: #6b50c4;
+  background: #eee8fb;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.qr-playback-lyric-lines {
+  max-height: 154px;
+  display: grid;
+  gap: 6px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
+.qr-playback-lyric-lines p {
+  margin: 0;
+  padding: 8px 9px;
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  align-items: center;
+  border-radius: 10px;
+  color: #8a8293;
+  transition: color .2s ease, background .2s ease, transform .2s ease;
+}
+
+.qr-playback-lyric-lines p.is-active {
+  color: #352651;
+  background: #f0eafd;
+  transform: translateX(2px);
+}
+
+.qr-playback-lyric-lines p.is-past { opacity: .52; }
+.qr-playback-measure-number { font-size: 10px; font-weight: 800; }
+.qr-playback-lyric-text { display: flex; flex-wrap: wrap; gap: 2px; font-size: 19px; font-weight: 900; }
+.qr-playback-lyric-text > span { padding: 1px 2px; border-radius: 5px; transition: all .14s ease; }
+.qr-playback-lyric-text > span.is-active {
+  color: #fff;
+  background: linear-gradient(135deg, #7657d1, #5b3bb5);
+  box-shadow: 0 4px 10px rgba(95, 65, 181, .25);
+  transform: translateY(-1px) scale(1.08);
+}
+
+.qr-playback-no-lyrics { margin: 13px 0; color: #82798e; font-size: 12px; }
+
+.qr-playback-start {
+  width: 100%;
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border: 0;
+  border-radius: 15px;
+  color: #fff;
+  background: linear-gradient(135deg, #6f52ca, #5338aa);
+  font-size: 16px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.qr-playback-start:disabled { opacity: .75; cursor: wait; }
+.qr-playback-guide { margin: 13px 0 0; color: #756b82; font-size: 12px; }
+.qr-playback-error { margin: 14px 0 0; color: #b5344e; font-size: 12px; }
+.qr-playback-card.is-error { color: #654f88; }
+.qr-playback-card.is-error h1 { margin-top: 14px; }
+
+@media (max-width: 520px) {
+  .qr-playback-page { padding: 14px; }
+  .qr-playback-card { padding: 24px 18px; border-radius: 22px; }
+  .qr-playback-art { width: 124px; height: 124px; }
+}

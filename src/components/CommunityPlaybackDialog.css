@@ -1,0 +1,138 @@
+.album-subdialog.community-playback-dialog {
+  width: min(760px, calc(100vw - 40px));
+  max-height: min(680px, calc(100vh - 48px));
+}
+
+.community-playback-body {
+  padding: 22px;
+  display: grid;
+  gap: 16px;
+  overflow: auto;
+}
+
+.community-playback-status {
+  padding: 13px 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #cce7dc;
+  border-radius: 12px;
+  background: #f0faf6;
+  color: #266b55;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.community-playback-status-dot {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #36a47d;
+  box-shadow: 0 0 0 5px rgb(54 164 125 / 12%);
+}
+
+.community-playback-status.is-loading .community-playback-status-dot {
+  animation: community-playback-pulse 1s ease-in-out infinite;
+}
+
+.community-playback-lyrics {
+  padding: 18px;
+  border: 1px solid #e5e0ec;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.community-playback-lyrics h3 {
+  margin: 0 0 14px;
+  color: #383241;
+  font-size: 15px;
+}
+
+.community-playback-lyric-list {
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  list-style: none;
+}
+
+.community-playback-lyric-list li {
+  min-width: 0;
+  padding: 12px 14px;
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 8px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: #f8f6fb;
+}
+
+.community-playback-lyric-list small {
+  color: #8a8097;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.community-playback-lyric-measures {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.community-playback-lyric-measure {
+  padding: 4px 7px;
+  flex: 0 0 auto;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  color: #35303a;
+  font-size: 15px;
+  line-height: 1.45;
+  transition:
+    background .2s ease,
+    border-color .2s ease,
+    box-shadow .2s ease,
+    color .2s ease,
+    transform .2s ease;
+}
+
+.community-playback-lyric-measure.is-active {
+  border-color: #a996ee;
+  background: linear-gradient(105deg, #e9e2ff, #e7f7f0);
+  color: #2d2850;
+  font-weight: 900;
+  box-shadow:
+    0 5px 13px rgb(91 69 184 / 18%),
+    inset 0 1px 0 rgb(255 255 255 / 80%);
+  transform: translateY(-1px);
+}
+
+.community-playback-empty {
+  margin: 0;
+  padding: 24px 12px;
+  color: #8a8390;
+  font-size: 13px;
+  text-align: center;
+}
+
+.community-playback-error {
+  margin: 0;
+  padding: 11px 13px;
+  border: 1px solid #efc5c1;
+  border-radius: 10px;
+  background: #fff5f4;
+  color: #9a403b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+@keyframes community-playback-pulse {
+  50% {
+    opacity: .45;
+    transform: scale(.78);
+  }
+}
