@@ -25,6 +25,12 @@ import { firebaseConfigured } from "./firebase/config";
 import type { User } from "./firebase/client";
 import type { PublishedSong } from "./firebase/communityAlbums";
 import type { CloudScore } from "./firebase/scores";
+import { clearCloudSaveBinding, createLocalProjectId, readCloudSaveBinding, writeCloudSaveBinding } from "./firebase/cloudSaveBinding";
+import {
+  cloudSaveErrorMessage,
+  cloudScoreIdForSave,
+  saveCloudScoreReliably
+} from "./firebase/cloudSaveReliability";
 import { ACCOMPANIMENT_MODES, ACCOMPANIMENT_PLAYING_STYLES, MAX_ACCOMPANIMENT_INSTRUMENTS, accompanimentInstrumentPart, createAccompanimentPattern, findAccompanimentStyle, isAccompanimentInstrument,
   type AccompanimentStyleId } from "./music/accompaniment";
 import { getCandidates, MELODY_CANDIDATE_COUNT, MELODY_FEELING_GROUPS } from "./music/candidates";
@@ -184,19 +190,6 @@ function firebaseAuthMessage(error: unknown, action: "signin" | "signup" | "rese
   if (action === "signup") return "회원가입에 실패했어요. 입력 내용을 확인해 주세요.";
   if (action === "reset") return "비밀번호 재설정 메일을 보내지 못했어요. 다시 시도해 주세요.";
   return "이메일 로그인에 실패했어요. 다시 시도해 주세요.";
-}
-
-function cloudSaveMessage(error: unknown): string {
-  const code = typeof error === "object" && error !== null && "code" in error
-    ? String((error as { code: unknown }).code).replace("firestore/", "")
-    : "";
-  if (code === "unauthenticated") return "로그인이 풀렸어요. 다시 로그인한 뒤 저장해 주세요.";
-  if (code === "permission-denied") return "이 계정에는 저장 권한이 없어요. 다시 로그인해 주세요.";
-  if (code === "unavailable" || code === "deadline-exceeded") {
-    return "인터넷 연결이 불안정해요. 연결을 확인하고 다시 저장해 주세요.";
-  }
-  if (code === "resource-exhausted") return "클라우드 저장 공간을 확인해 주세요.";
-  return "클라우드 저장에 실패했어요. 잠시 뒤 다시 시도해 주세요.";
 }
 
 type ProjectSnapshot = Readonly<{
@@ -360,6 +353,7 @@ export default function App() {
   const [activeCloudScoreId, setActiveCloudScoreId] = useState<string | null>(null);
   const resumableDraft = savedDraft && (!incomingShare || savedDraft.sourceHash === window.location.hash)
     ? savedDraft : null;
+  const [localProjectId, setLocalProjectId] = useState(() => resumableDraft?.projectId ?? createLocalProjectId());
   const initialPreset = findHarmonyPreset(resumableDraft?.presetId ?? incomingShare?.presetId ?? HARMONY_PRESETS[0].id);
   const initialLength = resumableDraft?.songLength ?? incomingShare?.songLength ?? 8;
   const initialAccompanimentStyleId = resumableDraft?.accompanimentStyleId ?? incomingShare?.accompanimentStyleId ?? "children_song";
@@ -402,6 +396,8 @@ export default function App() {
   const mobileRecordingQrRef = useRef<SVGSVGElement | null>(null);
   const backingMixRequest = useRef(0);
   const karaokeAbortController = useRef<AbortController | null>(null);
+  const pendingCloudSave = useRef<{ scoreId: string; asCopy: boolean } | null>(null);
+  const cloudSaveInFlight = useRef(false);
   const [selectedInstrumentId, setSelectedInstrumentId] = useState<InstrumentId>(
     findInstrument(resumableDraft?.instrumentId ?? incomingShare?.instrumentId ?? "piano").id
   );
@@ -660,7 +656,9 @@ export default function App() {
       unsubscribe = observeAuth((user) => {
         setAuthUser(user);
         setAuthReady(true);
-        setActiveCloudScoreId(null);
+        const binding = user ? readCloudSaveBinding(window.localStorage, user.uid, localProjectId) : null;
+        setActiveCloudScoreId(binding?.scoreId ?? null);
+        pendingCloudSave.current = null;
         setCloudError("");
         setCloudNotice("");
       });
@@ -675,7 +673,7 @@ export default function App() {
       active = false;
       unsubscribe?.();
     };
-  }, []);
+  }, [localProjectId]);
 
   useEffect(() => {
     if (!authUser) {
@@ -717,6 +715,7 @@ export default function App() {
 
   const autosaveDraft = useMemo<SavedDraft>(() => ({
     version: 1,
+    projectId: localProjectId,
     updatedAt: Date.now(),
     sourceHash,
     title: songTitle,
@@ -736,7 +735,7 @@ export default function App() {
     measures: measures.map(({ candidateId, candidateName, notes, chords, effects, keyFifths }) =>
       ({ candidateId, candidateName, notes, chords, effects, keyFifths })),
     showArrangement
-  }), [accompanimentInstrumentIds, accompanimentStyleId, beatPattern, beatVolume, bpm, creatorName,
+  }), [accompanimentInstrumentIds, accompanimentStyleId, beatPattern, beatVolume, bpm, creatorName, localProjectId,
     measures, meter, originalCreator, selectedInstrumentId, selectedPresetId, showArrangement, songDescription,
     songLength, songTitle, sourceHash]);
   const { discardDraft: discardAutosavedDraft, saveNow: saveDraftNow } = useDraftAutosave({
@@ -1549,6 +1548,8 @@ export default function App() {
   }
   function applyProjectDraft(project: SavedDraft) {
     const preset = findHarmonyPreset(project.presetId);
+    const nextProjectId = project.projectId ?? createLocalProjectId();
+    setLocalProjectId(nextProjectId);
     resetProjectHistory();
     setSelectedPresetId(preset.id);
     setMeter(project.meter);
@@ -1573,7 +1574,7 @@ export default function App() {
     setSelectedNoteId("");
     setSelectedNoteIds([]);
     setEditStatus("");
-    writeDraft(window.localStorage, project);
+    writeDraft(window.localStorage, { ...project, projectId: nextProjectId });
   }
 
   async function refreshCloudScores(uid: string) {
@@ -1651,34 +1652,56 @@ export default function App() {
       setCloudError("로그인이 풀렸어요. 다시 로그인한 뒤 저장해 주세요.");
       return;
     }
+    if (cloudSaveInFlight.current) return;
+    cloudSaveInFlight.current = true;
     setCloudBusy(true);
     setCloudError("");
     setCloudNotice("클라우드에 저장 중...");
-    saveDraftNow();
+    const draft = currentProjectDraft();
+    const locallySaved = saveDraftNow();
     try {
-      const { saveCloudScore } = await import("./firebase/scores");
-      const scoreId = await saveCloudScore(authUser.uid, currentProjectDraft(), asCopy ? undefined : activeCloudScoreId ?? undefined);
-      setActiveCloudScoreId(scoreId);
+      const { createCloudScoreId, saveCloudScore } = await import("./firebase/scores");
+      const pendingScoreId = pendingCloudSave.current?.asCopy === asCopy
+        ? pendingCloudSave.current.scoreId
+        : null;
+      const scoreId = cloudScoreIdForSave({
+        asCopy,
+        activeScoreId: activeCloudScoreId,
+        pendingScoreId,
+        createScoreId: () => createCloudScoreId(authUser.uid)
+      });
+      pendingCloudSave.current = { scoreId, asCopy };
+      writeCloudSaveBinding(window.localStorage, { uid: authUser.uid, projectId: localProjectId, scoreId });
+      const result = await saveCloudScoreReliably({
+        online: navigator.onLine !== false,
+        save: () => saveCloudScore(authUser.uid, draft, scoreId),
+        refresh: () => refreshCloudScores(authUser.uid)
+      });
+      setActiveCloudScoreId(result.scoreId);
+      pendingCloudSave.current = null;
       setCloudNotice(asCopy ? "새 악보로 저장됐어요 ✓" : "현재 악보가 저장됐어요 ✓");
       setShareStatus(asCopy ? "현재 악보를 새 클라우드 악보로 저장했어요." : "내 악보함에 저장했어요.");
-      try {
-        await refreshCloudScores(authUser.uid);
-      } catch (refreshError) {
-        console.error(refreshError);
+      if (result.refreshFailed) {
         setCloudError("저장은 완료됐지만 목록을 새로 불러오지 못했어요. 창을 닫았다 다시 열어 주세요.");
       }
     } catch (error) {
       console.error(error);
       setCloudNotice("");
-      setCloudError(cloudSaveMessage(error));
+      setCloudError(cloudSaveErrorMessage(error, locallySaved));
     } finally {
+      cloudSaveInFlight.current = false;
       setCloudBusy(false);
     }
   }
 
   function handleCloudLoad(score: CloudScore) {
     if (completedCount > 0 && !window.confirm(`지금 만든 곡 대신 '${score.title}' 악보를 열까요? 현재 곡은 이 컴퓨터에 자동 저장되어 있어요.`)) return;
-    applyProjectDraft(score.draft);
+    const loadedProjectId = score.draft.projectId ?? createLocalProjectId();
+    applyProjectDraft({ ...score.draft, projectId: loadedProjectId });
+    if (authUser) writeCloudSaveBinding(window.localStorage, {
+      uid: authUser.uid, projectId: loadedProjectId, scoreId: score.id
+    });
+    pendingCloudSave.current = null;
     setActiveCloudScoreId(score.id);
     setAccountLibraryOpen(false);
     setShareStatus("내 악보함에서 작품을 불러왔어요.");
@@ -1712,6 +1735,7 @@ export default function App() {
     const copyTitle = `${song.title.trim().slice(0, 56) || "제목 없는 노래"} 사본`;
     const copy: SavedDraft = {
       ...JSON.parse(JSON.stringify(song.draft)) as SavedDraft,
+      projectId: createLocalProjectId(),
       updatedAt: Date.now(),
       sourceHash: "",
       title: copyTitle,
@@ -1719,6 +1743,7 @@ export default function App() {
       originalCreator: song.draft.originalCreator || song.draft.creator || song.creator
     };
     applyProjectDraft(copy);
+    clearCloudSaveBinding(window.localStorage);
     setActiveCloudScoreId(null);
     setCommunityAlbumOpen(false);
     setShowOpening(false);
@@ -1733,7 +1758,10 @@ export default function App() {
     try {
       const { deleteCloudScore } = await import("./firebase/scores");
       await deleteCloudScore(authUser.uid, score.id);
-      if (activeCloudScoreId === score.id) setActiveCloudScoreId(null);
+      if (activeCloudScoreId === score.id) {
+        setActiveCloudScoreId(null);
+        clearCloudSaveBinding(window.localStorage);
+      }
       await refreshCloudScores(authUser.uid);
     } catch (error) {
       console.error(error);
@@ -1746,6 +1774,7 @@ export default function App() {
   function startNewProject() {
     if (completedCount > 0 && !window.confirm("새 곡을 시작할까요? 지금 만든 곡은 자동 저장되어 있어요.")) return;
     discardAutosavedDraft();
+    clearCloudSaveBinding(window.localStorage);
     window.location.assign(`${window.location.pathname}?start=new`);
   }
 
@@ -1984,6 +2013,7 @@ export default function App() {
             <div className="opening-actions">
               <button type="button" className="opening-start action-button" onClick={() => {
                 discardAutosavedDraft();
+                clearCloudSaveBinding(window.localStorage);
                 window.location.assign(`${window.location.pathname}?start=new`);
               }}>
                 <WandSparkles size={20} /> 시작하기 <ArrowRight size={18} />

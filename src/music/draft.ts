@@ -26,6 +26,7 @@ function isChordList(value: unknown): value is readonly string[] {
 
 export type SavedDraft = Readonly<{
   version: 1;
+  projectId?: string;
   updatedAt: number;
   sourceHash: string;
   title: string;
@@ -77,6 +78,8 @@ export function isSavedDraft(value: unknown): value is SavedDraft {
   if (!value || typeof value !== "object") return false;
   const draft = value as Partial<SavedDraft>;
   if (draft.version !== 1 || !Number.isFinite(draft.updatedAt)) return false;
+  if (draft.projectId !== undefined && (typeof draft.projectId !== "string" ||
+    draft.projectId.length === 0 || draft.projectId.length > 120)) return false;
   if (typeof draft.sourceHash !== "string" || draft.sourceHash.length > 50_000) return false;
   if (typeof draft.title !== "string" || draft.title.length > 60) return false;
   if (draft.description !== undefined && (typeof draft.description !== "string" || draft.description.length > 600)) return false;

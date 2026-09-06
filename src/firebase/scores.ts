@@ -71,6 +71,10 @@ export async function saveCloudScore(uid: string, draft: SavedDraft, scoreId?: s
   return scoreRef.id;
 }
 
+export function createCloudScoreId(uid: string): string {
+  return doc(collection(requireFirestore(), "users", uid, "scores")).id;
+}
+
 export async function deleteCloudScore(uid: string, scoreId: string): Promise<void> {
   await deleteDoc(doc(requireFirestore(), "users", uid, "scores", scoreId));
 }

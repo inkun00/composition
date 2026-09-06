@@ -84,4 +84,31 @@ describe("프로젝트 자동저장", () => {
     act(() => window.dispatchEvent(new PageTransitionEvent("pagehide")));
     expect(stored.has(DRAFT_STORAGE_KEY)).toBe(false);
   });
+
+  it("기기 저장소가 차단된 경우 저장 실패를 숨기지 않는다", () => {
+    const blockedStorage = {
+      setItem: () => { throw new DOMException("quota", "QuotaExceededError"); },
+      removeItem: vi.fn()
+    };
+    act(() => root.render(
+      <HarnessWithStorage draft={baseDraft} storage={blockedStorage} />
+    ));
+
+    let saved = true;
+    act(() => { saved = latestControls?.saveNow() ?? true; });
+    expect(saved).toBe(false);
+    expect(statuses.at(-1)).toBe("저장하지 못했어요");
+  });
 });
+
+function HarnessWithStorage({
+  draft,
+  storage: draftStorage
+}: Readonly<{ draft: SavedDraft; storage: Pick<Storage, "setItem" | "removeItem"> }>) {
+  latestControls = useDraftAutosave({
+    draft,
+    storage: draftStorage,
+    onStatus: (status) => statuses.push(status)
+  });
+  return null;
+}

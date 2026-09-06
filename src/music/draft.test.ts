@@ -3,6 +3,7 @@ import { DRAFT_STORAGE_KEY, readDraft, writeDraft, type SavedDraft } from "./dra
 
 const draft: SavedDraft = {
   version: 1,
+  projectId: "project-1",
   updatedAt: 123,
   sourceHash: "#song=sample",
   title: "구름 산책",
