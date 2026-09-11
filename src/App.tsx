@@ -22,7 +22,7 @@ import SaveFailureDialog from "./components/SaveFailureDialog";
 import { firebaseConfigured } from "./firebase/config";
 import type { User } from "./firebase/client";
 import type { PublishedSong } from "./firebase/communityAlbums";
-import type { CloudScore } from "./firebase/scores";
+import type { CloudScore, CloudScoreListItem } from "./firebase/scores";
 import { ACCOMPANIMENT_MODES, ACCOMPANIMENT_PLAYING_STYLES, MAX_ACCOMPANIMENT_INSTRUMENTS, accompanimentInstrumentPart, createAccompanimentPattern, findAccompanimentStyle, isAccompanimentInstrument,
   type AccompanimentStyleId } from "./music/accompaniment";
 import { getCandidates, MELODY_CANDIDATE_COUNT, MELODY_FEELING_GROUPS } from "./music/candidates";
@@ -129,7 +129,7 @@ function backingDisplayNotes(measure: MeasureDraft, meter: Meter, styleId: Accom
   return notes;
 }
 
-type SongLength = 8 | 12 | 16;
+type SongLength = 8 | 12 | 16 | 20 | 24 | 28 | 32;
 type SongPlaybackState = "idle" | "playing" | "paused";
 type KaraokePhase = "idle" | "intro" | "song" | "outro" | "encoding" | "done" | "error";
 type KaraokeMode = "recording" | "practice";
@@ -318,7 +318,7 @@ export default function App() {
   const [publishingScore, setPublishingScore] = useState<CloudScore | null>(null);
   const [authUser, setAuthUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(!firebaseConfigured);
-  const [cloudScores, setCloudScores] = useState<CloudScore[]>([]);
+  const [cloudScores, setCloudScores] = useState<CloudScoreListItem[]>([]);
   const [cloudLoading, setCloudLoading] = useState(false);
   const [cloudBusy, setCloudBusy] = useState(false);
   const [cloudError, setCloudError] = useState("");
@@ -1709,7 +1709,7 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  async function handleCloudDelete(score: CloudScore) {
+  async function handleCloudDelete(score: CloudScoreListItem) {
     if (!authUser || !window.confirm(`'${score.title}' 악보를 내 악보함에서 삭제할까요?`)) return;
     setCloudBusy(true);
     setCloudError("");
@@ -2426,10 +2426,10 @@ export default function App() {
         <section className="length-chooser" aria-labelledby="length-heading">
           <div className="compact-heading">
             <span className="number-badge">4</span>
-            <div><h2 id="length-heading">노래 길이를 골라요</h2><p>처음에는 8마디, 긴 이야기는 12·16마디가 좋아요.</p></div>
+            <div><h2 id="length-heading">노래 길이를 골라요</h2><p>8마디부터 32마디까지 고를 수 있어요.</p></div>
           </div>
           <div className="length-options">
-            {([8, 12, 16] as const).map((length) => (
+            {([8, 12, 16, 20, 24, 28, 32] as const).map((length) => (
               <button key={length} type="button" data-testid={`length-${length}`}
                 className={songLength === length ? "length-option active" : "length-option"}
                 aria-pressed={songLength === length} onClick={() => chooseLength(length)}>

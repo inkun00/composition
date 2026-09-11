@@ -20,7 +20,7 @@ export type SharedComposition = Readonly<{
   originalCreator: string;
   presetId: string;
   meter: Meter;
-  songLength: 8 | 12 | 16;
+  songLength: 8 | 12 | 16 | 20 | 24 | 28 | 32;
   instrumentId: InstrumentId;
   accompanimentStyleId?: AccompanimentStyleId;
   accompanimentInstrumentIds?: readonly InstrumentId[];
@@ -55,7 +55,7 @@ type CompactCompositionV1 = [
   string,
   number,
   2 | 4 | 8,
-  8 | 12 | 16,
+  8 | 12 | 16 | 20 | 24 | 28 | 32,
   string,
   string | undefined,
   readonly string[] | undefined,
@@ -76,7 +76,7 @@ type CompactComposition = [
   string,
   number,
   2 | 4 | 8,
-  8 | 12 | 16,
+  8 | 12 | 16 | 20 | 24 | 28 | 32,
   string,
   string | undefined,
   readonly string[] | undefined,
@@ -180,14 +180,14 @@ function expandCompactComposition(compact: CompactComposition): SharedCompositio
 function isCompactComposition(value: unknown): value is CompactComposition {
   return Array.isArray(value) && value[0] === 2 && typeof value[1] === "string" &&
     typeof value[3] === "string" && typeof value[4] === "string" && typeof value[5] === "string" &&
-    Number.isInteger(value[6]) && [2, 4, 8].includes(value[7]) && [8, 12, 16].includes(value[8]) &&
+    Number.isInteger(value[6]) && [2, 4, 8].includes(value[7]) && [8, 12, 16, 20, 24, 28, 32].includes(value[8]) &&
     typeof value[9] === "string" && Array.isArray(value[13]) && Array.isArray(value[14]);
 }
 
 function isCompactCompositionV1(value: unknown): value is CompactCompositionV1 {
   return Array.isArray(value) && value[0] === 1 && typeof value[1] === "string" &&
     typeof value[3] === "string" && typeof value[4] === "string" && typeof value[5] === "string" &&
-    Number.isInteger(value[6]) && [2, 4, 8].includes(value[7]) && [8, 12, 16].includes(value[8]) &&
+    Number.isInteger(value[6]) && [2, 4, 8].includes(value[7]) && [8, 12, 16, 20, 24, 28, 32].includes(value[8]) &&
     typeof value[9] === "string" && Array.isArray(value[13]) && Array.isArray(value[14]);
 }
 
@@ -230,7 +230,7 @@ function isSharedComposition(value: unknown): value is SharedComposition {
   const item = value as Partial<SharedComposition>;
   if (item.version !== 1 || typeof item.title !== "string" || typeof item.creator !== "string") return false;
   if (typeof item.originalCreator !== "string" || typeof item.presetId !== "string") return false;
-  if (![8, 12, 16].includes(item.songLength ?? 0) || !item.meter || !item.instrumentId) return false;
+  if (![8, 12, 16, 20, 24, 28, 32].includes(item.songLength ?? 0) || !item.meter || !item.instrumentId) return false;
   if (!isValidInstrumentId(item.instrumentId)) return false;
   if (item.accompanimentStyleId !== undefined &&
     !ACCOMPANIMENT_STYLES.some((style) => style.id === item.accompanimentStyleId)) return false;

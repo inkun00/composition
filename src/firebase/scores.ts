@@ -3,9 +3,6 @@ import {
   deleteDoc,
   doc,
   getDocs,
-  limit,
-  orderBy,
-  query,
   setDoc,
   Timestamp
 } from "firebase/firestore";
@@ -16,10 +13,23 @@ export type CloudScore = Readonly<{
   id: string;
   title: string;
   creator: string;
-  songLength: 8 | 12 | 16;
+  songLength: SavedDraft["songLength"];
   updatedAt: number;
   draft: SavedDraft;
+  unavailableReason?: undefined;
 }>;
+
+export type UnavailableCloudScore = Readonly<{
+  id: string;
+  title: string;
+  creator: string;
+  songLength: number | null;
+  updatedAt: number;
+  draft: null;
+  unavailableReason: string;
+}>;
+
+export type CloudScoreListItem = CloudScore | UnavailableCloudScore;
 
 function requireFirestore() {
   if (!firestore) throw new Error("firebase-not-configured");
@@ -30,26 +40,35 @@ function cleanDraft(draft: SavedDraft): SavedDraft {
   return JSON.parse(JSON.stringify(draft)) as SavedDraft;
 }
 
-export async function listCloudScores(uid: string): Promise<CloudScore[]> {
+function timestampMillis(value: unknown): number {
+  const timestamp = value as Timestamp | undefined;
+  return timestamp?.toMillis?.() ?? 0;
+}
+
+export function cloudScoreListItem(id: string, data: Record<string, unknown>): CloudScoreListItem {
+  const rawDraft = data.draft && typeof data.draft === "object" ? data.draft as Record<string, unknown> : null;
+  const updatedAt = timestampMillis(data.updatedAt) || timestampMillis(data.createdAt) ||
+    (typeof rawDraft?.updatedAt === "number" ? rawDraft.updatedAt : 0);
+  const title = typeof data.title === "string" ? data.title :
+    typeof rawDraft?.title === "string" ? rawDraft.title : "이름 없는 저장 자료";
+  const creator = typeof data.creator === "string" ? data.creator :
+    typeof rawDraft?.creator === "string" ? rawDraft.creator : "";
+  if (!isSavedDraft(data.draft)) return {
+    id, title, creator,
+    songLength: typeof data.songLength === "number" ? data.songLength :
+      typeof rawDraft?.songLength === "number" ? rawDraft.songLength : null,
+    updatedAt,
+    draft: null,
+    unavailableReason: "이전 버전에서 저장된 악보예요. 목록에는 보관되지만 지금은 열 수 없어요."
+  };
+  return { id, title, creator, songLength: data.draft.songLength, updatedAt, draft: data.draft };
+}
+
+export async function listCloudScores(uid: string): Promise<CloudScoreListItem[]> {
   const db = requireFirestore();
-  const result = await getDocs(query(
-    collection(db, "users", uid, "scores"),
-    orderBy("updatedAt", "desc"),
-    limit(100)
-  ));
-  return result.docs.flatMap((snapshot) => {
-    const data = snapshot.data();
-    if (!isSavedDraft(data.draft)) return [];
-    const timestamp = data.updatedAt as Timestamp | undefined;
-    return [{
-      id: snapshot.id,
-      title: typeof data.title === "string" ? data.title : data.draft.title,
-      creator: typeof data.creator === "string" ? data.creator : data.draft.creator,
-      songLength: data.draft.songLength,
-      updatedAt: timestamp?.toMillis?.() ?? data.draft.updatedAt,
-      draft: data.draft
-    }];
-  });
+  const result = await getDocs(collection(db, "users", uid, "scores"));
+  return result.docs.map((snapshot) => cloudScoreListItem(snapshot.id, snapshot.data()))
+    .sort((left, right) => right.updatedAt - left.updatedAt || left.title.localeCompare(right.title, "ko"));
 }
 
 export async function saveCloudScore(uid: string, draft: SavedDraft, scoreId?: string): Promise<CloudScore> {

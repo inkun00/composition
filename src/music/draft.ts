@@ -24,7 +24,7 @@ export type SavedDraft = Readonly<{
   originalCreator: string;
   presetId: string;
   meter: Meter;
-  songLength: 8 | 12 | 16;
+  songLength: 8 | 12 | 16 | 20 | 24 | 28 | 32;
   instrumentId: InstrumentId;
   accompanimentStyleId?: AccompanimentStyleId;
   accompanimentInstrumentIds?: readonly InstrumentId[];
@@ -69,7 +69,7 @@ export function isSavedDraft(value: unknown): value is SavedDraft {
   if (typeof draft.creator !== "string" || draft.creator.length > 40) return false;
   if (typeof draft.originalCreator !== "string" || draft.originalCreator.length > 40) return false;
   if (typeof draft.presetId !== "string" || draft.presetId.length > 20) return false;
-  if (![8, 12, 16].includes(draft.songLength ?? 0) || !draft.meter || !draft.instrumentId) return false;
+  if (![8, 12, 16, 20, 24, 28, 32].includes(draft.songLength ?? 0) || !draft.meter || !draft.instrumentId) return false;
   if (![[2, 4], [3, 4], [4, 4], [6, 8]].some(([beats, unit]) =>
     draft.meter?.beats === beats && draft.meter?.beatUnit === unit)) return false;
   if (!isValidInstrumentId(draft.instrumentId)) return false;

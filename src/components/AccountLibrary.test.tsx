@@ -5,7 +5,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import AccountLibrary from "./AccountLibrary";
 import type { User } from "../firebase/client";
-import type { CloudScore } from "../firebase/scores";
+import type { CloudScore, UnavailableCloudScore } from "../firebase/scores";
 import type { SavedDraft } from "../music/draft";
 
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -104,5 +104,36 @@ describe("이메일 계정 화면", () => {
       .find((button) => button.textContent?.includes("앨범에 공개"));
     await act(async () => publishButton?.click());
     expect(onPublish).toHaveBeenCalledWith(score);
+  });
+
+  it("이전 버전 저장 자료도 목록에 표시하고 삭제할 수 있게 한다", async () => {
+    const onDelete = vi.fn();
+    const score: UnavailableCloudScore = {
+      id: "legacy-score",
+      title: "예전 노래",
+      creator: "민준",
+      songLength: 20,
+      updatedAt: 0,
+      draft: null,
+      unavailableReason: "이전 버전에서 저장된 악보예요."
+    };
+    const user = { uid: "user-1", email: "student@example.com" } as User;
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    act(() => root?.render(<AccountLibrary configured user={user} authReady scores={[score]} loading={false}
+      busy={false} error="" currentScoreId={null} onClose={() => undefined}
+      onGoogleSignIn={() => undefined} onEmailAuth={vi.fn().mockResolvedValue(true)}
+      onPasswordReset={vi.fn().mockResolvedValue(true)} onClearError={() => undefined} onSignOut={() => undefined}
+      onSave={() => undefined} onLoad={() => undefined} onPublish={() => undefined} onDelete={onDelete} />));
+
+    expect(container.textContent).toContain("예전 노래");
+    expect(container.textContent).toContain("이전 버전에서 저장된 악보예요.");
+    const openButton = [...container.querySelectorAll<HTMLButtonElement>("button")]
+      .find((button) => button.textContent?.includes("예전 노래"));
+    expect(openButton?.disabled).toBe(true);
+    const deleteButton = container.querySelector<HTMLButtonElement>('[aria-label="예전 노래 삭제"]');
+    await act(async () => deleteButton?.click());
+    expect(onDelete).toHaveBeenCalledWith(score);
   });
 });

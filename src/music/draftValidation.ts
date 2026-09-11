@@ -49,7 +49,7 @@ export function findDraftSaveIssues(draft: SavedDraft): SaveIssue[] {
   } else {
     issues.push({ target: "settings", message: "공유 정보가 너무 커서 저장할 수 없어요. 새 곡으로 연 뒤 다시 저장해 주세요." });
   }
-  if (![8, 12, 16].includes(draft.songLength) || draft.measures.length !== draft.songLength || draft.lyrics.length !== draft.songLength) {
+  if (![8, 12, 16, 20, 24, 28, 32].includes(draft.songLength) || draft.measures.length !== draft.songLength || draft.lyrics.length !== draft.songLength) {
     issues.push({ target: "settings", message: "선택한 노래 길이와 실제 마디 수가 맞지 않아요." });
   }
   if (![[2, 4], [3, 4], [4, 4], [6, 8]].some(([beats, unit]) =>

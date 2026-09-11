@@ -1,13 +1,13 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Cloud, Copy, Eye, EyeOff, FileMusic, Library, LogIn, LogOut, Mail, Save, Share2, Trash2, UserRound, X } from "lucide-react";
 import type { User } from "../firebase/client";
-import type { CloudScore } from "../firebase/scores";
+import type { CloudScore, CloudScoreListItem } from "../firebase/scores";
 
 type AccountLibraryProps = Readonly<{
   configured: boolean;
   user: User | null;
   authReady: boolean;
-  scores: readonly CloudScore[];
+  scores: readonly CloudScoreListItem[];
   loading: boolean;
   busy: boolean;
   error: string;
@@ -21,7 +21,7 @@ type AccountLibraryProps = Readonly<{
   onSave: (asCopy: boolean) => void;
   onLoad: (score: CloudScore) => void;
   onPublish: (score: CloudScore) => void;
-  onDelete: (score: CloudScore) => void;
+  onDelete: (score: CloudScoreListItem) => void;
 }>;
 
 function updatedLabel(timestamp: number): string {
@@ -31,8 +31,12 @@ function updatedLabel(timestamp: number): string {
   }).format(new Date(timestamp));
 }
 
-function isPublishableScore(score: CloudScore): boolean {
-  return score.draft.measures.every((measure) => Array.isArray(measure.notes) && measure.notes.length > 0);
+function isAvailableScore(score: CloudScoreListItem): score is CloudScore {
+  return score.draft !== null;
+}
+
+function isPublishableScore(score: CloudScoreListItem): score is CloudScore {
+  return isAvailableScore(score) && score.draft.measures.every((measure) => Array.isArray(measure.notes) && measure.notes.length > 0);
 }
 
 export default function AccountLibrary({ configured, user, authReady, scores, loading, busy, error,
@@ -203,14 +207,16 @@ export default function AccountLibrary({ configured, user, authReady, scores, lo
               <div className="account-score-list">
                 {scores.map((score) => (
                   <article className={score.id === currentScoreId ? "account-score active" : "account-score"} key={score.id}>
-                    <button type="button" className="account-score-open" onClick={() => onLoad(score)} disabled={busy}>
+                    <button type="button" className="account-score-open"
+                      onClick={() => { if (isAvailableScore(score)) onLoad(score); }} disabled={busy || !isAvailableScore(score)}>
                       <FileMusic size={21} aria-hidden="true" />
-                      <span><strong>{score.title || "제목 없는 악보"}</strong><small>{score.songLength}마디 · {updatedLabel(score.updatedAt)}</small></span>
+                      <span><strong>{score.title || "제목 없는 악보"}</strong><small>{score.songLength ? `${score.songLength}마디 · ` : ""}{updatedLabel(score.updatedAt)}</small>
+                        {score.unavailableReason && <small>{score.unavailableReason}</small>}</span>
                     </button>
                     <div className="account-score-actions">
                       <button type="button" className="account-score-publish" title={isPublishableScore(score)
                         ? "앨범에 공개" : "모든 마디를 완성하면 공개할 수 있어요."}
-                        onClick={() => onPublish(score)} disabled={busy || !isPublishableScore(score)}>
+                        onClick={() => { if (isPublishableScore(score)) onPublish(score); }} disabled={busy || !isPublishableScore(score)}>
                         <Share2 size={16} /> 앨범에 공개
                       </button>
                       <button type="button" className="account-score-delete" title="악보 삭제" aria-label={`${score.title} 삭제`}

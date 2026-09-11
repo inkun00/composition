@@ -21,7 +21,7 @@ service cloud.firestore {
           && request.resource.data.ownerId == userId
           && request.resource.data.title is string
           && request.resource.data.title.size() <= 60
-          && request.resource.data.songLength in [8, 12, 16];
+          && request.resource.data.songLength in [8, 12, 16, 20, 24, 28, 32];
       }
     }
 
