@@ -18,6 +18,7 @@ import CommunityAlbum from "./components/CommunityAlbum";
 import HarmonyPresetChooser from "./components/HarmonyPresetChooser";
 import SongMoodSetup from "./components/SongMoodSetup";
 import PublishScoreDialog from "./components/PublishScoreDialog";
+import SaveFailureDialog from "./components/SaveFailureDialog";
 import { firebaseConfigured } from "./firebase/config";
 import type { User } from "./firebase/client";
 import type { PublishedSong } from "./firebase/communityAlbums";
@@ -28,6 +29,7 @@ import { getCandidates, MELODY_CANDIDATE_COUNT, MELODY_FEELING_GROUPS } from "./
 import { rankRecommendedCandidates } from "./music/recommendation";
 import { chordMidiPitches, chordPitchClasses } from "./music/chord";
 import { DRAFT_STORAGE_KEY, isSavedDraft, readDraft, writeDraft, type SavedDraft } from "./music/draft";
+import { cloudSaveIssue, findDraftSaveIssues, type SaveIssue } from "./music/draftValidation";
 import { findHarmonyPreset, HARMONY_PRESETS, type HarmonyPreset } from "./music/harmonyPresets";
 import { findInstrument, INSTRUMENTS, type InstrumentId } from "./music/instruments";
 import { measureCapacity, meterKey, SUPPORTED_METERS, validateMeasure, type Meter } from "./music/meter";
@@ -320,6 +322,8 @@ export default function App() {
   const [cloudLoading, setCloudLoading] = useState(false);
   const [cloudBusy, setCloudBusy] = useState(false);
   const [cloudError, setCloudError] = useState("");
+  const [saveIssues, setSaveIssues] = useState<SaveIssue[]>([]);
+  const [saveFailureOpen, setSaveFailureOpen] = useState(false);
   const [activeCloudScoreId, setActiveCloudScoreId] = useState<string | null>(null);
   const resumableDraft = savedDraft && (!incomingShare || savedDraft.sourceHash === window.location.hash)
     ? savedDraft : null;
@@ -437,7 +441,15 @@ export default function App() {
   const canRenderMobileRecordingQr = mobileRecordingUrl.length > 0 && mobileRecordingUrl.length <= QR_RENDER_LIMIT;
 
   const activeMeasure = measures[activeIndex];
-  const lyrics = measures.map((measure) => lyricText(measure.notes));
+  const lyrics = useMemo(() => measures.map((measure) => lyricText(measure.notes)), [measures]);
+  const currentDraft = useMemo<SavedDraft>(() => ({
+    version: 1, updatedAt: Date.now(), sourceHash, title: songTitle, description: songDescription,
+    creator: creatorName, originalCreator, presetId: selectedPresetId, meter, songLength,
+    instrumentId: selectedInstrumentId, accompanimentStyleId, accompanimentInstrumentIds, bpm, lyrics,
+    measures: measures.map(({ candidateId, candidateName, notes, effects }) => ({ candidateId, candidateName, notes, effects })),
+    showArrangement
+  }), [accompanimentInstrumentIds, accompanimentStyleId, bpm, creatorName, lyrics, measures, meter,
+    originalCreator, selectedInstrumentId, selectedPresetId, songDescription, sourceHash, showArrangement, songLength, songTitle]);
   const candidates = useMemo(
     () => getCandidates(activeMeasure.story, meter, activeMeasure.chords),
     [activeMeasure.story, activeMeasure.chords, meter]
@@ -687,30 +699,10 @@ export default function App() {
   useEffect(() => {
     setSaveStatus("저장 중…");
     const timer = window.setTimeout(() => {
-      const draft: SavedDraft = {
-        version: 1,
-        updatedAt: Date.now(),
-        sourceHash,
-        title: songTitle,
-        description: songDescription,
-        creator: creatorName,
-        originalCreator,
-        presetId: selectedPresetId,
-        meter,
-        songLength,
-        instrumentId: selectedInstrumentId,
-        accompanimentStyleId,
-        accompanimentInstrumentIds,
-        bpm,
-        lyrics,
-        measures: measures.map(({ candidateId, candidateName, notes, effects }) => ({ candidateId, candidateName, notes, effects })),
-        showArrangement
-      };
-      setSaveStatus(writeDraft(window.localStorage, draft) ? "저장됨 ✓" : "저장하지 못했어요");
+      setSaveStatus(writeDraft(window.localStorage, currentDraft) ? "저장됨 ✓" : "저장하지 못했어요");
     }, 800);
     return () => window.clearTimeout(timer);
-  }, [accompanimentInstrumentIds, accompanimentStyleId, bpm, creatorName, measures, meter,
-    originalCreator, selectedInstrumentId, selectedPresetId, songDescription, sourceHash, showArrangement, songLength, songTitle]);
+  }, [currentDraft]);
 
   function restoreComposition(snapshot: CompositionSnapshot) {
     restoringHistory.current = true;
@@ -1520,30 +1512,8 @@ export default function App() {
     }
   }
 
-  function currentProjectDraft(): SavedDraft {
-    return {
-      version: 1,
-      updatedAt: Date.now(),
-      sourceHash,
-      title: songTitle,
-      description: songDescription,
-      creator: creatorName,
-      originalCreator,
-      presetId: selectedPresetId,
-      meter,
-      songLength,
-      instrumentId: selectedInstrumentId,
-      accompanimentStyleId,
-      accompanimentInstrumentIds,
-      bpm,
-      lyrics,
-      measures: measures.map(({ candidateId, candidateName, notes, effects }) => ({ candidateId, candidateName, notes, effects })),
-      showArrangement
-    };
-  }
-
   function saveProjectFile() {
-    const blob = new Blob([JSON.stringify(currentProjectDraft(), null, 2)], { type: "text/plain;charset=utf-8" });
+    const blob = new Blob([JSON.stringify(currentDraft, null, 2)], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -1653,20 +1623,42 @@ export default function App() {
 
   async function handleCloudSave(asCopy: boolean) {
     if (!authUser) return;
+    const draft = { ...currentDraft, updatedAt: Date.now() };
+    const draftIssues = findDraftSaveIssues(draft);
+    setSaveIssues([]);
+    setSaveFailureOpen(false);
+    if (draftIssues.length > 0) {
+      setCloudError("저장할 수 없는 부분을 확인해 주세요.");
+      setSaveIssues(draftIssues);
+      setSaveFailureOpen(true);
+      return;
+    }
     setCloudBusy(true);
     setCloudError("");
     try {
       const { saveCloudScore } = await import("./firebase/scores");
-      const scoreId = await saveCloudScore(authUser.uid, currentProjectDraft(), asCopy ? undefined : activeCloudScoreId ?? undefined);
-      setActiveCloudScoreId(scoreId);
-      await refreshCloudScores(authUser.uid);
+      const savedScore = await saveCloudScore(authUser.uid, draft, asCopy ? undefined : activeCloudScoreId ?? undefined);
+      setActiveCloudScoreId(savedScore.id);
+      setCloudScores((scores) => [savedScore, ...scores.filter((score) => score.id !== savedScore.id)]);
       setShareStatus(asCopy ? "현재 악보를 새 클라우드 악보로 저장했어요." : "내 악보함에 저장했어요.");
     } catch (error) {
       console.error(error);
-      setCloudError("클라우드 저장에 실패했어요. 잠시 뒤 다시 시도해 주세요.");
+      const issue = cloudSaveIssue(error);
+      setCloudError(issue.message);
+      setSaveIssues([issue]);
+      setSaveFailureOpen(true);
     } finally {
       setCloudBusy(false);
     }
+  }
+
+  function locateSaveIssue(issue: SaveIssue) {
+    setSaveFailureOpen(false);
+    setAccountLibraryOpen(false);
+    if (issue.measureIndex !== undefined) setActiveIndex(issue.measureIndex);
+    if (["title", "creator", "description"].includes(issue.target)) setShowArrangement(true);
+    window.setTimeout(() => document.querySelector<HTMLElement>(`[data-save-target="${issue.measureIndex !== undefined ? `measure-${issue.measureIndex}` : issue.target}"]`)
+      ?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
   }
 
   function handleCloudLoad(score: CloudScore) {
@@ -2070,6 +2062,8 @@ export default function App() {
           onDelete={(score) => void handleCloudDelete(score)} />
       )}
 
+      {saveFailureOpen && <SaveFailureDialog issues={saveIssues} onClose={() => setSaveFailureOpen(false)} onLocate={locateSaveIssue} />}
+
       {communityAlbumOpen && !mobileRecordMode && (
         <CommunityAlbum configured={firebaseConfigured} user={authUser}
           onClose={() => setCommunityAlbumOpen(false)}
@@ -2405,7 +2399,7 @@ export default function App() {
           disabled={isAnyPlaying} playing={presetPreviewing}
           onPlayingChange={setPresetPreviewing} onSelect={choosePreset} />
 
-        <section className="meter-chooser meter-with-guide" aria-labelledby="meter-heading">
+        <section className="meter-chooser meter-with-guide" aria-labelledby="meter-heading" data-save-target="settings">
           <div className="compact-heading">
             <span className="number-badge">3</span>
             <div><h2 id="meter-heading">노래의 박자를 골라요</h2><p>박자를 바꾸면 작곡이 새로 시작돼요.</p></div>
@@ -2486,11 +2480,12 @@ export default function App() {
             {measures.map((measure, index) => (
               <div className="measure-cell" key={index}>
                 <button type="button" data-testid={`measure-${index + 1}`}
+                  data-save-target={`measure-${index}`}
                   data-playing={playingMeasureIndex === index ? "true" : undefined}
                   aria-current={playingMeasureIndex === index ? "true" : undefined}
                   aria-label={`${index + 1}마디, ${storyInfo[measure.story].label}, ${measure.storyHint}${measure.notes ? ", 가락 선택 완료" : ", 가락 선택 전"}`}
                   data-rhythm-check={rhythmChecks[index]}
-                  className={`measure-slot ${measure.story}${activeIndex === index ? " active" : ""}${measure.notes ? " completed" : ""}${rhythmChecks[index] ? ` rhythm-${rhythmChecks[index]}` : ""}${recentCompletedIndex === index ? " just-completed" : ""}${playingMeasureIndex === index ? " playing" : ""}`}
+                  className={`measure-slot ${measure.story}${activeIndex === index ? " active" : ""}${measure.notes ? " completed" : ""}${rhythmChecks[index] ? ` rhythm-${rhythmChecks[index]}` : ""}${recentCompletedIndex === index ? " just-completed" : ""}${playingMeasureIndex === index ? " playing" : ""}${saveIssues.some((issue) => issue.measureIndex === index) ? " save-issue" : ""}`}
                   onClick={() => {
                     setActiveIndex(index);
                     setSelectedNoteId(measure.notes?.[0]?.id ?? "");
@@ -2983,14 +2978,14 @@ export default function App() {
                 </div>
               )}
               <div className="publish-fields">
-                <label><span>곡 제목</span><input data-testid="song-title" value={songTitle} maxLength={60}
+                <label className={saveIssues.some((issue) => issue.target === "title") ? "save-issue" : ""} data-save-target="title"><span>곡 제목</span><input data-testid="song-title" value={songTitle} maxLength={60}
                   onChange={(event) => { setSongTitle(event.target.value); setShareStatus(""); }} /></label>
-                <label><span>{originalCreator ? "리메이크 작곡가" : "작곡가"}</span>
+                <label className={saveIssues.some((issue) => issue.target === "creator") ? "save-issue" : ""} data-save-target="creator"><span>{originalCreator ? "리메이크 작곡가" : "작곡가"}</span>
                   <input data-testid="creator-name" value={creatorName} maxLength={40}
                     onChange={(event) => { setCreatorName(event.target.value); setShareStatus(""); }}
                     placeholder="이름이나 별명을 적어요" /></label>
               </div>
-              <label className="song-description-field">
+              <label className={`song-description-field${saveIssues.some((issue) => issue.target === "description") ? " save-issue" : ""}`} data-save-target="description">
                 <span>이 노래에 대한 이야기</span>
                 <textarea data-testid="song-description" value={songDescription} maxLength={600} rows={4}
                   onChange={(event) => { setSongDescription(event.target.value); setShareStatus(""); }}

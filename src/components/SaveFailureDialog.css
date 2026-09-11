@@ -1,0 +1,17 @@
+.save-failure-overlay { position: fixed; inset: 0; z-index: 140; display: grid; place-items: center; padding: 20px; background: rgba(37,32,53,.62); }
+.save-failure-dialog { width: min(520px,100%); overflow: hidden; border: 1px solid #e6b7b2; border-radius: 14px; background: #fff; box-shadow: 0 24px 70px rgba(34,27,56,.35); }
+.save-failure-dialog header { padding: 20px; display: grid; grid-template-columns: auto 1fr auto; align-items: start; gap: 12px; border-bottom: 1px solid #f0dfdd; background: #fff8f7; }
+.save-failure-dialog header > span { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 50%; background: #fbe5e2; color: #b74942; }
+.save-failure-dialog h2, .save-failure-dialog p { margin: 0; }
+.save-failure-dialog h2 { color: #4a302f; font-size: 19px; }
+.save-failure-dialog p { margin-top: 5px; color: #795d5a; font-size: 13px; }
+.save-failure-dialog header > button { width: 34px; height: 34px; display: grid; place-items: center; border: 0; border-radius: 8px; background: transparent; color: #705d5c; cursor: pointer; }
+.save-failure-dialog ul { max-height: min(360px,50vh); overflow: auto; margin: 0; padding: 16px 20px; display: grid; gap: 9px; list-style: none; }
+.save-failure-dialog li { padding: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px solid #efd1cd; border-radius: 9px; background: #fffafa; color: #713d39; font-size: 13px; font-weight: 700; line-height: 1.45; }
+.save-failure-dialog li button { min-height: 34px; padding: 0 9px; display: inline-flex; flex: 0 0 auto; align-items: center; gap: 5px; border: 1px solid #d99e98; border-radius: 7px; background: #fff; color: #9b403a; font-weight: 800; cursor: pointer; }
+.save-failure-dialog footer { padding: 0 20px 18px; display: flex; justify-content: flex-end; }
+.save-failure-dialog footer button { min-width: 92px; min-height: 42px; border: 0; border-radius: 9px; background: #a74640; color: #fff; font-weight: 800; cursor: pointer; }
+.measure-slot.save-issue { border-color: #d34d46; box-shadow: 0 0 0 3px rgba(211,77,70,.18); animation: save-issue-pulse 1.1s ease-in-out 2; }
+.publish-fields label.save-issue input, .song-description-field.save-issue textarea { border-color: #d34d46; box-shadow: 0 0 0 3px rgba(211,77,70,.16); }
+@keyframes save-issue-pulse { 50% { box-shadow: 0 0 0 7px rgba(211,77,70,.08); } }
+@media (max-width: 620px) { .save-failure-overlay { padding: 0; align-items: end; } .save-failure-dialog { border-radius: 14px 14px 0 0; } .save-failure-dialog li { align-items: flex-start; flex-direction: column; } }

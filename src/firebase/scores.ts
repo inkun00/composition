@@ -6,9 +6,8 @@ import {
   limit,
   orderBy,
   query,
-  serverTimestamp,
   setDoc,
-  type Timestamp
+  Timestamp
 } from "firebase/firestore";
 import { firestore } from "./client";
 import { isSavedDraft, type SavedDraft } from "../music/draft";
@@ -53,7 +52,7 @@ export async function listCloudScores(uid: string): Promise<CloudScore[]> {
   });
 }
 
-export async function saveCloudScore(uid: string, draft: SavedDraft, scoreId?: string): Promise<string> {
+export async function saveCloudScore(uid: string, draft: SavedDraft, scoreId?: string): Promise<CloudScore> {
   const db = requireFirestore();
   const scoreRef = scoreId
     ? doc(db, "users", uid, "scores", scoreId)
@@ -64,11 +63,18 @@ export async function saveCloudScore(uid: string, draft: SavedDraft, scoreId?: s
     title: savedDraft.title || "제목 없는 악보",
     creator: savedDraft.creator,
     songLength: savedDraft.songLength,
-    updatedAt: serverTimestamp(),
-    ...(scoreId ? {} : { createdAt: serverTimestamp() }),
+    updatedAt: Timestamp.fromMillis(savedDraft.updatedAt),
+    ...(scoreId ? {} : { createdAt: Timestamp.fromMillis(savedDraft.updatedAt) }),
     draft: savedDraft
   }, { merge: true });
-  return scoreRef.id;
+  return {
+    id: scoreRef.id,
+    title: savedDraft.title || "제목 없는 악보",
+    creator: savedDraft.creator,
+    songLength: savedDraft.songLength,
+    updatedAt: savedDraft.updatedAt,
+    draft: savedDraft
+  };
 }
 
 export async function deleteCloudScore(uid: string, scoreId: string): Promise<void> {
