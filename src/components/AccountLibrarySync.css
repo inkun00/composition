@@ -1,0 +1,5 @@
+.account-sync-explain { margin: 8px 18px; color: #5b5567; font-size: 12px; line-height: 1.5; }
+.account-sync-explain code { overflow-wrap: anywhere; user-select: all; }
+.account-sync-notice { margin: 8px 18px; padding: 9px 12px; border-radius: 8px; background: #edf8f1; color: #246b49; font-size: 12px; font-weight: 700; }
+.account-sync-warning { margin: 8px 18px; padding: 10px 12px; border-radius: 8px; background: #fff5e9; color: #71451d; font-size: 12px; line-height: 1.5; }
+.account-sync-warning button { margin-left: 8px; border: 1px solid #d4a365; border-radius: 6px; background: #fff; color: inherit; cursor: pointer; font-weight: 700; }

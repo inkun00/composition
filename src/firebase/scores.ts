@@ -3,6 +3,7 @@ import {
   deleteDoc,
   doc,
   getDocs,
+  onSnapshot,
   setDoc,
   Timestamp
 } from "firebase/firestore";
@@ -69,6 +70,17 @@ export async function listCloudScores(uid: string): Promise<CloudScoreListItem[]
   const result = await getDocs(collection(db, "users", uid, "scores"));
   return result.docs.map((snapshot) => cloudScoreListItem(snapshot.id, snapshot.data()))
     .sort((left, right) => right.updatedAt - left.updatedAt || left.title.localeCompare(right.title, "ko"));
+}
+
+export function subscribeCloudScores(
+  uid: string,
+  onUpdate: (scores: CloudScoreListItem[], fromCache: boolean) => void,
+  onError: (error: Error) => void
+): () => void {
+  return onSnapshot(collection(requireFirestore(), "users", uid, "scores"), { includeMetadataChanges: true },
+    (snapshot) => onUpdate(snapshot.docs.map((item) => cloudScoreListItem(item.id, item.data()))
+      .sort((left, right) => right.updatedAt - left.updatedAt || left.title.localeCompare(right.title, "ko")),
+    snapshot.metadata.fromCache || snapshot.metadata.hasPendingWrites), onError);
 }
 
 export async function saveCloudScore(uid: string, draft: SavedDraft, scoreId?: string): Promise<CloudScore> {

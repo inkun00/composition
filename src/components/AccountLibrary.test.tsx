@@ -17,7 +17,7 @@ function renderAccountLibrary(onEmailAuth = vi.fn().mockResolvedValue(true)) {
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
-  act(() => root?.render(<AccountLibrary configured user={null} authReady scores={[]} loading={false}
+  act(() => root?.render(<AccountLibrary configured user={null} authReady scores={[]} listStatus="ready" onRetryList={() => undefined} saveNotice=""
     busy={false} error="" currentScoreId={null} onClose={() => undefined}
     onGoogleSignIn={() => undefined} onEmailAuth={onEmailAuth}
     onPasswordReset={vi.fn().mockResolvedValue(true)} onClearError={() => undefined} onSignOut={() => undefined}
@@ -94,7 +94,7 @@ describe("이메일 계정 화면", () => {
     container = document.createElement("div");
     document.body.append(container);
     root = createRoot(container);
-    act(() => root?.render(<AccountLibrary configured user={user} authReady scores={[score]} loading={false}
+    act(() => root?.render(<AccountLibrary configured user={user} authReady scores={[score]} listStatus="ready" onRetryList={() => undefined} saveNotice=""
       busy={false} error="" currentScoreId={null} onClose={() => undefined}
       onGoogleSignIn={() => undefined} onEmailAuth={vi.fn().mockResolvedValue(true)}
       onPasswordReset={vi.fn().mockResolvedValue(true)} onClearError={() => undefined} onSignOut={() => undefined}
@@ -121,7 +121,7 @@ describe("이메일 계정 화면", () => {
     container = document.createElement("div");
     document.body.append(container);
     root = createRoot(container);
-    act(() => root?.render(<AccountLibrary configured user={user} authReady scores={[score]} loading={false}
+    act(() => root?.render(<AccountLibrary configured user={user} authReady scores={[score]} listStatus="ready" onRetryList={() => undefined} saveNotice=""
       busy={false} error="" currentScoreId={null} onClose={() => undefined}
       onGoogleSignIn={() => undefined} onEmailAuth={vi.fn().mockResolvedValue(true)}
       onPasswordReset={vi.fn().mockResolvedValue(true)} onClearError={() => undefined} onSignOut={() => undefined}
@@ -135,5 +135,33 @@ describe("이메일 계정 화면", () => {
     const deleteButton = container.querySelector<HTMLButtonElement>('[aria-label="예전 노래 삭제"]');
     await act(async () => deleteButton?.click());
     expect(onDelete).toHaveBeenCalledWith(score);
+  });
+
+  it("조회 실패를 빈 목록과 구분하고 계정 번호와 저장 위치를 안내한다", async () => {
+    const onRetryList = vi.fn();
+    const user = { uid: "user-123", email: "student@example.com" } as User;
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    act(() => root?.render(<AccountLibrary configured user={user} authReady scores={[]} listStatus="error"
+      onRetryList={onRetryList} busy={false} error="" saveNotice="" currentScoreId={null} onClose={() => undefined}
+      onGoogleSignIn={() => undefined} onEmailAuth={vi.fn().mockResolvedValue(true)}
+      onPasswordReset={vi.fn().mockResolvedValue(true)} onClearError={() => undefined} onSignOut={() => undefined}
+      onSave={() => undefined} onLoad={() => undefined} onPublish={() => undefined} onDelete={() => undefined} />));
+    expect(container.textContent).toContain("계정 번호: user-123");
+    expect(container.textContent).toContain("자동 임시저장은 이 기기에만 남아요");
+    expect(container.textContent).toContain("목록을 불러오지 못했어요");
+    expect(container.textContent).not.toContain("아직 저장된 악보가 없어요");
+    expect(container.querySelector(".account-score-heading span")?.textContent).toBe("확인 전");
+    await act(async () => container?.querySelector<HTMLButtonElement>(".account-sync-warning button")?.click());
+    expect(onRetryList).toHaveBeenCalledOnce();
+    act(() => root?.render(<AccountLibrary configured user={user} authReady scores={[]} listStatus="stale"
+      onRetryList={onRetryList} busy={false} error="" saveNotice="계정 저장 완료 ✓" currentScoreId={null} onClose={() => undefined}
+      onGoogleSignIn={() => undefined} onEmailAuth={vi.fn().mockResolvedValue(true)}
+      onPasswordReset={vi.fn().mockResolvedValue(true)} onClearError={() => undefined} onSignOut={() => undefined}
+      onSave={() => undefined} onLoad={() => undefined} onPublish={() => undefined} onDelete={() => undefined} />));
+    expect(container.textContent).toContain("계정 저장 완료 ✓");
+    expect(container.textContent).toContain("이전 정보일 수 있어요");
+    expect(container.textContent).not.toContain("아직 저장된 악보가 없어요");
   });
 });

@@ -23,6 +23,7 @@ import { firebaseConfigured } from "./firebase/config";
 import type { User } from "./firebase/client";
 import type { PublishedSong } from "./firebase/communityAlbums";
 import type { CloudScore, CloudScoreListItem } from "./firebase/scores";
+import { useCloudScoreList } from "./hooks/useCloudScoreList";
 import { ACCOMPANIMENT_MODES, ACCOMPANIMENT_PLAYING_STYLES, MAX_ACCOMPANIMENT_INSTRUMENTS, accompanimentInstrumentPart, createAccompanimentPattern, findAccompanimentStyle, isAccompanimentInstrument,
   type AccompanimentStyleId } from "./music/accompaniment";
 import { getCandidates, MELODY_CANDIDATE_COUNT, MELODY_FEELING_GROUPS } from "./music/candidates";
@@ -318,10 +319,11 @@ export default function App() {
   const [publishingScore, setPublishingScore] = useState<CloudScore | null>(null);
   const [authUser, setAuthUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(!firebaseConfigured);
-  const [cloudScores, setCloudScores] = useState<CloudScoreListItem[]>([]);
-  const [cloudLoading, setCloudLoading] = useState(false);
+  const { scores: cloudScores, status: cloudListStatus, retry: retryCloudScores,
+    upsert: upsertCloudScore } = useCloudScoreList(authUser?.uid ?? null);
   const [cloudBusy, setCloudBusy] = useState(false);
   const [cloudError, setCloudError] = useState("");
+  const [cloudSaveNotice, setCloudSaveNotice] = useState("");
   const [saveIssues, setSaveIssues] = useState<SaveIssue[]>([]);
   const [saveFailureOpen, setSaveFailureOpen] = useState(false);
   const [activeCloudScoreId, setActiveCloudScoreId] = useState<string | null>(null);
@@ -394,7 +396,7 @@ export default function App() {
   const [songDescription, setSongDescription] = useState(
     resumableDraft?.description ?? incomingShare?.description ?? ""
   );
-  const [saveStatus, setSaveStatus] = useState(resumableDraft ? "이어 불러옴 ✓" : "저장됨 ✓");
+  const [saveStatus, setSaveStatus] = useState(resumableDraft ? "이 기기에서 이어 불러옴 ✓" : "이 기기에 임시 저장됨 ✓");
   const [shareStatus, setShareStatus] = useState("");
   const [generatedShareUrl, setGeneratedShareUrl] = useState("");
   const [mobileRecordingUrl, setMobileRecordingUrl] = useState("");
@@ -625,6 +627,7 @@ export default function App() {
         setAuthReady(true);
         setActiveCloudScoreId(null);
         setCloudError("");
+        setCloudSaveNotice("");
       });
     }).catch((error) => {
       console.error(error);
@@ -638,24 +641,6 @@ export default function App() {
       unsubscribe?.();
     };
   }, []);
-
-  useEffect(() => {
-    if (!authUser) {
-      setCloudScores([]);
-      setCloudLoading(false);
-      return;
-    }
-    let active = true;
-    setCloudLoading(true);
-    void import("./firebase/scores").then(({ listCloudScores }) => listCloudScores(authUser.uid))
-      .then((scores) => { if (active) setCloudScores(scores); })
-      .catch((error) => {
-        console.error(error);
-        if (active) setCloudError("클라우드 악보를 불러오지 못했어요. Firebase 설정을 확인해 주세요.");
-      })
-      .finally(() => { if (active) setCloudLoading(false); });
-    return () => { active = false; };
-  }, [authUser]);
 
   useEffect(() => () => {
     if (recordingDownloadUrl) URL.revokeObjectURL(recordingDownloadUrl);
@@ -698,8 +683,10 @@ export default function App() {
 
   useEffect(() => {
     setSaveStatus("저장 중…");
+    setCloudSaveNotice("");
     const timer = window.setTimeout(() => {
-      setSaveStatus(writeDraft(window.localStorage, currentDraft) ? "저장됨 ✓" : "저장하지 못했어요");
+      setSaveStatus(writeDraft(window.localStorage, currentDraft)
+        ? "이 기기에 임시 저장됨 ✓" : "이 기기에 저장하지 못했어요");
     }, 800);
     return () => window.clearTimeout(timer);
   }, [currentDraft]);
@@ -1552,19 +1539,10 @@ export default function App() {
     writeDraft(window.localStorage, project);
   }
 
-  async function refreshCloudScores(uid: string) {
-    setCloudLoading(true);
-    try {
-      const { listCloudScores } = await import("./firebase/scores");
-      setCloudScores(await listCloudScores(uid));
-    } finally {
-      setCloudLoading(false);
-    }
-  }
-
   async function handleGoogleSignIn() {
     setCloudBusy(true);
     setCloudError("");
+    setCloudSaveNotice("계정에 저장 중...");
     try {
       const { signInWithGoogle } = await import("./firebase/client");
       await signInWithGoogle();
@@ -1639,12 +1617,14 @@ export default function App() {
       const { saveCloudScore } = await import("./firebase/scores");
       const savedScore = await saveCloudScore(authUser.uid, draft, asCopy ? undefined : activeCloudScoreId ?? undefined);
       setActiveCloudScoreId(savedScore.id);
-      setCloudScores((scores) => [savedScore, ...scores.filter((score) => score.id !== savedScore.id)]);
+      upsertCloudScore(savedScore);
+      setCloudSaveNotice("계정 저장 완료 ✓ 다른 기기에서도 볼 수 있어요.");
       setShareStatus(asCopy ? "현재 악보를 새 클라우드 악보로 저장했어요." : "내 악보함에 저장했어요.");
     } catch (error) {
       console.error(error);
       const issue = cloudSaveIssue(error);
       setCloudError(issue.message);
+      setCloudSaveNotice("");
       setSaveIssues([issue]);
       setSaveFailureOpen(true);
     } finally {
@@ -1717,7 +1697,7 @@ export default function App() {
       const { deleteCloudScore } = await import("./firebase/scores");
       await deleteCloudScore(authUser.uid, score.id);
       if (activeCloudScoreId === score.id) setActiveCloudScoreId(null);
-      await refreshCloudScores(authUser.uid);
+      retryCloudScores();
     } catch (error) {
       console.error(error);
       setCloudError("악보를 삭제하지 못했어요. 다시 시도해 주세요.");
@@ -2052,7 +2032,8 @@ export default function App() {
 
       {accountLibraryOpen && !mobileRecordMode && (
         <AccountLibrary configured={firebaseConfigured} user={authUser} authReady={authReady}
-          scores={cloudScores} loading={cloudLoading} busy={cloudBusy} error={cloudError}
+          scores={cloudScores} listStatus={cloudListStatus} onRetryList={retryCloudScores}
+          busy={cloudBusy} error={cloudError} saveNotice={cloudSaveNotice}
           currentScoreId={activeCloudScoreId} onClose={() => setAccountLibraryOpen(false)}
           onGoogleSignIn={() => void handleGoogleSignIn()} onEmailAuth={handleEmailAuth}
           onPasswordReset={handlePasswordReset} onClearError={() => setCloudError("")}

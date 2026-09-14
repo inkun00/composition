@@ -2,15 +2,19 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Cloud, Copy, Eye, EyeOff, FileMusic, Library, LogIn, LogOut, Mail, Save, Share2, Trash2, UserRound, X } from "lucide-react";
 import type { User } from "../firebase/client";
 import type { CloudScore, CloudScoreListItem } from "../firebase/scores";
+import type { CloudListStatus } from "../hooks/useCloudScoreList";
+import "./AccountLibrarySync.css";
 
 type AccountLibraryProps = Readonly<{
   configured: boolean;
   user: User | null;
   authReady: boolean;
   scores: readonly CloudScoreListItem[];
-  loading: boolean;
+  listStatus: CloudListStatus;
+  onRetryList: () => void;
   busy: boolean;
   error: string;
+  saveNotice: string;
   currentScoreId: string | null;
   onClose: () => void;
   onGoogleSignIn: () => void;
@@ -39,7 +43,7 @@ function isPublishableScore(score: CloudScoreListItem): score is CloudScore {
   return isAvailableScore(score) && score.draft.measures.every((measure) => Array.isArray(measure.notes) && measure.notes.length > 0);
 }
 
-export default function AccountLibrary({ configured, user, authReady, scores, loading, busy, error,
+export default function AccountLibrary({ configured, user, authReady, scores, listStatus, onRetryList, busy, error, saveNotice,
   currentScoreId, onClose, onGoogleSignIn, onEmailAuth, onPasswordReset, onClearError,
   onSignOut, onSave, onLoad, onPublish, onDelete }: AccountLibraryProps) {
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
@@ -187,6 +191,7 @@ export default function AccountLibrary({ configured, user, authReady, scores, lo
               <div><strong>{user.displayName || "마음멜로디 사용자"}</strong><span>{user.email}</span></div>
               <button type="button" title="로그아웃" aria-label="로그아웃" onClick={onSignOut} disabled={busy}><LogOut size={18} /></button>
             </div>
+            <p className="account-sync-explain">다른 기기에서도 보려면 같은 계정으로 로그인하고 계정 저장 완료를 확인해 주세요.<br />계정 번호: <code>{user.uid}</code></p>
             <div className="cloud-save-actions">
               <button type="button" className="account-primary" onClick={() => onSave(false)} disabled={busy}>
                 <Save size={18} aria-hidden="true" /> {currentScoreId ? "현재 악보 업데이트" : "현재 악보 저장"}
@@ -197,13 +202,20 @@ export default function AccountLibrary({ configured, user, authReady, scores, lo
                 </button>
               )}
             </div>
+            <p className="account-sync-explain">자동 임시저장은 이 기기에만 남아요. 위 버튼으로 계정에 저장해야 다른 기기에 나타나요.</p>
+            {saveNotice && <p className="account-sync-notice" role="status">{saveNotice}</p>}
             {error && <p className="account-error" role="status">{error}</p>}
-            <div className="account-score-heading"><strong>저장된 악보</strong><span>{scores.length}개</span></div>
-            {loading ? (
+            <div className="account-score-heading"><strong>저장된 악보</strong><span>{listStatus === "ready"
+              ? `${scores.length}개` : scores.length > 0 ? `${scores.length}개 (확인 전)` : "확인 전"}</span></div>
+            {listStatus === "error" && <div className="account-sync-warning" role="alert">목록을 불러오지 못했어요. 아래에 보이는 항목도 최신 상태인지 확인할 수 없어요.
+              <button type="button" onClick={onRetryList}>다시 확인</button></div>}
+            {listStatus === "stale" && <div className="account-sync-warning" role="status">인터넷 연결을 확인 중이에요. 아래 목록은 이 기기에 남은 이전 정보일 수 있어요.
+              <button type="button" onClick={onRetryList}>다시 확인</button></div>}
+            {listStatus === "loading" ? (
               <div className="account-empty compact"><span className="account-spinner" /><strong>악보를 불러오고 있어요</strong></div>
-            ) : scores.length === 0 ? (
+            ) : listStatus === "ready" && scores.length === 0 ? (
               <div className="account-empty compact"><FileMusic size={30} /><strong>아직 저장된 악보가 없어요</strong></div>
-            ) : (
+            ) : scores.length > 0 ? (
               <div className="account-score-list">
                 {scores.map((score) => (
                   <article className={score.id === currentScoreId ? "account-score active" : "account-score"} key={score.id}>
@@ -225,7 +237,7 @@ export default function AccountLibrary({ configured, user, authReady, scores, lo
                   </article>
                 ))}
               </div>
-            )}
+            ) : null}
           </>
         )}
       </section>
