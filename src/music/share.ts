@@ -225,7 +225,7 @@ function expandCompactCompositionV1(compact: CompactCompositionV1): SharedCompos
   return JSON.parse(JSON.stringify(expanded)) as SharedComposition;
 }
 
-function isSharedComposition(value: unknown): value is SharedComposition {
+export function isSharedComposition(value: unknown): value is SharedComposition {
   if (!value || typeof value !== "object") return false;
   const item = value as Partial<SharedComposition>;
   if (item.version !== 1 || typeof item.title !== "string" || typeof item.creator !== "string") return false;
@@ -308,4 +308,18 @@ export function readCompositionFromHash(hash: string): SharedComposition | null 
 
 export function buildShareUrl(composition: SharedComposition, location: Pick<Location, "origin" | "pathname">): string {
   return `${location.origin}${location.pathname}#song=${encodeSharedComposition(composition)}`;
+}
+
+export function buildQrPlaybackUrl(
+  songId: string,
+  location: Pick<Location, "origin" | "pathname">
+): string {
+  return `${location.origin}${location.pathname}?play=qr&song=${encodeURIComponent(songId)}`;
+}
+
+export function buildEmbeddedQrPlaybackUrl(
+  composition: SharedComposition,
+  location: Pick<Location, "origin" | "pathname">
+): string {
+  return `${location.origin}${location.pathname}?play=qr#song=${encodeSharedComposition(composition)}`;
 }

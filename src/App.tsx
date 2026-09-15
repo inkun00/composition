@@ -19,6 +19,7 @@ import HarmonyPresetChooser from "./components/HarmonyPresetChooser";
 import SongMoodSetup from "./components/SongMoodSetup";
 import PublishScoreDialog from "./components/PublishScoreDialog";
 import SaveFailureDialog from "./components/SaveFailureDialog";
+import QrSongPlayback from "./components/QrSongPlayback";
 import { firebaseConfigured } from "./firebase/config";
 import type { User } from "./firebase/client";
 import type { PublishedSong } from "./firebase/communityAlbums";
@@ -38,7 +39,7 @@ import { rational, toNumber } from "./music/rational";
 import { prioritizeCandidatesForRhythm, RHYTHM_PREFERENCE_LABELS, rhythmPreferenceForStyle } from "./music/rhythmPreference";
 import { pitchName, positionNotes } from "./music/score";
 import { findSoundEffect, type SoundEffectId } from "./music/soundEffects";
-import { buildShareUrl, readCompositionFromHash, type SharedComposition } from "./music/share";
+import { buildEmbeddedQrPlaybackUrl, buildQrPlaybackUrl, buildShareUrl, readCompositionFromHash, type SharedComposition } from "./music/share";
 import type { HarmonyStory, MelodyCandidate, NoteEvent, SoundEffectEvent } from "./music/types";
 import { useKaraokeAutoFocus } from "./hooks/useKaraokeAutoFocus";
 
@@ -287,6 +288,12 @@ function isLocalHost(location: Pick<Location, "hostname">): boolean {
   return ["localhost", "127.0.0.1", "::1"].includes(location.hostname);
 }
 
+function qrPlaybackLocation(location: Location): Pick<Location, "origin" | "pathname"> {
+  return isLocalHost(location)
+    ? { origin: "https://composition-tan.vercel.app", pathname: "/" }
+    : location;
+}
+
 function replaceNote(
   notes: readonly NoteEvent[],
   id: string,
@@ -309,10 +316,12 @@ function sanitizeNoteLinks(notes: readonly NoteEvent[]): NoteEvent[] {
 
 export default function App() {
   const mobileRecordMode = isRecordingLink(window.location.search, window.location.hash);
+  const qrPlaybackMode = new URLSearchParams(window.location.search).get("play") === "qr";
+  const qrSongId = new URLSearchParams(window.location.search).get("song") ?? "";
   const [incomingShare] = useState(() => readCompositionFromHash(window.location.hash));
   const [savedDraft] = useState(() => readDraft(window.localStorage));
   const [showOpening, setShowOpening] = useState(() =>
-    !mobileRecordMode && new URLSearchParams(window.location.search).get("start") !== "new");
+    !mobileRecordMode && !qrPlaybackMode && new URLSearchParams(window.location.search).get("start") !== "new");
   const [showAppMenu, setShowAppMenu] = useState(false);
   const [accountLibraryOpen, setAccountLibraryOpen] = useState(false);
   const [communityAlbumOpen, setCommunityAlbumOpen] = useState(false);
@@ -402,6 +411,7 @@ export default function App() {
   const [mobileRecordingUrl, setMobileRecordingUrl] = useState("");
   const [exportingPdf, setExportingPdf] = useState(false);
   const [pdfIncludeAccompaniment, setPdfIncludeAccompaniment] = useState(false);
+  const [pdfPlaybackUrl, setPdfPlaybackUrl] = useState("");
   const [exportingBacking, setExportingBacking] = useState(false);
   const [backingExportPhase, setBackingExportPhase] = useState<BackingExportPhase>("idle");
   const [recordingSong, setRecordingSong] = useState(false);
@@ -1420,10 +1430,27 @@ export default function App() {
       setShareStatus("PDF에 넣을 곡 제목과 작곡가 이름을 먼저 적어 주세요.");
       return;
     }
+    const composition = makeSharedComposition();
+    if (!composition) {
+      setShareStatus("QR 재생 링크를 만들려면 모든 마디를 먼저 완성해 주세요.");
+      return;
+    }
     setExportingPdf(true);
     setPdfIncludeAccompaniment(includeAccompaniment);
-    setShareStatus(includeAccompaniment ? "반주가 포함된 A4 악보를 만들고 있어요..." : "A4 악보를 만들고 있어요...");
+    setPdfPlaybackUrl("");
+    setShareStatus("QR 노래 링크를 준비하고 있어요...");
     try {
+      const location = qrPlaybackLocation(window.location);
+      let playbackUrl = buildEmbeddedQrPlaybackUrl(composition, location);
+      try {
+        const { saveQrSong } = await import("./firebase/qrSongs");
+        playbackUrl = buildQrPlaybackUrl(await saveQrSong(composition), location);
+      } catch (qrError) {
+        console.warn("짧은 QR 링크를 만들지 못해 악보 데이터가 포함된 링크를 사용합니다.", qrError);
+      }
+      if (playbackUrl.length > QR_RENDER_LIMIT) throw new Error("qr-link-too-long");
+      setPdfPlaybackUrl(playbackUrl);
+      setShareStatus(includeAccompaniment ? "반주가 포함된 A4 악보를 만들고 있어요..." : "A4 악보를 만들고 있어요...");
       // The hidden PDF sheet must re-render after the selected layout changes.
       await new Promise<void>((resolve) => window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve())));
       await document.fonts.ready;
@@ -1956,6 +1983,8 @@ export default function App() {
     if (karaokePhase === "error") return karaokeMode === "practice" ? "연습 확인 필요" : "녹음 확인 필요";
     return karaokeMode === "practice" ? "연습 준비" : "녹음 준비";
   }
+
+  if (qrPlaybackMode) return <QrSongPlayback composition={incomingShare} songId={qrSongId} />;
 
   return (
     <div className="app-shell">
@@ -3055,7 +3084,8 @@ export default function App() {
             {allValid && printableMeasures.length === songLength && (
               <PdfScoreSheet title={songTitle} description={songDescription} creator={creatorName} originalCreator={originalCreator}
                 meter={meter}
-                measures={printableMeasures} includeAccompaniment={pdfIncludeAccompaniment} />
+                measures={printableMeasures} includeAccompaniment={pdfIncludeAccompaniment}
+                playbackUrl={pdfPlaybackUrl} />
             )}
           </section>
         )}

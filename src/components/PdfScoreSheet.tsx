@@ -6,6 +6,8 @@ import { rational, toNumber } from "../music/rational";
 import { positionNotes } from "../music/score";
 import { scoreLayout } from "../music/scoreLayout";
 import ScoreMeasure from "./ScoreMeasure";
+import { QRCodeSVG } from "qrcode.react";
+import "./PdfScoreSheetQr.css";
 
 export type PrintableMeasure = Readonly<{
   candidateName: string;
@@ -21,6 +23,7 @@ type PdfScoreSheetProps = {
   meter: Meter;
   measures: readonly PrintableMeasure[];
   includeAccompaniment: boolean;
+  playbackUrl?: string;
   preview?: boolean;
 };
 
@@ -108,7 +111,8 @@ function chunk<T>(items: readonly T[], size: number): readonly T[][] {
 }
 
 export default function PdfScoreSheet({
-  title, description, creator, originalCreator, meter, measures, includeAccompaniment, preview = false
+  title, description, creator, originalCreator, meter, measures, includeAccompaniment, preview = false,
+  playbackUrl = ""
 }: PdfScoreSheetProps) {
   const printableTitle = title || "나의 노래";
   // Keep student titles on one centered line while still allowing long names.
@@ -137,8 +141,15 @@ export default function PdfScoreSheet({
         const systems = chunk(pageMeasures, 4);
         const page = (
           <section className="pdf-page" data-pdf-page={preview ? undefined : "true"}>
-            <header className="pdf-header">
+            <header className={pageIndex === 0 && playbackUrl ? "pdf-header has-playback-qr" : "pdf-header"}>
               <h1 style={{ fontSize: `${titleFontSize}px` }}>{printableTitle}</h1>
+              {pageIndex === 0 && playbackUrl && (
+                <aside className="pdf-playback-qr" aria-label="악보 노래 재생 QR 코드">
+                  <QRCodeSVG value={playbackUrl} size={96} marginSize={4} level="L"
+                    bgColor="#ffffff" fgColor="#111111" title="악보 노래 재생 QR 코드" />
+                  <strong>스캔해서 노래 듣기</strong>
+                </aside>
+              )}
               {pageIndex === 0 && description.trim() && (
                 <section className="pdf-description" aria-label="이 노래에 대한 이야기">
                   <strong>이 노래에 대한 이야기</strong>

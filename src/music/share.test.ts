@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildShareUrl, decodeSharedComposition, encodeSharedComposition, type SharedComposition } from "./share";
+import { buildEmbeddedQrPlaybackUrl, buildQrPlaybackUrl, buildShareUrl, decodeSharedComposition,
+  encodeSharedComposition, type SharedComposition } from "./share";
 
 const sample: SharedComposition = {
   version: 1,
@@ -56,6 +57,13 @@ describe("공유 링크", () => {
   it("공유 주소에 곡 데이터를 넣는다", () => {
     expect(buildShareUrl(sample, { origin: "https://example.com", pathname: "/song" }))
       .toMatch(/^https:\/\/example\.com\/song#song=/);
+  });
+
+  it("QR 재생 주소는 전용 재생 화면을 연다", () => {
+    expect(buildQrPlaybackUrl("AbCdEfGhIjKlMnOpQrSt", { origin: "https://example.com", pathname: "/song" }))
+      .toBe("https://example.com/song?play=qr&song=AbCdEfGhIjKlMnOpQrSt");
+    expect(buildEmbeddedQrPlaybackUrl(sample, { origin: "https://example.com", pathname: "/song" }))
+      .toMatch(/^https:\/\/example\.com\/song\?play=qr#song=/);
   });
 
   it("공유 링크는 반주 악기 10개까지 복원한다", () => {
