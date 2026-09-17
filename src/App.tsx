@@ -20,6 +20,9 @@ import SongMoodSetup from "./components/SongMoodSetup";
 import PublishScoreDialog from "./components/PublishScoreDialog";
 import SaveFailureDialog from "./components/SaveFailureDialog";
 import QrSongPlayback from "./components/QrSongPlayback";
+import BeatInstrumentChooser from "./components/BeatInstrumentChooser";
+import { useBeatPatternState } from "./hooks/useBeatPatternState";
+import { backingDisplayNotes, repeatFourMeasures, rationalFromBeats } from "./components/backingDisplayNotes";
 import { firebaseConfigured } from "./firebase/config";
 import type { User } from "./firebase/client";
 import type { PublishedSong } from "./firebase/communityAlbums";
@@ -79,57 +82,7 @@ function sameInstrumentOrder(a: readonly InstrumentId[], b: readonly InstrumentI
   return a.length === b.length && a.every((id, index) => findInstrument(id).id === findInstrument(b[index]).id);
 }
 
-function repeatFourMeasures<T>(items: readonly T[], fromEnd = false): T[] {
-  if (items.length === 0) return [];
-  const source = fromEnd ? items.slice(Math.max(0, items.length - 4)) : items.slice(0, 4);
-  const repeated: T[] = [];
-  for (let index = 0; index < 4; index += 1) repeated.push(source[index % source.length]);
-  return repeated;
-}
-
-function rationalFromBeats(value: number) {
-  return rational(Math.max(1, Math.round(value * 24)), 24);
-}
-
-function backingDisplayNotes(measure: MeasureDraft, meter: Meter, styleId: AccompanimentStyleId,
-  section: "intro" | "outro", displayIndex: number): NoteEvent[] {
-  const capacity = toNumber(measureCapacity(meter));
-  const chordSymbols = measure.chords.length > 0 ? measure.chords : [""];
-  const chordBeats = capacity / chordSymbols.length;
-  let sequence = 0;
-  const events = chordSymbols.flatMap((chord, chordIndex) => {
-    const pitches = chord ? chordMidiPitches(chord) : chordMidiPitches("C");
-    return createAccompanimentPattern(styleId, chordBeats, meter).map((event) => {
-      const id = `${section}-${displayIndex}-${sequence}`;
-      sequence += 1;
-      const pitch = event.voice === "root"
-        ? pitches[0] - 12
-        : event.voice === "step"
-          ? pitches[(event.step ?? 0) % pitches.length]
-          : pitches[0];
-      return {
-        id,
-        onset: chordIndex * chordBeats + event.offsetBeats,
-        duration: event.durationBeats,
-        pitch: Math.max(48, Math.min(76, pitch))
-      };
-    });
-  }).sort((left, right) => left.onset - right.onset);
-
-  const notes: NoteEvent[] = [];
-  let cursor = 0;
-  events.forEach((event) => {
-    if (event.onset > cursor + 0.001) {
-      notes.push({ id: `${event.id}-rest-before`, pitch: null, duration: rationalFromBeats(event.onset - cursor) });
-    }
-    notes.push({ id: event.id, pitch: event.pitch, duration: rationalFromBeats(event.duration) });
-    cursor = Math.max(cursor, event.onset + event.duration);
-  });
-  if (cursor < capacity - 0.001) {
-    notes.push({ id: `${section}-${displayIndex}-rest-end`, pitch: null, duration: rationalFromBeats(capacity - cursor) });
-  }
-  return notes;
-}
+// backingDisplayNotes & repeatFourMeasures moved to ./components/backingDisplayNotes
 
 type SongLength = 8 | 12 | 16 | 20 | 24 | 28 | 32;
 type SongPlaybackState = "idle" | "playing" | "paused";
@@ -395,6 +348,14 @@ export default function App() {
   const [accompanimentInstrumentIds, setAccompanimentInstrumentIds] = useState<InstrumentId[]>(() =>
     uniqueAccompanimentInstrumentIds(resumableDraft?.accompanimentInstrumentIds ?? incomingShare?.accompanimentInstrumentIds ?? ["acoustic_grand_piano"])
   );
+  const {
+    beatPattern, setBeatPattern, beatVolume, setBeatVolume,
+    beatPreviewing, setBeatPreviewing, resetBeatPattern, loadBeatPattern
+  } = useBeatPatternState({
+    initialPattern: resumableDraft?.beatPattern ?? incomingShare?.beatPattern,
+    initialVolume: resumableDraft?.beatVolume ?? incomingShare?.beatVolume,
+    meter
+  });
   const [bpm, setBpm] = useState(resumableDraft?.bpm ?? incomingShare?.bpm ?? 96);
   const [showArrangement, setShowArrangement] = useState(resumableDraft?.showArrangement === true || incomingShare !== null);
   const [completionCelebration, setCompletionCelebration] = useState(false);
@@ -457,10 +418,11 @@ export default function App() {
   const currentDraft = useMemo<SavedDraft>(() => ({
     version: 1, updatedAt: Date.now(), sourceHash, title: songTitle, description: songDescription,
     creator: creatorName, originalCreator, presetId: selectedPresetId, meter, songLength,
-    instrumentId: selectedInstrumentId, accompanimentStyleId, accompanimentInstrumentIds, bpm, lyrics,
+    instrumentId: selectedInstrumentId, accompanimentStyleId, accompanimentInstrumentIds,
+    beatPattern, beatVolume, bpm, lyrics,
     measures: measures.map(({ candidateId, candidateName, notes, effects }) => ({ candidateId, candidateName, notes, effects })),
     showArrangement
-  }), [accompanimentInstrumentIds, accompanimentStyleId, bpm, creatorName, lyrics, measures, meter,
+  }), [accompanimentInstrumentIds, accompanimentStyleId, beatPattern, beatVolume, bpm, creatorName, lyrics, measures, meter,
     originalCreator, selectedInstrumentId, selectedPresetId, songDescription, sourceHash, showArrangement, songLength, songTitle]);
   const candidates = useMemo(
     () => getCandidates(activeMeasure.story, meter, activeMeasure.chords),
@@ -513,7 +475,7 @@ export default function App() {
   const activeStep = showArrangement ? 3 : 2;
   const playingSong = songPlaybackState !== "idle";
   const karaokeRunning = recordingSong || practicingSong;
-  const isAnyPlaying = playingId !== null || playingSong || playingMeasure || karaokeRunning || presetPreviewing;
+  const isAnyPlaying = playingId !== null || playingSong || playingMeasure || karaokeRunning || presetPreviewing || beatPreviewing;
   useKaraokeAutoFocus(karaokeOpen, karaokeRunning, karaokeHighlight);
   const updateLyricNotePositions = useCallback((index: number, positions: Record<string, { x: number; y: number }>) => {
     setLyricNotePositions((current) => {
@@ -740,6 +702,7 @@ export default function App() {
     if (meterKey(next) === meterKey(meter)) return;
     if (!confirmNewStructure("박자를 바꾸면 새 노래를 만들어요.")) return;
     setMeter(next);
+    resetBeatPattern();
     setMeasures(emptyComposition(selectedPreset, songLength));
     setRhythmChecks({});
     setActiveIndex(0);
@@ -896,6 +859,8 @@ export default function App() {
     const duration = await playComposition(playable, selectedInstrumentId, bpm, accompanimentReady ? {
       styleId: accompanimentStyleId,
       instrumentIds: accompanimentInstrumentIds,
+      beatPattern,
+      beatVolume,
       meter
     } : undefined);
     if (duration === null) return;
@@ -1552,6 +1517,7 @@ export default function App() {
     setAccompanimentStyleId(nextAccompanimentStyle.id);
     setAccompanimentStyleView(nextAccompanimentStyle.category === "playing" ? "playing" : "mode");
     setAccompanimentInstrumentIds(uniqueAccompanimentInstrumentIds(project.accompanimentInstrumentIds ?? ["piano"]));
+    loadBeatPattern(project.beatPattern, project.beatVolume, project.meter);
     setBpm(project.bpm ?? 96);
     setShowArrangement(project.showArrangement);
     setSongTitle(project.title);
@@ -1691,6 +1657,8 @@ export default function App() {
       song.draft.bpm ?? 96, song.draft.showArrangement ? {
         styleId: findAccompanimentStyle(song.draft.accompanimentStyleId ?? "arpeggio").id,
         instrumentIds: uniqueAccompanimentInstrumentIds(song.draft.accompanimentInstrumentIds ?? ["piano"]),
+        beatPattern: song.draft.beatPattern,
+        beatVolume: song.draft.beatVolume,
         meter: song.draft.meter
       } : undefined);
     return duration !== null;
@@ -2954,6 +2922,11 @@ export default function App() {
               {accompanimentInstrumentIds.length === 0 &&
                 <p className="accompaniment-warning">반주 악기를 하나 이상 골라 주세요. 지금은 가락만 연주돼요.</p>}
               </>)}
+
+              <BeatInstrumentChooser events={beatPattern}
+                meter={meter} bpm={bpm} volume={beatVolume} disabled={isAnyPlaying} playing={beatPreviewing}
+                onChange={setBeatPattern} onVolumeChange={setBeatVolume}
+                onPlayingChange={setBeatPreviewing} />
             </section>
 
             <div className="lyrics-heading">

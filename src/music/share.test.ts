@@ -13,6 +13,12 @@ const sample: SharedComposition = {
   instrumentId: "piano",
   accompanimentStyleId: "arpeggio",
   accompanimentInstrumentIds: ["piano", "violin"],
+  beatInstrumentIds: ["kick", "clap", "hihat"],
+  beatPattern: [
+    { id: "beat-1", instrumentId: "kick", measureIndex: 0, offsetBeats: 0 },
+    { id: "beat-2", instrumentId: "clap", measureIndex: 3, offsetBeats: 2 }
+  ],
+  beatVolume: 125,
   bpm: 124,
   lyrics: Array(8).fill("라라라"),
   measures: Array.from({ length: 8 }, (_, index) => ({
@@ -33,6 +39,7 @@ function normalizeTransientIds(composition: SharedComposition | null): unknown {
   if (!composition) return composition;
   const normalized = {
     ...composition,
+    beatPattern: composition.beatPattern?.map(({ id: _id, ...event }) => event),
     measures: composition.measures.map((measure) => {
       const beamGroups = new Map<string, number>();
       return {

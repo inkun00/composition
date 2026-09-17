@@ -5,6 +5,10 @@ import type { Meter } from "./meter";
 import type { NoteEvent } from "./types";
 import { isSoundEffectId } from "./soundEffects";
 import type { SoundEffectEvent } from "./types";
+import { BEAT_INSTRUMENTS, isValidBeatInstrumentSelection, isValidBeatVolume, type BeatInstrumentId } from "./beatInstruments";
+import { isValidBeatPattern, MAX_BEAT_PATTERN_EVENTS, type BeatPatternEvent } from "./beatPattern";
+
+type CompactBeatEvent = [number, number, number];
 
 export type SharedMeasure = Readonly<{
   candidateName: string;
@@ -24,6 +28,9 @@ export type SharedComposition = Readonly<{
   instrumentId: InstrumentId;
   accompanimentStyleId?: AccompanimentStyleId;
   accompanimentInstrumentIds?: readonly InstrumentId[];
+  beatInstrumentIds?: readonly BeatInstrumentId[];
+  beatPattern?: readonly BeatPatternEvent[];
+  beatVolume?: number;
   bpm?: number;
   lyrics: readonly string[];
   measures: readonly SharedMeasure[];
@@ -82,7 +89,10 @@ type CompactComposition = [
   readonly string[] | undefined,
   number | undefined,
   readonly string[],
-  CompactMeasure[]
+  CompactMeasure[],
+  readonly number[] | null | undefined,
+  number | null | undefined,
+  readonly CompactBeatEvent[] | null | undefined
 ];
 
 function trimTrailingEmpty<T>(items: T[]): T[] {
@@ -135,7 +145,15 @@ function compactComposition(composition: SharedComposition): CompactComposition 
         notes,
         measure.effects?.map((effect) => [effect.effectId, effect.offsetBeats] as CompactEffect)
       ]) as CompactMeasure;
-    })
+    }),
+    composition.beatInstrumentIds?.map((id) =>
+      BEAT_INSTRUMENTS.findIndex((instrument) => instrument.id === id)),
+    composition.beatVolume,
+    composition.beatPattern?.map((event) => [
+      BEAT_INSTRUMENTS.findIndex((instrument) => instrument.id === event.instrumentId),
+      event.measureIndex,
+      event.offsetBeats
+    ])
   ];
 }
 
@@ -153,6 +171,20 @@ function expandCompactComposition(compact: CompactComposition): SharedCompositio
     accompanimentStyleId: optional(compact[10]) as AccompanimentStyleId | undefined,
     accompanimentInstrumentIds: optional(compact[11]) as readonly InstrumentId[] | undefined,
     bpm: optional(compact[12]),
+    beatInstrumentIds: compact[15]?.flatMap((index) => {
+      const id = BEAT_INSTRUMENTS[index]?.id;
+      return id ? [id] : [];
+    }),
+    beatVolume: optional(compact[16]),
+    beatPattern: compact[17]?.flatMap((event, eventIndex) => {
+      const instrumentId = BEAT_INSTRUMENTS[event[0]]?.id;
+      return instrumentId ? [{
+        id: `shared-beat-${eventIndex}`,
+        instrumentId,
+        measureIndex: event[1],
+        offsetBeats: event[2]
+      }] : [];
+    }),
     lyrics: compact[13],
     measures: compact[14].map((measure, measureIndex) => ({
       candidateName: measure[0],
@@ -181,7 +213,15 @@ function isCompactComposition(value: unknown): value is CompactComposition {
   return Array.isArray(value) && value[0] === 2 && typeof value[1] === "string" &&
     typeof value[3] === "string" && typeof value[4] === "string" && typeof value[5] === "string" &&
     Number.isInteger(value[6]) && [2, 4, 8].includes(value[7]) && [8, 12, 16, 20, 24, 28, 32].includes(value[8]) &&
-    typeof value[9] === "string" && Array.isArray(value[13]) && Array.isArray(value[14]);
+    typeof value[9] === "string" && Array.isArray(value[13]) && Array.isArray(value[14]) &&
+    (value[15] == null || (Array.isArray(value[15]) && value[15].length <= 3 &&
+      value[15].every((index) => Number.isInteger(index) && index >= 0 && index < BEAT_INSTRUMENTS.length))) &&
+    (value[16] == null || isValidBeatVolume(value[16])) &&
+    (value[17] == null || (Array.isArray(value[17]) && value[17].length <= MAX_BEAT_PATTERN_EVENTS &&
+      value[17].every((event) => Array.isArray(event) && event.length === 3 &&
+        Number.isInteger(event[0]) && event[0] >= 0 && event[0] < BEAT_INSTRUMENTS.length &&
+        Number.isInteger(event[1]) && event[1] >= 0 && event[1] < 4 &&
+        typeof event[2] === "number" && Number.isFinite(event[2]))));
 }
 
 function isCompactCompositionV1(value: unknown): value is CompactCompositionV1 {
@@ -238,6 +278,10 @@ export function isSharedComposition(value: unknown): value is SharedComposition 
     item.accompanimentInstrumentIds.length > MAX_SAVED_ACCOMPANIMENT_INSTRUMENTS ||
     new Set(item.accompanimentInstrumentIds).size !== item.accompanimentInstrumentIds.length ||
     !item.accompanimentInstrumentIds.every(isValidInstrumentId))) return false;
+  if (item.beatInstrumentIds !== undefined &&
+    !isValidBeatInstrumentSelection(item.beatInstrumentIds)) return false;
+  if (item.beatPattern !== undefined && !isValidBeatPattern(item.beatPattern, item.meter)) return false;
+  if (item.beatVolume !== undefined && !isValidBeatVolume(item.beatVolume)) return false;
   if (item.bpm !== undefined && (!Number.isInteger(item.bpm) || item.bpm < 40 || item.bpm > 220)) return false;
   if (![2, 3, 4, 6].includes(item.meter.beats) || ![2, 4, 8].includes(item.meter.beatUnit)) return false;
   if (!Array.isArray(item.lyrics) || item.lyrics.length !== item.songLength) return false;

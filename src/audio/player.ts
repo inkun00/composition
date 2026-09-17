@@ -8,7 +8,9 @@ import { queueSoundEffect } from "./soundEffects";
 import { isSoundEffectId } from "../music/soundEffects";
 import type { HarmonyStory, NoteEvent, SoundEffectEvent } from "../music/types";
 import { Mp3Encoder } from "@breezystack/lamejs";
-import { scheduleDrumGroove } from "./drumGroove";
+import { scheduleBeatPattern } from "./drumGroove";
+import { beatPatternInstrumentIds, type BeatPatternEvent } from "../music/beatPattern";
+import { preloadBeatSamples } from "./beatSamples";
 import { karaokeGuideSettings, type KaraokeGuideMode } from "./karaokeGuide";
 import { createGentleNoiseGate, createVocalMonitor, karaokeBackingGainForRms, vocalCaptureProfile, type RecordingCaptureMode } from "./vocalCapture";
 export { karaokeBackingGainForRms } from "./vocalCapture";
@@ -23,6 +25,8 @@ export type PlaybackMeasure = Readonly<{
 export type AccompanimentOptions = Readonly<{
   styleId: AccompanimentStyleId;
   instrumentIds: readonly InstrumentId[];
+  beatPattern?: readonly BeatPatternEvent[];
+  beatVolume?: number;
   meter?: Meter;
 }>;
 
@@ -402,17 +406,17 @@ function cadenceChords(target: string): readonly [string, string, string] | null
   return [subdominant, dominant, tonic];
 }
 
-function accompanimentMeasure(template: PlaybackMeasure, chord: string): PlaybackMeasure {
-  return { ...template, chords: [chord], effects: [] };
+function accompanimentMeasure(template: PlaybackMeasure, chord: string, measureIndex?: number): PlaybackMeasure {
+  return { ...template, chords: [chord], effects: [], measureIndex };
 }
 
 function buildIntroMeasures(measures: readonly PlaybackMeasure[]): PlaybackMeasure[] {
   if (measures.length === 0) return [];
   const target = measures[0].chords?.[0] ?? "";
   const cadence = cadenceChords(target);
-  if (!cadence) return Array.from({ length: 4 }, (_, index) => measures[index % measures.length]);
+  if (!cadence) return Array.from({ length: 4 }, (_, index) => accompanimentMeasure(measures[index % measures.length], measures[index % measures.length].chords?.[0] ?? "", index));
   const [subdominant, dominant, tonic] = cadence;
-  return [tonic, subdominant, dominant, dominant].map((chord) => accompanimentMeasure(measures[0], chord));
+  return [tonic, subdominant, dominant, dominant].map((chord, measureIndex) => accompanimentMeasure(measures[0], chord, measureIndex));
 }
 
 function buildOutroMeasures(measures: readonly PlaybackMeasure[]): PlaybackMeasure[] {
@@ -422,14 +426,17 @@ function buildOutroMeasures(measures: readonly PlaybackMeasure[]): PlaybackMeasu
   const cadence = cadenceChords(target);
   if (!cadence) {
     const source = measures.slice(Math.max(0, measures.length - 4));
-    return Array.from({ length: 4 }, (_, index) => source[index % source.length]);
+    return Array.from({ length: 4 }, (_, index) => accompanimentMeasure(source[index % source.length], source[index % source.length].chords?.[0] ?? "", index));
   }
   const [subdominant, dominant, tonic] = cadence;
-  return [subdominant, dominant, tonic, tonic].map((chord) => accompanimentMeasure(template, chord));
+  return [subdominant, dominant, tonic, tonic].map((chord, measureIndex) => accompanimentMeasure(template, chord, measureIndex));
 }
 
 async function loadAccompanimentLayers(context: BaseAudioContext, destination: AudioNode,
   accompaniment?: AccompanimentOptions) {
+  if (accompaniment?.beatPattern && accompaniment.beatPattern.length > 0) {
+    void preloadBeatSamples(context, beatPatternInstrumentIds(accompaniment.beatPattern));
+  }
   return Promise.all((accompaniment?.instrumentIds ?? []).map(async (id) => {
     try {
       return { id, sample: await loadSampleWithTimeout(context, destination, id) };
@@ -474,9 +481,10 @@ function scheduleMeasure(
   const measureBeats = measure.notes.reduce((total, note) => total + toNumber(note.duration), 0);
   const chordSymbols = measure.chords && measure.chords.length > 0 ? measure.chords : [""];
   const chordBeats = measureBeats / chordSymbols.length;
-  if (options.accompaniment) {
-    scheduleDrumGroove(context, destination, absoluteStart, secondsPerBeat, options.accompaniment.styleId,
-      measureBeats, options.accompaniment.meter, arrangementEnergy, options.transitionFill === true);
+  if (options.accompaniment?.beatPattern && options.accompaniment.beatPattern.length > 0) {
+    scheduleBeatPattern(context, destination, absoluteStart, secondsPerBeat, measureBeats,
+      measure.measureIndex ?? 0, options.accompaniment.beatPattern,
+      options.accompaniment.beatVolume ?? 100, arrangementEnergy);
   }
 
   chordSymbols.forEach((chord, chordIndex) => {
@@ -833,21 +841,14 @@ export async function playComposition(
   } catch (error) {
     console.warn("악기 샘플을 불러오지 못해 합성 음색을 사용합니다.", error);
   }
-  const accompanimentLayers = await Promise.all((accompaniment?.instrumentIds ?? []).map(async (id) => {
-    try {
-      return { id, sample: await loadSampleWithTimeout(context, master, id) };
-    } catch (error) {
-      console.warn(`${id} 반주 샘플을 불러오지 못해 합성 음색을 사용합니다.`, error);
-      return { id, sample: null };
-    }
-  }));
+  const accompanimentLayers = await loadAccompanimentLayers(context, master, accompaniment);
   const voiceState = createArrangementVoiceState();
   const start = context.currentTime + 0.08;
   let songCursor = 0;
 
   measures.forEach((measure, measureIndex) => {
     const plan = songArrangementPlan(measureIndex, measures.length, accompanimentLayers.length);
-    songCursor += scheduleMeasure(context, master, measure, start + songCursor, secondsPerBeat, {
+    songCursor += scheduleMeasure(context, master, { ...measure, measureIndex }, start + songCursor, secondsPerBeat, {
       instrument,
       sampledInstrument,
       accompaniment,
@@ -1568,6 +1569,9 @@ export async function exportBackingCompositionMp3Offline(
     } catch (error) {
       console.warn("악기 샘플을 불러오지 못해 합성 음색을 사용합니다.", error);
     }
+    if (accompaniment?.beatPattern && accompaniment.beatPattern.length > 0) {
+      await preloadBeatSamples(context, beatPatternInstrumentIds(accompaniment.beatPattern));
+    }
     const accompanimentLayers = (accompaniment?.instrumentIds ?? []).map((id) => ({ id, sample: null }));
     const voiceState = createArrangementVoiceState();
     let cursor = 0;
@@ -1589,7 +1593,7 @@ export async function exportBackingCompositionMp3Offline(
     });
     measures.forEach((measure, measureIndex) => {
       const plan = songArrangementPlan(measureIndex, measures.length, accompanimentLayers.length);
-      cursor += scheduleMeasure(context, master, measure, start + cursor, secondsPerBeat, {
+      cursor += scheduleMeasure(context, master, { ...measure, measureIndex }, start + cursor, secondsPerBeat, {
         instrument,
         sampledInstrument: null,
         accompaniment,
