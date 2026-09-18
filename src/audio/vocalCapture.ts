@@ -55,8 +55,8 @@ export function vocalCaptureProfile(mode: RecordingCaptureMode): VocalCapturePro
       channelCount: 1
     },
     useNoiseGate: true,
-    highPassHz: 90,
-    lowPassHz: 12000,
+    highPassHz: 70,   // 90 → 70: 저음 온기 회복
+    lowPassHz: 16000, // 12000 → 16000: 16kHz까지 확장해 공기감 추가
     mudCutDb: -1.4,
     presenceDb: 1.2,
     deEsserDb: -1.2,

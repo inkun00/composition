@@ -76,12 +76,15 @@ let activeOfflineExport = false;
 
 /**
  * 현재 브라우저에서 MediaRecorder가 지원하는 오디오 codec을 선택한다.
- * 우선순위: audio/mp4 (iOS Safari) → audio/webm;codecs=opus (Chrome/Firefox) → audio/ogg;codecs=opus → 기본값
+ * 우선순위: audio/webm;codecs=opus (Chrome/Android — 고품질) →
+ *           audio/mp4 (iOS Safari) → audio/ogg;codecs=opus → 기본값
+ * audio/mp4를 먼저 두면 Android Chrome도 mp4를 선택하는데,
+ * mp4의 기본 비트레이트가 16~32kbps로 전화 음질 수준이므로 webm을 우선한다.
  */
 function selectRecorderMimeType(): string | null {
   const candidates = [
-    "audio/mp4",
     "audio/webm;codecs=opus",
+    "audio/mp4",
     "audio/ogg;codecs=opus"
   ];
   for (const mimeType of candidates) {
@@ -1307,7 +1310,11 @@ export async function recordKaraokeComposition(
     if (context.state === "suspended") await context.resume();
     throwIfAborted();
     const recorderMimeType = selectRecorderMimeType();
-    const recorderOptions = recorderMimeType ? { mimeType: recorderMimeType } : undefined;
+    const recorderOptions: MediaRecorderOptions = {
+      // 128kbps: Opus/AAC 기준 음악 녹음에 충분한 품질, 기본값(16~32kbps)의 전화 음질 방지
+      audioBitsPerSecond: 128000,
+      ...(recorderMimeType ? { mimeType: recorderMimeType } : {})
+    };
     const createRecorder = (destination: MediaStreamAudioDestinationNode) => {
       const recorder = new MediaRecorder(destination.stream, recorderOptions);
       const chunks: BlobPart[] = [];
@@ -1539,7 +1546,10 @@ export async function exportBackingCompositionMp3(
     const voiceState = createArrangementVoiceState();
 
     const recorderMimeType = selectRecorderMimeType();
-    const recorderOptions = recorderMimeType ? { mimeType: recorderMimeType } : undefined;
+    const recorderOptions: MediaRecorderOptions = {
+      audioBitsPerSecond: 128000,
+      ...(recorderMimeType ? { mimeType: recorderMimeType } : {})
+    };
     const recorder = new MediaRecorder(recordingDestination.stream, recorderOptions);
     const chunks: BlobPart[] = [];
     recorder.addEventListener("dataavailable", (event) => {
