@@ -74,6 +74,22 @@ let activePlaybackContext: AudioContext | null = null;
 let sharedAudioContext: AudioContext | null = null;
 let activeOfflineExport = false;
 
+/**
+ * 현재 브라우저에서 MediaRecorder가 지원하는 오디오 codec을 선택한다.
+ * 우선순위: audio/mp4 (iOS Safari) → audio/webm;codecs=opus (Chrome/Firefox) → audio/ogg;codecs=opus → 기본값
+ */
+function selectRecorderMimeType(): string | null {
+  const candidates = [
+    "audio/mp4",
+    "audio/webm;codecs=opus",
+    "audio/ogg;codecs=opus"
+  ];
+  for (const mimeType of candidates) {
+    if (MediaRecorder.isTypeSupported(mimeType)) return mimeType;
+  }
+  return null;
+}
+
 async function loadSampleWithTimeout(context: BaseAudioContext, destination: AudioNode,
   instrumentId: InstrumentId, timeoutMs = 2500) {
   let timeout: number | undefined;
@@ -1084,7 +1100,13 @@ export async function recordKaraokeComposition(
     throw new Error("이 브라우저에서는 마이크 녹음을 사용할 수 없어요.");
   }
   if (typeof MediaRecorder === "undefined") {
-    throw new Error("이 브라우저에서는 녹음 저장을 사용할 수 없어요.");
+    // iOS 17.4 미만은 MediaRecorder 자체가 없음
+    const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    throw new Error(
+      isIos
+        ? "iOS 17.4 이상 또는 최신 Chrome 앱에서 녹음할 수 있어요."
+        : "이 브라우저에서는 녹음 저장을 사용할 수 없어요."
+    );
   }
 
   const AudioContextClass = window.AudioContext ||
@@ -1125,9 +1147,13 @@ export async function recordKaraokeComposition(
 
   try {
     throwIfAborted();
+    // iOS Safari는 사용자 제스처 스택이 살아있는 동안에만 AudioContext를 활성화할 수 있다.
+    // getUserMedia 프롬프트를 기다리면 그 타이밍을 잃으므로, 반드시 getUserMedia 전에 resume한다.
+    if (context.state === "suspended") await context.resume();
     callbacks.onStatus?.("마이크 권한을 허용해 주세요.");
     microphoneStream = await navigator.mediaDevices.getUserMedia({ audio: capture.constraints });
     throwIfAborted();
+    // getUserMedia 이후에도 suspended 상태가 되는 경우(일부 Android)를 대비해 재시도
     if (context.state === "suspended") await context.resume();
 
     callbacks.onStatus?.(recordingMode === "choir"
@@ -1236,9 +1262,8 @@ export async function recordKaraokeComposition(
     throwIfAborted();
     const voiceState = createArrangementVoiceState();
 
-    const recorderOptions = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-      ? { mimeType: "audio/webm;codecs=opus" }
-      : undefined;
+    const recorderMimeType = selectRecorderMimeType();
+    const recorderOptions = recorderMimeType ? { mimeType: recorderMimeType } : undefined;
     const createRecorder = (destination: MediaStreamAudioDestinationNode) => {
       const recorder = new MediaRecorder(destination.stream, recorderOptions);
       const chunks: BlobPart[] = [];
@@ -1465,9 +1490,8 @@ export async function exportBackingCompositionMp3(
     const accompanimentLayers = await loadAccompanimentLayers(context, master, accompaniment);
     const voiceState = createArrangementVoiceState();
 
-    const recorderOptions = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-      ? { mimeType: "audio/webm;codecs=opus" }
-      : undefined;
+    const recorderMimeType = selectRecorderMimeType();
+    const recorderOptions = recorderMimeType ? { mimeType: recorderMimeType } : undefined;
     const recorder = new MediaRecorder(recordingDestination.stream, recorderOptions);
     const chunks: BlobPart[] = [];
     recorder.addEventListener("dataavailable", (event) => {

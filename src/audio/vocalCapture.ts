@@ -24,7 +24,7 @@ export function vocalCaptureProfile(mode: RecordingCaptureMode): VocalCapturePro
         echoCancellation: true,
         noiseSuppression: false,
         autoGainControl: false,
-        channelCount: { ideal: 2 }
+        channelCount: 1
       },
       useNoiseGate: false,
       highPassHz: 70,
