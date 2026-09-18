@@ -23,7 +23,8 @@ export function vocalCaptureProfile(mode: RecordingCaptureMode): VocalCapturePro
       constraints: {
         echoCancellation: true,
         noiseSuppression: false,
-        autoGainControl: false,
+        // AGC를 켜서 브라우저/OS가 마이크 입력 레벨을 자동으로 높여준다
+        autoGainControl: true,
         channelCount: 1
       },
       useNoiseGate: false,
@@ -37,7 +38,7 @@ export function vocalCaptureProfile(mode: RecordingCaptureMode): VocalCapturePro
       dryGain: 1,
       reverbSend: 0.025,
       reverbReturn: 0.16,
-      vocalBusGain: 1.12,
+      vocalBusGain: 1.35,
       mixBusGain: 0.94
     };
   }
@@ -45,7 +46,8 @@ export function vocalCaptureProfile(mode: RecordingCaptureMode): VocalCapturePro
     constraints: {
       echoCancellation: true,
       noiseSuppression: true,
-      autoGainControl: false,
+      // AGC를 켜서 브라우저/OS가 마이크 입력 레벨을 자동으로 높여준다
+      autoGainControl: true,
       channelCount: 1
     },
     useNoiseGate: true,
@@ -59,7 +61,7 @@ export function vocalCaptureProfile(mode: RecordingCaptureMode): VocalCapturePro
     dryGain: 0.96,
     reverbSend: 0.09,
     reverbReturn: 0.32,
-    vocalBusGain: 1.08,
+    vocalBusGain: 1.4,
     mixBusGain: 0.96
   };
 }
@@ -88,7 +90,8 @@ export function createGentleNoiseGate(context: AudioContext): Readonly<{
     for (let index = 0; index < data.length; index += 1) sum += data[index] * data[index];
     const rms = Math.sqrt(sum / data.length);
     const now = context.currentTime;
-    const target = rms < 0.006 ? 0.65 : rms < 0.012 ? 0.86 : 1;
+    // 최솟값을 0.82로 높여 약한 마이크 신호가 지나치게 억제되지 않도록 한다
+    const target = rms < 0.006 ? 0.82 : rms < 0.012 ? 0.92 : 1;
     output.gain.cancelScheduledValues(now);
     output.gain.setTargetAtTime(target, now, target < output.gain.value ? 0.18 : 0.055);
     frame = window.setTimeout(tick, 45);
@@ -130,7 +133,8 @@ export function createVocalMonitor(
     let sum = 0;
     for (const sample of data) sum += sample * sample;
     const rms = Math.sqrt(sum / data.length);
-    onInputLevel?.(Math.min(1, rms / (mode === "choir" ? 0.075 : 0.11)));
+    // 기준값을 낮춰 레벨 미터가 실제 입력에 더 민감하게 반응하도록 한다
+    onInputLevel?.(Math.min(1, rms / (mode === "choir" ? 0.045 : 0.06)));
     const targetBacking = mode === "choir" ? 1 : karaokeBackingGainForRms(rms);
     backingMaster.gain.setTargetAtTime(targetBacking, context.currentTime,
       mode === "choir" ? 0.18 : rms > 0.025 ? 0.09 : 0.22);
