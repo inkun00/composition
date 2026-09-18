@@ -21,9 +21,11 @@ export function vocalCaptureProfile(mode: RecordingCaptureMode): VocalCapturePro
   if (mode === "choir") {
     return {
       constraints: {
-        echoCancellation: true,
+        // echoCancellation을 끈다: 스마트폰은 스피커-마이크 거리가 짧아
+        // EC가 반주음을 에코로 판단해 목소리까지 함께 억제한다.
+        // 에코 제어는 Web Audio 처리 체인(필터·컴프레서·믹스)이 담당한다.
+        echoCancellation: false,
         noiseSuppression: false,
-        // AGC를 켜서 브라우저/OS가 마이크 입력 레벨을 자동으로 높여준다
         autoGainControl: true,
         channelCount: 1
       },
@@ -44,9 +46,11 @@ export function vocalCaptureProfile(mode: RecordingCaptureMode): VocalCapturePro
   }
   return {
     constraints: {
-      echoCancellation: true,
-      noiseSuppression: true,
-      // AGC를 켜서 브라우저/OS가 마이크 입력 레벨을 자동으로 높여준다
+      // echoCancellation을 끈다: 스마트폰은 스피커-마이크 거리가 짧아
+      // EC가 반주음을 에코로 판단해 목소리까지 함께 억제한다.
+      // 에코 제어는 Web Audio 처리 체인(필터·컴프레서·믹스)이 담당한다.
+      echoCancellation: false,
+      noiseSuppression: false,
       autoGainControl: true,
       channelCount: 1
     },
