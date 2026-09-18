@@ -1116,6 +1116,17 @@ export async function recordKaraokeComposition(
   }
   const context = new AudioContextClass();
   activePlaybackContext = context;
+
+  // iOS는 마이크 하드웨어가 켜질 때 오디오 라우팅이 바뀌면서 AudioContext를
+  // 자동으로 suspended 상태로 되돌린다. Android OEM도 동일한 현상이 있다.
+  // statechange를 리슨해 suspended가 감지되는 즉시 resume을 재시도한다.
+  const handleContextStateChange = () => {
+    if (context.state === "suspended") {
+      void context.resume().catch(() => undefined);
+    }
+  };
+  context.addEventListener("statechange", handleContextStateChange);
+
   let microphoneStream: MediaStream | null = null;
   let stopNoiseGate: (() => void) | null = null;
   let stopVocalMonitor: (() => void) | null = null;
@@ -1262,6 +1273,13 @@ export async function recordKaraokeComposition(
     throwIfAborted();
     const voiceState = createArrangementVoiceState();
 
+    // 샘플·반주 로딩 도중 await가 여러 번 발생한다. 이 구간에 iOS/Android가
+    // AudioContext를 정지시켰을 수 있으므로 MediaRecorder 시작 전에 재확인한다.
+    // 300ms 대기는 마이크 하드웨어 라우팅이 완전히 안정될 시간을 준다.
+    if (context.state === "suspended") await context.resume();
+    await new Promise<void>((resolve) => window.setTimeout(resolve, 300));
+    if (context.state === "suspended") await context.resume();
+    throwIfAborted();
     const recorderMimeType = selectRecorderMimeType();
     const recorderOptions = recorderMimeType ? { mimeType: recorderMimeType } : undefined;
     const createRecorder = (destination: MediaStreamAudioDestinationNode) => {
@@ -1441,6 +1459,7 @@ export async function recordKaraokeComposition(
     };
   } finally {
     signal?.removeEventListener("abort", abortRecording);
+    context.removeEventListener("statechange", handleContextStateChange);
     callbackTimers.forEach((timer) => window.clearTimeout(timer));
     stopNoiseGate?.();
     stopVocalMonitor?.();
