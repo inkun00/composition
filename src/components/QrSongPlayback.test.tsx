@@ -83,4 +83,30 @@ describe("QR 악보 노래 재생", () => {
     expect(loadQrSong).toHaveBeenCalledWith("AbCdEfGhIjKlMnOpQrSt");
     expect(container?.textContent).toContain("QR 노래");
   });
+
+  it("각 마디의 가사를 표시하고 실시간 연주 영역을 제공한다", async () => {
+    act(() => root?.render(<QrSongPlayback composition={composition} />));
+    expect(container?.textContent).toContain("가사 및 연주 위치");
+    const firstMeasure = container?.querySelector('[data-testid="qr-measure-0"]');
+    expect(firstMeasure).not.toBeNull();
+    expect(firstMeasure?.textContent).toContain("1마디");
+    expect(firstMeasure?.textContent).toContain("라");
+  });
+
+  it("가사가 비어 있는 경우 계이름으로 가락 위치를 보여준다", async () => {
+    const noLyricSong: SharedComposition = {
+      ...composition,
+      lyrics: [],
+      measures: [
+        {
+          candidateName: "가락 1",
+          notes: [{ id: "n1", pitch: 60, duration: { numerator: 4, denominator: 1 } }]
+        }
+      ],
+      songLength: 8
+    };
+    act(() => root?.render(<QrSongPlayback composition={noLyricSong} />));
+    const firstMeasure = container?.querySelector('[data-testid="qr-measure-0"]');
+    expect(firstMeasure?.textContent).toContain("도");
+  });
 });
