@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, CheckCircle2, ExternalLink, FileDown, FileMusic, FileUp, Library, Menu, Mic2, Music2, Plus, QrCode, Redo2, SlidersHorizontal, Smartphone, Square, Undo2, UserRound, Volume2, WandSparkles, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { exportBackingCompositionMp3, pausePlayback, playComposition, playMeasure, practiceKaraokeComposition, recordKaraokeComposition, renderKaraokePreviewMix, renderProcessedKaraokeMp3, resumePlayback, stopPlayback,
-  type KaraokePostProcessPreset } from "./audio/player";
+  type AccompanimentOptions, type KaraokePostProcessPreset } from "./audio/player";
 import { preloadInstrument } from "./audio/samplePlayer";
 import { reviewRecordedPitch, type RecordingPitchReview } from "./audio/pitchReview";
 import PlayIcon from "./components/PlayIcon";
@@ -424,6 +424,13 @@ export default function App() {
     showArrangement
   }), [accompanimentInstrumentIds, accompanimentStyleId, beatPattern, beatVolume, bpm, creatorName, lyrics, measures, meter,
     originalCreator, selectedInstrumentId, selectedPresetId, songDescription, sourceHash, showArrangement, songLength, songTitle]);
+  const currentAccompanimentOptions = useMemo<AccompanimentOptions>(() => ({
+    styleId: accompanimentStyleId,
+    instrumentIds: accompanimentInstrumentIds,
+    beatPattern,
+    beatVolume,
+    meter
+  }), [accompanimentInstrumentIds, accompanimentStyleId, beatPattern, beatVolume, meter]);
   const candidates = useMemo(
     () => getCandidates(activeMeasure.story, meter, activeMeasure.chords),
     [activeMeasure.story, activeMeasure.chords, meter]
@@ -856,13 +863,8 @@ export default function App() {
       measureIndex: startMeasureIndex + relativeIndex
     }] : []);
     if (playable.length === 0) return;
-    const duration = await playComposition(playable, selectedInstrumentId, bpm, accompanimentReady ? {
-      styleId: accompanimentStyleId,
-      instrumentIds: accompanimentInstrumentIds,
-      beatPattern,
-      beatVolume,
-      meter
-    } : undefined);
+    const duration = await playComposition(playable, selectedInstrumentId, bpm,
+      accompanimentReady ? currentAccompanimentOptions : undefined);
     if (duration === null) return;
     const secondsPerBeat = 60 / bpm;
     let offsetSeconds = 0.08;
@@ -928,11 +930,7 @@ export default function App() {
       chords: activeMeasure.chords,
       effects: activeMeasure.effects,
       measureIndex: activeIndex
-    }], selectedInstrumentId, bpm, accompanimentReady ? {
-      styleId: accompanimentStyleId,
-      instrumentIds: accompanimentInstrumentIds,
-      meter
-    } : undefined);
+    }], selectedInstrumentId, bpm, accompanimentReady ? currentAccompanimentOptions : undefined);
     if (duration === null) return;
     setPlayingMeasure(true);
     animateSingleMeasureNotes(notes, bpm);
@@ -1321,6 +1319,8 @@ export default function App() {
       instrumentId: selectedInstrumentId,
       accompanimentStyleId,
       accompanimentInstrumentIds,
+      beatPattern,
+      beatVolume,
       bpm,
       lyrics,
       measures: printableMeasures.map(({ candidateName, notes, effects }) => ({ candidateName, notes, effects }))
@@ -1460,11 +1460,9 @@ export default function App() {
       measureIndex: index
     }] : []);
     try {
-      const blob = await exportBackingCompositionMp3(playable, selectedInstrumentId, bpm, {
-        styleId: accompanimentStyleId,
-        instrumentIds: accompanimentInstrumentIds,
-        meter
-      });
+      const blob = await exportBackingCompositionMp3(
+        playable, selectedInstrumentId, bpm, currentAccompanimentOptions
+      );
       if (!blob) {
         setShareStatus("다른 연주나 녹음이 끝난 뒤에 다시 저장해 주세요.");
         setBackingExportPhase("error");
@@ -1772,11 +1770,8 @@ export default function App() {
       measureIndex: index
     }] : []);
     try {
-      const result = await recordKaraokeComposition(playable, selectedInstrumentId, bpm, {
-        styleId: accompanimentStyleId,
-        instrumentIds: accompanimentInstrumentIds,
-        meter
-      }, {
+      const result = await recordKaraokeComposition(
+        playable, selectedInstrumentId, bpm, currentAccompanimentOptions, {
         guideMelodyMode: guideMode,
         recordingMode: captureMode,
         onStatus: setRecordingStatus,
@@ -1851,11 +1846,8 @@ export default function App() {
       measureIndex: index
     }] : []);
     try {
-      const duration = await practiceKaraokeComposition(playable, selectedInstrumentId, bpm, {
-        styleId: accompanimentStyleId,
-        instrumentIds: accompanimentInstrumentIds,
-        meter
-      }, {
+      const duration = await practiceKaraokeComposition(
+        playable, selectedInstrumentId, bpm, currentAccompanimentOptions, {
         onStatus: setRecordingStatus,
         onPhase: setKaraokePhase,
         onCount: setKaraokeCount,

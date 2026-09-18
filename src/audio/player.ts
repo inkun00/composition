@@ -435,7 +435,7 @@ function buildOutroMeasures(measures: readonly PlaybackMeasure[]): PlaybackMeasu
 async function loadAccompanimentLayers(context: BaseAudioContext, destination: AudioNode,
   accompaniment?: AccompanimentOptions) {
   if (accompaniment?.beatPattern && accompaniment.beatPattern.length > 0) {
-    void preloadBeatSamples(context, beatPatternInstrumentIds(accompaniment.beatPattern));
+    await preloadBeatSamples(context, beatPatternInstrumentIds(accompaniment.beatPattern));
   }
   return Promise.all((accompaniment?.instrumentIds ?? []).map(async (id) => {
     try {
@@ -993,7 +993,7 @@ export async function practiceKaraokeComposition(
       });
       songNoteCursor += measureSeconds(measure, secondsPerBeat);
       const plan = recordingArrangementPlan(measureIndex, measures.length, accompanimentLayers.length);
-      cursor += scheduleMeasure(context, master, measure, start + cursor, secondsPerBeat, {
+      cursor += scheduleMeasure(context, master, { ...measure, measureIndex: measure.measureIndex ?? measureIndex }, start + cursor, secondsPerBeat, {
         instrument,
         sampledInstrument,
         accompaniment,
@@ -1331,7 +1331,7 @@ export async function recordKaraokeComposition(
       });
       songNoteCursor += measureSeconds(measure, secondsPerBeat);
       const plan = recordingArrangementPlan(measureIndex, measures.length, accompanimentLayers.length);
-      cursor += scheduleMeasure(context, master, measure, start + cursor, secondsPerBeat, {
+      cursor += scheduleMeasure(context, master, { ...measure, measureIndex: measure.measureIndex ?? measureIndex }, start + cursor, secondsPerBeat, {
         instrument,
         sampledInstrument,
         accompaniment,
@@ -1499,7 +1499,7 @@ export async function exportBackingCompositionMp3(
     });
     measures.forEach((measure, measureIndex) => {
       const plan = songArrangementPlan(measureIndex, measures.length, accompanimentLayers.length);
-      cursor += scheduleMeasure(context, master, measure, start + cursor, secondsPerBeat, {
+      cursor += scheduleMeasure(context, master, { ...measure, measureIndex: measure.measureIndex ?? measureIndex }, start + cursor, secondsPerBeat, {
         instrument,
         sampledInstrument: null,
         accompaniment,

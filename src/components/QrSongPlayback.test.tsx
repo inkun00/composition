@@ -28,6 +28,8 @@ const composition: SharedComposition = {
   instrumentId: "piano",
   accompanimentStyleId: "arpeggio",
   accompanimentInstrumentIds: ["piano"],
+  beatPattern: [{ id: "beat-1", instrumentId: "kick", measureIndex: 0, offsetBeats: 0 }],
+  beatVolume: 120,
   bpm: 96,
   lyrics: Array(8).fill("라"),
   measures: Array.from({ length: 8 }, (_, index) => ({
@@ -65,7 +67,12 @@ describe("QR 악보 노래 재생", () => {
       expect.arrayContaining([expect.objectContaining({ chords: expect.any(Array) })]),
       "acoustic_grand_piano",
       96,
-      expect.objectContaining({ styleId: "arpeggio", meter: composition.meter })
+      expect.objectContaining({
+        styleId: "arpeggio",
+        meter: composition.meter,
+        beatPattern: composition.beatPattern,
+        beatVolume: 120
+      })
     );
     expect(container?.textContent).toContain("재생 멈추기");
   });
