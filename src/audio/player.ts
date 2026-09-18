@@ -1117,15 +1117,41 @@ export async function recordKaraokeComposition(
   const context = new AudioContextClass();
   activePlaybackContext = context;
 
+  // ── iOS / Android AudioContext 유지 대책 ─────────────────────────────────
   // iOS는 마이크 하드웨어가 켜질 때 오디오 라우팅이 바뀌면서 AudioContext를
-  // 자동으로 suspended 상태로 되돌린다. Android OEM도 동일한 현상이 있다.
-  // statechange를 리슨해 suspended가 감지되는 즉시 resume을 재시도한다.
+  // suspended 상태로 되돌린다. statechange 이벤트는 외부 정지 시 발화하지 않을 수
+  // 있으므로 세 가지 방어막을 함께 사용한다.
+  //
+  // 1) statechange + onstatechange: 이벤트로 감지되면 즉시 resume 재시도
+  // 2) 폴링: 200ms마다 상태를 직접 확인
+  // 3) silent keep-alive: 무음 버퍼를 loop=true로 재생 → iOS가 "오디오 재생 중"
+  //    으로 인식해 AudioContext를 자동 정지시키지 않음
   const handleContextStateChange = () => {
     if (context.state === "suspended") {
       void context.resume().catch(() => undefined);
     }
   };
   context.addEventListener("statechange", handleContextStateChange);
+  context.onstatechange = handleContextStateChange;
+
+  // silent keep-alive 소스 (gain=0이지만 loop 재생으로 AudioContext를 활성 상태 유지)
+  let keepAliveSource: AudioBufferSourceNode | null = null;
+  const keepAliveBuffer = context.createBuffer(1, context.sampleRate, context.sampleRate);
+  keepAliveSource = context.createBufferSource();
+  keepAliveSource.buffer = keepAliveBuffer;
+  keepAliveSource.loop = true;
+  const keepAliveGain = context.createGain();
+  keepAliveGain.gain.value = 0.00001;
+  keepAliveSource.connect(keepAliveGain).connect(context.destination);
+  keepAliveSource.start();
+
+  // 폴링 fallback: statechange 미발화 시 200ms마다 직접 resume 시도
+  const keepAliveInterval = window.setInterval(() => {
+    if (context.state === "suspended") {
+      void context.resume().catch(() => undefined);
+    }
+  }, 200);
+  // ─────────────────────────────────────────────────────────────────────────
 
   let microphoneStream: MediaStream | null = null;
   let stopNoiseGate: (() => void) | null = null;
@@ -1460,6 +1486,9 @@ export async function recordKaraokeComposition(
   } finally {
     signal?.removeEventListener("abort", abortRecording);
     context.removeEventListener("statechange", handleContextStateChange);
+    context.onstatechange = null;
+    window.clearInterval(keepAliveInterval);
+    try { keepAliveSource?.stop(); } catch { /* already stopped */ }
     callbackTimers.forEach((timer) => window.clearTimeout(timer));
     stopNoiseGate?.();
     stopVocalMonitor?.();
