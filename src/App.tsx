@@ -2226,7 +2226,7 @@ export default function App() {
                 <p className="local-preview-note">미리듣기 파일은 서버에 올리지 않고 이 브라우저 안에서만 임시로 만들어져요.</p>
                 <label className="backing-preview-volume">
                   <span><strong>미리듣기 반주 크기</strong><b>{Math.round(previewBackingVolume * 100)}%</b></span>
-                  <input type="range" min="0.25" max="1.6" step="0.05" value={previewBackingVolume}
+                  <input type="range" min="0.05" max="1.5" step="0.05" value={previewBackingVolume}
                     disabled={!recordedVocalBuffer || !recordedBackingBuffer || mixingPreview}
                     onChange={(event) => void updatePreviewBackingVolume(Number(event.target.value))} />
                   <small>{mixingPreview ? "반주 크기를 바꾸고 있어요..." : "내 목소리는 그대로 두고 반주만 조절해 보세요."}</small>

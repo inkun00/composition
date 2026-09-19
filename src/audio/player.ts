@@ -754,13 +754,13 @@ export async function renderKaraokePreviewMix(
   const vocalGain = context.createGain();
   const backingGain = context.createGain();
   const compressor = context.createDynamicsCompressor();
-  vocalGain.gain.value = 1;
-  backingGain.gain.value = Math.max(.25, Math.min(1.6, backingVolume));
-  compressor.threshold.value = -14;
-  compressor.knee.value = 12;
-  compressor.ratio.value = 2.4;
-  compressor.attack.value = .004;
-  compressor.release.value = .18;
+  vocalGain.gain.value = 1.1;
+  backingGain.gain.value = Math.max(0.02, Math.min(1.0, backingVolume * 0.5));
+  compressor.threshold.value = -3;
+  compressor.knee.value = 6;
+  compressor.ratio.value = 8;
+  compressor.attack.value = 0.003;
+  compressor.release.value = 0.1;
   vocal.connect(vocalGain).connect(compressor);
   backing.connect(backingGain).connect(compressor);
   compressor.connect(context.destination);
@@ -1210,7 +1210,9 @@ export async function recordKaraokeComposition(
     limiter.attack.value = 0.001;
     limiter.release.value = 0.08;
 
-    master.connect(mixBus);
+    const backingMixGain = context.createGain();
+    backingMixGain.gain.value = 0.5;
+    master.connect(backingMixGain).connect(mixBus);
     master.connect(context.destination);
     guideBus.connect(context.destination);
     vocalBus.connect(mixBus);
