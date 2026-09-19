@@ -32,8 +32,15 @@ class PcmCaptureProcessor extends AudioWorkletProcessor {
     return true;
   }
 }
-registerProcessor("pcm-capture-processor", PcmCaptureProcessor);
+try {
+  registerProcessor("pcm-capture-processor", PcmCaptureProcessor);
+} catch {
+  // 이미 등록된 경우 무시
+}
 `;
+
+const registeredWorkletContexts = new WeakSet<BaseAudioContext>();
+
 
 /**
  * 스마트폰 본체 내장 마이크를 우선적으로 탐색하여 deviceId를 반환한다.
@@ -160,10 +167,13 @@ export async function startPcmStreamCapture(
   // AudioWorklet 등록 및 초기화 시도
   if (typeof AudioWorkletNode !== "undefined" && context.audioWorklet?.addModule) {
     try {
-      const blob = new Blob([WORKLET_PROCESSOR_CODE], { type: "application/javascript" });
-      const workletUrl = URL.createObjectURL(blob);
-      await context.audioWorklet.addModule(workletUrl);
-      URL.revokeObjectURL(workletUrl);
+      if (!registeredWorkletContexts.has(context)) {
+        const blob = new Blob([WORKLET_PROCESSOR_CODE], { type: "application/javascript" });
+        const workletUrl = URL.createObjectURL(blob);
+        await context.audioWorklet.addModule(workletUrl);
+        URL.revokeObjectURL(workletUrl);
+        registeredWorkletContexts.add(context);
+      }
 
       const workletNode = new AudioWorkletNode(context, "pcm-capture-processor");
       workletNode.port.onmessage = (event: MessageEvent<Float32Array>) => {

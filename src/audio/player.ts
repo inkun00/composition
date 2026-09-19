@@ -1138,24 +1138,15 @@ export async function recordKaraokeComposition(
   let microphoneStream: MediaStream | null = null;
   let stopVocalMonitor: (() => void) | null = null;
   let pcmCaptures: PcmStreamCapture[] = [];
-  let pcmStopped = false;
-  let pcmResultPromise: Promise<[Float32Array, Float32Array]> | null = null;
-  const stopPcmCaptures = () => {
-    if (pcmStopped) return;
-    pcmStopped = true;
-    if (pcmCaptures.length >= 2) {
-      pcmResultPromise = Promise.all([pcmCaptures[0].stop(), pcmCaptures[1].stop()]);
-    }
-  };
   const abortRecording = () => {
     callbackTimers.forEach((timer) => window.clearTimeout(timer));
     callbackTimers = [];
-    stopPcmCaptures();
     pcmCaptures.forEach((capture) => void capture.stop().catch(() => undefined));
     microphoneStream?.getTracks().forEach((track) => track.stop());
     callbacks.onInputLevel?.(0);
     if (context.state !== "closed") void context.close().catch(() => undefined);
   };
+
   const throwIfAborted = () => {
     if (signal?.aborted) throw new DOMException("녹음을 중단했어요.", "AbortError");
   };
@@ -1366,11 +1357,27 @@ export async function recordKaraokeComposition(
       });
     });
 
-    queueCallback(cursor + tailSeconds, stopPcmCaptures);
+    const [vocalPcm, backingPcm] = await new Promise<[Float32Array, Float32Array]>((resolve, reject) => {
+      const handleAbort = () => {
+        reject(new DOMException("녹음을 중단했어요.", "AbortError"));
+      };
+      if (signal?.aborted) {
+        handleAbort();
+        return;
+      }
+      signal?.addEventListener("abort", handleAbort, { once: true });
 
-    const [vocalPcm, backingPcm] = pcmResultPromise
-      ? await pcmResultPromise
-      : (await Promise.all([vocalPcmCapture.stop(), backingPcmCapture.stop()]));
+      queueCallback(cursor + tailSeconds, async () => {
+        signal?.removeEventListener("abort", handleAbort);
+        try {
+          const results = await Promise.all([vocalPcmCapture.stop(), backingPcmCapture.stop()]);
+          resolve(results);
+        } catch (err) {
+          reject(err);
+        }
+      });
+    });
+
     callbackTimers.forEach((timer) => window.clearTimeout(timer));
     callbackTimers = [];
     throwIfAborted();
