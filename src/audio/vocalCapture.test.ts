@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import { calculateVocalMakeupGain, karaokeBackingGainForRms, vocalCaptureProfile } from "./vocalCapture";
 
 describe("녹음 입력 프로필", () => {
-  it("개인 녹음은 가까운 한 사람의 잡음을 부드럽게 줄인다", () => {
+  it("개인 녹음은 가창 왜곡을 방지하기 위해 통화용 잡음 제거를 끄고 노이즈 게이트와 머드컷을 적용한다", () => {
     const profile = vocalCaptureProfile("personal");
     expect(profile.useNoiseGate).toBe(true);
-    expect(profile.constraints.noiseSuppression).toBe(true);
+    expect(profile.constraints.noiseSuppression).toBe(false);
+    expect(profile.mudCutDb).toBeLessThanOrEqual(-4.0);
+    expect(profile.highPassHz).toBeGreaterThanOrEqual(100);
     expect(profile.reverbSend).toBeGreaterThan(vocalCaptureProfile("choir").reverbSend);
     expect(profile.vocalBusGain).toBeGreaterThanOrEqual(2.5);
     expect(profile.presenceDb).toBeGreaterThanOrEqual(3.0);

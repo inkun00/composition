@@ -67,21 +67,22 @@ export function vocalCaptureProfile(mode: RecordingCaptureMode): VocalCapturePro
   }
   return {
     constraints: {
-      // echoCancellation: true
-      // 이어폰/스피커 재생음이 마이크로 물리적/전기적으로 유입되는 것을 방지하기 위해 AEC 활성화
+      // 이어폰/스피커 재생음이 마이크로 유입되는 것을 방지하기 위해 AEC 활성화
       echoCancellation: true,
-      // 개인 녹음은 주변 일상 잡음을 억제하기 위해 noiseSuppression을 활성화한다
-      noiseSuppression: true,
+      // 브라우저의 통화용 잡음 제거(spectral subtraction)가 가창 지속음을 잡음으로 오인해
+      // 물속에서 부르는 듯한 뭉개짐(phasing)을 유발하므로 음악 녹음에서는 비활성화한다.
+      // 묵음 구간의 실내 잡음은 전용 노이즈 게이트가 자연스럽게 정돈한다.
+      noiseSuppression: false,
       // AGC를 꺼서 조용할 때 마이크 민감도가 자동 폭증해 먼 소리를 다 녹음하는 현상을 차단한다
       autoGainControl: false,
       channelCount: 1
     },
     useNoiseGate: true,
-    highPassHz: 80,   // 80Hz: 마이크 터치 및 실내 저주파를 억제하면서 남녀 보컬의 흉성 보존
+    highPassHz: 110,  // 110Hz: 마이크 터치 및 100Hz 이하 저역 럼블/부밍을 차단
     lowPassHz: 16000, // 16kHz까지 확장해 공기감 및 선명도 확보
-    mudCutDb: -2.0,   // 260Hz 먹먹함 감쇄
-    presenceDb: 3.2,  // 3.2kHz 자음/성대 명료도 대역을 +3.2dB 부스트하여 반주를 뚫고 또렷하게 들리도록 개선
-    deEsserDb: -1.2,
+    mudCutDb: -4.5,   // 120~250Hz 근접 효과로 인한 웅웅거림과 머드 대역을 -4.5dB 시원하게 감쇄
+    presenceDb: 4.2,  // 3.4kHz 자음/성대 명료도 대역을 +4.2dB 부스트하여 가사 전달력 극대화
+    deEsserDb: -1.0,
     compressorThreshold: -18,
     compressorRatio: 2.4,
     dryGain: 1.25,    // 드라이 게인 +2dB

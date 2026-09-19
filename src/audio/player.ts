@@ -697,8 +697,9 @@ export async function renderProcessedKaraokeMp3(
   compressor.release.value = 0.18;
 
   if (preset === "clear") {
-    tone.gain.value = 2.2;
-    outputGain.gain.value = 1.03;
+    tone.frequency.value = 3400;
+    tone.gain.value = 3.6;
+    outputGain.gain.value = 1.02;
   } else if (preset === "soft") {
     tone.frequency.value = 4200;
     tone.gain.value = -1.8;
@@ -1235,12 +1236,12 @@ export async function recordKaraokeComposition(
     vocalLowPass.Q.value = 0.5;
     const vocalMudCut = context.createBiquadFilter();
     vocalMudCut.type = "peaking";
-    vocalMudCut.frequency.value = 260;
-    vocalMudCut.Q.value = 1.1;
+    vocalMudCut.frequency.value = 220;
+    vocalMudCut.Q.value = 1.0;
     vocalMudCut.gain.value = capture.mudCutDb;
     const vocalPresence = context.createBiquadFilter();
     vocalPresence.type = "peaking";
-    vocalPresence.frequency.value = 3200;
+    vocalPresence.frequency.value = 3400;
     vocalPresence.Q.value = 0.9;
     vocalPresence.gain.value = capture.presenceDb;
     const vocalDeEsser = context.createBiquadFilter();
