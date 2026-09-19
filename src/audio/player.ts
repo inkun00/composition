@@ -1272,7 +1272,7 @@ export async function recordKaraokeComposition(
     const vocalSource: AudioNode = noiseGate ? noiseGate.output : vocalDeEsser;
     if (noiseGate) vocalDeEsser.connect(noiseGate.input);
     vocalSource.connect(vocalCompressor);
-    stopVocalMonitor = createVocalMonitor(context, vocalSource, master, callbacks.onInputLevel, recordingMode);
+    stopVocalMonitor = createVocalMonitor(context, vocalDeEsser, master, callbacks.onInputLevel, recordingMode);
     vocalCompressor.connect(vocalDry).connect(vocalBus);
     vocalCompressor.connect(reverbSend).connect(reverb).connect(reverbReturn).connect(vocalBus);
 

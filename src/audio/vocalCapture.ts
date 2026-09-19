@@ -213,7 +213,7 @@ export function createVocalMonitor(
 ): () => void {
   const analyser = context.createAnalyser();
   analyser.fftSize = 1024;
-  analyser.smoothingTimeConstant = 0.78;
+  analyser.smoothingTimeConstant = 0.62;
   source.connect(analyser);
   const data = new Float32Array(analyser.fftSize);
   let timer = 0;
@@ -225,12 +225,16 @@ export function createVocalMonitor(
     let sum = 0;
     for (const sample of data) sum += sample * sample;
     const rms = Math.sqrt(sum / data.length);
-    // 기준값을 낮춰 레벨 미터가 실제 입력에 더 민감하게 반응하도록 한다
-    onInputLevel?.(Math.min(1, rms / (mode === "choir" ? 0.045 : 0.06)));
+    // 모바일 마이크의 낮은 캡슐 신호(RMS 0.003~0.018)와 PC(0.03~0.08) 모두에서
+    // 게이지가 생동감 있게 반응하도록 비선형(제곱근) 지각 음량 커브 적용
+    const sensitivity = mode === "choir" ? 0.035 : 0.022;
+    const rawLevel = Math.min(1, rms / sensitivity);
+    const displayLevel = rms < 0.0015 ? 0 : Math.min(1, Math.sqrt(rawLevel));
+    onInputLevel?.(displayLevel);
     const targetBacking = mode === "choir" ? 1 : karaokeBackingGainForRms(rms);
     backingMaster.gain.setTargetAtTime(targetBacking, context.currentTime,
       mode === "choir" ? 0.18 : rms > 0.025 ? 0.09 : 0.22);
-    timer = window.setTimeout(tick, 70);
+    timer = window.setTimeout(tick, 60);
   };
   tick();
   return () => {
