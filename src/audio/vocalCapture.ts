@@ -45,7 +45,8 @@ export function vocalCaptureProfile(mode: RecordingCaptureMode): VocalCapturePro
       // 원음 녹음: 브라우저/기기의 인위적인 음성 왜곡 및 에코 캔슬러에 의한 보컬 차단 방지
       echoCancellation: false,
       noiseSuppression: false,
-      channelCount: 1
+      channelCount: 1,
+      sampleRate: { ideal: 48000 }
     },
     useNoiseGate: false,
     highPassHz: 20,

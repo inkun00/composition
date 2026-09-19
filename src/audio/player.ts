@@ -625,7 +625,7 @@ function floatTo16BitPcm(input: Float32Array): Int16Array {
 
 function encodeAudioBufferToMp3(buffer: AudioBuffer): Blob {
   const channels = Math.min(2, buffer.numberOfChannels);
-  const encoder = new Mp3Encoder(channels, buffer.sampleRate, 160);
+  const encoder = new Mp3Encoder(channels, buffer.sampleRate, 192);
   const chunks: BlobPart[] = [];
   const blockSize = 1152;
   const left = buffer.getChannelData(0);
@@ -1258,8 +1258,8 @@ export async function recordKaraokeComposition(
     throwIfAborted();
     const recorderMimeType = selectRecorderMimeType();
     const recorderOptions: MediaRecorderOptions = {
-      // 128kbps: Opus/AAC 기준 음악 녹음에 충분한 품질, 기본값(16~32kbps)의 전화 음질 방지
-      audioBitsPerSecond: 128000,
+      // 192kbps: 목소리의 고음역 배음과 디테일을 선명하게 보존
+      audioBitsPerSecond: 192000,
       ...(recorderMimeType ? { mimeType: recorderMimeType } : {})
     };
     const createRecorder = (destination: MediaStreamAudioDestinationNode) => {
