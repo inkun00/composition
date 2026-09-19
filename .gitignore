@@ -9,3 +9,5 @@ artifacts/
 .env
 .env.local
 .env.*.local
+/*.mp3
+tmp/

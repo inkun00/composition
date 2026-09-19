@@ -1,0 +1,192 @@
+/* ==========================================================================
+   Mobile Responsive Polish
+   화면 폭 900px 이하 모바일/태블릿 환경 전용 레이아웃 및 텍스트 줄바꿈 최적화
+   ========================================================================== */
+
+@media (max-width: 900px) {
+  /* 1. 상단 바: 스크롤 시 내용물이 비치지 않도록 글래스모피즘 불투명 배경 적용 */
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgba(109, 92, 231, 0.12);
+    box-shadow: 0 2px 12px rgba(34, 28, 63, 0.05);
+  }
+
+  /* 2. 하단 고정 바가 페이지 최하단 콘텐츠를 가리지 않도록 main 하단 여백 확보 */
+  main {
+    padding-bottom: 130px !important;
+  }
+
+  /* 3. 모바일 버튼 공통: 한국어 단어 중간 어색한 줄바꿈 방지 */
+  button,
+  .btn,
+  .meter-option,
+  .length-option,
+  .story-tab,
+  .candidate-card,
+  .preset-card {
+    word-break: keep-all;
+    overflow-wrap: normal;
+  }
+
+  /* 4. 박자 선택(3단계): 6/8 박자의 '하나둘셋 · 넷다섯여섯' 등 긴 텍스트 줄바꿈 개선 */
+  .meter-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  .meter-option {
+    min-height: 80px;
+    padding: 10px 12px;
+  }
+
+  .meter-option strong {
+    font-size: 22px;
+    line-height: 1.1;
+  }
+
+  .meter-option span {
+    font-size: 13px;
+    margin-top: 2px;
+    white-space: nowrap;
+  }
+
+  .meter-option small {
+    font-size: 11px;
+    letter-spacing: -0.04em;
+    margin-top: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* 5. 곡 길이 선택(4단계): 1열 7개 거대 세로 나열 대신 모바일 친화적 2열 그리드로 정돈 */
+  .length-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  .length-option {
+    min-height: 56px;
+    padding: 9px 12px;
+  }
+
+  .length-option strong {
+    font-size: 17px;
+    line-height: 1.1;
+  }
+
+  .length-option span {
+    font-size: 11px;
+    letter-spacing: -0.02em;
+    margin-top: 2px;
+    white-space: nowrap;
+  }
+
+  /* 6. 화음 이야기 탭(화음 흐름): 텍스트 줄바꿈 방지 및 터치 영역 최적화 */
+  .story-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .story-tab {
+    min-height: 48px;
+    padding: 8px 10px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  /* 7. 추천 가락(후보) 그리드 및 카드 텍스트 */
+  .candidate-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .candidate-card {
+    padding: 12px;
+  }
+
+  .candidate-meta {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  /* 8. 하단 바 버튼: 줄바꿈 없이 한눈에 들어오도록 폰트와 패딩 정돈 */
+  .bottom-bar {
+    min-height: 72px;
+    padding: 10px 14px max(10px, env(safe-area-inset-bottom, 10px));
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid rgba(109, 92, 231, 0.12);
+    box-shadow: 0 -4px 20px rgba(34, 28, 63, 0.08);
+  }
+
+  .bottom-bar button {
+    min-height: 44px;
+    padding: 0 12px;
+    font-size: 13px;
+    white-space: nowrap;
+    border-radius: 12px;
+  }
+
+  /* 9. 노래방/녹음 오버레이 모바일 화면 꽉 채움 및 텍스트 겹침 방지 */
+  .karaoke-overlay {
+    padding: 0;
+    align-items: stretch;
+  }
+
+  .karaoke-window {
+    width: 100%;
+    min-height: 100vh;
+    border-radius: 0;
+    padding: 14px 12px;
+  }
+
+  .karaoke-controls {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .karaoke-controls button {
+    flex: 1 1 45%;
+    white-space: nowrap;
+  }
+}
+
+/* 430px 이하 소형 스마트폰 (iPhone SE, 소형 Galaxy) 추가 미세 조정 */
+@media (max-width: 430px) {
+  .meter-option {
+    padding: 8px 10px;
+  }
+
+  .meter-option strong {
+    font-size: 20px;
+  }
+
+  .meter-option span {
+    font-size: 12px;
+  }
+
+  .meter-option small {
+    font-size: 10px;
+    letter-spacing: -0.05em;
+  }
+
+  .length-option {
+    padding: 8px 10px;
+  }
+
+  .length-option strong {
+    font-size: 16px;
+  }
+
+  .bottom-bar button {
+    padding: 0 8px;
+    font-size: 12px;
+  }
+}

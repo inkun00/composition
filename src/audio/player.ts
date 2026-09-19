@@ -12,7 +12,7 @@ import { scheduleBeatPattern } from "./drumGroove";
 import { beatPatternInstrumentIds, type BeatPatternEvent } from "../music/beatPattern";
 import { preloadBeatSamples } from "./beatSamples";
 import { karaokeGuideSettings, type KaraokeGuideMode } from "./karaokeGuide";
-import { createGentleNoiseGate, createVocalMonitor, karaokeBackingGainForRms, selectRecorderMimeType, vocalCaptureProfile, type RecordingCaptureMode } from "./vocalCapture";
+import { calculateVocalMakeupGain, createGentleNoiseGate, createVocalMonitor, karaokeBackingGainForRms, selectRecorderMimeType, vocalCaptureProfile, type RecordingCaptureMode } from "./vocalCapture";
 export { karaokeBackingGainForRms } from "./vocalCapture";
 export type PlaybackMeasure = Readonly<{
   notes: readonly NoteEvent[];
@@ -754,8 +754,8 @@ export async function renderKaraokePreviewMix(
   const vocalGain = context.createGain();
   const backingGain = context.createGain();
   const compressor = context.createDynamicsCompressor();
-  vocalGain.gain.value = 1.1;
-  backingGain.gain.value = Math.max(0.02, Math.min(1.0, backingVolume * 0.5));
+  vocalGain.gain.value = calculateVocalMakeupGain(vocalBuffer);
+  backingGain.gain.value = Math.max(0.02, Math.min(1.0, backingVolume * 0.45));
   compressor.threshold.value = -3;
   compressor.knee.value = 6;
   compressor.ratio.value = 8;
@@ -1455,20 +1455,17 @@ export async function recordKaraokeComposition(
     callbacks.onHighlight?.({ section: "outro", measureIndex: null, noteId: null });
     callbacks.onPhase?.("encoding");
     callbacks.onStatus?.("MP3 파일로 바꾸는 중이에요.");
-    const recordedBuffer = await recordedBlob.arrayBuffer();
-    const decoded = await context.decodeAudioData(recordedBuffer);
-    throwIfAborted();
     const vocalAudioBuffer = await context.decodeAudioData(await vocalBlob.arrayBuffer());
     throwIfAborted();
     const backingAudioBuffer = await context.decodeAudioData(await backingBlob.arrayBuffer());
     throwIfAborted();
-    const mp3Blob = encodeAudioBufferToMp3(decoded);
+    const initialMix = await renderKaraokePreviewMix(vocalAudioBuffer, backingAudioBuffer, 1.0);
     throwIfAborted();
     callbacks.onStatus?.("MP3 저장 준비가 끝났어요.");
     callbacks.onPhase?.("done");
     return {
-      blob: mp3Blob,
-      audioBuffer: decoded,
+      blob: initialMix.blob,
+      audioBuffer: initialMix.audioBuffer,
       vocalAudioBuffer,
       backingAudioBuffer,
       durationSeconds: introSeconds + songSeconds + outroSeconds + tailSeconds,
