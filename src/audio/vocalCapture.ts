@@ -59,17 +59,16 @@ export function vocalCaptureProfile(mode: RecordingCaptureMode): VocalCapturePro
       compressorThreshold: -14,
       compressorRatio: 1.6,
       dryGain: 1,
-      reverbSend: 0.015,
-      reverbReturn: 0.12,
-      vocalBusGain: 1.25,
+      reverbSend: 0.002,
+      reverbReturn: 0.02,
+      vocalBusGain: 1.0,
       mixBusGain: 0.94
     };
   }
   return {
     constraints: {
-      // echoCancellation: true (핵심)
-      // 스피커로 재생되는 반주음이 마이크로 물리 유입되어 메아리처럼 반복 녹음되는 현상을
-      // 브라우저의 하드웨어/소프트웨어 음향 에코 캔슬러(AEC)가 실시간 상쇄 제거한다.
+      // echoCancellation: true
+      // 이어폰/스피커 재생음이 마이크로 물리적/전기적으로 유입되는 것을 방지하기 위해 AEC 활성화
       echoCancellation: true,
       // 개인 녹음은 주변 일상 잡음을 억제하기 위해 noiseSuppression을 활성화한다
       noiseSuppression: true,
@@ -83,12 +82,14 @@ export function vocalCaptureProfile(mode: RecordingCaptureMode): VocalCapturePro
     mudCutDb: -1.4,
     presenceDb: 1.2,
     deEsserDb: -1.2,
-    compressorThreshold: -20,
+    compressorThreshold: -16, // 과도한 압축으로 미세 누음이 펌핑 증폭되는 것을 방지
     compressorRatio: 2.0,
-    dryGain: 0.98,
-    reverbSend: 0.035, // 과도한 리버브로 인한 동굴 울림 및 피드백성 메아리 방지
-    reverbReturn: 0.15,
-    vocalBusGain: 1.2,
+    dryGain: 1.0,
+    // 실시간 녹음 시 리버브를 극소화하여 이어폰 누음이 동굴 메아리로 변질되는 현상 원천 차단
+    // (공간계 리버브는 녹음 후 완성 단계의 후가공 프리셋에서 처리)
+    reverbSend: 0.008,
+    reverbReturn: 0.03,
+    vocalBusGain: 1.0, // 1.2 → 1.0: 마이크 트랙 과증폭 방지
     mixBusGain: 0.96
   };
 }
@@ -100,13 +101,13 @@ export function createGentleNoiseGate(context: AudioContext): Readonly<{
 }> {
   const input = context.createGain();
   const output = context.createGain();
-  output.gain.value = 0.02;
+  output.gain.value = 0.01;
   input.connect(output);
 
-  // 음성 감지용 사이드체인 필터: 180Hz 하이패스로 실내 럼블 및 저음 반주 블리드에 의한 게이트 오작동 방지
+  // 음성 감지용 사이드체인 필터: 220Hz 하이패스로 반주 베이스·드럼 누음에 의한 게이트 오작동 방지
   const detectionFilter = context.createBiquadFilter();
   detectionFilter.type = "highpass";
-  detectionFilter.frequency.value = 180;
+  detectionFilter.frequency.value = 220;
   detectionFilter.Q.value = 0.7;
   input.connect(detectionFilter);
 
@@ -125,13 +126,13 @@ export function createGentleNoiseGate(context: AudioContext): Readonly<{
     for (let index = 0; index < data.length; index += 1) sum += data[index] * data[index];
     const rms = Math.sqrt(sum / data.length);
     const now = context.currentTime;
-    // 발성하지 않는 조용한 구간 및 일상 실내 소음(rms < 0.013)은 게인을 0.02(-34dB)로 확실하게 닫아
-    // 방 안의 잔류 소음 및 스피커 누음이 들어가지 않도록 완벽히 차단한다.
-    // 발성 시작 시(rms >= 0.025)에는 15ms 빠른 어택으로 첫 음절을 즉각 통과시키고,
-    // 발성이 끝날 때는 약 150ms 릴리즈로 부드럽게 닫아 자연스러운 여운을 유지한다.
-    const target = rms < 0.013 ? 0.02 : rms < 0.025 ? 0.35 : 1;
+    // 발성하지 않는 조용한 구간 및 일상 실내 소음(rms < 0.015)은 게인을 0.01(-40dB)로 확실하게 닫아
+    // 방 안의 잔류 소음 및 이어폰 누음이 들어가지 않도록 완벽히 차단한다.
+    // 발성 시작 시(rms >= 0.03)에는 15ms 빠른 어택으로 첫 음절을 즉각 통과시키고,
+    // 발성이 끝날 때는 약 140ms 릴리즈로 부드럽게 닫아 자연스러운 여운을 유지한다.
+    const target = rms < 0.015 ? 0.01 : rms < 0.03 ? 0.35 : 1;
     output.gain.cancelScheduledValues(now);
-    output.gain.setTargetAtTime(target, now, target < output.gain.value ? 0.15 : 0.015);
+    output.gain.setTargetAtTime(target, now, target < output.gain.value ? 0.14 : 0.015);
     frame = window.setTimeout(tick, 30);
   };
   tick();
