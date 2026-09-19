@@ -40,56 +40,26 @@ export function selectRecorderMimeType(): string | null {
 }
 
 export function vocalCaptureProfile(mode: RecordingCaptureMode): VocalCaptureProfile {
-  if (mode === "choir") {
-    return {
-      constraints: {
-        // 합창 녹음 시에도 스피커 반주음이 마이크로 재유입되어 울리는 현상을 막기 위해 AEC 활성화
-        echoCancellation: true,
-        noiseSuppression: false,
-        // AGC를 꺼서 마이크 감도가 제멋대로 치솟아 먼 소음까지 빨아들이는 현상을 차단한다
-        autoGainControl: false,
-        channelCount: 1
-      },
-      useNoiseGate: false,
-      highPassHz: 70,
-      lowPassHz: 15000,
-      mudCutDb: -0.6,
-      presenceDb: 0.45,
-      deEsserDb: -0.35,
-      compressorThreshold: -14,
-      compressorRatio: 1.6,
-      dryGain: 1,
-      reverbSend: 0.002,
-      reverbReturn: 0.02,
-      vocalBusGain: 1.0,
-      mixBusGain: 0.94
-    };
-  }
   return {
     constraints: {
-      // 이어폰/스피커 재생음이 마이크로 유입되는 것을 방지하기 위해 AEC 활성화
-      echoCancellation: true,
-      // 스마트폰의 다중 마이크 빔포밍을 활성화하여 바람소리, 입김, 주변 공기 난류를 차단한다
-      noiseSuppression: true,
-      // AGC를 꺼서 조용할 때 마이크 민감도가 자동 폭증해 먼 소리를 다 녹음하는 현상을 차단한다
-      autoGainControl: false,
+      // 원음 녹음: 브라우저/기기의 인위적인 음성 왜곡 및 에코 캔슬러에 의한 보컬 차단 방지
+      echoCancellation: false,
+      noiseSuppression: false,
       channelCount: 1
     },
-    useNoiseGate: true,
-    highPassHz: 110,  // 110Hz: 마이크 터치 및 100Hz 이하 저역 럼블/부밍을 차단
-    lowPassHz: 16000, // 16kHz까지 확장해 공기감 및 선명도 확보
-    mudCutDb: -4.5,   // 120~250Hz 근접 효과로 인한 웅웅거림과 머드 대역을 -4.5dB 시원하게 감쇄
-    presenceDb: 4.2,  // 3.4kHz 자음/성대 명료도 대역을 +4.2dB 부스트하여 가사 전달력 극대화
-    deEsserDb: -1.0,
-    compressorThreshold: -18,
-    compressorRatio: 2.4,
-    dryGain: 1.25,    // 드라이 게인 +2dB
-    // 실시간 녹음 시 리버브를 극소화하여 이어폰 누음이 동굴 메아리로 변질되는 현상 원천 차단
-    // (공간계 리버브는 녹음 후 완성 단계의 후가공 프리셋에서 처리)
-    reverbSend: 0.008,
-    reverbReturn: 0.03,
-    vocalBusGain: 2.8, // 하드웨어 AGC 해제 시 저하되는 마이크 캡슐 신호를 +9dB 프리앰프 보정
-    mixBusGain: 0.96
+    useNoiseGate: false,
+    highPassHz: 20,
+    lowPassHz: 20000,
+    mudCutDb: 0,
+    presenceDb: 0,
+    deEsserDb: 0,
+    compressorThreshold: 0,
+    compressorRatio: 1,
+    dryGain: 1,
+    reverbSend: 0,
+    reverbReturn: 0,
+    vocalBusGain: 1.0,
+    mixBusGain: 1.0
   };
 }
 
@@ -213,9 +183,22 @@ export function createVocalMonitor(
 ): () => void {
   const analyser = context.createAnalyser();
   analyser.fftSize = 1024;
-  analyser.smoothingTimeConstant = 0.62;
+  analyser.smoothingTimeConstant = 0.55;
   source.connect(analyser);
+
+  // 모바일 브라우저(iOS Safari / Android Chrome)에서 AnalyserNode가 context.destination으로의
+  // 오디오 경로가 없을 때 렌더링 퀀텀을 비활성화하여 데이터가 0으로 고정되는 현상을 방지
+  const dummyGain = context.createGain();
+  dummyGain.gain.value = 0;
+  analyser.connect(dummyGain);
+  try {
+    dummyGain.connect(context.destination);
+  } catch {
+    // context 상태에 따른 연결 예외 방지
+  }
+
   const data = new Float32Array(analyser.fftSize);
+  const byteData = new Uint8Array(analyser.fftSize);
   let timer = 0;
   let stopped = false;
 
@@ -224,22 +207,41 @@ export function createVocalMonitor(
     analyser.getFloatTimeDomainData(data);
     let sum = 0;
     for (const sample of data) sum += sample * sample;
-    const rms = Math.sqrt(sum / data.length);
-    // 모바일 마이크의 낮은 캡슐 신호(RMS 0.003~0.018)와 PC(0.03~0.08) 모두에서
-    // 게이지가 생동감 있게 반응하도록 비선형(제곱근) 지각 음량 커브 적용
-    const sensitivity = mode === "choir" ? 0.035 : 0.022;
+    let rms = Math.sqrt(sum / data.length);
+
+    // 일부 모바일 브라우저에서 FloatTimeDomainData가 0만 반환하는 환경 대응
+    if (rms === 0 && typeof analyser.getByteTimeDomainData === "function") {
+      analyser.getByteTimeDomainData(byteData);
+      let byteSum = 0;
+      for (let i = 0; i < byteData.length; i += 1) {
+        const diff = (byteData[i] - 128) / 128;
+        byteSum += diff * diff;
+      }
+      rms = Math.sqrt(byteSum / byteData.length);
+    }
+
+    // 원음 마이크 입력 감도 및 지각 음량 스케일링:
+    // 미세 기저 소음(rms < 0.0008)은 0%로 정적 유지,
+    // 부드러운 가창부터 시원한 가창까지 25% ~ 80%("좋아요") 구간으로 생동감 있게 반응
+    const sensitivity = mode === "choir" ? 0.045 : 0.035;
     const rawLevel = Math.min(1, rms / sensitivity);
-    const displayLevel = rms < 0.0015 ? 0 : Math.min(1, Math.sqrt(rawLevel));
+    const displayLevel = rms < 0.0008 ? 0 : Math.min(1, Math.sqrt(rawLevel));
     onInputLevel?.(displayLevel);
+
     const targetBacking = mode === "choir" ? 1 : karaokeBackingGainForRms(rms);
     backingMaster.gain.setTargetAtTime(targetBacking, context.currentTime,
       mode === "choir" ? 0.18 : rms > 0.025 ? 0.09 : 0.22);
-    timer = window.setTimeout(tick, 60);
+    timer = window.setTimeout(tick, 50);
   };
   tick();
   return () => {
     stopped = true;
     window.clearTimeout(timer);
+    try {
+      dummyGain.disconnect();
+    } catch {
+      // ignore
+    }
     onInputLevel?.(0);
   };
 }

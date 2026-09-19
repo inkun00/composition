@@ -2,24 +2,20 @@ import { describe, expect, it } from "vitest";
 import { calculateVocalMakeupGain, karaokeBackingGainForRms, vocalCaptureProfile } from "./vocalCapture";
 
 describe("녹음 입력 프로필", () => {
-  it("개인 녹음은 바람소리와 잡음을 억제하기 위해 noiseSuppression을 활성화하고 머드컷을 적용한다", () => {
+  it("원음 녹음은 인위적인 필터링이나 왜곡 없이 순수 마이크 입력을 받는다", () => {
     const profile = vocalCaptureProfile("personal");
-    expect(profile.useNoiseGate).toBe(true);
-    expect(profile.constraints.noiseSuppression).toBe(true);
-    expect(profile.mudCutDb).toBeLessThanOrEqual(-4.0);
-    expect(profile.highPassHz).toBeGreaterThanOrEqual(100);
-    expect(profile.reverbSend).toBeGreaterThan(vocalCaptureProfile("choir").reverbSend);
-    expect(profile.vocalBusGain).toBeGreaterThanOrEqual(2.5);
-    expect(profile.presenceDb).toBeGreaterThanOrEqual(3.0);
+    expect(profile.useNoiseGate).toBe(false);
+    expect(profile.constraints.echoCancellation).toBe(false);
+    expect(profile.constraints.noiseSuppression).toBe(false);
+    expect(profile.mudCutDb).toBe(0);
+    expect(profile.vocalBusGain).toBe(1.0);
   });
 
-  it("합창 녹음은 먼 여러 목소리를 자르지 않고 완만하게 압축한다", () => {
+  it("합창 녹음도 원음을 보존하며 노이즈게이트를 사용하지 않는다", () => {
     const choir = vocalCaptureProfile("choir");
-    const personal = vocalCaptureProfile("personal");
     expect(choir.useNoiseGate).toBe(false);
     expect(choir.constraints.noiseSuppression).toBe(false);
-    expect(choir.compressorRatio).toBeLessThan(personal.compressorRatio);
-    expect(choir.highPassHz).toBeLessThanOrEqual(personal.highPassHz);
+    expect(choir.vocalBusGain).toBe(1.0);
   });
 
   it("개인 녹음에서 목소리가 들어오면 반주를 조금만 낮춘다", () => {

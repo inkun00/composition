@@ -12,7 +12,7 @@ import { scheduleBeatPattern } from "./drumGroove";
 import { beatPatternInstrumentIds, type BeatPatternEvent } from "../music/beatPattern";
 import { preloadBeatSamples } from "./beatSamples";
 import { karaokeGuideSettings, type KaraokeGuideMode } from "./karaokeGuide";
-import { calculateVocalMakeupGain, createGentleNoiseGate, createVocalMonitor, karaokeBackingGainForRms, selectRecorderMimeType, vocalCaptureProfile, type RecordingCaptureMode } from "./vocalCapture";
+import { calculateVocalMakeupGain, createVocalMonitor, karaokeBackingGainForRms, selectRecorderMimeType, vocalCaptureProfile, type RecordingCaptureMode } from "./vocalCapture";
 export { karaokeBackingGainForRms } from "./vocalCapture";
 export type PlaybackMeasure = Readonly<{
   notes: readonly NoteEvent[];
@@ -1142,7 +1142,6 @@ export async function recordKaraokeComposition(
   // ─────────────────────────────────────────────────────────────────────────
 
   let microphoneStream: MediaStream | null = null;
-  let stopNoiseGate: (() => void) | null = null;
   let stopVocalMonitor: (() => void) | null = null;
   let callbackTimers: number[] = [];
   let activeRecorders: MediaRecorder[] = [];
@@ -1176,7 +1175,11 @@ export async function recordKaraokeComposition(
     // getUserMedia 프롬프트를 기다리면 그 타이밍을 잃으므로, 반드시 getUserMedia 전에 resume한다.
     if (context.state === "suspended") await context.resume();
     callbacks.onStatus?.("마이크 권한을 허용해 주세요.");
-    microphoneStream = await navigator.mediaDevices.getUserMedia({ audio: capture.constraints });
+    try {
+      microphoneStream = await navigator.mediaDevices.getUserMedia({ audio: capture.constraints });
+    } catch {
+      microphoneStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    }
     throwIfAborted();
     // getUserMedia 이후에도 suspended 상태가 되는 경우(일부 Android)를 대비해 재시도
     if (context.state === "suspended") await context.resume();
@@ -1228,53 +1231,10 @@ export async function recordKaraokeComposition(
     master.connect(backingRecordingDestination);
 
     const microphone = context.createMediaStreamSource(microphoneStream);
-    const vocalHighPass = context.createBiquadFilter();
-    vocalHighPass.type = "highpass";
-    vocalHighPass.frequency.value = capture.highPassHz;
-    vocalHighPass.Q.value = 0.7;
-    const vocalLowPass = context.createBiquadFilter();
-    vocalLowPass.type = "lowpass";
-    vocalLowPass.frequency.value = capture.lowPassHz;
-    vocalLowPass.Q.value = 0.5;
-    const vocalMudCut = context.createBiquadFilter();
-    vocalMudCut.type = "peaking";
-    vocalMudCut.frequency.value = 220;
-    vocalMudCut.Q.value = 1.0;
-    vocalMudCut.gain.value = capture.mudCutDb;
-    const vocalPresence = context.createBiquadFilter();
-    vocalPresence.type = "peaking";
-    vocalPresence.frequency.value = 3400;
-    vocalPresence.Q.value = 0.9;
-    vocalPresence.gain.value = capture.presenceDb;
-    const vocalDeEsser = context.createBiquadFilter();
-    vocalDeEsser.type = "peaking";
-    vocalDeEsser.frequency.value = 6500;
-    vocalDeEsser.Q.value = 1.4;
-    vocalDeEsser.gain.value = capture.deEsserDb;
-    const noiseGate = capture.useNoiseGate ? createGentleNoiseGate(context) : null;
-    stopNoiseGate = noiseGate?.stop ?? null;
-    const vocalCompressor = context.createDynamicsCompressor();
-    vocalCompressor.threshold.value = capture.compressorThreshold;
-    vocalCompressor.knee.value = 24;
-    vocalCompressor.ratio.value = capture.compressorRatio;
-    vocalCompressor.attack.value = 0.012;
-    vocalCompressor.release.value = 0.24;
-    const vocalDry = context.createGain();
-    vocalDry.gain.value = capture.dryGain;
-    const reverbSend = context.createGain();
-    reverbSend.gain.value = capture.reverbSend;
-    const reverb = context.createConvolver();
-    reverb.buffer = createRoomImpulse(context);
-    const reverbReturn = context.createGain();
-    reverbReturn.gain.value = capture.reverbReturn;
-    microphone.connect(vocalHighPass).connect(vocalLowPass).connect(vocalMudCut)
-      .connect(vocalPresence).connect(vocalDeEsser);
-    const vocalSource: AudioNode = noiseGate ? noiseGate.output : vocalDeEsser;
-    if (noiseGate) vocalDeEsser.connect(noiseGate.input);
-    vocalSource.connect(vocalCompressor);
-    stopVocalMonitor = createVocalMonitor(context, vocalDeEsser, master, callbacks.onInputLevel, recordingMode);
-    vocalCompressor.connect(vocalDry).connect(vocalBus);
-    vocalCompressor.connect(reverbSend).connect(reverb).connect(reverbReturn).connect(vocalBus);
+    // 원음 녹음: 필터, 게이트, 컴프레서, 리버브 등 특별한 처리를 배제하고
+    // 마이크에서 들어오는 목소리 원음을 있는 그대로 깨끗하게 vocalBus로 연결한다.
+    microphone.connect(vocalBus);
+    stopVocalMonitor = createVocalMonitor(context, microphone, master, callbacks.onInputLevel, recordingMode);
 
     const instrument = findInstrument(instrumentId);
     let sampledInstrument: Awaited<ReturnType<typeof loadSampleInstrument>> | null = null;
@@ -1481,7 +1441,6 @@ export async function recordKaraokeComposition(
     window.clearInterval(keepAliveInterval);
     try { keepAliveSource?.stop(); } catch { /* already stopped */ }
     callbackTimers.forEach((timer) => window.clearTimeout(timer));
-    stopNoiseGate?.();
     stopVocalMonitor?.();
     microphoneStream?.getTracks().forEach((track) => track.stop());
     if (activePlaybackContext === context) activePlaybackContext = null;
