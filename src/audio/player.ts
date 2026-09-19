@@ -742,7 +742,9 @@ export async function renderProcessedKaraokeMp3(
 export async function renderKaraokePreviewMix(
   vocalBuffer: AudioBuffer,
   backingBuffer: AudioBuffer,
-  backingVolume: number
+  backingVolume: number,
+  introSeconds = 0,
+  outroSeconds = 0
 ): Promise<Readonly<{ blob: Blob; audioBuffer: AudioBuffer }>> {
   const channels = Math.min(2, Math.max(vocalBuffer.numberOfChannels, backingBuffer.numberOfChannels));
   const sampleRate = Math.max(vocalBuffer.sampleRate, backingBuffer.sampleRate);
@@ -755,7 +757,7 @@ export async function renderKaraokePreviewMix(
   const vocalGain = context.createGain();
   const backingGain = context.createGain();
   const compressor = context.createDynamicsCompressor();
-  vocalGain.gain.value = calculateVocalMakeupGain(vocalBuffer);
+  vocalGain.gain.value = calculateVocalMakeupGain(vocalBuffer, introSeconds, outroSeconds);
   backingGain.gain.value = Math.max(0.02, Math.min(1.0, backingVolume * 0.45));
   compressor.threshold.value = -3;
   compressor.knee.value = 6;
@@ -1460,7 +1462,7 @@ export async function recordKaraokeComposition(
     throwIfAborted();
     const backingAudioBuffer = await context.decodeAudioData(await backingBlob.arrayBuffer());
     throwIfAborted();
-    const initialMix = await renderKaraokePreviewMix(vocalAudioBuffer, backingAudioBuffer, 1.0);
+    const initialMix = await renderKaraokePreviewMix(vocalAudioBuffer, backingAudioBuffer, 1.0, introSeconds, outroSeconds);
     throwIfAborted();
     callbacks.onStatus?.("MP3 저장 준비가 끝났어요.");
     callbacks.onPhase?.("done");

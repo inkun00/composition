@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { calculateVocalMakeupGain, karaokeBackingGainForRms, vocalCaptureProfile } from "./vocalCapture";
 
 describe("녹음 입력 프로필", () => {
-  it("개인 녹음은 가창 왜곡을 방지하기 위해 통화용 잡음 제거를 끄고 노이즈 게이트와 머드컷을 적용한다", () => {
+  it("개인 녹음은 바람소리와 잡음을 억제하기 위해 noiseSuppression을 활성화하고 머드컷을 적용한다", () => {
     const profile = vocalCaptureProfile("personal");
     expect(profile.useNoiseGate).toBe(true);
-    expect(profile.constraints.noiseSuppression).toBe(false);
+    expect(profile.constraints.noiseSuppression).toBe(true);
     expect(profile.mudCutDb).toBeLessThanOrEqual(-4.0);
     expect(profile.highPassHz).toBeGreaterThanOrEqual(100);
     expect(profile.reverbSend).toBeGreaterThan(vocalCaptureProfile("choir").reverbSend);
@@ -35,6 +35,7 @@ describe("녹음 입력 프로필", () => {
     const mockBuffer = {
       length,
       sampleRate,
+      duration: 5,
       getChannelData: () => channelData
     } as unknown as AudioBuffer;
 
@@ -55,5 +56,29 @@ describe("녹음 입력 프로필", () => {
 
     const gain = calculateVocalMakeupGain(mockBuffer);
     expect(gain).toBeCloseTo(1.0, 1);
+  });
+
+  it("인트로 구간에 발생한 큰 터치 팝 노이즈를 무시하고 실제 가창 음량을 부스트한다", () => {
+    const sampleRate = 48000;
+    const length = sampleRate * 30;
+    const channelData = new Float32Array(length);
+    // 1.0초 인트로에 팝 노이즈 피크 0.8
+    channelData[Math.floor(sampleRate * 1.0)] = 0.8;
+    // 10초~20초 실제 노래 구간에 작은 목소리 피크 0.08
+    for (let sec = 10; sec <= 20; sec += 1) {
+      for (let i = 0; i < 2000; i += 1) {
+        channelData[sampleRate * sec + i] = 0.08 * Math.sin(i * 0.1);
+      }
+    }
+    const mockBuffer = {
+      length,
+      sampleRate,
+      duration: 30,
+      getChannelData: () => channelData
+    } as unknown as AudioBuffer;
+
+    const gain = calculateVocalMakeupGain(mockBuffer, 8.0, 4.0);
+    expect(gain).toBeGreaterThanOrEqual(7.0);
+    expect(gain).toBeLessThanOrEqual(12.0);
   });
 });

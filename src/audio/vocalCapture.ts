@@ -69,10 +69,8 @@ export function vocalCaptureProfile(mode: RecordingCaptureMode): VocalCapturePro
     constraints: {
       // 이어폰/스피커 재생음이 마이크로 유입되는 것을 방지하기 위해 AEC 활성화
       echoCancellation: true,
-      // 브라우저의 통화용 잡음 제거(spectral subtraction)가 가창 지속음을 잡음으로 오인해
-      // 물속에서 부르는 듯한 뭉개짐(phasing)을 유발하므로 음악 녹음에서는 비활성화한다.
-      // 묵음 구간의 실내 잡음은 전용 노이즈 게이트가 자연스럽게 정돈한다.
-      noiseSuppression: false,
+      // 스마트폰의 다중 마이크 빔포밍을 활성화하여 바람소리, 입김, 주변 공기 난류를 차단한다
+      noiseSuppression: true,
       // AGC를 꺼서 조용할 때 마이크 민감도가 자동 폭증해 먼 소리를 다 녹음하는 현상을 차단한다
       autoGainControl: false,
       channelCount: 1
@@ -148,23 +146,58 @@ export function createGentleNoiseGate(context: AudioContext): Readonly<{
 }
 
 /**
- * 녹음된 보컬 오디오의 피크를 분석하여 최적의 메이크업 게인을 계산한다.
- * 스마트폰 마이크의 AGC 해제 환경에서 발생하는 극소 음량을 표준 방송 레벨(-2.4dBFS)로 끌어올린다.
+ * 녹음된 보컬 오디오를 분석하여 최적의 메이크업 게인을 계산한다.
+ * 인트로 반주 구간이나 종료 터치음의 단발성 팝 노이즈에 속지 않도록,
+ * 실제 노래 구간의 유의미한 가창 프레임들을 기반으로 견고하게 측정한다.
  */
-export function calculateVocalMakeupGain(buffer: AudioBuffer): number {
+export function calculateVocalMakeupGain(
+  buffer: AudioBuffer,
+  introSeconds = 0,
+  outroSeconds = 0
+): number {
   if (buffer.length === 0) return 1.0;
   const channel = buffer.getChannelData(0);
   const sampleRate = buffer.sampleRate;
-  const startOffset = Math.min(buffer.length, Math.floor(sampleRate * 0.2));
-  const endOffset = Math.max(startOffset, buffer.length - Math.floor(sampleRate * 0.8));
+  const duration = buffer.duration || (sampleRate > 0 ? buffer.length / sampleRate : 0);
+  const effectiveIntro = introSeconds > 0 ? introSeconds : Math.min(8.0, duration * 0.18);
+  const effectiveOutro = outroSeconds > 0 ? outroSeconds : Math.min(5.0, duration * 0.12);
 
-  let peak = 0;
-  for (let i = startOffset; i < endOffset; i += 4) {
-    const abs = Math.abs(channel[i]);
-    if (abs > peak) peak = abs;
+  const startOffset = Math.min(buffer.length, Math.round(sampleRate * effectiveIntro));
+  const endOffset = Math.max(startOffset, buffer.length - Math.round(sampleRate * effectiveOutro));
+
+  const frameSize = Math.floor(sampleRate * 0.05);
+  const frameCount = Math.floor((endOffset - startOffset) / frameSize);
+  const framePeaks: number[] = [];
+
+  for (let f = 0; f < frameCount; f += 1) {
+    let fPeak = 0;
+    let fSumSq = 0;
+    const fStart = startOffset + f * frameSize;
+    for (let i = 0; i < frameSize; i += 2) {
+      const v = Math.abs(channel[fStart + i]);
+      if (v > fPeak) fPeak = v;
+      fSumSq += v * v;
+    }
+    const fRms = Math.sqrt(fSumSq / (frameSize / 2));
+    if (fRms > 0.003 && fPeak > 0.006) {
+      framePeaks.push(fPeak);
+    }
   }
-  if (peak < 0.003) return 1.0;
-  return Math.max(1.0, Math.min(18.0, 0.76 / peak));
+
+  let measuredPeak = 0;
+  if (framePeaks.length >= 4) {
+    framePeaks.sort((a, b) => a - b);
+    const p95 = Math.min(framePeaks.length - 1, Math.floor(framePeaks.length * 0.95));
+    measuredPeak = framePeaks[p95];
+  } else {
+    for (let i = startOffset; i < endOffset; i += 4) {
+      const abs = Math.abs(channel[i]);
+      if (abs > measuredPeak) measuredPeak = abs;
+    }
+  }
+
+  if (measuredPeak < 0.003) return 1.0;
+  return Math.max(1.0, Math.min(18.0, 0.76 / measuredPeak));
 }
 
 export function karaokeBackingGainForRms(rms: number): number {
