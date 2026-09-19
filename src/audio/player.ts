@@ -13,6 +13,7 @@ import { beatPatternInstrumentIds, type BeatPatternEvent } from "../music/beatPa
 import { preloadBeatSamples } from "./beatSamples";
 import { karaokeGuideSettings, type KaraokeGuideMode } from "./karaokeGuide";
 import { calculateVocalMakeupGain, createVocalMonitor, karaokeBackingGainForRms, selectRecorderMimeType, vocalCaptureProfile, type RecordingCaptureMode } from "./vocalCapture";
+import { createAudioBufferFromPcm, encodeAudioBufferToWav, findBuiltInMicrophoneDeviceId, forceBuiltInMicrophoneStream, startPcmStreamCapture, type PcmStreamCapture } from "./pcmRecorder";
 export { karaokeBackingGainForRms } from "./vocalCapture";
 export type PlaybackMeasure = Readonly<{
   notes: readonly NoteEvent[];
@@ -37,6 +38,7 @@ export type KaraokeRecordingResult = Readonly<{
   backingAudioBuffer: AudioBuffer;
   durationSeconds: number;
   introSeconds: number;
+  wavBlob?: Blob;
 }>;
 
 export type KaraokePostProcessPreset = "natural" | "clear" | "soft" | "loud" | "singer";
@@ -1087,15 +1089,6 @@ export async function recordKaraokeComposition(
   if (!navigator.mediaDevices?.getUserMedia) {
     throw new Error("이 브라우저에서는 마이크 녹음을 사용할 수 없어요.");
   }
-  if (typeof MediaRecorder === "undefined") {
-    // iOS 17.4 미만은 MediaRecorder 자체가 없음
-    const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    throw new Error(
-      isIos
-        ? "iOS 17.4 이상 또는 최신 Chrome 앱에서 녹음할 수 있어요."
-        : "이 브라우저에서는 녹음 저장을 사용할 수 없어요."
-    );
-  }
 
   const AudioContextClass = window.AudioContext ||
     (window as Window & typeof globalThis & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
@@ -1141,23 +1134,24 @@ export async function recordKaraokeComposition(
   }, 200);
   // ─────────────────────────────────────────────────────────────────────────
 
+  let callbackTimers: number[] = [];
   let microphoneStream: MediaStream | null = null;
   let stopVocalMonitor: (() => void) | null = null;
-  let callbackTimers: number[] = [];
-  let activeRecorders: MediaRecorder[] = [];
-  const stopActiveRecorders = () => {
-    activeRecorders.forEach((recorder) => {
-      try {
-        if (recorder.state !== "inactive") recorder.stop();
-      } catch (error) {
-        console.warn("녹음기를 종료하지 못했어요.", error);
-      }
-    });
+  let pcmCaptures: PcmStreamCapture[] = [];
+  let pcmStopped = false;
+  let pcmResultPromise: Promise<[Float32Array, Float32Array]> | null = null;
+  const stopPcmCaptures = () => {
+    if (pcmStopped) return;
+    pcmStopped = true;
+    if (pcmCaptures.length >= 2) {
+      pcmResultPromise = Promise.all([pcmCaptures[0].stop(), pcmCaptures[1].stop()]);
+    }
   };
   const abortRecording = () => {
     callbackTimers.forEach((timer) => window.clearTimeout(timer));
     callbackTimers = [];
-    stopActiveRecorders();
+    stopPcmCaptures();
+    pcmCaptures.forEach((capture) => void capture.stop().catch(() => undefined));
     microphoneStream?.getTracks().forEach((track) => track.stop());
     callbacks.onInputLevel?.(0);
     if (context.state !== "closed") void context.close().catch(() => undefined);
@@ -1175,11 +1169,21 @@ export async function recordKaraokeComposition(
     // getUserMedia 프롬프트를 기다리면 그 타이밍을 잃으므로, 반드시 getUserMedia 전에 resume한다.
     if (context.state === "suspended") await context.resume();
     callbacks.onStatus?.("마이크 권한을 허용해 주세요.");
+    let builtInDeviceId = await findBuiltInMicrophoneDeviceId().catch(() => null);
+    const audioConstraints: MediaTrackConstraints = {
+      ...capture.constraints,
+      ...(builtInDeviceId ? { deviceId: { ideal: builtInDeviceId } } : {})
+    };
     try {
-      microphoneStream = await navigator.mediaDevices.getUserMedia({ audio: capture.constraints });
+      microphoneStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
     } catch {
       microphoneStream = await navigator.mediaDevices.getUserMedia({ audio: true });
     }
+    throwIfAborted();
+
+    // 마이크 권한 승인 직후 스마트폰 본체 마이크로 강제 전환 (이어폰/블루투스 연결 시 8kHz/16kHz HFP 대신 본체 48kHz 스튜디오 캡슐 강제)
+    const forcedMic = await forceBuiltInMicrophoneStream(microphoneStream, capture.constraints);
+    microphoneStream = forcedMic.stream;
     throwIfAborted();
     // getUserMedia 이후에도 suspended 상태가 되는 경우(일부 Android)를 대비해 재시도
     if (context.state === "suspended") await context.resume();
@@ -1201,40 +1205,16 @@ export async function recordKaraokeComposition(
     const guideBus = context.createGain();
     const vocalBus = context.createGain();
     vocalBus.gain.value = capture.vocalBusGain;
-    const mixBus = context.createGain();
-    mixBus.gain.value = capture.mixBusGain;
-    const mixCompressor = context.createDynamicsCompressor();
-    mixCompressor.threshold.value = -18;
-    mixCompressor.knee.value = 12;
-    mixCompressor.ratio.value = 3;
-    mixCompressor.attack.value = 0.004;
-    mixCompressor.release.value = 0.24;
-    const limiter = context.createDynamicsCompressor();
-    limiter.threshold.value = -2.5;
-    limiter.knee.value = 0;
-    limiter.ratio.value = 18;
-    limiter.attack.value = 0.001;
-    limiter.release.value = 0.08;
 
-    const backingMixGain = context.createGain();
-    backingMixGain.gain.value = 0.5;
-    master.connect(backingMixGain).connect(mixBus);
     master.connect(context.destination);
     guideBus.connect(context.destination);
-    vocalBus.connect(mixBus);
-    mixBus.connect(mixCompressor).connect(limiter);
-    const recordingDestination = context.createMediaStreamDestination();
-    const vocalRecordingDestination = context.createMediaStreamDestination();
-    const backingRecordingDestination = context.createMediaStreamDestination();
-    limiter.connect(recordingDestination);
-    vocalBus.connect(vocalRecordingDestination);
-    master.connect(backingRecordingDestination);
 
     const microphone = context.createMediaStreamSource(microphoneStream);
     // 원음 녹음: 필터, 게이트, 컴프레서, 리버브 등 특별한 처리를 배제하고
     // 마이크에서 들어오는 목소리 원음을 있는 그대로 깨끗하게 vocalBus로 연결한다.
     microphone.connect(vocalBus);
     stopVocalMonitor = createVocalMonitor(context, microphone, master, callbacks.onInputLevel, recordingMode);
+
 
     const instrument = findInstrument(instrumentId);
     let sampledInstrument: Awaited<ReturnType<typeof loadSampleInstrument>> | null = null;
@@ -1256,35 +1236,14 @@ export async function recordKaraokeComposition(
     await new Promise<void>((resolve) => window.setTimeout(resolve, 300));
     if (context.state === "suspended") await context.resume();
     throwIfAborted();
-    const recorderMimeType = selectRecorderMimeType();
-    const recorderOptions: MediaRecorderOptions = {
-      // 192kbps: 목소리의 고음역 배음과 디테일을 선명하게 보존
-      audioBitsPerSecond: 192000,
-      ...(recorderMimeType ? { mimeType: recorderMimeType } : {})
-    };
-    const createRecorder = (destination: MediaStreamAudioDestinationNode) => {
-      const recorder = new MediaRecorder(destination.stream, recorderOptions);
-      const chunks: BlobPart[] = [];
-      recorder.addEventListener("dataavailable", (event) => {
-        if (event.data.size > 0) chunks.push(event.data);
-      });
-      const stopped = new Promise<Blob>((resolve) => {
-        recorder.addEventListener("stop", () => {
-          resolve(new Blob(chunks, { type: recorder.mimeType || "audio/webm" }));
-        }, { once: true });
-      });
-      return { recorder, stopped };
-    };
-    const mixRecorder = createRecorder(recordingDestination);
-    const vocalRecorder = createRecorder(vocalRecordingDestination);
-    const backingRecorder = createRecorder(backingRecordingDestination);
-    activeRecorders = [mixRecorder.recorder, vocalRecorder.recorder, backingRecorder.recorder];
+    // 100% 디지털 무손실 32-bit Float PCM 캡처 시작 (vocalBus 원음 + master 반주)
+    const vocalPcmCapture = await startPcmStreamCapture(context, vocalBus);
+    const backingPcmCapture = await startPcmStreamCapture(context, master);
+    pcmCaptures = [vocalPcmCapture, backingPcmCapture];
 
     const start = context.currentTime + 0.6;
     let cursor = 0;
-    mixRecorder.recorder.start(250);
-    vocalRecorder.recorder.start(250);
-    backingRecorder.recorder.start(250);
+
     const queueCallback = (relativeSeconds: number, callback: () => void) => {
       callbackTimers.push(window.setTimeout(callback, Math.max(0, (start - context.currentTime + relativeSeconds) * 1000)));
     };
@@ -1407,24 +1366,27 @@ export async function recordKaraokeComposition(
       });
     });
 
-    queueCallback(cursor + tailSeconds, stopActiveRecorders);
+    queueCallback(cursor + tailSeconds, stopPcmCaptures);
 
-    const [recordedBlob, vocalBlob, backingBlob] = await Promise.all([
-      mixRecorder.stopped, vocalRecorder.stopped, backingRecorder.stopped
-    ]);
+    const [vocalPcm, backingPcm] = pcmResultPromise
+      ? await pcmResultPromise
+      : (await Promise.all([vocalPcmCapture.stop(), backingPcmCapture.stop()]));
     callbackTimers.forEach((timer) => window.clearTimeout(timer));
     callbackTimers = [];
     throwIfAborted();
     callbacks.onHighlight?.({ section: "outro", measureIndex: null, noteId: null });
     callbacks.onPhase?.("encoding");
-    callbacks.onStatus?.("MP3 파일로 바꾸는 중이에요.");
-    const vocalAudioBuffer = await context.decodeAudioData(await vocalBlob.arrayBuffer());
+    callbacks.onStatus?.("고음질 오디오로 변환하는 중이에요.");
+
+    // 손실 압축(MediaRecorder/WebM/Opus) 및 decodeAudioData 없이 32-bit Float PCM에서 직접 AudioBuffer 생성
+    const vocalAudioBuffer = createAudioBufferFromPcm(context, vocalPcm, 1);
     throwIfAborted();
-    const backingAudioBuffer = await context.decodeAudioData(await backingBlob.arrayBuffer());
+    const backingAudioBuffer = createAudioBufferFromPcm(context, backingPcm, 2);
     throwIfAborted();
-    const initialMix = await renderKaraokePreviewMix(vocalAudioBuffer, backingAudioBuffer, 1.0, introSeconds, outroSeconds);
+    const initialMix = await renderKaraokePreviewMix(vocalAudioBuffer, backingAudioBuffer, 1.0, introSeconds + 0.6, outroSeconds);
     throwIfAborted();
-    callbacks.onStatus?.("MP3 저장 준비가 끝났어요.");
+    const wavBlob = encodeAudioBufferToWav(initialMix.audioBuffer);
+    callbacks.onStatus?.("녹음 저장 준비가 끝났어요.");
     callbacks.onPhase?.("done");
     return {
       blob: initialMix.blob,
@@ -1432,8 +1394,10 @@ export async function recordKaraokeComposition(
       vocalAudioBuffer,
       backingAudioBuffer,
       durationSeconds: introSeconds + songSeconds + outroSeconds + tailSeconds,
-      introSeconds
+      introSeconds: introSeconds + 0.6,
+      wavBlob
     };
+
   } finally {
     signal?.removeEventListener("abort", abortRecording);
     context.removeEventListener("statechange", handleContextStateChange);
