@@ -12,7 +12,7 @@ import { scheduleBeatPattern } from "./drumGroove";
 import { beatPatternInstrumentIds, type BeatPatternEvent } from "../music/beatPattern";
 import { preloadBeatSamples } from "./beatSamples";
 import { karaokeGuideSettings, type KaraokeGuideMode } from "./karaokeGuide";
-import { createGentleNoiseGate, createVocalMonitor, karaokeBackingGainForRms, vocalCaptureProfile, type RecordingCaptureMode } from "./vocalCapture";
+import { createGentleNoiseGate, createVocalMonitor, karaokeBackingGainForRms, selectRecorderMimeType, vocalCaptureProfile, type RecordingCaptureMode } from "./vocalCapture";
 export { karaokeBackingGainForRms } from "./vocalCapture";
 export type PlaybackMeasure = Readonly<{
   notes: readonly NoteEvent[];
@@ -74,24 +74,6 @@ let activePlaybackContext: AudioContext | null = null;
 let sharedAudioContext: AudioContext | null = null;
 let activeOfflineExport = false;
 
-/**
- * 현재 브라우저에서 MediaRecorder가 지원하는 오디오 codec을 선택한다.
- * 우선순위: audio/webm;codecs=opus (Chrome/Android — 고품질) →
- *           audio/mp4 (iOS Safari) → audio/ogg;codecs=opus → 기본값
- * audio/mp4를 먼저 두면 Android Chrome도 mp4를 선택하는데,
- * mp4의 기본 비트레이트가 16~32kbps로 전화 음질 수준이므로 webm을 우선한다.
- */
-function selectRecorderMimeType(): string | null {
-  const candidates = [
-    "audio/webm;codecs=opus",
-    "audio/mp4",
-    "audio/ogg;codecs=opus"
-  ];
-  for (const mimeType of candidates) {
-    if (MediaRecorder.isTypeSupported(mimeType)) return mimeType;
-  }
-  return null;
-}
 
 async function loadSampleWithTimeout(context: BaseAudioContext, destination: AudioNode,
   instrumentId: InstrumentId, timeoutMs = 2500) {
