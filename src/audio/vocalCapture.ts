@@ -43,10 +43,8 @@ export function vocalCaptureProfile(mode: RecordingCaptureMode): VocalCapturePro
   if (mode === "choir") {
     return {
       constraints: {
-        // echoCancellation을 끈다: 스마트폰은 스피커-마이크 거리가 짧아
-        // EC가 반주음을 에코로 판단해 목소리까지 함께 억제한다.
-        // 에코 제어는 Web Audio 처리 체인(필터·컴프레서·믹스)이 담당한다.
-        echoCancellation: false,
+        // 합창 녹음 시에도 스피커 반주음이 마이크로 재유입되어 울리는 현상을 막기 위해 AEC 활성화
+        echoCancellation: true,
         noiseSuppression: false,
         // AGC를 꺼서 마이크 감도가 제멋대로 치솟아 먼 소음까지 빨아들이는 현상을 차단한다
         autoGainControl: false,
@@ -61,18 +59,18 @@ export function vocalCaptureProfile(mode: RecordingCaptureMode): VocalCapturePro
       compressorThreshold: -14,
       compressorRatio: 1.6,
       dryGain: 1,
-      reverbSend: 0.025,
-      reverbReturn: 0.16,
-      vocalBusGain: 1.35,
+      reverbSend: 0.015,
+      reverbReturn: 0.12,
+      vocalBusGain: 1.25,
       mixBusGain: 0.94
     };
   }
   return {
     constraints: {
-      // echoCancellation을 끈다: 스마트폰은 스피커-마이크 거리가 짧아
-      // EC가 반주음을 에코로 판단해 목소리까지 함께 억제한다.
-      // 에코 제어는 Web Audio 처리 체인(필터·컴프레서·믹스)이 담당한다.
-      echoCancellation: false,
+      // echoCancellation: true (핵심)
+      // 스피커로 재생되는 반주음이 마이크로 물리 유입되어 메아리처럼 반복 녹음되는 현상을
+      // 브라우저의 하드웨어/소프트웨어 음향 에코 캔슬러(AEC)가 실시간 상쇄 제거한다.
+      echoCancellation: true,
       // 개인 녹음은 주변 일상 잡음을 억제하기 위해 noiseSuppression을 활성화한다
       noiseSuppression: true,
       // AGC를 꺼서 조용할 때 마이크 민감도가 자동 폭증해 먼 소리를 다 녹음하는 현상을 차단한다
@@ -80,17 +78,17 @@ export function vocalCaptureProfile(mode: RecordingCaptureMode): VocalCapturePro
       channelCount: 1
     },
     useNoiseGate: true,
-    highPassHz: 85,   // 85Hz: 책상 진동 및 실내 저주파 웅웅거림을 억제하면서 보컬의 온기는 보존
+    highPassHz: 90,   // 90Hz: 책상 진동 및 실내 저주파 웅웅거림을 억제하면서 보컬의 온기는 보존
     lowPassHz: 16000, // 16kHz까지 확장해 공기감 및 선명도 확보
     mudCutDb: -1.4,
     presenceDb: 1.2,
     deEsserDb: -1.2,
     compressorThreshold: -20,
-    compressorRatio: 2.2,
-    dryGain: 0.96,
-    reverbSend: 0.09,
-    reverbReturn: 0.32,
-    vocalBusGain: 1.3,
+    compressorRatio: 2.0,
+    dryGain: 0.98,
+    reverbSend: 0.035, // 과도한 리버브로 인한 동굴 울림 및 피드백성 메아리 방지
+    reverbReturn: 0.15,
+    vocalBusGain: 1.2,
     mixBusGain: 0.96
   };
 }
@@ -102,12 +100,20 @@ export function createGentleNoiseGate(context: AudioContext): Readonly<{
 }> {
   const input = context.createGain();
   const output = context.createGain();
-  output.gain.value = 0.05;
+  output.gain.value = 0.02;
   input.connect(output);
+
+  // 음성 감지용 사이드체인 필터: 180Hz 하이패스로 실내 럼블 및 저음 반주 블리드에 의한 게이트 오작동 방지
+  const detectionFilter = context.createBiquadFilter();
+  detectionFilter.type = "highpass";
+  detectionFilter.frequency.value = 180;
+  detectionFilter.Q.value = 0.7;
+  input.connect(detectionFilter);
+
   const analyser = context.createAnalyser();
   analyser.fftSize = 1024;
-  analyser.smoothingTimeConstant = 0.82;
-  input.connect(analyser);
+  analyser.smoothingTimeConstant = 0.75;
+  detectionFilter.connect(analyser);
   const data = new Float32Array(analyser.fftSize);
   let frame = 0;
   let closed = false;
@@ -119,14 +125,14 @@ export function createGentleNoiseGate(context: AudioContext): Readonly<{
     for (let index = 0; index < data.length; index += 1) sum += data[index] * data[index];
     const rms = Math.sqrt(sum / data.length);
     const now = context.currentTime;
-    // 발성하지 않는 조용한 구간(rms < 0.007)은 게인을 0.04(-28dB)로 대폭 낮춰
-    // 방 안의 먼 소음과 공조기 소리가 들어가지 않도록 확실하게 차단한다.
-    // 발성 시(rms >= 0.016)에는 20ms 빠른 어택으로 첫 음절 끊김을 방지하고,
-    // 발성이 끝날 때는 약 140ms 릴리즈로 부드럽게 닫아 자연스러운 여운을 유지한다.
-    const target = rms < 0.007 ? 0.04 : rms < 0.016 ? 0.45 : 1;
+    // 발성하지 않는 조용한 구간 및 일상 실내 소음(rms < 0.013)은 게인을 0.02(-34dB)로 확실하게 닫아
+    // 방 안의 잔류 소음 및 스피커 누음이 들어가지 않도록 완벽히 차단한다.
+    // 발성 시작 시(rms >= 0.025)에는 15ms 빠른 어택으로 첫 음절을 즉각 통과시키고,
+    // 발성이 끝날 때는 약 150ms 릴리즈로 부드럽게 닫아 자연스러운 여운을 유지한다.
+    const target = rms < 0.013 ? 0.02 : rms < 0.025 ? 0.35 : 1;
     output.gain.cancelScheduledValues(now);
-    output.gain.setTargetAtTime(target, now, target < output.gain.value ? 0.14 : 0.02);
-    frame = window.setTimeout(tick, 35);
+    output.gain.setTargetAtTime(target, now, target < output.gain.value ? 0.15 : 0.015);
+    frame = window.setTimeout(tick, 30);
   };
   tick();
 
