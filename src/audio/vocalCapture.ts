@@ -101,19 +101,19 @@ export function createGentleNoiseGate(context: AudioContext): Readonly<{
 }> {
   const input = context.createGain();
   const output = context.createGain();
-  output.gain.value = 0.01;
+  output.gain.value = 0.5;
   input.connect(output);
 
-  // 음성 감지용 사이드체인 필터: 220Hz 하이패스로 반주 베이스·드럼 누음에 의한 게이트 오작동 방지
+  // 음성 감지용 사이드체인 필터: 75Hz 초저역 럼블만 차단하고 인간 목소리 기저음(100~300Hz)은 온전히 보존
   const detectionFilter = context.createBiquadFilter();
   detectionFilter.type = "highpass";
-  detectionFilter.frequency.value = 220;
+  detectionFilter.frequency.value = 75;
   detectionFilter.Q.value = 0.7;
   input.connect(detectionFilter);
 
   const analyser = context.createAnalyser();
   analyser.fftSize = 1024;
-  analyser.smoothingTimeConstant = 0.75;
+  analyser.smoothingTimeConstant = 0.7;
   detectionFilter.connect(analyser);
   const data = new Float32Array(analyser.fftSize);
   let frame = 0;
@@ -126,13 +126,12 @@ export function createGentleNoiseGate(context: AudioContext): Readonly<{
     for (let index = 0; index < data.length; index += 1) sum += data[index] * data[index];
     const rms = Math.sqrt(sum / data.length);
     const now = context.currentTime;
-    // 발성하지 않는 조용한 구간 및 일상 실내 소음(rms < 0.015)은 게인을 0.01(-40dB)로 확실하게 닫아
-    // 방 안의 잔류 소음 및 이어폰 누음이 들어가지 않도록 완벽히 차단한다.
-    // 발성 시작 시(rms >= 0.03)에는 15ms 빠른 어택으로 첫 음절을 즉각 통과시키고,
-    // 발성이 끝날 때는 약 140ms 릴리즈로 부드럽게 닫아 자연스러운 여운을 유지한다.
-    const target = rms < 0.015 ? 0.01 : rms < 0.03 ? 0.35 : 1;
+    // 발성하지 않는 조용한 구간(rms < 0.004)은 게인을 0.15(-16dB)로 부드럽게 감쇄하여 방 안의 잔류 소음을 줄인다.
+    // 작게 부르는 목소리(rms >= 0.007)라도 감지되면 즉각 1.0(100%)으로 개방하여 반주 유무와 관계없이
+    // 여린 목소리가 잘리거나 먹히지 않도록 한다.
+    const target = rms < 0.004 ? 0.15 : rms < 0.007 ? 0.6 : 1;
     output.gain.cancelScheduledValues(now);
-    output.gain.setTargetAtTime(target, now, target < output.gain.value ? 0.14 : 0.015);
+    output.gain.setTargetAtTime(target, now, target < output.gain.value ? 0.22 : 0.012);
     frame = window.setTimeout(tick, 30);
   };
   tick();
