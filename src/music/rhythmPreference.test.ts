@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { getCandidates } from "./candidates";
+import { HARMONY_PRESETS } from "./harmonyPresets";
+import { rankRecommendedCandidates } from "./recommendation";
 import {
   candidateAverageDuration,
+  candidateRhythmSignature,
   prioritizeCandidatesForRhythm,
   rhythmPreferenceForStyle
 } from "./rhythmPreference";
@@ -34,5 +37,28 @@ describe("선택한 음의 움직임에 맞는 추천 가락", () => {
     expect(rhythmPreferenceForStyle("children_song")).toBe("short");
     expect(rhythmPreferenceForStyle("folk")).toBe("medium");
     expect(rhythmPreferenceForStyle("opera")).toBe("long");
+  });
+
+  it("처음 보이는 여섯 가락은 서로 다른 리듬이며 마디마다 첫 제안이 달라진다", () => {
+    const firstChoices = Array.from({ length: 4 }, (_, index) =>
+      prioritizeCandidatesForRhythm(candidates, "children_song", index).slice(0, 6));
+    firstChoices.forEach((choices) => {
+      expect(new Set(choices.map(candidateRhythmSignature)).size).toBe(6);
+    });
+    expect(new Set(firstChoices.map((choices) => candidateRhythmSignature(choices[0]))).size).toBe(4);
+  });
+
+  it("100가지 이야기의 기본 설정에서 한 리듬만 계속 첫 자리를 차지하지 않는다", () => {
+    const firstRhythms = new Set<string>();
+    for (const preset of HARMONY_PRESETS) {
+      preset.bars.forEach((chords, index) => {
+        const available = getCandidates(preset.roles[index], { beats: 4, beatUnit: 4 }, chords);
+        const harmonyRanked = rankRecommendedCandidates(available, chords, null, index, 16);
+        const visible = prioritizeCandidatesForRhythm(harmonyRanked, "children_song", index).slice(0, 6);
+        expect(new Set(visible.map(candidateRhythmSignature)).size).toBe(6);
+        firstRhythms.add(candidateRhythmSignature(visible[0]));
+      });
+    }
+    expect(firstRhythms.size).toBeGreaterThanOrEqual(4);
   });
 });

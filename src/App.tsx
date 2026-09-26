@@ -21,6 +21,9 @@ import PublishScoreDialog from "./components/PublishScoreDialog";
 import SaveFailureDialog from "./components/SaveFailureDialog";
 import QrSongPlayback from "./components/QrSongPlayback";
 import BeatInstrumentChooser from "./components/BeatInstrumentChooser";
+import SongStoryMap from "./components/SongStoryMap";
+import SongStructureChooser from "./components/SongStructureChooser";
+import SongLengthChooser from "./components/SongLengthChooser";
 import { useBeatPatternState } from "./hooks/useBeatPatternState";
 import { backingDisplayNotes, repeatFourMeasures, rationalFromBeats } from "./components/backingDisplayNotes";
 import { firebaseConfigured } from "./firebase/config";
@@ -31,7 +34,7 @@ import { useCloudScoreList } from "./hooks/useCloudScoreList";
 import { ACCOMPANIMENT_MODES, ACCOMPANIMENT_PLAYING_STYLES, MAX_ACCOMPANIMENT_INSTRUMENTS, accompanimentInstrumentPart, createAccompanimentPattern, findAccompanimentStyle, isAccompanimentInstrument,
   type AccompanimentStyleId } from "./music/accompaniment";
 import { getCandidates, MELODY_CANDIDATE_COUNT, MELODY_FEELING_GROUPS } from "./music/candidates";
-import { rankRecommendedCandidates } from "./music/recommendation";
+import { candidatePatternIndex, rankRecommendedCandidates } from "./music/recommendation";
 import { chordMidiPitches, chordPitchClasses } from "./music/chord";
 import { DRAFT_STORAGE_KEY, isSavedDraft, readDraft, writeDraft, type SavedDraft } from "./music/draft";
 import { cloudSaveIssue, findDraftSaveIssues, type SaveIssue } from "./music/draftValidation";
@@ -40,6 +43,8 @@ import { findInstrument, INSTRUMENTS, type InstrumentId } from "./music/instrume
 import { measureCapacity, meterKey, SUPPORTED_METERS, validateMeasure, type Meter } from "./music/meter";
 import { rational, toNumber } from "./music/rational";
 import { prioritizeCandidatesForRhythm, RHYTHM_PREFERENCE_LABELS, rhythmPreferenceForStyle } from "./music/rhythmPreference";
+import { fillStructuredRepeats, songStructurePlan, type SongStructureId } from "./music/songStructure";
+import type { SongLength } from "./music/songLength";
 import { pitchName, positionNotes } from "./music/score";
 import { findSoundEffect, type SoundEffectId } from "./music/soundEffects";
 import { buildEmbeddedQrPlaybackUrl, buildQrPlaybackUrl, buildShareUrl, readCompositionFromHash, type SharedComposition } from "./music/share";
@@ -84,7 +89,6 @@ function sameInstrumentOrder(a: readonly InstrumentId[], b: readonly InstrumentI
 
 // backingDisplayNotes & repeatFourMeasures moved to ./components/backingDisplayNotes
 
-type SongLength = 8 | 12 | 16 | 20 | 24 | 28 | 32;
 type SongPlaybackState = "idle" | "playing" | "paused";
 type KaraokePhase = "idle" | "intro" | "song" | "outro" | "encoding" | "done" | "error";
 type KaraokeMode = "recording" | "practice";
@@ -141,6 +145,7 @@ type CompositionSnapshot = Readonly<{
   presetId: string;
   meter: Meter;
   songLength: SongLength;
+  structureTemplateId: SongStructureId | null;
   measures: readonly MeasureDraft[];
 }>;
 
@@ -296,6 +301,8 @@ export default function App() {
   const initialAccompanimentStyleId = resumableDraft?.accompanimentStyleId ?? incomingShare?.accompanimentStyleId ?? "children_song";
   const [selectedPresetId, setSelectedPresetId] = useState(initialPreset.id);
   const [songLength, setSongLength] = useState<SongLength>(initialLength);
+  const [structureTemplateId, setStructureTemplateId] = useState<SongStructureId | null>(
+    resumableDraft?.structureTemplateId ?? incomingShare?.structureTemplateId ?? null);
   const [meter, setMeter] = useState<Meter>(resumableDraft?.meter ?? incomingShare?.meter ?? { beats: 4, beatUnit: 4 });
   const [measures, setMeasures] = useState<MeasureDraft[]>(() =>
     resumableDraft ? compositionFromDraft(resumableDraft, initialPreset) :
@@ -406,6 +413,7 @@ export default function App() {
     (incomingShare ? incomingShare.originalCreator || incomingShare.creator : ""));
   const [sourceHash, setSourceHash] = useState(incomingShare ? window.location.hash : resumableDraft?.sourceHash ?? "");
   const selectedPreset = findHarmonyPreset(selectedPresetId);
+  const structurePlan = songStructurePlan(structureTemplateId, songLength);
   const selectedInstrument = findInstrument(selectedInstrumentId);
   const selectedAccompanimentStyle = findAccompanimentStyle(accompanimentStyleId);
   const activeAccompanimentMode = ACCOMPANIMENT_MODES.find((mode) =>
@@ -418,12 +426,14 @@ export default function App() {
   const currentDraft = useMemo<SavedDraft>(() => ({
     version: 1, updatedAt: Date.now(), sourceHash, title: songTitle, description: songDescription,
     creator: creatorName, originalCreator, presetId: selectedPresetId, meter, songLength,
+    structureTemplateId: structureTemplateId ?? undefined,
     instrumentId: selectedInstrumentId, accompanimentStyleId, accompanimentInstrumentIds,
     beatPattern, beatVolume, bpm, lyrics,
     measures: measures.map(({ candidateId, candidateName, notes, effects }) => ({ candidateId, candidateName, notes, effects })),
     showArrangement
   }), [accompanimentInstrumentIds, accompanimentStyleId, beatPattern, beatVolume, bpm, creatorName, lyrics, measures, meter,
-    originalCreator, selectedInstrumentId, selectedPresetId, songDescription, sourceHash, showArrangement, songLength, songTitle]);
+    originalCreator, selectedInstrumentId, selectedPresetId, songDescription, sourceHash, showArrangement, songLength,
+    songTitle, structureTemplateId]);
   const currentAccompanimentOptions = useMemo<AccompanimentOptions>(() => ({
     styleId: accompanimentStyleId,
     instrumentIds: accompanimentInstrumentIds,
@@ -439,13 +449,13 @@ export default function App() {
     const earlierMeasures = measures.slice(0, activeIndex);
     const previousNotes = [...earlierMeasures].reverse().find((measure) => measure.notes)?.notes ?? [];
     const previousPitch = [...previousNotes].reverse().find((note) => note.pitch !== null)?.pitch ?? null;
-    const earlierIndexes = new Set(earlierMeasures
-      .map((measure) => candidates.findIndex((candidate) => candidate.id === measure.candidateId))
+    const earlierIndexes = new Set(earlierMeasures.slice(-3)
+      .map((measure) => candidatePatternIndex(measure.candidateId, activeMeasure.story))
       .filter((index) => index >= 0));
-    const previousCandidateIndex = candidates.findIndex((candidate) => candidate.id === measures[activeIndex - 1]?.candidateId);
+    const previousCandidateIndex = candidatePatternIndex(measures[activeIndex - 1]?.candidateId ?? null, activeMeasure.story);
     const harmonyRanked = rankRecommendedCandidates(candidates, activeMeasure.chords, previousPitch, activeIndex,
       measures.length, previousCandidateIndex, earlierIndexes);
-    return prioritizeCandidatesForRhythm(harmonyRanked, accompanimentStyleId);
+    return prioritizeCandidatesForRhythm(harmonyRanked, accompanimentStyleId, activeIndex);
   }, [accompanimentStyleId, activeIndex, activeMeasure.chords, candidates, measures]);
   const rhythmPreferenceLabel = RHYTHM_PREFERENCE_LABELS[rhythmPreferenceForStyle(accompanimentStyleId)];
   const visibleCandidates = showMoreCandidates ? candidatePriority : candidatePriority.slice(0, 6);
@@ -642,7 +652,7 @@ export default function App() {
   }, [accompanimentInstrumentIds]);
 
   useEffect(() => {
-    const next: CompositionSnapshot = { presetId: selectedPresetId, meter, songLength, measures };
+    const next: CompositionSnapshot = { presetId: selectedPresetId, meter, songLength, structureTemplateId, measures };
     const previous = historyCurrent.current;
     if (!previous) {
       historyCurrent.current = next;
@@ -654,11 +664,12 @@ export default function App() {
       return;
     }
     if (previous.presetId === next.presetId && previous.meter === next.meter &&
-      previous.songLength === next.songLength && previous.measures === next.measures) return;
+      previous.songLength === next.songLength && previous.structureTemplateId === next.structureTemplateId &&
+      previous.measures === next.measures) return;
     setUndoStack((stack) => [...stack, previous].slice(-40));
     setRedoStack([]);
     historyCurrent.current = next;
-  }, [measures, meter, selectedPresetId, songLength]);
+  }, [measures, meter, selectedPresetId, songLength, structureTemplateId]);
 
   useEffect(() => {
     setSaveStatus("저장 중…");
@@ -675,6 +686,7 @@ export default function App() {
     setSelectedPresetId(snapshot.presetId);
     setMeter(snapshot.meter);
     setSongLength(snapshot.songLength);
+    setStructureTemplateId(snapshot.structureTemplateId);
     setMeasures(snapshot.measures as MeasureDraft[]);
     setRhythmChecks({});
     setActiveIndex((index) => Math.min(index, snapshot.measures.length - 1));
@@ -734,7 +746,20 @@ export default function App() {
     if (length === songLength) return;
     if (!confirmNewStructure("마디 수를 바꾸면 새 노래를 만들어요.")) return;
     setSongLength(length);
+    setStructureTemplateId(null);
     setMeasures(emptyComposition(selectedPreset, length));
+    setRhythmChecks({});
+    setActiveIndex(0);
+    setSelectedNoteId("");
+    setSelectedNoteIds([]);
+    setShowArrangement(false);
+  }
+
+  function chooseStructure(id: SongStructureId | null) {
+    if (id === structureTemplateId) return;
+    if (!confirmNewStructure("노래 모양을 바꾸면 새 노래를 만들어요.")) return;
+    setStructureTemplateId(id);
+    setMeasures(emptyComposition(selectedPreset, songLength));
     setRhythmChecks({});
     setActiveIndex(0);
     setSelectedNoteId("");
@@ -749,9 +774,16 @@ export default function App() {
       delete next[activeIndex];
       return next;
     });
-    setMeasures((current) =>
-      current.map((measure, index) => (index === activeIndex ? update(measure) : measure))
-    );
+    setMeasures((current) => fillStructuredRepeats(
+      current.map((measure, index) => (index === activeIndex ? update(measure) : measure)),
+      structureTemplateId, activeIndex));
+  }
+
+  function selectMeasure(index: number) {
+    setActiveIndex(index);
+    setSelectedNoteId(measures[index].notes?.[0]?.id ?? "");
+    setSelectedNoteIds(measures[index].notes?.[0] ? [measures[index].notes[0].id] : []);
+    setEditStatus("");
   }
 
   function chooseCandidate(candidate: MelodyCandidate) {
@@ -1316,6 +1348,7 @@ export default function App() {
       presetId: selectedPresetId,
       meter,
       songLength,
+      structureTemplateId: structureTemplateId ?? undefined,
       instrumentId: selectedInstrumentId,
       accompanimentStyleId,
       accompanimentInstrumentIds,
@@ -1508,6 +1541,7 @@ export default function App() {
     setSelectedPresetId(preset.id);
     setMeter(project.meter);
     setSongLength(project.songLength);
+    setStructureTemplateId(project.structureTemplateId ?? null);
     setMeasures(compositionFromDraft(project, preset));
     setRhythmChecks({});
     setSelectedInstrumentId(findInstrument(project.instrumentId).id);
@@ -2393,27 +2427,15 @@ export default function App() {
             alt="" aria-hidden="true" draggable="false" />
         </section>
 
-        <section className="length-chooser" aria-labelledby="length-heading">
-          <div className="compact-heading">
-            <span className="number-badge">4</span>
-            <div><h2 id="length-heading">노래 길이를 골라요</h2><p>8마디부터 32마디까지 고를 수 있어요.</p></div>
-          </div>
-          <div className="length-options">
-            {([8, 12, 16, 20, 24, 28, 32] as const).map((length) => (
-              <button key={length} type="button" data-testid={`length-${length}`}
-                className={songLength === length ? "length-option active" : "length-option"}
-                aria-pressed={songLength === length} onClick={() => chooseLength(length)}>
-                <strong>{length}마디</strong><span>{length / 4}개의 이야기 묶음</span>
-              </button>
-            ))}
-          </div>
-        </section>
+        <SongLengthChooser length={songLength} onSelect={chooseLength} />
+
+        <SongStructureChooser length={songLength} selectedId={structureTemplateId} onSelect={chooseStructure} />
 
         <div className="composition-workspace">
           <div className="score-workspace-column">
         <section className="composition-section" aria-labelledby="composition-heading">
           <div className="compact-heading timeline-heading">
-            <span className="number-badge">5</span>
+            <span className="number-badge">6</span>
             <div><h2 id="composition-heading">{songLength}마디를 차례로 채워요</h2><p>색깔은 마디마다 어울리는 화음 느낌을 알려줘요.</p></div>
             <div className="timeline-actions">
               <label className="tempo-control">
@@ -2446,6 +2468,8 @@ export default function App() {
             </div>
           </div>
 
+          {structurePlan && <SongStoryMap plan={structurePlan} activeIndex={activeIndex}
+            completed={measures.map((measure) => measure.notes !== null)} onSelect={selectMeasure} />}
           <div className="measure-timeline">
             {measures.map((measure, index) => (
               <div className="measure-cell" key={index}>
@@ -2456,12 +2480,7 @@ export default function App() {
                   aria-label={`${index + 1}마디, ${storyInfo[measure.story].label}, ${measure.storyHint}${measure.notes ? ", 가락 선택 완료" : ", 가락 선택 전"}`}
                   data-rhythm-check={rhythmChecks[index]}
                   className={`measure-slot ${measure.story}${activeIndex === index ? " active" : ""}${measure.notes ? " completed" : ""}${rhythmChecks[index] ? ` rhythm-${rhythmChecks[index]}` : ""}${recentCompletedIndex === index ? " just-completed" : ""}${playingMeasureIndex === index ? " playing" : ""}${saveIssues.some((issue) => issue.measureIndex === index) ? " save-issue" : ""}`}
-                  onClick={() => {
-                    setActiveIndex(index);
-                    setSelectedNoteId(measure.notes?.[0]?.id ?? "");
-                    setSelectedNoteIds(measure.notes?.[0] ? [measure.notes[0].id] : []);
-                    setEditStatus("");
-                  }}>
+                  onClick={() => selectMeasure(index)}>
                   <span className="measure-slot-header">
                     <strong>{index + 1}마디</strong>
                     <span className="measure-slot-meta">

@@ -17,6 +17,14 @@ function lastPitch(candidate: MelodyCandidate): number | null {
 
 export type RecommendationFeelingId = "gentle" | "bouncy" | "flowing" | "highlight";
 
+// Candidate IDs include the chords, so an exact ID comparison misses the
+// same melody family when the next measure has different harmony.
+export function candidatePatternIndex(candidateId: string | null, story: string): number {
+  if (!candidateId?.startsWith(`${story}-`)) return -1;
+  const match = candidateId.match(/-(\d+)$/);
+  return match ? Number(match[1]) - 1 : -1;
+}
+
 const recommendationFeelingPatterns: readonly (readonly RecommendationFeelingId[])[] = [
   ["gentle", "flowing", "bouncy", "flowing", "gentle", "bouncy", "highlight", "gentle"],
   ["bouncy", "flowing", "bouncy", "gentle", "bouncy", "flowing", "highlight", "bouncy"],

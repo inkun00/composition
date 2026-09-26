@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import { preloadVexFlow } from "./music/vexflow";
 import "./styles.css";
+import "./styles/song-structure.css";
 import "./desktop-polish.css";
 import "./mobile-polish.css";
 

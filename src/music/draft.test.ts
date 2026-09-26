@@ -11,6 +11,7 @@ const draft: SavedDraft = {
   presetId: "H001",
   meter: { beats: 6, beatUnit: 8 },
   songLength: 8,
+  structureTemplateId: "repeat",
   instrumentId: "acoustic_grand_piano",
   accompanimentStyleId: "folk",
   accompanimentInstrumentIds: ["guitar", "violin"],
@@ -39,6 +40,16 @@ describe("브라우저 임시 저장", () => {
   it("깨졌거나 규칙에 맞지 않는 저장 데이터는 불러오지 않는다", () => {
     expect(readDraft({ getItem: () => "not-json" })).toBeNull();
     expect(readDraft({ getItem: () => JSON.stringify({ ...draft, songLength: 7 }) })).toBeNull();
+    expect(readDraft({ getItem: () => JSON.stringify({ ...draft, structureTemplateId: "aaba" }) })).toBeNull();
+    expect(readDraft({ getItem: () => JSON.stringify({ ...draft, structureTemplateId: undefined }) })?.songLength).toBe(8);
+  });
+
+  it("직접 설정한 21마디와 기존 20마디를 모두 다시 읽는다", () => {
+    for (const length of [20, 21]) {
+      const saved = { ...draft, songLength: length, structureTemplateId: undefined,
+        lyrics: Array(length).fill("랄라"), measures: Array.from({ length }, (_, index) => draft.measures[index % 8]) };
+      expect(readDraft({ getItem: () => JSON.stringify(saved) })?.songLength).toBe(length);
+    }
   });
 
   it("반주 악기 10개는 저장하고 11개는 거부한다", () => {

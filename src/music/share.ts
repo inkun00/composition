@@ -7,6 +7,8 @@ import { isSoundEffectId } from "./soundEffects";
 import type { SoundEffectEvent } from "./types";
 import { BEAT_INSTRUMENTS, isValidBeatInstrumentSelection, isValidBeatVolume, type BeatInstrumentId } from "./beatInstruments";
 import { isValidBeatPattern, MAX_BEAT_PATTERN_EVENTS, type BeatPatternEvent } from "./beatPattern";
+import { isSongStructureForLength, type SongStructureId } from "./songStructure";
+import { isSongLength, type SongLength } from "./songLength";
 
 type CompactBeatEvent = [number, number, number];
 
@@ -24,7 +26,8 @@ export type SharedComposition = Readonly<{
   originalCreator: string;
   presetId: string;
   meter: Meter;
-  songLength: 8 | 12 | 16 | 20 | 24 | 28 | 32;
+  songLength: SongLength;
+  structureTemplateId?: SongStructureId;
   instrumentId: InstrumentId;
   accompanimentStyleId?: AccompanimentStyleId;
   accompanimentInstrumentIds?: readonly InstrumentId[];
@@ -62,7 +65,7 @@ type CompactCompositionV1 = [
   string,
   number,
   2 | 4 | 8,
-  8 | 12 | 16 | 20 | 24 | 28 | 32,
+  SongLength,
   string,
   string | undefined,
   readonly string[] | undefined,
@@ -83,7 +86,7 @@ type CompactComposition = [
   string,
   number,
   2 | 4 | 8,
-  8 | 12 | 16 | 20 | 24 | 28 | 32,
+  SongLength,
   string,
   string | undefined,
   readonly string[] | undefined,
@@ -92,7 +95,8 @@ type CompactComposition = [
   CompactMeasure[],
   readonly number[] | null | undefined,
   number | null | undefined,
-  readonly CompactBeatEvent[] | null | undefined
+  readonly CompactBeatEvent[] | null | undefined,
+  SongStructureId?
 ];
 
 function trimTrailingEmpty<T>(items: T[]): T[] {
@@ -105,7 +109,7 @@ function optional<T>(value: T | null | undefined): T | undefined {
 }
 
 function compactComposition(composition: SharedComposition): CompactComposition {
-  return [
+  const compact: CompactComposition = [
     2,
     composition.title,
     composition.description || undefined,
@@ -153,8 +157,11 @@ function compactComposition(composition: SharedComposition): CompactComposition 
       BEAT_INSTRUMENTS.findIndex((instrument) => instrument.id === event.instrumentId),
       event.measureIndex,
       event.offsetBeats
-    ])
+    ]),
+    composition.structureTemplateId
   ];
+  if (!composition.structureTemplateId) compact.pop();
+  return compact;
 }
 
 function expandCompactComposition(compact: CompactComposition): SharedComposition {
@@ -167,6 +174,7 @@ function expandCompactComposition(compact: CompactComposition): SharedCompositio
     presetId: compact[5],
     meter: { beats: compact[6], beatUnit: compact[7] },
     songLength: compact[8],
+    structureTemplateId: optional(compact[18]),
     instrumentId: compact[9],
     accompanimentStyleId: optional(compact[10]) as AccompanimentStyleId | undefined,
     accompanimentInstrumentIds: optional(compact[11]) as readonly InstrumentId[] | undefined,
@@ -212,7 +220,7 @@ function expandCompactComposition(compact: CompactComposition): SharedCompositio
 function isCompactComposition(value: unknown): value is CompactComposition {
   return Array.isArray(value) && value[0] === 2 && typeof value[1] === "string" &&
     typeof value[3] === "string" && typeof value[4] === "string" && typeof value[5] === "string" &&
-    Number.isInteger(value[6]) && [2, 4, 8].includes(value[7]) && [8, 12, 16, 20, 24, 28, 32].includes(value[8]) &&
+    Number.isInteger(value[6]) && [2, 4, 8].includes(value[7]) && isSongLength(value[8]) &&
     typeof value[9] === "string" && Array.isArray(value[13]) && Array.isArray(value[14]) &&
     (value[15] == null || (Array.isArray(value[15]) && value[15].length <= 3 &&
       value[15].every((index) => Number.isInteger(index) && index >= 0 && index < BEAT_INSTRUMENTS.length))) &&
@@ -227,7 +235,7 @@ function isCompactComposition(value: unknown): value is CompactComposition {
 function isCompactCompositionV1(value: unknown): value is CompactCompositionV1 {
   return Array.isArray(value) && value[0] === 1 && typeof value[1] === "string" &&
     typeof value[3] === "string" && typeof value[4] === "string" && typeof value[5] === "string" &&
-    Number.isInteger(value[6]) && [2, 4, 8].includes(value[7]) && [8, 12, 16, 20, 24, 28, 32].includes(value[8]) &&
+    Number.isInteger(value[6]) && [2, 4, 8].includes(value[7]) && isSongLength(value[8]) &&
     typeof value[9] === "string" && Array.isArray(value[13]) && Array.isArray(value[14]);
 }
 
@@ -270,7 +278,8 @@ export function isSharedComposition(value: unknown): value is SharedComposition 
   const item = value as Partial<SharedComposition>;
   if (item.version !== 1 || typeof item.title !== "string" || typeof item.creator !== "string") return false;
   if (typeof item.originalCreator !== "string" || typeof item.presetId !== "string") return false;
-  if (![8, 12, 16, 20, 24, 28, 32].includes(item.songLength ?? 0) || !item.meter || !item.instrumentId) return false;
+  if (!isSongLength(item.songLength) || !item.meter || !item.instrumentId) return false;
+  if (item.structureTemplateId !== undefined && !isSongStructureForLength(item.structureTemplateId, item.songLength!)) return false;
   if (!isValidInstrumentId(item.instrumentId)) return false;
   if (item.accompanimentStyleId !== undefined &&
     !ACCOMPANIMENT_STYLES.some((style) => style.id === item.accompanimentStyleId)) return false;

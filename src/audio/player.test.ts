@@ -16,4 +16,13 @@ describe("녹음용 반주", () => {
     expect(secondPhrase.layerCount).toBeGreaterThanOrEqual(opening.layerCount);
     expect(secondPhrase.layerCount).toBeLessThanOrEqual(4);
   });
+
+  it("긴 노래는 중간에 가볍게 쉬었다가 마지막 구절에서 다시 풍성해진다", () => {
+    const building = recordingArrangementPlan(4, 16, 4);
+    const breathing = recordingArrangementPlan(8, 16, 4);
+    const finale = recordingArrangementPlan(12, 16, 4);
+    expect(breathing.layerCount).toBeLessThan(building.layerCount);
+    expect(finale.layerCount).toBeGreaterThan(breathing.layerCount);
+    expect(finale.energy).toBeGreaterThan(breathing.energy);
+  });
 });

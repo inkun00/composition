@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { rational } from "./rational";
-import { chooseRecommendedCandidate, recommendationFeelingForMeasure } from "./recommendation";
+import { candidatePatternIndex, chooseRecommendedCandidate, recommendationFeelingForMeasure } from "./recommendation";
 import type { MelodyCandidate } from "./types";
 
 function candidate(id: string, pitches: readonly number[], feelingId?: string): MelodyCandidate {
@@ -15,6 +15,20 @@ function candidate(id: string, pitches: readonly number[], feelingId?: string): 
 }
 
 describe("화음 특징 추천", () => {
+  it("화음이 달라져도 같은 이야기의 가락 무늬를 알아본다", () => {
+    expect(candidatePatternIndex("home-4-4-C-7", "home")).toBe(6);
+    expect(candidatePatternIndex("home-4-4-G7-7", "home")).toBe(6);
+    expect(candidatePatternIndex("journey-4-4-G7-7", "home")).toBe(-1);
+    expect(candidatePatternIndex("custom", "home")).toBe(-1);
+  });
+
+  it("다음 마디의 화음이 달라도 방금 쓴 가락 무늬는 뒤로 보낸다", () => {
+    const repeated = candidate("home-4-4-G-1", [67, 71, 74, 71]);
+    const fresh = candidate("home-4-4-G-2", [67, 71, 74, 71]);
+    const previousIndex = candidatePatternIndex("home-4-4-C-1", "home");
+    expect(chooseRecommendedCandidate([repeated, fresh], ["G"], 71, 1, 8, previousIndex).id)
+      .toBe(fresh.id);
+  });
   it("으뜸음만 반복하는 가락보다 3도음과 5도음이 드러나는 가락을 고른다", () => {
     const rootOnly = candidate("root-only", [60, 60, 60, 60]);
     const colourful = candidate("colourful", [60, 64, 67, 64]);

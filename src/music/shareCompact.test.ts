@@ -10,6 +10,7 @@ const compactSample: SharedComposition = {
   presetId: "H001",
   meter: { beats: 4, beatUnit: 4 },
   songLength: 16,
+  structureTemplateId: "aaba",
   instrumentId: "piano",
   accompanimentStyleId: "arpeggio",
   accompanimentInstrumentIds: ["piano", "violin", "flute"],
@@ -97,7 +98,8 @@ describe("compact share encoding", () => {
   });
 
   it("continues to decode version 1 compact share data", () => {
+    const { structureTemplateId: _structureTemplateId, ...legacySample } = compactSample;
     expect(normalizeTransientIds(decodeSharedComposition(compactV1Encode(compactSample))))
-      .toEqual(normalizeTransientIds(compactSample));
+      .toEqual(normalizeTransientIds(legacySample));
   });
 });

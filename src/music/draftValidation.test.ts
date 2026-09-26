@@ -32,6 +32,13 @@ describe("악보 저장 진단", () => {
     expect(findDraftSaveIssues(validDraft())).toEqual([]);
   });
 
+  it("직접 설정한 21마디도 저장할 수 있다", () => {
+    const draft = validDraft();
+    const custom = { ...draft, songLength: 21, lyrics: Array(21).fill(""),
+      measures: Array.from({ length: 21 }, (_, index) => draft.measures[index % 8]) };
+    expect(findDraftSaveIssues(custom)).toEqual([]);
+  });
+
   it("문제가 있는 마디 번호와 이유를 알려준다", () => {
     const draft = validDraft();
     const measures = [...draft.measures];

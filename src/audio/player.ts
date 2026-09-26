@@ -373,12 +373,17 @@ function songArrangementPlan(measureIndex: number, measureCount: number, availab
   const phraseIndex = Math.floor(measureIndex / 4);
   const phrasePosition = measureIndex % 4;
   const lastMeasure = measureIndex === measureCount - 1;
-  const baseLayers = phraseIndex === 0 ? Math.min(2, availableLayers)
-    : Math.min(3 + Math.max(0, phraseIndex - 1), availableLayers);
+  const phraseCount = Math.ceil(measureCount / 4);
+  const finalPhrase = phraseIndex === phraseCount - 1;
+  const breathingPhrase = phraseCount >= 4 && phraseIndex % 4 === 2 && !finalPhrase;
+  const baseLayers = breathingPhrase ? Math.min(2, availableLayers)
+    : finalPhrase ? availableLayers
+      : phraseIndex === 0 ? Math.min(2, availableLayers) : Math.min(3, availableLayers);
+  const baseEnergy = breathingPhrase ? .78 : finalPhrase ? 1.04 : phraseIndex === 0 ? .86 : .96;
   if (lastMeasure) return { layerCount: availableLayers, energy: 1.04 };
-  if (phrasePosition === 0) return { layerCount: Math.max(1, baseLayers - 1), energy: .82 + phraseIndex * .06 };
-  if (phrasePosition === 3) return { layerCount: Math.min(baseLayers + 1, availableLayers), energy: .98 + phraseIndex * .04 };
-  return { layerCount: baseLayers, energy: .9 + phraseIndex * .06 };
+  if (phrasePosition === 0) return { layerCount: Math.max(1, baseLayers - 1), energy: baseEnergy - .04 };
+  if (phrasePosition === 3) return { layerCount: Math.min(baseLayers + 1, availableLayers), energy: baseEnergy + .08 };
+  return { layerCount: baseLayers, energy: baseEnergy };
 }
 
 export function recordingArrangementPlan(

@@ -10,6 +10,7 @@ const sample: SharedComposition = {
   presetId: "H001",
   meter: { beats: 4, beatUnit: 4 },
   songLength: 8,
+  structureTemplateId: "repeat",
   instrumentId: "piano",
   accompanimentStyleId: "arpeggio",
   accompanimentInstrumentIds: ["piano", "violin"],
@@ -59,6 +60,12 @@ describe("공유 링크", () => {
   it("한글과 악보를 손실 없이 저장하고 복원한다", () => {
     expect(normalizeTransientIds(decodeSharedComposition(encodeSharedComposition(sample))))
       .toEqual(normalizeTransientIds(sample));
+  });
+
+  it("직접 설정한 21마디 악보도 공유 링크에서 복원한다", () => {
+    const custom = { ...sample, songLength: 21, structureTemplateId: undefined,
+      lyrics: Array(21).fill("라"), measures: Array.from({ length: 21 }, (_, index) => sample.measures[index % 8]) };
+    expect(decodeSharedComposition(encodeSharedComposition(custom))?.songLength).toBe(21);
   });
 
   it("공유 주소에 곡 데이터를 넣는다", () => {

@@ -43,19 +43,40 @@ function durationCharacterScore(candidate: MelodyCandidate, preference: RhythmPr
   return oneBeatRatio * 6 - Math.abs(average - 1.0) * 2;
 }
 
+export function candidateRhythmSignature(candidate: MelodyCandidate): string {
+  return candidate.notes.map((note) => `${note.pitch === null ? "r" : "n"}${toNumber(note.duration)}`).join("|");
+}
+
 export function prioritizeCandidatesForRhythm(
   harmonyRankedCandidates: readonly MelodyCandidate[],
-  styleId: AccompanimentStyleId
+  styleId: AccompanimentStyleId,
+  measureIndex = 0
 ): readonly MelodyCandidate[] {
+  if (harmonyRankedCandidates.length === 0) return [];
   const preference = rhythmPreferenceForStyle(styleId);
-  return harmonyRankedCandidates
+  const scored = harmonyRankedCandidates
     .map((candidate, harmonyRank) => ({
       candidate,
       harmonyRank,
-      score: durationCharacterScore(candidate, preference)
+      score: durationCharacterScore(candidate, preference) * .55 - harmonyRank * .18
     }))
-    .sort((left, right) => right.score - left.score || left.harmonyRank - right.harmonyRank)
-    .map((item) => item.candidate);
+    .sort((left, right) => right.score - left.score || left.harmonyRank - right.harmonyRank);
+
+  // Give the six easy-to-see choices different rhythms. Harmony rank still
+  // contributes to every choice, rather than being discarded by a style sort.
+  const distinct: typeof scored = [];
+  const seen = new Set<string>();
+  for (const item of scored) {
+    const signature = candidateRhythmSignature(item.candidate);
+    if (seen.has(signature)) continue;
+    seen.add(signature);
+    distinct.push(item);
+  }
+  const leadChoices = distinct.slice(0, Math.min(4, distinct.length));
+  const lead = leadChoices[((measureIndex % leadChoices.length) + leadChoices.length) % leadChoices.length];
+  const front = [lead, ...distinct.filter((item) => item !== lead)].slice(0, 6);
+  const chosen = new Set(front.map((item) => item.candidate.id));
+  return [...front, ...scored.filter((item) => !chosen.has(item.candidate.id))].map((item) => item.candidate);
 }
 
 export function candidateAverageDuration(candidate: MelodyCandidate): number {

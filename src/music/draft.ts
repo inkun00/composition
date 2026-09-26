@@ -6,6 +6,8 @@ import { isSoundEffectId } from "./soundEffects";
 import type { SoundEffectEvent } from "./types";
 import { isValidBeatInstrumentSelection, isValidBeatVolume, type BeatInstrumentId } from "./beatInstruments";
 import { isValidBeatPattern, type BeatPatternEvent } from "./beatPattern";
+import { isSongStructureForLength, type SongStructureId } from "./songStructure";
+import { isSongLength, type SongLength } from "./songLength";
 
 export const DRAFT_STORAGE_KEY = "maeum-melody:draft:v1";
 
@@ -26,7 +28,8 @@ export type SavedDraft = Readonly<{
   originalCreator: string;
   presetId: string;
   meter: Meter;
-  songLength: 8 | 12 | 16 | 20 | 24 | 28 | 32;
+  songLength: SongLength;
+  structureTemplateId?: SongStructureId;
   instrumentId: InstrumentId;
   accompanimentStyleId?: AccompanimentStyleId;
   accompanimentInstrumentIds?: readonly InstrumentId[];
@@ -74,7 +77,8 @@ export function isSavedDraft(value: unknown): value is SavedDraft {
   if (typeof draft.creator !== "string" || draft.creator.length > 40) return false;
   if (typeof draft.originalCreator !== "string" || draft.originalCreator.length > 40) return false;
   if (typeof draft.presetId !== "string" || draft.presetId.length > 20) return false;
-  if (![8, 12, 16, 20, 24, 28, 32].includes(draft.songLength ?? 0) || !draft.meter || !draft.instrumentId) return false;
+  if (!isSongLength(draft.songLength) || !draft.meter || !draft.instrumentId) return false;
+  if (draft.structureTemplateId !== undefined && !isSongStructureForLength(draft.structureTemplateId, draft.songLength!)) return false;
   if (![[2, 4], [3, 4], [4, 4], [6, 8]].some(([beats, unit]) =>
     draft.meter?.beats === beats && draft.meter?.beatUnit === unit)) return false;
   if (!isValidInstrumentId(draft.instrumentId)) return false;
