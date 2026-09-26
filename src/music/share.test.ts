@@ -68,6 +68,22 @@ describe("공유 링크", () => {
     expect(decodeSharedComposition(encodeSharedComposition(custom))?.songLength).toBe(21);
   });
 
+  it("가져온 48마디 악보를 공유 링크에서 복원한다", () => {
+    const longScore = { ...sample, songLength: 48, structureTemplateId: undefined,
+      lyrics: Array(48).fill("라"), measures: Array.from({ length: 48 }, (_, index) => sample.measures[index % 8]) };
+    expect(decodeSharedComposition(encodeSharedComposition(longScore))?.songLength).toBe(48);
+  });
+
+  it("가져온 악보의 화음과 조표·임시표를 공유 후에도 보존한다", () => {
+    const imported = { ...sample, measures: sample.measures.map((measure, index) => index === 0 ? {
+      ...measure, chords: ["Bb"], keyFifths: -1,
+      notes: measure.notes.map((note) => ({ ...note, pitch: 70, accidental: "flat" as const }))
+    } : measure) };
+    expect(decodeSharedComposition(encodeSharedComposition(imported))?.measures[0]).toMatchObject({
+      chords: ["Bb"], keyFifths: -1, notes: [expect.objectContaining({ accidental: "flat" })]
+    });
+  });
+
   it("공유 주소에 곡 데이터를 넣는다", () => {
     expect(buildShareUrl(sample, { origin: "https://example.com", pathname: "/song" }))
       .toMatch(/^https:\/\/example\.com\/song#song=/);

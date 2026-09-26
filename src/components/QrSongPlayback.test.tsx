@@ -77,6 +77,14 @@ describe("QR 악보 노래 재생", () => {
     expect(container?.textContent).toContain("재생 멈추기");
   });
 
+  it("가져온 악보에 적힌 화음을 QR 재생에도 사용한다", async () => {
+    const imported = { ...composition, measures: composition.measures.map((measure, index) =>
+      index === 0 ? { ...measure, chords: ["F#m7"] } : measure) };
+    act(() => root?.render(<QrSongPlayback composition={imported} />));
+    await act(async () => container?.querySelector<HTMLButtonElement>('[data-testid="qr-create-play"]')?.click());
+    expect(playComposition.mock.calls[0][0][0].chords).toEqual(["F#m7"]);
+  });
+
   it("짧은 Firebase 곡 번호로 저장된 노래를 불러온다", async () => {
     loadQrSong.mockResolvedValue(composition);
     await act(async () => root?.render(<QrSongPlayback composition={null} songId="AbCdEfGhIjKlMnOpQrSt" />));

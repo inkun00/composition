@@ -45,11 +45,31 @@ describe("브라우저 임시 저장", () => {
   });
 
   it("직접 설정한 21마디와 기존 20마디를 모두 다시 읽는다", () => {
-    for (const length of [20, 21]) {
+    for (const length of [20, 21, 48]) {
       const saved = { ...draft, songLength: length, structureTemplateId: undefined,
         lyrics: Array(length).fill("랄라"), measures: Array.from({ length }, (_, index) => draft.measures[index % 8]) };
       expect(readDraft({ getItem: () => JSON.stringify(saved) })?.songLength).toBe(length);
     }
+  });
+
+  it("가져온 마디의 음표가 32개를 넘어도 다시 읽는다", () => {
+    const manyNotes = Array.from({ length: 64 }, (_, index) => ({
+      id: `note-${index}`, pitch: 60, duration: { numerator: 1, denominator: 16 }
+    }));
+    const imported = { ...draft, measures: draft.measures.map((measure, index) =>
+      index === 0 ? { ...measure, notes: manyNotes } : measure) };
+    expect(readDraft({ getItem: () => JSON.stringify(imported) })?.measures[0].notes).toHaveLength(64);
+  });
+
+  it("가져온 악보의 화음과 조표·임시표를 저장하고 다시 읽는다", () => {
+    const imported = { ...draft, measures: draft.measures.map((measure, index) => index === 0 ? {
+      ...measure, chords: ["F#m7"], keyFifths: 1,
+      notes: [{ id: "imported-note", pitch: 66, accidental: "sharp" as const,
+        duration: { numerator: 3, denominator: 1 }, lyric: "랄" }]
+    } : measure) };
+    expect(readDraft({ getItem: () => JSON.stringify(imported) })?.measures[0]).toMatchObject({
+      chords: ["F#m7"], keyFifths: 1, notes: [expect.objectContaining({ accidental: "sharp" })]
+    });
   });
 
   it("반주 악기 10개는 저장하고 11개는 거부한다", () => {

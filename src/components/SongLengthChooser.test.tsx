@@ -54,6 +54,14 @@ describe("노래 길이 선택", () => {
     setCustomValue("21");
     act(() => container!.querySelector<HTMLFormElement>(".length-custom-form")!.requestSubmit());
     expect(onSelect).toHaveBeenCalledWith(21);
+    setCustomValue("48");
+    act(() => container!.querySelector<HTMLFormElement>(".length-custom-form")!.requestSubmit());
+    expect(onSelect).toHaveBeenCalledTimes(1);
+  });
+
+  it("가져온 48마디 악보는 현재 길이를 표시한다", () => {
+    render(48);
+    expect(container!.querySelector('[data-testid="length-custom"]')?.textContent).toContain("현재 48마디");
   });
 
   it("기존 20마디 악보는 직접 설정 선택으로 표시한다", () => {

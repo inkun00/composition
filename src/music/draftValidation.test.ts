@@ -42,9 +42,9 @@ describe("악보 저장 진단", () => {
   it("문제가 있는 마디 번호와 이유를 알려준다", () => {
     const draft = validDraft();
     const measures = [...draft.measures];
-    measures[2] = { ...measures[2], notes: Array.from({ length: 33 }, (_, index) => ({
-      id: `note-${index}`, pitch: 60, duration: { numerator: 1, denominator: 4 }
-    })) };
+    measures[2] = { ...measures[2], notes: [{
+      id: "invalid-pitch", pitch: 200, duration: { numerator: 1, denominator: 4 }
+    }] };
     const issues = findDraftSaveIssues({ ...draft, measures });
     expect(issues).toContainEqual(expect.objectContaining({ target: "measure", measureIndex: 2 }));
     expect(issues.some((issue) => issue.message.includes("3마디"))).toBe(true);

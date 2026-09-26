@@ -21,6 +21,7 @@ export type NoteEvent = Readonly<{
   id: string;
   pitch: number | null;
   duration: Rational;
+  accidental?: "sharp" | "flat" | "natural";
   dotted?: boolean;
   beamGroup?: string;
   beamBreak?: boolean;

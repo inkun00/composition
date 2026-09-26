@@ -45,7 +45,7 @@ import { rational, toNumber } from "./music/rational";
 import { prioritizeCandidatesForRhythm, RHYTHM_PREFERENCE_LABELS, rhythmPreferenceForStyle } from "./music/rhythmPreference";
 import { fillStructuredRepeats, songStructurePlan, type SongStructureId } from "./music/songStructure";
 import type { SongLength } from "./music/songLength";
-import { pitchName, positionNotes } from "./music/score";
+import { pitchName, positionNotes, withEditedPitch } from "./music/score";
 import { findSoundEffect, type SoundEffectId } from "./music/soundEffects";
 import { buildEmbeddedQrPlaybackUrl, buildQrPlaybackUrl, buildShareUrl, readCompositionFromHash, type SharedComposition } from "./music/share";
 import type { HarmonyStory, MelodyCandidate, NoteEvent, SoundEffectEvent } from "./music/types";
@@ -59,6 +59,7 @@ type MeasureDraft = {
   candidateName: string | null;
   notes: readonly NoteEvent[] | null;
   effects: readonly SoundEffectEvent[];
+  keyFifths?: number;
 };
 
 function uniqueAccompanimentInstrumentIds(ids: readonly InstrumentId[]): InstrumentId[] {
@@ -214,6 +215,8 @@ function applyLegacyLyric(notes: readonly NoteEvent[], lyric: string | undefined
 function compositionFromShare(shared: SharedComposition, preset: HarmonyPreset): MeasureDraft[] {
   return emptyComposition(preset, shared.songLength).map((measure, index) => ({
     ...measure,
+    chords: shared.measures[index].chords ?? measure.chords,
+    keyFifths: shared.measures[index].keyFifths,
     candidateId: "shared",
     candidateName: shared.measures[index].candidateName,
     notes: applyLegacyLyric(shared.measures[index].notes, shared.lyrics[index]),
@@ -224,6 +227,8 @@ function compositionFromShare(shared: SharedComposition, preset: HarmonyPreset):
 function compositionFromDraft(draft: SavedDraft, preset: HarmonyPreset): MeasureDraft[] {
   return emptyComposition(preset, draft.songLength).map((measure, index) => ({
     ...measure,
+    chords: draft.measures[index].chords ?? measure.chords,
+    keyFifths: draft.measures[index].keyFifths,
     candidateId: draft.measures[index].candidateId,
     candidateName: draft.measures[index].candidateName,
     notes: draft.measures[index].notes
@@ -429,7 +434,7 @@ export default function App() {
     structureTemplateId: structureTemplateId ?? undefined,
     instrumentId: selectedInstrumentId, accompanimentStyleId, accompanimentInstrumentIds,
     beatPattern, beatVolume, bpm, lyrics,
-    measures: measures.map(({ candidateId, candidateName, notes, effects }) => ({ candidateId, candidateName, notes, effects })),
+    measures: measures.map(({ candidateId, candidateName, notes, chords, keyFifths, effects }) => ({ candidateId, candidateName, notes, chords, keyFifths, effects })),
     showArrangement
   }), [accompanimentInstrumentIds, accompanimentStyleId, beatPattern, beatVolume, bpm, creatorName, lyrics, measures, meter,
     originalCreator, selectedInstrumentId, selectedPresetId, songDescription, sourceHash, showArrangement, songLength,
@@ -538,6 +543,7 @@ export default function App() {
     candidateName: measure.candidateName ?? "나만의 가락",
     notes: measure.notes,
     chords: measure.chords,
+    keyFifths: measure.keyFifths,
     effects: measure.effects
   }] : []);
   const karaokeIntroMeasures = repeatFourMeasures(measures, false);
@@ -976,7 +982,7 @@ export default function App() {
       candidateId: "custom",
       candidateName: measure.candidateName ? measure.candidateName + " · 나만의 변화" : "나만의 가락",
       notes: (measure.notes ?? []).map((note) => selectedNoteIds.includes(note.id) && note.pitch !== null
-        ? { ...note, pitch: Math.max(48, Math.min(84, note.pitch + amount)) }
+        ? withEditedPitch(note, Math.max(48, Math.min(84, note.pitch + amount)), measure.keyFifths)
         : note)
     }));
   }
@@ -986,7 +992,7 @@ export default function App() {
       ...measure,
       candidateId: "custom",
       candidateName: "직접 다듬은 가락",
-      notes: replaceNote(measure.notes ?? [], id, (note) => note.pitch === null ? note : { ...note, pitch: value })
+      notes: replaceNote(measure.notes ?? [], id, (note) => withEditedPitch(note, value, measure.keyFifths))
     }));
   }
 
@@ -1356,7 +1362,7 @@ export default function App() {
       beatVolume,
       bpm,
       lyrics,
-      measures: printableMeasures.map(({ candidateName, notes, effects }) => ({ candidateName, notes, effects }))
+      measures: printableMeasures.map(({ candidateName, notes, chords, keyFifths, effects }) => ({ candidateName, notes, chords, keyFifths, effects }))
     };
   }
 
@@ -2210,7 +2216,7 @@ export default function App() {
                           tabIndex={-1} data-karaoke-section="song" data-karaoke-measure-index={measureIndex}>
                           <span>{measureIndex + 1}마디</span>
                           <em>{measure.chords.join(" · ")}</em>
-                          <ScoreMeasure notes={measure.notes ?? []} meter={meter} compact systemMeasure
+                          <ScoreMeasure notes={measure.notes ?? []} meter={meter} keyFifths={measure.keyFifths} compact systemMeasure
                             showSignature={columnIndex === 0}
                             onNoteLayout={(positions) => updateKaraokeLyricNotePositions(measureIndex, positions)}
                             playingNoteId={reviewPlaybackNoteId ?? (active ? karaokeHighlight.noteId : null)}
@@ -2401,7 +2407,8 @@ export default function App() {
         <HarmonyPresetChooser preset={selectedPreset} meter={meter}
           bpm={bpm} accompanimentStyleId={accompanimentStyleId}
           disabled={isAnyPlaying} playing={presetPreviewing}
-          onPlayingChange={setPresetPreviewing} onSelect={choosePreset} />
+          onPlayingChange={setPresetPreviewing} onSelect={choosePreset}
+          baseDraft={currentDraft} onImportScore={applyProjectDraft} />
 
         <section className="meter-chooser meter-with-guide" aria-labelledby="meter-heading" data-save-target="settings">
           <div className="compact-heading">
@@ -2488,7 +2495,7 @@ export default function App() {
                       <span className="measure-story-label">{storyInfo[measure.story].icon} {measure.storyHint}</span>
                     </span>
                   </span>
-                  <ScoreMeasure notes={measure.notes ?? []} meter={meter} compact wide
+                  <ScoreMeasure notes={measure.notes ?? []} meter={meter} keyFifths={measure.keyFifths} compact wide
                     playingNoteId={playingMeasureIndex === index ? playingNoteId : null}
                     showSignature={index % 4 === 0} systemMeasure
                     onNoteLayout={(positions) => updateTimelineLyricNotePositions(index, positions)} />
@@ -2542,7 +2549,7 @@ export default function App() {
           <div className={activeMeasure.notes ? "editor-card" : "editor-card empty-editor"}>
             {activeMeasure.notes ? (
               <>
-                <ScoreMeasure notes={activeNotes} meter={meter}
+                <ScoreMeasure notes={activeNotes} meter={meter} keyFifths={activeMeasure.keyFifths}
                   playingNoteId={playingMeasure || playingMeasureIndex === activeIndex ? playingNoteId : null}
                   selectedNoteId={selectedNoteId} selectedNoteIds={selectedNoteIds}
                   onSelectNote={selectNote} onMoveNote={moveNotePitch} onMovePosition={moveNotePosition}
@@ -2576,7 +2583,7 @@ export default function App() {
                   </strong>}
                 </div>
                 <div className="note-tools" onMouseDown={keepEditorFocus} onClickCapture={preserveViewportAfterButtonClick}>
-                  <div><span>고른 음표</span><strong>{selectedNoteIds.length > 1 ? `${selectedNoteIds.length}개 선택` : selectedNote ? pitchName(selectedNote.pitch) : "음표를 골라 주세요"}</strong></div>
+                  <div><span>고른 음표</span><strong>{selectedNoteIds.length > 1 ? `${selectedNoteIds.length}개 선택` : selectedNote ? pitchName(selectedNote.pitch, selectedNote.accidental) : "음표를 골라 주세요"}</strong></div>
                   <button type="button" onClick={() => changePitch(1)}
                     disabled={selectedNoteIds.length === 0 || selectedNotes.every((note) => note.pitch === null)}>↑<span>높게</span></button>
                   <button type="button" onClick={() => changePitch(-1)}
@@ -2948,7 +2955,7 @@ export default function App() {
               {measures.map((measure, index) => (
                 <div key={index} className={lyrics[index].trim() ? "lyric-card filled" : "lyric-card"}>
                   <span>{index + 1}마디</span>
-                  <ScoreMeasure notes={measure.notes ?? []} meter={meter} compact
+                  <ScoreMeasure notes={measure.notes ?? []} meter={meter} keyFifths={measure.keyFifths} compact
                     onNoteLayout={(positions) => updateLyricNotePositions(index, positions)} />
                   <NoteLyrics notes={measure.notes ?? []} meter={meter} measureIndex={index} compact
                     notePositions={lyricNotePositions[index]}

@@ -15,7 +15,7 @@ export default function SongLengthChooser({ length, onSelect }: Props) {
   function submitCustom(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const value = Number(customValue.trim());
-    if (customValue.trim() === "" || !isSongLength(value)) {
+    if (customValue.trim() === "" || !isSongLength(value) || value > MAX_SONG_LENGTH) {
       setShowError(true);
       return;
     }
@@ -26,7 +26,8 @@ export default function SongLengthChooser({ length, onSelect }: Props) {
   return <section className="length-chooser" aria-labelledby="length-heading">
     <div className="compact-heading">
       <span className="number-badge">4</span>
-      <div><h2 id="length-heading">노래 길이를 골라요</h2><p>8마디부터 32마디까지 고를 수 있어요.</p></div>
+      <div><h2 id="length-heading">노래 길이를 골라요</h2><p>{length > MAX_SONG_LENGTH
+        ? "가져온 긴 악보도 이곳에서 이어서 만들 수 있어요." : "8마디부터 32마디까지 고를 수 있어요."}</p></div>
     </div>
     <div className="length-options">
       {QUICK_SONG_LENGTHS.map((option) => <button key={option} type="button"

@@ -66,9 +66,6 @@ export function findDraftSaveIssues(draft: SavedDraft): SaveIssue[] {
     issues.push({ target: "settings", message: "악기나 빠르기 설정에 저장할 수 없는 값이 있어요." });
   }
   draft.measures.forEach((measure, measureIndex) => {
-    if (measure.notes && measure.notes.length > 32) {
-      issues.push({ target: "measure", measureIndex, message: `${measureIndex + 1}마디에는 음표를 32개까지만 저장할 수 있어요.` });
-    }
     const noteProblem = measure.notes?.map((note) => noteIssue(note, measureIndex)).find(Boolean);
     if (noteProblem) issues.push(noteProblem);
     if ((measure.effects?.length ?? 0) > 16) {

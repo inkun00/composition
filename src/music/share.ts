@@ -15,6 +15,8 @@ type CompactBeatEvent = [number, number, number];
 export type SharedMeasure = Readonly<{
   candidateName: string;
   notes: readonly NoteEvent[];
+  chords?: readonly string[];
+  keyFifths?: number;
   effects?: readonly SoundEffectEvent[];
 }>;
 
@@ -74,9 +76,9 @@ type CompactCompositionV1 = [
   CompactMeasureV1[]
 ];
 
-type CompactNote = [number | null, number, number, boolean?, number?, boolean?, boolean?, number?, string?];
+type CompactNote = [number | null, number, number, boolean?, number?, boolean?, boolean?, number?, string?, NoteEvent["accidental"]?];
 type CompactEffect = [string, number];
-type CompactMeasure = [string, CompactNote[], CompactEffect[]?];
+type CompactMeasure = [string, CompactNote[], CompactEffect[] | null | undefined, readonly string[] | undefined, number?];
 type CompactComposition = [
   2,
   string,
@@ -141,13 +143,16 @@ function compactComposition(composition: SharedComposition): CompactComposition 
           note.beamBreak,
           note.linkToNext,
           note.restY,
-          note.lyric
+          note.lyric,
+          note.accidental
         ]) as CompactNote;
       });
       return trimTrailingEmpty([
         measure.candidateName,
         notes,
-        measure.effects?.map((effect) => [effect.effectId, effect.offsetBeats] as CompactEffect)
+        measure.effects?.map((effect) => [effect.effectId, effect.offsetBeats] as CompactEffect),
+        measure.chords,
+        measure.keyFifths
       ]) as CompactMeasure;
     }),
     composition.beatInstrumentIds?.map((id) =>
@@ -205,13 +210,16 @@ function expandCompactComposition(compact: CompactComposition): SharedCompositio
         beamBreak: optional(note[5]),
         linkToNext: optional(note[6]),
         restY: optional(note[7]),
-        lyric: optional(note[8])
+        lyric: optional(note[8]),
+        accidental: optional(note[9])
       })),
       effects: measure[2]?.map((effect, effectIndex) => ({
         id: `shared-effect-${measureIndex}-${effectIndex}`,
         effectId: effect[0],
         offsetBeats: effect[1]
-      }))
+      })),
+      chords: optional(measure[3]),
+      keyFifths: optional(measure[4])
     }))
   };
   return JSON.parse(JSON.stringify(expanded)) as SharedComposition;
@@ -299,7 +307,12 @@ export function isSharedComposition(value: unknown): value is SharedComposition 
   if (item.description !== undefined && (typeof item.description !== "string" || item.description.length > 600)) return false;
   return item.measures.every((measure) =>
     measure && typeof measure.candidateName === "string" && Array.isArray(measure.notes) &&
-    measure.notes.length > 0 && measure.notes.length <= 32 &&
+    measure.notes.length > 0 &&
+    (measure.chords === undefined || (Array.isArray(measure.chords) && measure.chords.length > 0 &&
+      measure.chords.length <= 4 && measure.chords.every((chord: unknown) => typeof chord === "string" &&
+        chord.length <= 16 && /^[A-G](?:#|b)?(?:maj7|m7b5|m7|m|dim|aug|sus4|7|5)?(?:\/[A-G](?:#|b)?)?$/.test(chord)))) &&
+    (measure.keyFifths === undefined || (Number.isInteger(measure.keyFifths) &&
+      measure.keyFifths >= -7 && measure.keyFifths <= 7)) &&
     (measure.effects === undefined || (Array.isArray(measure.effects) && measure.effects.length <= 16 &&
       measure.effects.every((effect: unknown) => {
         const candidate = effect as Partial<SoundEffectEvent>;
@@ -311,6 +324,7 @@ export function isSharedComposition(value: unknown): value is SharedComposition 
       const candidate = note as Partial<NoteEvent>;
       return candidate && typeof candidate.id === "string" &&
         (candidate.pitch === null || Number.isInteger(candidate.pitch)) &&
+        (candidate.accidental === undefined || ["sharp", "flat", "natural"].includes(candidate.accidental)) &&
         Number.isInteger(candidate.duration?.numerator) && Number.isInteger(candidate.duration?.denominator) &&
         (candidate.duration?.denominator ?? 0) > 0 &&
         (candidate.dotted === undefined || typeof candidate.dotted === "boolean") &&

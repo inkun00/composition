@@ -73,7 +73,7 @@ export default function QrSongPlayback({ composition, songId = "" }: Readonly<{
     return activeComposition.measures.map((measure, index) => ({
       notes: measure.notes,
       harmony: preset.roles[index % preset.roles.length],
-      chords: preset.bars[index % preset.bars.length],
+      chords: measure.chords ?? preset.bars[index % preset.bars.length],
       effects: measure.effects,
       measureIndex: index
     }));
@@ -90,7 +90,7 @@ export default function QrSongPlayback({ composition, songId = "" }: Readonly<{
         return {
           id: note.id,
           isRest,
-          text: text || (isRest ? "·" : pitchName(note.pitch)),
+          text: text || (isRest ? "·" : pitchName(note.pitch, note.accidental)),
           isPitchFallback: !text && !isRest
         };
       });
