@@ -10,7 +10,7 @@
 }
 
 .homr-setup-dialog {
-  width: min(480px, 100%);
+  width: min(520px, 100%);
   max-height: min(760px, calc(100vh - 32px));
   overflow: auto;
   border: 1px solid #ded6f0;
@@ -35,6 +35,12 @@
   line-height: 1.25;
 }
 
+.homr-setup-dialog > header p {
+  margin: 5px 0 0;
+  color: rgba(255, 255, 255, .88);
+  font-size: .8rem;
+}
+
 .homr-setup-dialog > header button {
   display: grid;
   flex: 0 0 38px;
@@ -55,7 +61,33 @@
 
 .homr-setup-body {
   display: grid;
+  gap: 15px;
   padding: 22px 24px;
+}
+
+.homr-setup-journey {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.homr-setup-journey span {
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: #f1eef5;
+  color: #8a8292;
+  font-size: .73rem;
+  font-weight: 800;
+}
+
+.homr-setup-journey .current {
+  background: #e9e2ff;
+  color: #5b43a0;
+}
+
+.homr-setup-journey .done {
+  background: #e9f8ee;
+  color: #267147;
 }
 
 .homr-setup-state {
@@ -95,6 +127,84 @@
   color: #6d6678;
   font-size: 0.82rem;
   line-height: 1.5;
+}
+
+.homr-setup-guide {
+  display: grid;
+  gap: 11px;
+  padding: 15px;
+  border: 1px solid #e7e0f2;
+  border-radius: 16px;
+  background: #fff;
+  color: #3e344d;
+}
+
+.homr-setup-guide-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+}
+
+.homr-setup-guide-step > span {
+  display: grid;
+  flex: 0 0 25px;
+  width: 25px;
+  height: 25px;
+  place-items: center;
+  border-radius: 50%;
+  background: #6f55ad;
+  color: #fff;
+  font-size: .79rem;
+  font-weight: 900;
+}
+
+.homr-setup-guide strong {
+  font-size: .89rem;
+}
+
+.homr-setup-guide p,
+.homr-setup-tip,
+.homr-setup-file-note {
+  margin: 5px 0 0;
+  color: #685f73;
+  font-size: .78rem;
+  line-height: 1.55;
+}
+
+.homr-setup-guide a {
+  justify-self: start;
+  margin-top: 8px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: #6850aa;
+  color: #fff;
+  font-size: .78rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.homr-setup-guide a,
+.homr-setup-tip a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.homr-setup-tip {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f7f4fd;
+}
+
+.homr-setup-tip a {
+  margin: 0 4px;
+  color: #5740a0;
+  font-weight: 800;
+}
+
+.homr-setup-file-note {
+  margin: 0;
+  text-align: center;
 }
 
 .homr-setup-dialog > footer {

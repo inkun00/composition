@@ -55,6 +55,19 @@ async function commandWorks(command, args) {
 
 async function pythonCommand() {
   const candidates = platform() === "win32" ? ["py", "python"] : ["python3", "python"];
+  if (platform() === "win32") {
+    const pythonHome = join(process.env.LOCALAPPDATA ?? homedir(), "Programs", "Python");
+    try {
+      const installations = await readdir(pythonHome, { withFileTypes: true });
+      for (const installation of installations) {
+        if (installation.isDirectory() && /^Python3\d+$/i.test(installation.name)) {
+          candidates.push(join(pythonHome, installation.name, "python.exe"));
+        }
+      }
+    } catch {
+      // Python may be installed only through the system launcher.
+    }
+  }
   for (const command of candidates) {
     if (await commandWorks(command, ["--version"])) return command;
   }
@@ -179,7 +192,9 @@ async function findMusicXml(directory) {
 async function installUv() {
   const python = await pythonCommand();
   if (!python) {
-    throw new Error("자동으로 준비하지 못했어요. 앱을 다시 연 뒤 시도해 주세요.");
+    const error = new Error("Python 설치가 필요해요. 설치한 뒤 다시 준비하기를 눌러 주세요.");
+    error.code = "PYTHON_NOT_FOUND";
+    throw error;
   }
   const result = await run(python, [
     "-m", "pip", "install", "--user", "--disable-pip-version-check", "uv"
@@ -250,7 +265,9 @@ export async function homrMiddleware(request, response, next, options = {}) {
       const runner = existing ?? await installUv();
       sendJson(response, 200, publicStatus(runner, "악보 읽기 준비를 마쳤어요."));
     } catch (error) {
-      sendError(response, 500, "INSTALL_FAILED", error instanceof Error ? error.message : "준비하지 못했어요.");
+      const missingPython = error?.code === "PYTHON_NOT_FOUND";
+      sendError(response, missingPython ? 412 : 500, missingPython ? "PYTHON_NOT_FOUND" : "INSTALL_FAILED",
+        error instanceof Error ? error.message : "준비하지 못했어요.");
     } finally {
       installInProgress = false;
     }
