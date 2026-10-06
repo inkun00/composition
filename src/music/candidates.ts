@@ -1,6 +1,8 @@
 import type { Meter } from "./meter";
 import { meterKey } from "./meter";
 import { chordPitchClasses, chordSequenceKey, nearestChordTone } from "./chord";
+import { colourContour, harmonyVariation } from "./harmonyVariation";
+import { melodyFeelingForNotes } from "./melodyFeelings";
 import { rational, toNumber, type Rational } from "./rational";
 import type { HarmonyStory, MelodyCandidate, NoteEvent } from "./types";
 
@@ -37,20 +39,6 @@ const melodyProfiles: Record<HarmonyStory, MelodyProfile> = {
 };
 
 export const MELODY_CANDIDATE_COUNT = 30;
-
-export const MELODY_FEELING_GROUPS = [
-  { id: "gentle", label: "차분하게", description: "천천히, 포근하게 시작해요" },
-  { id: "bouncy", label: "통통하게", description: "리듬을 또렷하고 신나게 만들어요" },
-  { id: "flowing", label: "부드럽게 이어서", description: "노래말을 자연스럽게 이어 가요" },
-  { id: "highlight", label: "높이 빛나게", description: "중요한 말과 클라이맥스를 돋보이게 해요" }
-] as const;
-
-function feelingIdForIndex(index: number): string {
-  if (index < 8) return "gentle";
-  if (index < 16) return "bouncy";
-  if (index < 24) return "flowing";
-  return "highlight";
-}
 
 const shapes: Record<BaseStory, readonly CandidateShape[]> = {
   home: [
@@ -116,6 +104,19 @@ const highImpactShapes: readonly CandidateShape[] = [
   { name: "힘찬 외침", hint: "중요한 말을 크게 들려줘요", contour: [4, 7, 12, 7, 9, 12, 7] },
   { name: "마지막 햇살", hint: "높은 음을 길게 빛내요", contour: [7, 9, 12, 12, 7, 9] }
 ];
+
+const feelingAnchors: Record<"gentle" | "flowing" | "quick", CandidateShape> = {
+  gentle: { name: "느긋한 숨", hint: "긴 음을 편안하게 불러요", contour: [0, 1, 2, 1] },
+  flowing: { name: "이어지는 길", hint: "음이 한 걸음씩 자연스럽게 이어져요", contour: [0, 1, 2, 1, 0, 1] },
+  quick: { name: "빠른 발걸음", hint: "짧은 음이 쉬지 않고 이어져요", contour: [0, 1, 2, 1, 0, 2, 1, 0] }
+};
+
+const anchorRhythmIndex: Record<string, { gentle: number; flowing: number; quick: number }> = {
+  "2/4": { gentle: 3, flowing: 0, quick: 2 },
+  "3/4": { gentle: 2, flowing: 1, quick: 4 },
+  "4/4": { gentle: 5, flowing: 1, quick: 4 },
+  "6/8": { gentle: 0, flowing: 2, quick: 1 }
+};
 
 const rhythmTemplates: Record<string, readonly (readonly Rational[])[]> = {
   "2/4": [
@@ -187,7 +188,7 @@ function buildNotes(
   const chordDuration = chords.length > 0 ? totalDuration / chords.length : totalDuration;
   let onset = 0;
   const profile = melodyProfiles[story];
-  return durations.map((duration, index) => {
+  const notes = durations.map((duration, index) => {
     const offset = contour[index % contour.length];
     const chordIndex = Math.min(Math.floor(onset / chordDuration), Math.max(chords.length - 1, 0));
     const targetPitch = profile.basePitch + offset + profile.motion[index % profile.motion.length];
@@ -201,6 +202,11 @@ function buildNotes(
     onset += toNumber(duration);
     return note;
   });
+  if (notes.every((note) => note.pitch === null)) {
+    const firstPitch = chords.length > 0 ? nearestChordTone(profile.basePitch, chords[0]) : profile.basePitch;
+    return notes.map((note, index) => index === 0 ? { ...note, pitch: firstPitch } : note);
+  }
+  return notes;
 }
 
 function addNeighborTone(notes: readonly NoteEvent[], chords: readonly string[]): NoteEvent[] {
@@ -266,7 +272,7 @@ function varyContour(contour: readonly number[], variation: number): readonly nu
 
 function addRestVariation(notes: readonly NoteEvent[], candidateIndex: number): NoteEvent[] {
   const shouldAddRest = candidateIndex % 5 === 3 || candidateIndex % 5 === 4;
-  if (!shouldAddRest || notes.some((note) => note.pitch === null)) return [...notes];
+  if (!shouldAddRest || notes.length < 2 || notes.some((note) => note.pitch === null)) return [...notes];
 
   const targetIndex = candidateIndex % 5 === 3 ? 0 : notes.length - 1;
   return notes.map((note, index) => index === targetIndex ? { ...note, pitch: null } : note);
@@ -284,26 +290,39 @@ export function getCandidates(
   const profile = melodyProfiles[story];
   const availableShapes = [...shapes[profile.family], ...extraShapes[profile.family]];
   const highImpactStart = MELODY_CANDIDATE_COUNT - highImpactShapes.length;
+  const variation = harmonyVariation(chords);
 
   return Array.from({ length: MELODY_CANDIDATE_COUNT }, (_, index) => {
     const isHighImpact = index >= highImpactStart;
-    const shape = isHighImpact ? highImpactShapes[index - highImpactStart] : availableShapes[index % availableShapes.length];
-    const variation = Math.floor(index / availableShapes.length);
+    const anchor = index === 21 ? "gentle" : index === 22 ? "flowing" : index === 23 ? "quick" : null;
+    const shape = anchor ? feelingAnchors[anchor]
+      : isHighImpact ? highImpactShapes[index - highImpactStart]
+        : availableShapes[(index + variation.shapeShift) % availableShapes.length];
+    const contourVariation = Math.floor(index / availableShapes.length);
     const chordKey = chords.length > 0 ? `-${chordSequenceKey(chords)}` : "";
     const id = `${story}-${key.replace("/", "-")}${chordKey}-${index + 1}`;
-    const baseHint = isHighImpact || variation === 0 ? shape.hint : `${shape.hint} 음의 흐름도 새롭게 바꿨어요.`;
+    const baseHint = isHighImpact || anchor || contourVariation === 0
+      ? shape.hint : `${shape.hint} 음의 흐름도 새롭게 바꿨어요.`;
     const chordToneNotes = isHighImpact ? buildNotes(
       id,
       "sparkle",
-      rhythms[(index + melodyProfiles.sparkle.rhythmOffset) % rhythms.length],
-      shape.contour,
+      rhythms[index === highImpactStart ? anchorRhythmIndex[key].quick
+        : (index + melodyProfiles.sparkle.rhythmOffset + variation.rhythmShift) % rhythms.length],
+      colourContour(index === highImpactStart ? [0, 4, 12, 7, 14, 12, 7] : shape.contour,
+        variation.contourBend),
+      chords
+    ) : anchor ? buildNotes(
+      id,
+      story,
+      rhythms[anchorRhythmIndex[key][anchor]],
+      colourContour(shape.contour, variation.contourBend),
       chords
     ) : addRestVariation(
       buildNotes(
         id,
         story,
-        rhythms[(index + profile.rhythmOffset) % rhythms.length],
-        varyContour(shape.contour, variation),
+        rhythms[(index + profile.rhythmOffset + variation.rhythmShift) % rhythms.length],
+        colourContour(varyContour(shape.contour, contourVariation), variation.contourBend),
         chords
       ),
       index
@@ -317,9 +336,9 @@ export function getCandidates(
 
     return {
       id,
-      name: isHighImpact || variation === 0 ? shape.name : `${shape.name} 새 리듬`,
+      name: isHighImpact || anchor || contourVariation === 0 ? shape.name : `${shape.name} 새 리듬`,
       hint,
-      feelingId: feelingIdForIndex(index),
+      feelingId: melodyFeelingForNotes(notes),
       harmony: story,
       notes
     };

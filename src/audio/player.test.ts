@@ -1,7 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { karaokeBackingGainForRms, recordingArrangementPlan } from "./player";
+import { compositionIntroDuration, karaokeBackingGainForRms, recordingArrangementPlan } from "./player";
 
 describe("녹음용 반주", () => {
+  it("QR 전주는 노래 시작 전 네 마디 길이로 계산한다", () => {
+    const measures = Array.from({ length: 8 }, () => ({
+      notes: [{ id: "n", pitch: 60, duration: { numerator: 4, denominator: 1 } }],
+      harmony: "home" as const,
+      chords: ["C"]
+    }));
+    expect(compositionIntroDuration(measures, 120)).toBe(8);
+    expect(compositionIntroDuration(measures.map((measure) => ({ ...measure,
+      notes: [{ id: "n", pitch: 60, duration: { numerator: 3, denominator: 1 } }]
+    })), 120)).toBe(6);
+  });
   it("노래를 부를 때도 반주를 과하게 줄이지 않는다", () => {
     expect(karaokeBackingGainForRms(0)).toBe(1.06);
     expect(karaokeBackingGainForRms(.03)).toBe(.96);

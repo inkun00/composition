@@ -38,7 +38,7 @@ import { withEditedPitch } from "../music/score";
 type ScoreImageImportProps = Readonly<{
   baseDraft: SavedDraft;
   disabled?: boolean;
-  onImport: (draft: SavedDraft) => void;
+  onImport: (draft: SavedDraft) => boolean | void;
 }>;
 
 type ImportPhase = "setup" | "recognizing" | "review";
@@ -239,8 +239,7 @@ export default function ScoreImageImport({ baseDraft, disabled = false, onImport
 
   function applyImport() {
     if (!score || !validRange || !allExact) return;
-    onImport(recognizedScoreToDraft(score, baseDraft, range));
-    reset(false);
+    if (onImport(recognizedScoreToDraft(score, baseDraft, range)) !== false) reset(false);
   }
 
   return (

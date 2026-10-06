@@ -24,7 +24,7 @@ type HarmonyPresetChooserProps = Readonly<{
   onPlayingChange: (playing: boolean) => void;
   onSelect: (id: string) => void;
   baseDraft?: SavedDraft;
-  onImportScore?: (draft: SavedDraft) => void;
+  onImportScore?: (draft: SavedDraft) => boolean | void;
 }>;
 
 export function buildHarmonyPreviewMeasures(
@@ -82,7 +82,7 @@ export default function HarmonyPresetChooser({
   onImportScore
 }: HarmonyPresetChooserProps) {
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState("추천 음악으로 네 마디의 느낌을 먼저 들어 보세요.");
+  const [status, setStatus] = useState("네 마디의 느낌을 먼저 들어 보세요.");
   const timerRef = useRef<number | null>(null);
   const requestRef = useRef(0);
   const ownsPlaybackRef = useRef(false);
@@ -130,7 +130,7 @@ export default function HarmonyPresetChooser({
       ownsPlaybackRef.current = true;
       setLoading(false);
       onPlayingChange(true);
-      setStatus("추천 가락과 반주를 함께 듣고 있어요.");
+      setStatus("가락과 반주를 함께 듣고 있어요.");
       timerRef.current = window.setTimeout(
         () => finishPreview("다른 이야기도 골라서 비교해 보세요."),
         duration * 1000
@@ -184,7 +184,7 @@ export default function HarmonyPresetChooser({
               disabled={disabled && !playing} aria-pressed={playing}
               onClick={() => void togglePreview()}>
               <PlayIcon playing={playing} />
-              {loading ? "음악 준비 중…" : playing ? "미리듣기 멈추기" : "추천 음악 4마디 미리듣기"}
+              {loading ? "음악 준비 중…" : playing ? "미리듣기 멈추기" : "4마디 미리듣기"}
             </button>
             <p className="preset-preview-status" aria-live="polite">{status}</p>
           </div>

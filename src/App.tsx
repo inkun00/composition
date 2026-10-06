@@ -24,6 +24,8 @@ import BeatInstrumentChooser from "./components/BeatInstrumentChooser";
 import SongStoryMap from "./components/SongStoryMap";
 import SongStructureChooser from "./components/SongStructureChooser";
 import SongLengthChooser from "./components/SongLengthChooser";
+import LocalDraftRecoveryDialog from "./components/LocalDraftRecoveryDialog";
+import CandidateFeelingTabs from "./components/CandidateFeelingTabs";
 import { useBeatPatternState } from "./hooks/useBeatPatternState";
 import { backingDisplayNotes, repeatFourMeasures, rationalFromBeats } from "./components/backingDisplayNotes";
 import { firebaseConfigured } from "./firebase/config";
@@ -33,16 +35,18 @@ import type { CloudScore, CloudScoreListItem } from "./firebase/scores";
 import { useCloudScoreList } from "./hooks/useCloudScoreList";
 import { ACCOMPANIMENT_MODES, ACCOMPANIMENT_PLAYING_STYLES, MAX_ACCOMPANIMENT_INSTRUMENTS, accompanimentInstrumentPart, createAccompanimentPattern, findAccompanimentStyle, isAccompanimentInstrument,
   type AccompanimentStyleId } from "./music/accompaniment";
-import { getCandidates, MELODY_CANDIDATE_COUNT, MELODY_FEELING_GROUPS } from "./music/candidates";
+import { getCandidates } from "./music/candidates";
+import { MELODY_FEELING_GROUPS, type MelodyFeelingId } from "./music/melodyFeelings";
 import { candidatePatternIndex, rankRecommendedCandidates } from "./music/recommendation";
 import { chordMidiPitches, chordPitchClasses } from "./music/chord";
 import { DRAFT_STORAGE_KEY, isSavedDraft, readDraft, writeDraft, type SavedDraft } from "./music/draft";
+import { archiveDraft, readBrowserDraftHistory, type ArchivedDraft } from "./music/draftHistory";
 import { cloudSaveIssue, findDraftSaveIssues, type SaveIssue } from "./music/draftValidation";
 import { findHarmonyPreset, HARMONY_PRESETS, type HarmonyPreset } from "./music/harmonyPresets";
 import { findInstrument, INSTRUMENTS, type InstrumentId } from "./music/instruments";
 import { measureCapacity, meterKey, SUPPORTED_METERS, validateMeasure, type Meter } from "./music/meter";
 import { rational, toNumber } from "./music/rational";
-import { prioritizeCandidatesForRhythm, RHYTHM_PREFERENCE_LABELS, rhythmPreferenceForStyle } from "./music/rhythmPreference";
+import { prioritizeCandidatesForRhythm } from "./music/rhythmPreference";
 import { fillStructuredRepeats, songStructurePlan, type SongStructureId } from "./music/songStructure";
 import type { SongLength } from "./music/songLength";
 import { pitchName, positionNotes, withEditedPitch } from "./music/score";
@@ -282,10 +286,13 @@ export default function App() {
   const qrPlaybackMode = new URLSearchParams(window.location.search).get("play") === "qr";
   const qrSongId = new URLSearchParams(window.location.search).get("song") ?? "";
   const [incomingShare] = useState(() => readCompositionFromHash(window.location.hash));
-  const [savedDraft] = useState(() => readDraft(window.localStorage));
+  const [savedDraft] = useState(() => {
+    try { return readDraft(window.localStorage); } catch { return null; }
+  });
   const [showOpening, setShowOpening] = useState(() =>
     !mobileRecordMode && !qrPlaybackMode && new URLSearchParams(window.location.search).get("start") !== "new");
   const [showAppMenu, setShowAppMenu] = useState(false);
+  const [recoveryOpen, setRecoveryOpen] = useState(false);
   const [accountLibraryOpen, setAccountLibraryOpen] = useState(false);
   const [communityAlbumOpen, setCommunityAlbumOpen] = useState(false);
   const [publishingScore, setPublishingScore] = useState<CloudScore | null>(null);
@@ -316,7 +323,7 @@ export default function App() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [selectedNoteId, setSelectedNoteId] = useState("");
   const [selectedNoteIds, setSelectedNoteIds] = useState<string[]>([]);
-  const [showMoreCandidates, setShowMoreCandidates] = useState(false);
+  const [activeMelodyFeeling, setActiveMelodyFeeling] = useState<MelodyFeelingId>("flowing");
   const [soundEffectDialogOpen, setSoundEffectDialogOpen] = useState(false);
   const [editStatus, setEditStatus] = useState("");
   const [undoStack, setUndoStack] = useState<readonly CompositionSnapshot[]>([]);
@@ -462,8 +469,6 @@ export default function App() {
       measures.length, previousCandidateIndex, earlierIndexes);
     return prioritizeCandidatesForRhythm(harmonyRanked, accompanimentStyleId, activeIndex);
   }, [accompanimentStyleId, activeIndex, activeMeasure.chords, candidates, measures]);
-  const rhythmPreferenceLabel = RHYTHM_PREFERENCE_LABELS[rhythmPreferenceForStyle(accompanimentStyleId)];
-  const visibleCandidates = showMoreCandidates ? candidatePriority : candidatePriority.slice(0, 6);
   const pitchReviewByMeasure = useMemo(() => {
     const worstByMeasure = new Map<number, RecordingPitchReview>();
     pitchReviews.filter((review) => review.status === "off").forEach((review) => {
@@ -476,8 +481,10 @@ export default function App() {
   }, [pitchReviews]);
   const candidateFeelingGroups = useMemo(() => MELODY_FEELING_GROUPS.map((group) => ({
     ...group,
-    candidates: visibleCandidates.filter((candidate) => candidate.feelingId === group.id)
-  })).filter((group) => group.candidates.length > 0), [visibleCandidates]);
+    candidates: candidatePriority.filter((candidate) => candidate.feelingId === group.id)
+  })).filter((group) => group.candidates.length > 0), [candidatePriority]);
+  const selectedFeelingGroup = candidateFeelingGroups.find((group) => group.id === activeMelodyFeeling)
+    ?? candidateFeelingGroups[0];
   const activeNotes = activeMeasure.notes ?? [];
   const validation = activeMeasure.notes
     ? validateMeasure(activeMeasure.notes, meter)
@@ -647,10 +654,6 @@ export default function App() {
   }, [selectedInstrumentId]);
 
   useEffect(() => {
-    setShowMoreCandidates(false);
-  }, [activeIndex, meter, selectedPresetId]);
-
-  useEffect(() => {
     // 선택된 반주 악기들 프리로드
     accompanimentInstrumentIds.forEach((id) => {
       void preloadInstrument(id);
@@ -678,13 +681,11 @@ export default function App() {
   }, [measures, meter, selectedPresetId, songLength, structureTemplateId]);
 
   useEffect(() => {
-    setSaveStatus("저장 중…");
     setCloudSaveNotice("");
-    const timer = window.setTimeout(() => {
+    try {
       setSaveStatus(writeDraft(window.localStorage, currentDraft)
         ? "이 기기에 임시 저장됨 ✓" : "이 기기에 저장하지 못했어요");
-    }, 800);
-    return () => window.clearTimeout(timer);
+    } catch { setSaveStatus("이 기기에 저장하지 못했어요"); }
   }, [currentDraft]);
 
   function restoreComposition(snapshot: CompositionSnapshot) {
@@ -1539,7 +1540,22 @@ export default function App() {
     setShareStatus("나중에 다시 고칠 수 있는 작품 파일을 저장했어요.");
   }
 
-  function applyProjectDraft(project: SavedDraft) {
+  function preserveCurrentDraft(): boolean {
+    try {
+      if (archiveDraft(window.localStorage, currentDraft)) return true;
+    } catch { /* Storage may be unavailable. */ }
+    window.alert("현재 작업을 보관하지 못했어요. 기기 저장 공간을 확인한 뒤 다시 시도해 주세요.");
+    return false;
+  }
+
+  function applyProjectDraft(project: SavedDraft): boolean {
+    if (!preserveCurrentDraft()) return false;
+    try {
+      if (!writeDraft(window.localStorage, project)) throw new Error("local-save-failed");
+    } catch {
+      window.alert("불러온 작품을 이 기기에 저장하지 못했어요. 저장 공간을 확인해 주세요.");
+      return false;
+    }
     const preset = findHarmonyPreset(project.presetId);
     historyCurrent.current = null;
     setUndoStack([]);
@@ -1567,7 +1583,7 @@ export default function App() {
     setSelectedNoteId("");
     setSelectedNoteIds([]);
     setEditStatus("");
-    writeDraft(window.localStorage, project);
+    return true;
   }
 
   async function handleGoogleSignIn() {
@@ -1673,8 +1689,8 @@ export default function App() {
   }
 
   function handleCloudLoad(score: CloudScore) {
-    if (completedCount > 0 && !window.confirm(`지금 만든 곡 대신 '${score.title}' 악보를 열까요? 현재 곡은 로컬에 자동 저장되어 있어요.`)) return;
-    applyProjectDraft(score.draft);
+    if (completedCount > 0 && !window.confirm(`'${score.title}' 악보를 열까요? 지금 작업은 이 기기의 이전 작업에 보관돼요.`)) return;
+    if (!applyProjectDraft(score.draft)) return;
     setActiveCloudScoreId(score.id);
     setAccountLibraryOpen(false);
     setShareStatus("내 악보함에서 작품을 불러왔어요.");
@@ -1704,7 +1720,7 @@ export default function App() {
 
   function openPublishedProjectCopy(song: PublishedSong) {
     if (song.access !== "project") return;
-    if (completedCount > 0 && !window.confirm(`지금 만든 곡 대신 '${song.title}' 프로젝트의 사본을 열까요? 현재 곡은 로컬에 자동 저장되어 있어요.`)) return;
+    if (completedCount > 0 && !window.confirm(`'${song.title}' 프로젝트 사본을 열까요? 지금 작업은 이 기기의 이전 작업에 보관돼요.`)) return;
     const copyTitle = `${song.title.trim().slice(0, 56) || "제목 없는 노래"} 사본`;
     const copy: SavedDraft = {
       ...JSON.parse(JSON.stringify(song.draft)) as SavedDraft,
@@ -1714,7 +1730,7 @@ export default function App() {
       creator: authUser?.displayName || authUser?.email?.split("@")[0] || "새 작곡가",
       originalCreator: song.draft.originalCreator || song.draft.creator || song.creator
     };
-    applyProjectDraft(copy);
+    if (!applyProjectDraft(copy)) return;
     setActiveCloudScoreId(null);
     setCommunityAlbumOpen(false);
     setShowOpening(false);
@@ -1740,9 +1756,19 @@ export default function App() {
   }
 
   function startNewProject() {
-    if (completedCount > 0 && !window.confirm("새 곡을 시작할까요? 지금 만든 곡은 작품 파일로 저장한 뒤 다시 불러올 수 있어요.")) return;
-    window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+    if (completedCount > 0 && !window.confirm("새 곡을 시작할까요? 지금 작업은 이 기기의 이전 작업에 보관돼요.")) return;
+    if (!preserveCurrentDraft()) return;
+    try { window.localStorage.removeItem(DRAFT_STORAGE_KEY); }
+    catch { window.alert("새 곡을 시작하지 못했어요. 기기 저장 공간을 확인해 주세요."); return; }
     window.location.assign(`${window.location.pathname}?start=new`);
+  }
+
+  function restorePreviousDraft(entry: ArchivedDraft): boolean {
+    if (!applyProjectDraft(entry.draft)) return false;
+    setActiveCloudScoreId(null);
+    setShowOpening(false);
+    setShareStatus("이전 작업을 다시 열었어요.");
+    return true;
   }
 
   async function loadProjectFile(event: React.ChangeEvent<HTMLInputElement>) {
@@ -1756,9 +1782,9 @@ export default function App() {
     try {
       const parsed: unknown = JSON.parse(await file.text());
       if (!isSavedDraft(parsed)) throw new Error("invalid-project");
-      if (completedCount > 0 && !window.confirm("지금 만든 곡 대신 불러온 작품을 열까요? 현재 곡은 자동 저장되어 있어요.")) return;
+      if (completedCount > 0 && !window.confirm("불러온 작품을 열까요? 지금 작업은 이 기기의 이전 작업에 보관돼요.")) return;
       const project = parsed;
-      applyProjectDraft(project);
+      if (!applyProjectDraft(project)) return;
       setActiveCloudScoreId(null);
       setShareStatus("작품 파일을 불러왔어요. 이어서 고쳐 보세요!");
     } catch (error) {
@@ -2004,15 +2030,15 @@ export default function App() {
             <h1>마음멜로디</h1>
             <p><strong>네 마음속 장면이 노래가 되는 곳</strong><br />친구들과 함께 첫 멜로디를 만들어 봐요.</p>
             <div className="opening-actions">
-              <button type="button" className="opening-start action-button" onClick={() => {
-                window.localStorage.removeItem(DRAFT_STORAGE_KEY);
-                window.location.assign(`${window.location.pathname}?start=new`);
-              }}>
+              <button type="button" className="opening-start action-button" onClick={startNewProject}>
                 <WandSparkles size={20} /> 시작하기 <ArrowRight size={18} />
               </button>
               <button type="button" className="opening-continue action-button" disabled={!resumableDraft}
                 onClick={() => setShowOpening(false)}>
                 <Music2 size={19} /> 이어하기
+              </button>
+              <button type="button" className="opening-continue action-button" onClick={() => setRecoveryOpen(true)}>
+                이전 작업
               </button>
             </div>
             <small className="opening-status">{resumableDraft ? "저장한 노래가 기다리고 있어요." : "오늘의 첫 노래를 시작해 볼까요?"}</small>
@@ -2032,6 +2058,9 @@ export default function App() {
             </button>
             {showAppMenu && <div className="app-menu-panel" role="menu">
               <button type="button" role="menuitem" onClick={startNewProject}><WandSparkles size={16} /> 새로 시작하기</button>
+              <button type="button" role="menuitem" onClick={() => { setShowAppMenu(false); setRecoveryOpen(true); }}>
+                <Library size={16} /> 이전 작업 다시 열기
+              </button>
               <button type="button" role="menuitem" onClick={() => {
                 setShowAppMenu(false);
                 projectFileInput.current?.click();
@@ -2071,6 +2100,9 @@ export default function App() {
           onPublish={(score) => { setPublishingScore(score); setAccountLibraryOpen(false); }}
           onDelete={(score) => void handleCloudDelete(score)} />
       )}
+
+      {recoveryOpen && <LocalDraftRecoveryDialog drafts={readBrowserDraftHistory()}
+        onRestore={restorePreviousDraft} onClose={() => setRecoveryOpen(false)} />}
 
       {saveFailureOpen && <SaveFailureDialog issues={saveIssues} onClose={() => setSaveFailureOpen(false)} onLocate={locateSaveIssue} />}
 
@@ -2609,7 +2641,7 @@ export default function App() {
                 {editStatus && <p className="edit-status" role="status">{editStatus}</p>}
               </>
             ) : (
-              <div className="empty-message"><span>♪</span><strong>먼저 가락을 하나 골라 주세요</strong><p>위의 추천 가락 카드를 눌러 시작할 수 있어요.</p></div>
+              <div className="empty-message"><span>♪</span><strong>먼저 가락을 하나 골라 주세요</strong><p>느낌 탭을 누르고 마음에 드는 가락을 골라 보세요.</p></div>
             )}
           </div>
         </section>
@@ -2634,24 +2666,14 @@ export default function App() {
             <div>
               <span className={`dot ${activeMeasure.story}`} />
               <h2>이 마디에 어울리는 가락</h2>
-              <p>{meterKey(meter)}박자에 딱 맞는 {MELODY_CANDIDATE_COUNT}가지를 준비했어요.</p>
+              <p>느낌을 고르면 {meterKey(meter)}박자에 맞는 가락이 나와요.</p>
             </div>
             <span className="count-pill">{activeIndex + 1}/{songLength} 마디</span>
           </div>
-          <div className="candidate-priority-note">
-            <div>
-              <strong>{showMoreCandidates ? "모든 가락 보기" : "지금 마디에 추천하는 가락 6개"}</strong>
-              <span>{showMoreCandidates
-                ? `추천 밖의 다른 성격까지 ${MELODY_CANDIDATE_COUNT}개를 모두 보여줘요.`
-                : `"${rhythmPreferenceLabel}" 성격과 화음에 잘 맞는 가락을 먼저 보여줘요.`}</span>
-            </div>
-            <div className="candidate-view-toggle" role="group" aria-label="가락 보기 방식">
-              <button type="button" className={!showMoreCandidates ? "active" : ""}
-                onClick={() => setShowMoreCandidates(false)}>추천 6개</button>
-              <button type="button" className={showMoreCandidates ? "active" : ""}
-                onClick={() => setShowMoreCandidates(true)}>전체 {MELODY_CANDIDATE_COUNT}개</button>
-            </div>
-          </div>
+          <CandidateFeelingTabs
+            groups={candidateFeelingGroups.map((group) => ({ ...group, count: group.candidates.length }))}
+            activeId={selectedFeelingGroup.id}
+            onChange={setActiveMelodyFeeling} />
 
           <div className="preview-instrument-picker candidate-instrument-picker" aria-label="가락 미리듣기 악기 선택">
             <div>
@@ -2684,48 +2706,10 @@ export default function App() {
             </div>
           </div>
 
-          {showMoreCandidates ? <div className="candidate-feeling-groups">
-            {candidateFeelingGroups.map((group) => (
-              <section className={`candidate-feeling-group ${group.id}`} key={group.id}>
-                <header>
-                  <div><strong>{group.label}</strong><span>{group.description}</span></div>
-                  <small>{group.candidates.length}가지</small>
-                </header>
-                <div className="candidate-grid">
-            {group.candidates.map((candidate) => (
-              <article key={candidate.id}
-                className={`candidate-card${activeMeasure.candidateId === candidate.id ? " selected" : ""}${playingId === candidate.id ? " previewing" : ""}`}
-                data-playing={playingId === candidate.id ? "true" : undefined}
-                onClick={() => chooseCandidate(candidate)}>
-                <div className="card-top">
-                  <div><strong>{candidate.name}</strong><span>{candidate.hint}</span></div>
-                  <button className="play-button" type="button" disabled={isAnyPlaying}
-                    aria-label={`${candidate.name} 들어보기`}
-                    aria-pressed={playingId === candidate.id}
-                    onClick={(event) => void preview(candidate, event)}>
-                    <PlayIcon playing={playingId === candidate.id} />
-                  </button>
-                </div>
-                <ScoreMeasure notes={candidate.notes} meter={meter} compact
-                  playingNoteId={playingId === candidate.id ? playingNoteId : null} />
-                <button className="select-row" type="button" data-testid={`candidate-${candidate.id}`}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    chooseCandidate(candidate);
-                  }}>
-                  <span>{activeMeasure.candidateId === candidate.id ? "이 마디에 고른 가락" : "이 가락 고르기"}</span>
-                  <i>{activeMeasure.candidateId === candidate.id
-                    ? <CheckCircle2 size={17} aria-hidden="true" />
-                    : <ArrowRight size={17} aria-hidden="true" />}</i>
-                </button>
-              </article>
-            ))}
-                </div>
-              </section>
-            ))}
-          </div> : <div className="candidate-grid recommended-candidate-grid">
-            {candidatePriority.slice(0, 6).map(renderCandidateCard)}
-          </div>}
+          <div className="candidate-grid" id="melody-feeling-panel" role="tabpanel"
+            aria-labelledby={`melody-feeling-${selectedFeelingGroup.id}`}>
+            {selectedFeelingGroup.candidates.map(renderCandidateCard)}
+          </div>
         </section>
         </div>
 

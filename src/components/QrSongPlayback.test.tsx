@@ -8,13 +8,14 @@ import QrSongPlayback from "./QrSongPlayback";
 
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-const { playComposition, stopPlayback, loadQrSong } = vi.hoisted(() => ({
+const { compositionIntroDuration, playComposition, stopPlayback, loadQrSong } = vi.hoisted(() => ({
+  compositionIntroDuration: vi.fn().mockReturnValue(10),
   playComposition: vi.fn(),
   stopPlayback: vi.fn(),
   loadQrSong: vi.fn()
 }));
 
-vi.mock("../audio/player", () => ({ playComposition, stopPlayback }));
+vi.mock("../audio/player", () => ({ compositionIntroDuration, playComposition, stopPlayback }));
 vi.mock("../firebase/qrSongs", () => ({ loadQrSong }));
 
 const composition: SharedComposition = {
@@ -72,8 +73,11 @@ describe("QR 악보 노래 재생", () => {
         meter: composition.meter,
         beatPattern: composition.beatPattern,
         beatVolume: 120
-      })
+      }),
+      true
     );
+    expect(compositionIntroDuration).toHaveBeenCalledWith(expect.any(Array), 96);
+    expect(container?.textContent).toContain("전주 연주 중");
     expect(container?.textContent).toContain("재생 멈추기");
   });
 

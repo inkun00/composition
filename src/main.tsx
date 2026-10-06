@@ -4,6 +4,7 @@ import App from "./App";
 import { preloadVexFlow } from "./music/vexflow";
 import "./styles.css";
 import "./styles/song-structure.css";
+import "./styles/candidate-feeling-tabs.css";
 import "./desktop-polish.css";
 import "./mobile-polish.css";
 

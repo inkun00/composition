@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { getCandidates, MELODY_CANDIDATE_COUNT } from "./candidates";
 import { chordPitchClasses } from "./chord";
+import { HARMONY_PRESETS } from "./harmonyPresets";
+import { MELODY_FEELING_GROUPS, melodyFeelingForNotes } from "./melodyFeelings";
 import { SUPPORTED_METERS, validateMeasure } from "./meter";
+import { toNumber } from "./rational";
+import { rankRecommendedCandidates } from "./recommendation";
+import { prioritizeCandidatesForRhythm } from "./rhythmPreference";
 
 describe("M0 가락 후보", () => {
   it.each(["home", "journey", "wonder"] as const)("각 화음 이야기에 6개 후보가 있다", (story) => {
@@ -32,6 +37,61 @@ describe("M0 가락 후보", () => {
     const cMelody = getCandidates("home", { beats: 4, beatUnit: 4 }, ["C"])[0];
     const flatMelody = getCandidates("home", { beats: 4, beatUnit: 4 }, ["D♭"])[0];
     expect(cMelody.notes.map((note) => note.pitch)).not.toEqual(flatMelody.notes.map((note) => note.pitch));
+  });
+
+  it("화음의 성격에 따라 가락 모양과 리듬이 함께 달라진다", () => {
+    const meter = { beats: 4, beatUnit: 4 } as const;
+    const major = getCandidates("home", meter, ["C"])[0];
+    const minor = getCandidates("home", meter, ["Am"])[0];
+    const seventh = getCandidates("home", meter, ["Cmaj7"])[0];
+    const rhythm = (candidate: typeof major) => candidate.notes.map((note) => toNumber(note.duration));
+
+    expect(major.name).not.toBe(minor.name);
+    expect(rhythm(major)).not.toEqual(rhythm(minor));
+    expect(rhythm(major)).not.toEqual(rhythm(seventh));
+  });
+
+  it("100가지 화음 이야기의 첫 마디에 여러 리듬을 만든다", () => {
+    const rhythms = new Set(HARMONY_PRESETS.map((preset) => {
+      const candidate = getCandidates(preset.roles[0], { beats: 4, beatUnit: 4 }, preset.bars[0])[0];
+      return candidate.notes.map((note) => toNumber(note.duration)).join(",");
+    }));
+    expect(rhythms.size).toBeGreaterThanOrEqual(8);
+  });
+
+  it("첫 느낌 탭의 맨 앞 가락도 화음 이야기에 따라 달라진다", () => {
+    const rhythms = new Set<string>();
+    const pitches = new Set<string>();
+    for (const preset of HARMONY_PRESETS) {
+      const chords = preset.bars[0];
+      const candidates = getCandidates(preset.roles[0], { beats: 4, beatUnit: 4 }, chords);
+      const ranked = rankRecommendedCandidates(candidates, chords, null, 0, 16);
+      const first = prioritizeCandidatesForRhythm(ranked, "children_song")
+        .find((candidate) => candidate.feelingId === "flowing");
+      expect(first).toBeDefined();
+      rhythms.add(first!.notes.map((note) => toNumber(note.duration)).join(","));
+      pitches.add(first!.notes.map((note) => note.pitch).join(","));
+    }
+    expect(rhythms.size).toBeGreaterThanOrEqual(6);
+    expect(pitches.size).toBeGreaterThanOrEqual(50);
+  });
+
+  it("느낌 탭은 후보 번호가 아니라 실제 음 길이와 움직임으로 분류한다", () => {
+    const feelings = new Set<string>();
+    for (const preset of HARMONY_PRESETS) {
+      for (const meter of SUPPORTED_METERS) {
+        preset.bars.forEach((chords, index) => {
+          const candidates = getCandidates(preset.roles[index], meter, chords);
+          candidates.forEach((candidate) => {
+            expect(candidate.feelingId).toBe(melodyFeelingForNotes(candidate.notes));
+            expect(candidate.notes.some((note) => note.pitch !== null)).toBe(true);
+            feelings.add(candidate.feelingId ?? "");
+          });
+          expect(new Set(candidates.map((candidate) => candidate.feelingId)).size).toBe(5);
+        });
+      }
+    }
+    expect(feelings).toEqual(new Set(MELODY_FEELING_GROUPS.map((group) => group.id)));
   });
 
   it("각 화음 이야기와 박자마다 쉼표가 들어간 후보를 보여준다", () => {

@@ -156,7 +156,7 @@ export function chooseRecommendedCandidate(
   preferredFeelingId?: RecommendationFeelingId,
   variationIndex = 0
 ): MelodyCandidate {
-  if (candidates.length === 0) throw new Error("추천할 가락이 없습니다.");
+  if (candidates.length === 0) throw new Error("고를 가락이 없습니다.");
   const ranked = rankRecommendedCandidates(candidates, chords, previousPitch, measureIndex, measureCount,
     previousCandidateIndex, usedCandidateIndexes);
   const matchingFeeling = preferredFeelingId

@@ -427,6 +427,11 @@ function buildIntroMeasures(measures: readonly PlaybackMeasure[]): PlaybackMeasu
   return [tonic, subdominant, dominant, dominant].map((chord, measureIndex) => accompanimentMeasure(measures[0], chord, measureIndex));
 }
 
+export function compositionIntroDuration(measures: readonly PlaybackMeasure[], bpm: number): number {
+  return buildIntroMeasures(measures).reduce((total, measure) =>
+    total + measure.notes.reduce((beats, note) => beats + toNumber(note.duration), 0), 0) * 60 / bpm;
+}
+
 function buildOutroMeasures(measures: readonly PlaybackMeasure[]): PlaybackMeasure[] {
   if (measures.length === 0) return [];
   const template = measures[measures.length - 1];
@@ -839,7 +844,8 @@ export async function playComposition(
   measures: readonly PlaybackMeasure[],
   instrumentId: InstrumentId = "piano",
   bpm = 96,
-  accompaniment?: AccompanimentOptions
+  accompaniment?: AccompanimentOptions,
+  withIntro = false
 ): Promise<number | null> {
   const context = await claimPlayback();
   if (!context) return null;
@@ -856,6 +862,25 @@ export async function playComposition(
   const voiceState = createArrangementVoiceState();
   const start = context.currentTime + 0.08;
   let songCursor = 0;
+
+  if (withIntro) {
+    const introMeasures = buildIntroMeasures(measures);
+    introMeasures.forEach((measure, introIndex) => {
+      songCursor += scheduleMeasure(context, master, { ...measure, measureIndex: introIndex },
+        start + songCursor, secondsPerBeat, {
+          instrument,
+          sampledInstrument,
+          accompaniment,
+          accompanimentLayers,
+          includeMelody: false,
+          includeEffects: false,
+          arrangementSection: "intro",
+          voiceState,
+          arrangementLayerCount: Math.min(2, accompanimentLayers.length),
+          transitionFill: introIndex === introMeasures.length - 1
+        });
+    });
+  }
 
   measures.forEach((measure, measureIndex) => {
     const plan = songArrangementPlan(measureIndex, measures.length, accompanimentLayers.length);

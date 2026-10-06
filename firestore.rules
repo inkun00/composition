@@ -21,7 +21,8 @@ service cloud.firestore {
           && request.resource.data.ownerId == userId
           && request.resource.data.title is string
           && request.resource.data.title.size() <= 60
-          && request.resource.data.songLength in [8, 12, 16, 20, 24, 28, 32];
+          && request.resource.data.songLength is int
+          && request.resource.data.songLength >= 8;
       }
     }
 
@@ -74,7 +75,8 @@ service cloud.firestore {
         && request.resource.data.composition.creator is string
         && request.resource.data.composition.creator.size() > 0
         && request.resource.data.composition.creator.size() <= 40
-        && request.resource.data.composition.songLength in [8, 12, 16, 20, 24, 28, 32]
+        && request.resource.data.composition.songLength is int
+        && request.resource.data.composition.songLength >= 8
         && request.resource.data.composition.measures is list
         && request.resource.data.composition.measures.size() == request.resource.data.composition.songLength;
       allow update, delete: if false;

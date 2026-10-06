@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FileMusic, Music2, Square, X } from "lucide-react";
-import { playComposition, stopPlayback, type PlaybackMeasure } from "../audio/player";
+import { compositionIntroDuration, playComposition, stopPlayback, type PlaybackMeasure } from "../audio/player";
 import { findHarmonyPreset } from "../music/harmonyPresets";
 import { findAccompanimentStyle } from "../music/accompaniment";
 import { findInstrument } from "../music/instruments";
@@ -174,6 +174,7 @@ export default function QrSongPlayback({ composition, songId = "" }: Readonly<{
     setError("");
     try {
       const bpm = activeComposition.bpm ?? 96;
+      const introDuration = compositionIntroDuration(playable, bpm);
       const duration = await playComposition(playable, findInstrument(activeComposition.instrumentId).id,
         bpm, {
           styleId: findAccompanimentStyle(activeComposition.accompanimentStyleId ?? "arpeggio").id,
@@ -182,11 +183,11 @@ export default function QrSongPlayback({ composition, songId = "" }: Readonly<{
           beatPattern: activeComposition.beatPattern,
           beatVolume: activeComposition.beatVolume,
           meter: activeComposition.meter
-        });
+        }, true);
       if (duration === null) throw new Error("audio-busy");
 
       const secondsPerBeat = 60 / bpm;
-      let offsetSeconds = 0.08;
+      let offsetSeconds = 0.08 + introDuration;
       const segments: PlaybackSegment[] = [];
       const noteSegments: PlaybackNoteSegment[] = [];
 
@@ -269,6 +270,8 @@ export default function QrSongPlayback({ composition, songId = "" }: Readonly<{
                 <span className="qr-pulse-dot" aria-hidden="true" />
                 {playingMeasureIndex + 1} / {activeComposition.songLength}마디 연주 중
               </span>
+            ) : phase === "playing" ? (
+              <span className="qr-lyrics-badge playing" role="status">전주 연주 중 ♪</span>
             ) : (
               <span className="qr-lyrics-badge">전체 {activeComposition.songLength}마디</span>
             )}

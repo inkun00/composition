@@ -1,0 +1,36 @@
+.draft-recovery-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(29, 24, 49, .6);
+}
+
+.draft-recovery-dialog {
+  width: min(100%, 520px);
+  max-height: min(80vh, 720px);
+  overflow: auto;
+  padding: 22px;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 20px 55px rgba(24, 19, 48, .28);
+}
+
+.draft-recovery-dialog header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.draft-recovery-dialog h2 { margin: 0; font-size: 21px; }
+.draft-recovery-dialog header p { margin: 5px 0 16px; color: #706c7d; }
+.draft-recovery-dialog header button { align-self: start; border: 0; background: #f3f0f8; border-radius: 9px; padding: 4px 11px; font-size: 24px; cursor: pointer; }
+.draft-recovery-list { display: grid; gap: 8px; }
+.draft-recovery-item { display: flex; gap: 8px; align-items: stretch; }
+.draft-recovery-list button { display: grid; gap: 4px; width: 100%; padding: 12px 14px; border: 1px solid #ded8ee; border-radius: 12px; background: #faf8ff; text-align: left; cursor: pointer; }
+.draft-recovery-list button:hover, .draft-recovery-list button:focus-visible { border-color: #6a56c5; }
+.draft-recovery-list .draft-recovery-delete { width: auto; flex: 0 0 auto; color: #a03d3d; font-weight: 700; }
+.draft-recovery-list span, .draft-recovery-empty { color: #706c7d; font-size: 13px; }
+.draft-recovery-error { color: #aa2424; font-size: 13px; }
