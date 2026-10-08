@@ -135,3 +135,7 @@ export function writeDraft(storage: Pick<Storage, "setItem">, draft: SavedDraft)
     return false;
   }
 }
+
+export function draftFingerprint(draft: SavedDraft): string {
+  return JSON.stringify({ ...draft, updatedAt: 0 });
+}

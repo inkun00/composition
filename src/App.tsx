@@ -24,9 +24,9 @@ import BeatInstrumentChooser from "./components/BeatInstrumentChooser";
 import SongStoryMap from "./components/SongStoryMap";
 import SongStructureChooser from "./components/SongStructureChooser";
 import SongLengthChooser from "./components/SongLengthChooser";
-import LocalDraftRecoveryDialog from "./components/LocalDraftRecoveryDialog";
 import CandidateFeelingTabs from "./components/CandidateFeelingTabs";
 import { useBeatPatternState } from "./hooks/useBeatPatternState";
+import { UNSAVED_WORK_WARNING, useUnsavedWorkWarning } from "./hooks/useUnsavedWorkWarning";
 import { backingDisplayNotes, repeatFourMeasures, rationalFromBeats } from "./components/backingDisplayNotes";
 import { firebaseConfigured } from "./firebase/config";
 import type { User } from "./firebase/client";
@@ -36,11 +36,11 @@ import { useCloudScoreList } from "./hooks/useCloudScoreList";
 import { ACCOMPANIMENT_MODES, ACCOMPANIMENT_PLAYING_STYLES, MAX_ACCOMPANIMENT_INSTRUMENTS, accompanimentInstrumentPart, createAccompanimentPattern, findAccompanimentStyle, isAccompanimentInstrument,
   type AccompanimentStyleId } from "./music/accompaniment";
 import { getCandidates } from "./music/candidates";
+import { makeEndingCandidates } from "./music/endingCandidates";
 import { MELODY_FEELING_GROUPS, type MelodyFeelingId } from "./music/melodyFeelings";
 import { candidatePatternIndex, rankRecommendedCandidates } from "./music/recommendation";
 import { chordMidiPitches, chordPitchClasses } from "./music/chord";
-import { DRAFT_STORAGE_KEY, isSavedDraft, readDraft, writeDraft, type SavedDraft } from "./music/draft";
-import { archiveDraft, readBrowserDraftHistory, type ArchivedDraft } from "./music/draftHistory";
+import { DRAFT_STORAGE_KEY, draftFingerprint, isSavedDraft, readDraft, writeDraft, type SavedDraft } from "./music/draft";
 import { cloudSaveIssue, findDraftSaveIssues, type SaveIssue } from "./music/draftValidation";
 import { findHarmonyPreset, HARMONY_PRESETS, type HarmonyPreset } from "./music/harmonyPresets";
 import { findInstrument, INSTRUMENTS, type InstrumentId } from "./music/instruments";
@@ -292,7 +292,6 @@ export default function App() {
   const [showOpening, setShowOpening] = useState(() =>
     !mobileRecordMode && !qrPlaybackMode && new URLSearchParams(window.location.search).get("start") !== "new");
   const [showAppMenu, setShowAppMenu] = useState(false);
-  const [recoveryOpen, setRecoveryOpen] = useState(false);
   const [accountLibraryOpen, setAccountLibraryOpen] = useState(false);
   const [communityAlbumOpen, setCommunityAlbumOpen] = useState(false);
   const [publishingScore, setPublishingScore] = useState<CloudScore | null>(null);
@@ -306,6 +305,7 @@ export default function App() {
   const [saveIssues, setSaveIssues] = useState<SaveIssue[]>([]);
   const [saveFailureOpen, setSaveFailureOpen] = useState(false);
   const [activeCloudScoreId, setActiveCloudScoreId] = useState<string | null>(null);
+  const [cloudSavedFingerprint, setCloudSavedFingerprint] = useState<string | null>(null);
   const resumableDraft = savedDraft && (!incomingShare || savedDraft.sourceHash === window.location.hash)
     ? savedDraft : null;
   const initialPreset = findHarmonyPreset(resumableDraft?.presetId ?? incomingShare?.presetId ?? HARMONY_PRESETS[0].id);
@@ -446,6 +446,8 @@ export default function App() {
   }), [accompanimentInstrumentIds, accompanimentStyleId, beatPattern, beatVolume, bpm, creatorName, lyrics, measures, meter,
     originalCreator, selectedInstrumentId, selectedPresetId, songDescription, sourceHash, showArrangement, songLength,
     songTitle, structureTemplateId]);
+  const currentDraftFingerprint = useMemo(() => draftFingerprint(currentDraft), [currentDraft]);
+  const initialDraftFingerprint = useRef(currentDraftFingerprint);
   const currentAccompanimentOptions = useMemo<AccompanimentOptions>(() => ({
     styleId: accompanimentStyleId,
     instrumentIds: accompanimentInstrumentIds,
@@ -454,8 +456,12 @@ export default function App() {
     meter
   }), [accompanimentInstrumentIds, accompanimentStyleId, beatPattern, beatVolume, meter]);
   const candidates = useMemo(
-    () => getCandidates(activeMeasure.story, meter, activeMeasure.chords),
-    [activeMeasure.story, activeMeasure.chords, meter]
+    () => {
+      const choices = getCandidates(activeMeasure.story, meter, activeMeasure.chords);
+      return activeIndex === measures.length - 1
+        ? makeEndingCandidates(choices, activeMeasure.chords, meter) : choices;
+    },
+    [activeIndex, activeMeasure.story, activeMeasure.chords, measures.length, meter]
   );
   const candidatePriority = useMemo(() => {
     const earlierMeasures = measures.slice(0, activeIndex);
@@ -495,6 +501,11 @@ export default function App() {
   const selectedNotes = activeNotes.filter((note) => selectedNoteIds.includes(note.id));
   const selectedHarmonyFit = selectedNote ? noteHarmonyFit(selectedNote, activeNotes, activeMeasure.chords, meter) : null;
   const completedCount = measures.filter((measure) => measure.notes !== null).length;
+  const hasUnsavedWork = (completedCount > 0 || currentDraftFingerprint !== initialDraftFingerprint.current) &&
+    currentDraftFingerprint !== cloudSavedFingerprint;
+  const skipNextUnloadWarning = useUnsavedWorkWarning(
+    !showOpening && !mobileRecordMode && !qrPlaybackMode && hasUnsavedWork
+  );
   const allValid = measures.every(
     (measure) => measure.notes && validateMeasure(measure.notes, meter).state === "exact"
   );
@@ -1540,16 +1551,7 @@ export default function App() {
     setShareStatus("나중에 다시 고칠 수 있는 작품 파일을 저장했어요.");
   }
 
-  function preserveCurrentDraft(): boolean {
-    try {
-      if (archiveDraft(window.localStorage, currentDraft)) return true;
-    } catch { /* Storage may be unavailable. */ }
-    window.alert("현재 작업을 보관하지 못했어요. 기기 저장 공간을 확인한 뒤 다시 시도해 주세요.");
-    return false;
-  }
-
   function applyProjectDraft(project: SavedDraft): boolean {
-    if (!preserveCurrentDraft()) return false;
     try {
       if (!writeDraft(window.localStorage, project)) throw new Error("local-save-failed");
     } catch {
@@ -1579,6 +1581,7 @@ export default function App() {
     setCreatorName(project.creator);
     setOriginalCreator(project.originalCreator);
     setSourceHash(project.sourceHash);
+    setCloudSavedFingerprint(null);
     setActiveIndex(0);
     setSelectedNoteId("");
     setSelectedNoteIds([]);
@@ -1664,6 +1667,7 @@ export default function App() {
       const { saveCloudScore } = await import("./firebase/scores");
       const savedScore = await saveCloudScore(authUser.uid, draft, asCopy ? undefined : activeCloudScoreId ?? undefined);
       setActiveCloudScoreId(savedScore.id);
+      setCloudSavedFingerprint(draftFingerprint(draft));
       upsertCloudScore(savedScore);
       setCloudSaveNotice("계정 저장 완료 ✓ 다른 기기에서도 볼 수 있어요.");
       setShareStatus(asCopy ? "현재 악보를 새 클라우드 악보로 저장했어요." : "내 악보함에 저장했어요.");
@@ -1689,9 +1693,10 @@ export default function App() {
   }
 
   function handleCloudLoad(score: CloudScore) {
-    if (completedCount > 0 && !window.confirm(`'${score.title}' 악보를 열까요? 지금 작업은 이 기기의 이전 작업에 보관돼요.`)) return;
+    if (hasUnsavedWork && !window.confirm(`'${score.title}' 악보를 열까요?\n\n${UNSAVED_WORK_WARNING} 먼저 내 악보함에 저장해 주세요.`)) return;
     if (!applyProjectDraft(score.draft)) return;
     setActiveCloudScoreId(score.id);
+    setCloudSavedFingerprint(draftFingerprint(score.draft));
     setAccountLibraryOpen(false);
     setShareStatus("내 악보함에서 작품을 불러왔어요.");
   }
@@ -1720,7 +1725,7 @@ export default function App() {
 
   function openPublishedProjectCopy(song: PublishedSong) {
     if (song.access !== "project") return;
-    if (completedCount > 0 && !window.confirm(`'${song.title}' 프로젝트 사본을 열까요? 지금 작업은 이 기기의 이전 작업에 보관돼요.`)) return;
+    if (hasUnsavedWork && !window.confirm(`'${song.title}' 프로젝트 사본을 열까요?\n\n${UNSAVED_WORK_WARNING} 먼저 내 악보함에 저장해 주세요.`)) return;
     const copyTitle = `${song.title.trim().slice(0, 56) || "제목 없는 노래"} 사본`;
     const copy: SavedDraft = {
       ...JSON.parse(JSON.stringify(song.draft)) as SavedDraft,
@@ -1756,19 +1761,11 @@ export default function App() {
   }
 
   function startNewProject() {
-    if (completedCount > 0 && !window.confirm("새 곡을 시작할까요? 지금 작업은 이 기기의 이전 작업에 보관돼요.")) return;
-    if (!preserveCurrentDraft()) return;
+    if (hasUnsavedWork && !window.confirm(`새 곡을 시작할까요?\n\n${UNSAVED_WORK_WARNING} 먼저 내 악보함에 저장해 주세요.`)) return;
     try { window.localStorage.removeItem(DRAFT_STORAGE_KEY); }
     catch { window.alert("새 곡을 시작하지 못했어요. 기기 저장 공간을 확인해 주세요."); return; }
+    skipNextUnloadWarning();
     window.location.assign(`${window.location.pathname}?start=new`);
-  }
-
-  function restorePreviousDraft(entry: ArchivedDraft): boolean {
-    if (!applyProjectDraft(entry.draft)) return false;
-    setActiveCloudScoreId(null);
-    setShowOpening(false);
-    setShareStatus("이전 작업을 다시 열었어요.");
-    return true;
   }
 
   async function loadProjectFile(event: React.ChangeEvent<HTMLInputElement>) {
@@ -1782,7 +1779,7 @@ export default function App() {
     try {
       const parsed: unknown = JSON.parse(await file.text());
       if (!isSavedDraft(parsed)) throw new Error("invalid-project");
-      if (completedCount > 0 && !window.confirm("불러온 작품을 열까요? 지금 작업은 이 기기의 이전 작업에 보관돼요.")) return;
+      if (hasUnsavedWork && !window.confirm(`불러온 작품을 열까요?\n\n${UNSAVED_WORK_WARNING} 먼저 내 악보함에 저장해 주세요.`)) return;
       const project = parsed;
       if (!applyProjectDraft(project)) return;
       setActiveCloudScoreId(null);
@@ -2037,9 +2034,6 @@ export default function App() {
                 onClick={() => setShowOpening(false)}>
                 <Music2 size={19} /> 이어하기
               </button>
-              <button type="button" className="opening-continue action-button" onClick={() => setRecoveryOpen(true)}>
-                이전 작업
-              </button>
             </div>
             <small className="opening-status">{resumableDraft ? "저장한 노래가 기다리고 있어요." : "오늘의 첫 노래를 시작해 볼까요?"}</small>
           </div>
@@ -2058,9 +2052,6 @@ export default function App() {
             </button>
             {showAppMenu && <div className="app-menu-panel" role="menu">
               <button type="button" role="menuitem" onClick={startNewProject}><WandSparkles size={16} /> 새로 시작하기</button>
-              <button type="button" role="menuitem" onClick={() => { setShowAppMenu(false); setRecoveryOpen(true); }}>
-                <Library size={16} /> 이전 작업 다시 열기
-              </button>
               <button type="button" role="menuitem" onClick={() => {
                 setShowAppMenu(false);
                 projectFileInput.current?.click();
@@ -2100,9 +2091,6 @@ export default function App() {
           onPublish={(score) => { setPublishingScore(score); setAccountLibraryOpen(false); }}
           onDelete={(score) => void handleCloudDelete(score)} />
       )}
-
-      {recoveryOpen && <LocalDraftRecoveryDialog drafts={readBrowserDraftHistory()}
-        onRestore={restorePreviousDraft} onClose={() => setRecoveryOpen(false)} />}
 
       {saveFailureOpen && <SaveFailureDialog issues={saveIssues} onClose={() => setSaveFailureOpen(false)} onLocate={locateSaveIssue} />}
 
@@ -2665,8 +2653,10 @@ export default function App() {
           <div className="section-heading">
             <div>
               <span className={`dot ${activeMeasure.story}`} />
-              <h2>이 마디에 어울리는 가락</h2>
-              <p>느낌을 고르면 {meterKey(meter)}박자에 맞는 가락이 나와요.</p>
+              <h2>{activeIndex === measures.length - 1 ? "노래를 끝맺는 가락" : "이 마디에 어울리는 가락"}</h2>
+              <p>{activeIndex === measures.length - 1
+                ? "마지막 화음에 맞춰 편안하게 끝나는 가락만 골랐어요."
+                : `느낌을 고르면 ${meterKey(meter)}박자에 맞는 가락이 나와요.`}</p>
             </div>
             <span className="count-pill">{activeIndex + 1}/{songLength} 마디</span>
           </div>

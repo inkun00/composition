@@ -3,6 +3,7 @@ import { playComposition, stopPlayback, type PlaybackMeasure } from "../audio/pl
 import type { AccompanimentStyleId } from "../music/accompaniment";
 import { getCandidates } from "../music/candidates";
 import type { SavedDraft } from "../music/draft";
+import { makeEndingCandidates } from "../music/endingCandidates";
 import { HARMONY_PRESETS, type HarmonyPreset } from "../music/harmonyPresets";
 import type { Meter } from "../music/meter";
 import {
@@ -38,7 +39,8 @@ export function buildHarmonyPreviewMeasures(
   const variationSeed = Number.parseInt(preset.id.slice(1), 10) || 0;
 
   return preset.bars.slice(0, 4).map((chords, index) => {
-    const candidates = getCandidates(preset.roles[index], meter, chords);
+    const regularCandidates = getCandidates(preset.roles[index], meter, chords);
+    const candidates = index === 3 ? makeEndingCandidates(regularCandidates, chords, meter) : regularCandidates;
     const harmonyRanked = rankRecommendedCandidates(
       candidates,
       chords,
