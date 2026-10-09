@@ -159,13 +159,13 @@ describe("모두의 앨범", () => {
     const codeInput = container?.querySelector<HTMLInputElement>('input[placeholder="인증코드를 입력해 주세요"]');
     await act(async () => {
       const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
-      setter?.call(codeInput, "마음멜로디");
+      setter?.call(codeInput, "maeum");
       codeInput?.dispatchEvent(new Event("input", { bubbles: true }));
     });
     await act(async () => container?.querySelector("form")?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
     await flush();
 
-    expect(firebaseMocks.createCommunityAlbum).toHaveBeenCalledWith(user.uid, user.displayName, album.name, "마음멜로디");
+    expect(firebaseMocks.createCommunityAlbum).toHaveBeenCalledWith(user.uid, user.displayName, album.name, "maeum");
     expect(container?.textContent).toContain(album.name);
   });
 
