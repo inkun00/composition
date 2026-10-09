@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, Copy, FileMusic, Folder, Send, Volume2, X } from "lucide-react";
+import { ArrowLeft, Copy, FileMusic, Folder, Lock, Send, Volume2, X } from "lucide-react";
 import type { User } from "../firebase/client";
 import type { CommunityAlbum, PublicationAccess } from "../firebase/communityAlbums";
 import type { CloudScore } from "../firebase/scores";
+import "./PublishScoreDialog.css";
 
 type PublishScoreDialogProps = Readonly<{
   user: User;
@@ -29,9 +30,11 @@ export default function PublishScoreDialog({ user, score, onClose, onPublished }
   const [albums, setAlbums] = useState<CommunityAlbum[]>([]);
   const [selectedAlbum, setSelectedAlbum] = useState<CommunityAlbum | null>(null);
   const [access, setAccess] = useState<PublicationAccess>("audio");
+  const [albumPassword, setAlbumPassword] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const needsPassword = selectedAlbum?.locked && selectedAlbum.ownerId !== user.uid;
 
   useEffect(() => {
     let active = true;
@@ -59,12 +62,16 @@ export default function PublishScoreDialog({ user, score, onClose, onPublished }
     setBusy(true);
     setError("");
     try {
-      const { publishScoreToAlbum } = await import("../firebase/communityAlbums");
+      const { enterCommunityAlbum, publishScoreToAlbum } = await import("../firebase/communityAlbums");
+      if (needsPassword) await enterCommunityAlbum(selectedAlbum.id, user.uid, albumPassword.trim(), selectedAlbum.passwordSalt ?? "");
       await publishScoreToAlbum(user.uid, ownerName(user), selectedAlbum.id, score, access);
       onPublished(selectedAlbum, access);
     } catch (publishError) {
       console.error(publishError);
-      setError("앨범에 공개하지 못했어요. 잠시 뒤 다시 시도해 주세요.");
+      setError(publishError && typeof publishError === "object" && "code" in publishError &&
+        publishError.code === "permission-denied"
+        ? "앨범 암호가 맞지 않아요. 다시 확인해 주세요."
+        : "앨범에 공개하지 못했어요. 잠시 뒤 다시 시도해 주세요.");
     } finally {
       setBusy(false);
     }
@@ -77,7 +84,7 @@ export default function PublishScoreDialog({ user, score, onClose, onPublished }
         <header className="album-subdialog-header">
           <div>
             {selectedAlbum && <button type="button" className="community-back" aria-label="앨범 다시 선택"
-              onClick={() => { setSelectedAlbum(null); setError(""); }}><ArrowLeft size={18} /></button>}
+              onClick={() => { setSelectedAlbum(null); setAlbumPassword(""); setError(""); }}><ArrowLeft size={18} /></button>}
             <FileMusic size={20} /><span><strong>앨범에 공개</strong><small>{score.title || "제목 없는 악보"}</small></span>
           </div>
           <button type="button" aria-label="앨범 공개 닫기" onClick={onClose}><X size={20} /></button>
@@ -88,6 +95,9 @@ export default function PublishScoreDialog({ user, score, onClose, onPublished }
         ) : selectedAlbum ? (
           <div className="publish-access-step">
             <div className="publish-selected-album"><Folder size={25} /><span><small>선택한 앨범</small><strong>{selectedAlbum.name}</strong></span></div>
+            {needsPassword && <label className="publish-album-password"><span><Lock size={15} /> 앨범 암호</span>
+              <input type="password" value={albumPassword} autoComplete="off" maxLength={40}
+                placeholder="친구에게 받은 앨범 암호" onChange={(event) => { setAlbumPassword(event.target.value); setError(""); }} /></label>}
             <div className="album-access-options">
               {ACCESS_OPTIONS.map((option) => (
                 <button type="button" key={option.id} className={access === option.id ? "active" : ""}
@@ -97,7 +107,8 @@ export default function PublishScoreDialog({ user, score, onClose, onPublished }
                 </button>
               ))}
             </div>
-            <button type="button" className="account-primary publish-confirm" onClick={() => void publish()} disabled={busy}>
+            <button type="button" className="account-primary publish-confirm" onClick={() => void publish()}
+              disabled={busy || Boolean(needsPassword && !albumPassword.trim())}>
               <Send size={18} /> {busy ? "공개하는 중" : "이 범위로 공개하기"}
             </button>
           </div>
@@ -106,8 +117,9 @@ export default function PublishScoreDialog({ user, score, onClose, onPublished }
         ) : (
           <div className="publish-album-grid">
             {albums.map((album) => (
-              <button type="button" key={album.id} onClick={() => setSelectedAlbum(album)}>
-                <Folder size={35} /><span><strong>{album.name}</strong><small>{album.ownerName}의 앨범</small></span>
+              <button type="button" key={album.id} onClick={() => { setSelectedAlbum(album); setAlbumPassword(""); }}>
+                <Folder size={35} /><span><strong>{album.name}</strong><small>{album.ownerName}의 앨범</small>
+                  {album.locked && <small className="album-lock-badge"><Lock size={12} /> 암호 있는 앨범</small>}</span>
               </button>
             ))}
           </div>

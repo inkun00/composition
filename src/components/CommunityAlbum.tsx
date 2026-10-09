@@ -21,6 +21,7 @@ import type {
 import { findHarmonyPreset } from "../music/harmonyPresets";
 import type { NoteEvent } from "../music/types";
 import PdfScoreSheet from "./PdfScoreSheet";
+import AlbumPasswordDialog from "./AlbumPasswordDialog";
 
 type CommunityAlbumProps = Readonly<{
   configured: boolean;
@@ -96,6 +97,10 @@ export default function CommunityAlbum({ configured, user, onClose, onRequestLog
   const [createOpen, setCreateOpen] = useState(false);
   const [albumName, setAlbumName] = useState("");
   const [albumCode, setAlbumCode] = useState("");
+  const [newAlbumPassword, setNewAlbumPassword] = useState("");
+  const [passwordDialog, setPasswordDialog] = useState<Readonly<{
+    album: CommunityAlbumItem; mode: "unlock" | "manage";
+  }> | null>(null);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [playingSongId, setPlayingSongId] = useState<string | null>(null);
@@ -105,6 +110,7 @@ export default function CommunityAlbum({ configured, user, onClose, onRequestLog
   const closeCreateDialog = useCallback(() => {
     setCreateOpen(false);
     setAlbumCode("");
+    setNewAlbumPassword("");
     setError("");
   }, []);
 
@@ -134,6 +140,7 @@ export default function CommunityAlbum({ configured, user, onClose, onRequestLog
       if (scoreSong) setScoreSong(null);
       else if (selectedSong) setSelectedSong(null);
       else if (createOpen) closeCreateDialog();
+      else if (passwordDialog) setPasswordDialog(null);
       else onClose();
     };
     document.body.style.overflow = "hidden";
@@ -142,9 +149,9 @@ export default function CommunityAlbum({ configured, user, onClose, onRequestLog
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", closeOnEscape);
     };
-  }, [closeCreateDialog, createOpen, onClose, scoreSong, selectedSong]);
+  }, [closeCreateDialog, createOpen, onClose, passwordDialog, scoreSong, selectedSong]);
 
-  async function openAlbum(album: CommunityAlbumItem) {
+  async function loadAlbum(album: CommunityAlbumItem): Promise<boolean> {
     setSelectedAlbum(album);
     setSongs([]);
     setLoading(true);
@@ -152,12 +159,51 @@ export default function CommunityAlbum({ configured, user, onClose, onRequestLog
     try {
       const { listPublishedSongs } = await import("../firebase/communityAlbums");
       setSongs(await listPublishedSongs(album.id));
+      return true;
     } catch (loadError) {
       console.error(loadError);
+      setSelectedAlbum(null);
       setError("앨범 속 노래를 불러오지 못했어요.");
+      return false;
     } finally {
       setLoading(false);
     }
+  }
+
+  function openAlbum(album: CommunityAlbumItem) {
+    if (album.locked && album.ownerId !== user?.uid) {
+      setPasswordDialog({ album, mode: "unlock" });
+      setError("");
+      return;
+    }
+    void loadAlbum(album);
+  }
+
+  async function submitAlbumPassword(password: string) {
+    if (!passwordDialog || !user) throw new Error("login-required");
+    const { album, mode } = passwordDialog;
+    const { enterCommunityAlbum, setCommunityAlbumPassword } = await import("../firebase/communityAlbums");
+    if (mode === "unlock") {
+      await enterCommunityAlbum(album.id, user.uid, password, album.passwordSalt ?? "");
+      if (!await loadAlbum(album)) throw new Error("album-read-failed");
+    } else {
+      const access = await setCommunityAlbumPassword(album.id, user.uid, password);
+      const updated = { ...album, ...access };
+      setAlbums((current) => current.map((item) => item.id === album.id ? updated : item));
+      setSelectedAlbum(updated);
+    }
+    setPasswordDialog(null);
+  }
+
+  async function removeAlbumPassword() {
+    if (!passwordDialog || !user || passwordDialog.mode !== "manage") return;
+    const { setCommunityAlbumPassword } = await import("../firebase/communityAlbums");
+    const { album } = passwordDialog;
+    const access = await setCommunityAlbumPassword(album.id, user.uid, "");
+    const updated = { ...album, ...access };
+    setAlbums((current) => current.map((item) => item.id === album.id ? updated : item));
+    setSelectedAlbum(updated);
+    setPasswordDialog(null);
   }
 
   async function deleteAlbum(album: CommunityAlbumItem) {
@@ -193,14 +239,20 @@ export default function CommunityAlbum({ configured, user, onClose, onRequestLog
       setError("인증코드를 입력해 주세요.");
       return;
     }
+    const trimmedPassword = newAlbumPassword.trim();
+    if (trimmedPassword && trimmedPassword.length < 4) {
+      setError("앨범 암호는 4글자 이상 적어 주세요.");
+      return;
+    }
     setBusy(true);
     setError("");
     try {
       const { createCommunityAlbum } = await import("../firebase/communityAlbums");
-      const album = await createCommunityAlbum(user.uid, userName(user), trimmedName, trimmedCode);
+      const album = await createCommunityAlbum(user.uid, userName(user), trimmedName, trimmedCode, trimmedPassword);
       setAlbums((current) => [album, ...current]);
       setAlbumName("");
       setAlbumCode("");
+      setNewAlbumPassword("");
       setCreateOpen(false);
     } catch (createError) {
       console.error(createError);
@@ -279,7 +331,10 @@ export default function CommunityAlbum({ configured, user, onClose, onRequestLog
           </div>
           <div className="community-header-actions">
             {!selectedAlbum && <button type="button" className="community-create-button"
-              onClick={() => { setAlbumCode(""); setCreateOpen(true); setError(""); }}><Plus size={17} /> 앨범 만들기</button>}
+              onClick={() => { setAlbumCode(""); setNewAlbumPassword(""); setCreateOpen(true); setError(""); }}><Plus size={17} /> 앨범 만들기</button>}
+            {selectedAlbum && selectedAlbum.ownerId === user?.uid && <button type="button" className="community-album-password-button"
+              onClick={() => setPasswordDialog({ album: selectedAlbum, mode: "manage" })}>
+              <Lock size={16} /> {selectedAlbum.locked ? "암호 바꾸기" : "암호 설정"}</button>}
             <button type="button" className="account-close" aria-label="모두의 앨범 닫기" onClick={onClose}><X size={20} /></button>
           </div>
         </header>
@@ -309,9 +364,10 @@ export default function CommunityAlbum({ configured, user, onClose, onRequestLog
             {albums.map((album) => (
               <article className="community-album-folder-card" key={album.id}>
                 <button type="button" className="community-album-folder" disabled={busy}
-                  onClick={() => void openAlbum(album)}>
+                  onClick={() => openAlbum(album)}>
                   <Folder size={45} strokeWidth={1.7} aria-hidden="true" />
-                  <span><strong>{album.name}</strong><small>{album.ownerName}의 앨범</small></span>
+                  <span><strong>{album.name}</strong><small>{album.ownerName}의 앨범</small>
+                    {album.locked && <small className="album-lock-badge"><Lock size={12} /> 암호 있는 앨범</small>}</span>
                 </button>
                 {canDeleteAlbum(user, album) && (
                   <button type="button" className="community-album-delete" disabled={busy}
@@ -336,6 +392,8 @@ export default function CommunityAlbum({ configured, user, onClose, onRequestLog
                 placeholder="예: 우리 반 여름 노래" onChange={(event) => { setAlbumName(event.target.value); setError(""); }} /></label>
               <label><span>인증코드</span><input type="password" value={albumCode} maxLength={40} autoComplete="off"
                 placeholder="인증코드를 입력해 주세요" onChange={(event) => { setAlbumCode(event.target.value); setError(""); }} /></label>
+              <label><span>앨범 암호 (선택)</span><input type="password" value={newAlbumPassword} maxLength={40} autoComplete="new-password"
+                placeholder="친구들과 나눌 암호, 4글자 이상" onChange={(event) => { setNewAlbumPassword(event.target.value); setError(""); }} /></label>
               {!user && <div className="album-login-needed"><Lock size={18} /><span>로그인한 사용자만 앨범을 만들 수 있어요.</span>
                 <button type="button" onClick={onRequestLogin}>로그인</button></div>}
               {error && <p className="community-album-error" role="status">{error}</p>}
@@ -346,6 +404,10 @@ export default function CommunityAlbum({ configured, user, onClose, onRequestLog
           </section>
         </div>
       )}
+
+      {passwordDialog && <AlbumPasswordDialog album={passwordDialog.album} mode={passwordDialog.mode}
+        signedIn={Boolean(user)} onRequestLogin={onRequestLogin} onClose={() => setPasswordDialog(null)}
+        onSubmit={submitAlbumPassword} onRemove={passwordDialog.mode === "manage" ? removeAlbumPassword : undefined} />}
 
       {selectedSong && (
         <div className="album-subdialog-overlay" role="dialog" aria-modal="true" aria-label={`${selectedSong.title} 음악 메뉴`}

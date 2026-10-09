@@ -11,6 +11,7 @@ import {
 import { firestore } from "./client";
 import { isSavedDraft, type SavedDraft } from "../music/draft";
 import type { CloudScore } from "./scores";
+import { albumPasswordProof, newAlbumPasswordSalt } from "./albumPassword";
 
 export type PublicationAccess = "audio" | "score" | "project";
 
@@ -19,6 +20,8 @@ export type CommunityAlbum = Readonly<{
   name: string;
   ownerId: string;
   ownerName: string;
+  locked: boolean;
+  passwordSalt?: string;
   createdAt: number;
   updatedAt: number;
 }>;
@@ -69,31 +72,53 @@ export async function listCommunityAlbums(): Promise<CommunityAlbum[]> {
       name: data.name,
       ownerId: data.ownerId,
       ownerName: typeof data.ownerName === "string" ? data.ownerName : "마음멜로디 사용자",
+      locked: data.locked === true,
+      passwordSalt: typeof data.passwordSalt === "string" ? data.passwordSalt : undefined,
       createdAt: timestampMillis(data.createdAt),
       updatedAt: timestampMillis(data.updatedAt)
     }];
   }).sort((a, b) => b.updatedAt - a.updatedAt || a.name.localeCompare(b.name, "ko"));
 }
 
-export async function createCommunityAlbum(ownerId: string, ownerName: string, name: string, code: string): Promise<CommunityAlbum> {
+export async function createCommunityAlbum(
+  ownerId: string, ownerName: string, name: string, code: string, password = ""
+): Promise<CommunityAlbum> {
   const trimmedName = name.trim();
+  const trimmedPassword = password.trim();
   if (!trimmedName || trimmedName.length > 40) throw new Error("invalid-album-name");
   if (!code.trim()) throw new Error("missing-album-code");
+  if (trimmedPassword && (trimmedPassword.length < 4 || trimmedPassword.length > 40)) throw new Error("invalid-album-password");
   const db = requireFirestore();
   await setDoc(doc(db, "albumCreatorAccess", ownerId), { code: code.trim() });
   const albumRef = doc(collection(db, "communityAlbums"));
-  await setDoc(albumRef, {
+  const passwordSalt = trimmedPassword ? newAlbumPasswordSalt() : undefined;
+  const albumData = {
     name: trimmedName,
     ownerId,
     ownerName: ownerName.trim().slice(0, 40) || "마음멜로디 사용자",
+    locked: Boolean(passwordSalt),
+    ...(passwordSalt ? { passwordSalt } : {}),
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
-  });
+  };
+  if (passwordSalt) {
+    const batch = writeBatch(db);
+    batch.set(albumRef, albumData);
+    batch.set(doc(db, "albumSecrets", albumRef.id), {
+      ownerId,
+      proof: await albumPasswordProof(trimmedPassword, passwordSalt)
+    });
+    await batch.commit();
+  } else {
+    await setDoc(albumRef, albumData);
+  }
   return {
     id: albumRef.id,
     name: trimmedName,
     ownerId,
     ownerName: ownerName.trim().slice(0, 40) || "마음멜로디 사용자",
+    locked: Boolean(passwordSalt),
+    passwordSalt,
     createdAt: Date.now(),
     updatedAt: Date.now()
   };
@@ -108,7 +133,38 @@ export async function deleteCommunityAlbum(albumId: string): Promise<void> {
     songRefs.slice(index, index + 450).forEach((songRef) => batch.delete(songRef));
     await batch.commit();
   }
-  await deleteDoc(doc(db, "communityAlbums", albumId));
+  const batch = writeBatch(db);
+  batch.delete(doc(db, "albumSecrets", albumId));
+  batch.delete(doc(db, "communityAlbums", albumId));
+  await batch.commit();
+}
+
+export async function setCommunityAlbumPassword(
+  albumId: string, ownerId: string, password: string
+): Promise<Readonly<{ locked: boolean; passwordSalt?: string }>> {
+  const trimmed = password.trim();
+  if (trimmed && (trimmed.length < 4 || trimmed.length > 40)) throw new Error("invalid-album-password");
+  const db = requireFirestore();
+  const salt = trimmed ? newAlbumPasswordSalt() : undefined;
+  const batch = writeBatch(db);
+  batch.update(doc(db, "communityAlbums", albumId), {
+    locked: Boolean(salt),
+    passwordSalt: salt ?? "",
+    updatedAt: serverTimestamp()
+  });
+  const secretRef = doc(db, "albumSecrets", albumId);
+  if (salt) batch.set(secretRef, { ownerId, proof: await albumPasswordProof(trimmed, salt) });
+  else batch.delete(secretRef);
+  await batch.commit();
+  return { locked: Boolean(salt), passwordSalt: salt };
+}
+
+export async function enterCommunityAlbum(
+  albumId: string, userId: string, password: string, salt: string
+): Promise<void> {
+  if (!password || !salt) throw new Error("missing-album-password");
+  const proof = await albumPasswordProof(password, salt);
+  await setDoc(doc(requireFirestore(), "albumMemberAccess", albumId, "users", userId), { proof });
 }
 
 export async function listPublishedSongs(albumId: string): Promise<PublishedSong[]> {

@@ -1,0 +1,4 @@
+.publish-album-password { display: grid; gap: 7px; margin-top: 14px; color: #514a5b; font-size: 12px; font-weight: 800; }
+.publish-album-password > span { display: inline-flex; align-items: center; gap: 5px; }
+.publish-album-password input { width: 100%; min-height: 44px; padding: 0 12px; border: 1px solid #d8d2df; border-radius: 8px; font: inherit; }
+.publish-album-password input:focus { outline: 2px solid #b7a5e7; }
