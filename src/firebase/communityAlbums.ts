@@ -5,6 +5,7 @@ import {
   getDocs,
   serverTimestamp,
   setDoc,
+  updateDoc,
   writeBatch,
   type Timestamp
 } from "firebase/firestore";
@@ -137,6 +138,16 @@ export async function deleteCommunityAlbum(albumId: string): Promise<void> {
   batch.delete(doc(db, "albumSecrets", albumId));
   batch.delete(doc(db, "communityAlbums", albumId));
   await batch.commit();
+}
+
+export async function renameCommunityAlbum(albumId: string, name: string): Promise<string> {
+  const trimmedName = name.trim();
+  if (!trimmedName || trimmedName.length > 40) throw new Error("invalid-album-name");
+  await updateDoc(doc(requireFirestore(), "communityAlbums", albumId), {
+    name: trimmedName,
+    updatedAt: serverTimestamp()
+  });
+  return trimmedName;
 }
 
 export async function setCommunityAlbumPassword(

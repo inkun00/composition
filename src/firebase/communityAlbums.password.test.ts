@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { albumPasswordProof } from "./albumPassword";
-import { createCommunityAlbum, deleteCommunityAlbum, enterCommunityAlbum, setCommunityAlbumPassword } from "./communityAlbums";
+import { createCommunityAlbum, deleteCommunityAlbum, enterCommunityAlbum, renameCommunityAlbum, setCommunityAlbumPassword } from "./communityAlbums";
 
 const mocks = vi.hoisted(() => ({
   setDoc: vi.fn(),
+  updateDoc: vi.fn(),
   getDocs: vi.fn(),
   batch: { set: vi.fn(), update: vi.fn(), delete: vi.fn(), commit: vi.fn() }
 }));
@@ -18,12 +19,14 @@ vi.mock("firebase/firestore", () => ({
   getDocs: mocks.getDocs,
   serverTimestamp: () => "server-time",
   setDoc: mocks.setDoc,
+  updateDoc: mocks.updateDoc,
   writeBatch: () => mocks.batch
 }));
 
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.setDoc.mockResolvedValue(undefined);
+  mocks.updateDoc.mockResolvedValue(undefined);
   mocks.batch.commit.mockResolvedValue(undefined);
 });
 
@@ -79,5 +82,16 @@ describe("암호 있는 앨범 저장", () => {
     expect(mocks.batch.delete).toHaveBeenCalledWith({ id: "album-1", path: "albumSecrets/album-1" });
     expect(mocks.batch.delete).toHaveBeenCalledWith({ id: "album-1", path: "communityAlbums/album-1" });
     expect(mocks.batch.commit).toHaveBeenCalledTimes(2);
+  });
+
+  it("앨범 이름만 수정하고 공백과 길이를 검증한다", async () => {
+    expect(await renameCommunityAlbum("album-1", "  새 이름  ")).toBe("새 이름");
+    expect(mocks.updateDoc).toHaveBeenCalledWith(
+      { id: "album-1", path: "communityAlbums/album-1" },
+      { name: "새 이름", updatedAt: "server-time" }
+    );
+    await expect(renameCommunityAlbum("album-1", "   ")).rejects.toThrow("invalid-album-name");
+    await expect(renameCommunityAlbum("album-1", "가".repeat(41))).rejects.toThrow("invalid-album-name");
+    expect(mocks.updateDoc).toHaveBeenCalledOnce();
   });
 });

@@ -94,9 +94,16 @@ service cloud.firestore {
         && request.resource.data.ownerName.size() <= 40
         && validLockedAlbum(albumId, request.resource.data);
       allow update: if request.auth != null
-        && resource.data.ownerId == request.auth.uid
-        && request.resource.data.ownerId == request.auth.uid
-        && validLockedAlbum(albumId, request.resource.data);
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 40
+        && (
+          (resource.data.ownerId == request.auth.uid
+            && validLockedAlbum(albumId, request.resource.data))
+          || (isAdmin()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["name", "updatedAt"]))
+        );
       allow delete: if request.auth != null
         && (resource.data.ownerId == request.auth.uid || isAdmin());
 

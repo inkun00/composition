@@ -6,6 +6,7 @@ import {
   Folder,
   Library,
   Lock,
+  Pencil,
   Play,
   Plus,
   Save,
@@ -22,6 +23,7 @@ import { findHarmonyPreset } from "../music/harmonyPresets";
 import type { NoteEvent } from "../music/types";
 import PdfScoreSheet from "./PdfScoreSheet";
 import AlbumPasswordDialog from "./AlbumPasswordDialog";
+import "./CommunityAlbumRename.css";
 
 type CommunityAlbumProps = Readonly<{
   configured: boolean;
@@ -52,7 +54,7 @@ function userName(user: User): string {
   return user.displayName || user.email?.split("@")[0] || "마음멜로디 사용자";
 }
 
-function canDeleteAlbum(user: User | null, album: CommunityAlbumItem): boolean {
+function canManageAlbum(user: User | null, album: CommunityAlbumItem): boolean {
   return user?.uid === album.ownerId || user?.email?.trim().toLowerCase() === ADMIN_EMAIL;
 }
 
@@ -98,6 +100,9 @@ export default function CommunityAlbum({ configured, user, onClose, onRequestLog
   const [albumName, setAlbumName] = useState("");
   const [albumCode, setAlbumCode] = useState("");
   const [newAlbumPassword, setNewAlbumPassword] = useState("");
+  const [renameDialog, setRenameDialog] = useState<CommunityAlbumItem | null>(null);
+  const [renameName, setRenameName] = useState("");
+  const [renameError, setRenameError] = useState("");
   const [passwordDialog, setPasswordDialog] = useState<Readonly<{
     album: CommunityAlbumItem; mode: "unlock" | "manage";
   }> | null>(null);
@@ -140,6 +145,9 @@ export default function CommunityAlbum({ configured, user, onClose, onRequestLog
       if (scoreSong) setScoreSong(null);
       else if (selectedSong) setSelectedSong(null);
       else if (createOpen) closeCreateDialog();
+      else if (renameDialog) {
+        if (!busy) setRenameDialog(null);
+      }
       else if (passwordDialog) setPasswordDialog(null);
       else onClose();
     };
@@ -149,7 +157,7 @@ export default function CommunityAlbum({ configured, user, onClose, onRequestLog
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", closeOnEscape);
     };
-  }, [closeCreateDialog, createOpen, onClose, passwordDialog, scoreSong, selectedSong]);
+  }, [busy, closeCreateDialog, createOpen, onClose, passwordDialog, renameDialog, scoreSong, selectedSong]);
 
   async function loadAlbum(album: CommunityAlbumItem): Promise<boolean> {
     setSelectedAlbum(album);
@@ -207,7 +215,7 @@ export default function CommunityAlbum({ configured, user, onClose, onRequestLog
   }
 
   async function deleteAlbum(album: CommunityAlbumItem) {
-    if (!canDeleteAlbum(user, album)) return;
+    if (!canManageAlbum(user, album)) return;
     if (!window.confirm(`'${album.name}' 앨범을 삭제할까요? 앨범에 공개된 음악도 모두 삭제되며 되돌릴 수 없어요.`)) return;
     setBusy(true);
     setError("");
@@ -218,6 +226,45 @@ export default function CommunityAlbum({ configured, user, onClose, onRequestLog
     } catch (deleteError) {
       console.error(deleteError);
       setError("앨범을 삭제하지 못했어요. 권한을 확인하고 다시 시도해 주세요.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function openRenameDialog(album: CommunityAlbumItem) {
+    if (!canManageAlbum(user, album)) return;
+    setRenameDialog(album);
+    setRenameName(album.name);
+    setRenameError("");
+  }
+
+  async function submitRename(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!renameDialog || !canManageAlbum(user, renameDialog) || busy) return;
+    const trimmedName = renameName.trim();
+    if (!trimmedName || trimmedName.length > 40) {
+      setRenameError("앨범 이름을 1~40글자로 적어 주세요.");
+      return;
+    }
+    if (trimmedName === renameDialog.name) {
+      setRenameDialog(null);
+      return;
+    }
+    setBusy(true);
+    setRenameError("");
+    try {
+      const { renameCommunityAlbum } = await import("../firebase/communityAlbums");
+      const savedName = await renameCommunityAlbum(renameDialog.id, trimmedName);
+      setAlbums((current) => current.map((item) => item.id === renameDialog.id
+        ? { ...item, name: savedName, updatedAt: Date.now() } : item));
+      setSelectedAlbum((current) => current?.id === renameDialog.id ? { ...current, name: savedName } : current);
+      setRenameDialog(null);
+    } catch (renameFailure) {
+      console.error(renameFailure);
+      setRenameError(renameFailure && typeof renameFailure === "object" && "code" in renameFailure &&
+        renameFailure.code === "permission-denied"
+        ? "이 앨범 이름을 바꿀 권한이 없어요."
+        : "앨범 이름을 바꾸지 못했어요. 다시 시도해 주세요.");
     } finally {
       setBusy(false);
     }
@@ -369,10 +416,15 @@ export default function CommunityAlbum({ configured, user, onClose, onRequestLog
                   <span><strong>{album.name}</strong><small>{album.ownerName}의 앨범</small>
                     {album.locked && <small className="album-lock-badge"><Lock size={12} /> 암호 있는 앨범</small>}</span>
                 </button>
-                {canDeleteAlbum(user, album) && (
-                  <button type="button" className="community-album-delete" disabled={busy}
-                    title="앨범 삭제" aria-label={`${album.name} 앨범 삭제`}
-                    onClick={() => void deleteAlbum(album)}><Trash2 size={17} /></button>
+                {canManageAlbum(user, album) && (
+                  <div className="community-album-card-actions">
+                    <button type="button" className="community-album-delete" disabled={busy}
+                      title="앨범 삭제" aria-label={`${album.name} 앨범 삭제`}
+                      onClick={() => void deleteAlbum(album)}><Trash2 size={17} /></button>
+                    <button type="button" className="community-album-rename" disabled={busy}
+                      title="앨범 이름 수정" aria-label={`${album.name} 앨범 이름 수정`}
+                      onClick={() => openRenameDialog(album)}><Pencil size={17} /></button>
+                  </div>
                 )}
               </article>
             ))}
@@ -399,6 +451,25 @@ export default function CommunityAlbum({ configured, user, onClose, onRequestLog
               {error && <p className="community-album-error" role="status">{error}</p>}
               <button type="submit" className="account-primary" disabled={busy || !user || !albumName.trim() || !albumCode.trim()}>
                 <Plus size={18} /> 앨범 만들기
+              </button>
+            </form>
+          </section>
+        </div>
+      )}
+
+      {renameDialog && (
+        <div className="album-subdialog-overlay" role="dialog" aria-modal="true" aria-label="앨범 이름 수정"
+          onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) setRenameDialog(null); }}>
+          <section className="album-subdialog album-rename-dialog">
+            <header className="album-subdialog-header"><div><Pencil size={20} /><strong>앨범 이름 수정</strong></div>
+              <button type="button" aria-label="앨범 이름 수정 닫기" disabled={busy}
+                onClick={() => setRenameDialog(null)}><X size={20} /></button></header>
+            <form className="album-create-form" onSubmit={(event) => void submitRename(event)}>
+              <label><span>새 앨범 이름</span><input type="text" value={renameName} maxLength={40} autoFocus
+                placeholder="새 앨범 이름을 적어 주세요" onChange={(event) => { setRenameName(event.target.value); setRenameError(""); }} /></label>
+              {renameError && <p className="community-album-error" role="status">{renameError}</p>}
+              <button type="submit" className="account-primary" disabled={busy || !renameName.trim()}>
+                <Pencil size={17} /> {busy ? "저장하는 중..." : "이름 저장"}
               </button>
             </form>
           </section>

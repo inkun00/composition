@@ -1,0 +1,6 @@
+.community-album-card-actions { position: absolute; top: 10px; right: 10px; display: grid; gap: 6px; }
+.community-album-card-actions .community-album-delete { position: static; }
+.community-album-rename { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid #d9d3e2; border-radius: 7px; background: #fff; color: #6253a6; cursor: pointer; }
+.community-album-rename:hover { border-color: #b7a5e7; background: #f6f2ff; }
+.community-album-rename:disabled { opacity: .5; cursor: wait; }
+.album-rename-dialog { width: min(440px, 100%); }
