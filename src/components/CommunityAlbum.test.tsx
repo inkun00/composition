@@ -142,7 +142,7 @@ describe("모두의 앨범", () => {
     expect(onPlay).toHaveBeenCalledWith(song);
   });
 
-  it("앨범 만들기 창에서 입력한 이름으로 앨범을 생성한다", async () => {
+  it("앨범 이름과 인증코드를 입력해야 앨범을 생성한다", async () => {
     firebaseMocks.listCommunityAlbums.mockResolvedValue([]);
     mount(<CommunityAlbum configured user={user} onClose={() => undefined} onRequestLogin={() => undefined}
       onPlay={vi.fn().mockResolvedValue(true)} onOpenProject={() => undefined} />);
@@ -155,11 +155,41 @@ describe("모두의 앨범", () => {
       setter?.call(input, album.name);
       input?.dispatchEvent(new Event("input", { bubbles: true }));
     });
+    expect(container?.querySelector<HTMLButtonElement>('form button[type="submit"]')?.disabled).toBe(true);
+    const codeInput = container?.querySelector<HTMLInputElement>('input[placeholder="인증코드를 입력해 주세요"]');
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+      setter?.call(codeInput, "마음멜로디");
+      codeInput?.dispatchEvent(new Event("input", { bubbles: true }));
+    });
     await act(async () => container?.querySelector("form")?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
     await flush();
 
-    expect(firebaseMocks.createCommunityAlbum).toHaveBeenCalledWith(user.uid, user.displayName, album.name);
+    expect(firebaseMocks.createCommunityAlbum).toHaveBeenCalledWith(user.uid, user.displayName, album.name, "마음멜로디");
     expect(container?.textContent).toContain(album.name);
+  });
+
+  it("인증코드가 틀리면 앨범 생성 오류를 안내한다", async () => {
+    firebaseMocks.createCommunityAlbum.mockRejectedValue({ code: "permission-denied" });
+    mount(<CommunityAlbum configured user={user} onClose={() => undefined} onRequestLogin={() => undefined}
+      onPlay={vi.fn().mockResolvedValue(true)} onOpenProject={() => undefined} />);
+    await flush();
+
+    await act(async () => buttonNamed("앨범 만들기")?.click());
+    const nameInput = container?.querySelector<HTMLInputElement>('input[placeholder="예: 우리 반 여름 노래"]');
+    const codeInput = container?.querySelector<HTMLInputElement>('input[placeholder="인증코드를 입력해 주세요"]');
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+      setter?.call(nameInput, album.name);
+      nameInput?.dispatchEvent(new Event("input", { bubbles: true }));
+      setter?.call(codeInput, "잘못된 코드");
+      codeInput?.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await act(async () => container?.querySelector("form")?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
+    await flush();
+
+    expect(firebaseMocks.createCommunityAlbum).toHaveBeenCalledWith(user.uid, user.displayName, album.name, "잘못된 코드");
+    expect(container?.querySelector('[role="status"]')?.textContent).toContain("인증코드나 로그인 상태를 확인해 주세요.");
   });
 
   it("앨범 소유자가 앨범과 내부 음악을 삭제할 수 있다", async () => {

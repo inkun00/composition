@@ -95,11 +95,18 @@ export default function CommunityAlbum({ configured, user, onClose, onRequestLog
   const [scoreSong, setScoreSong] = useState<PublishedSong | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [albumName, setAlbumName] = useState("");
+  const [albumCode, setAlbumCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [playingSongId, setPlayingSongId] = useState<string | null>(null);
   const [manageAccess, setManageAccess] = useState<PublicationAccess>("audio");
   const [error, setError] = useState("");
+
+  const closeCreateDialog = useCallback(() => {
+    setCreateOpen(false);
+    setAlbumCode("");
+    setError("");
+  }, []);
 
   const refreshAlbums = useCallback(async () => {
     if (!configured) return;
@@ -126,7 +133,7 @@ export default function CommunityAlbum({ configured, user, onClose, onRequestLog
       if (event.key !== "Escape") return;
       if (scoreSong) setScoreSong(null);
       else if (selectedSong) setSelectedSong(null);
-      else if (createOpen) setCreateOpen(false);
+      else if (createOpen) closeCreateDialog();
       else onClose();
     };
     document.body.style.overflow = "hidden";
@@ -135,7 +142,7 @@ export default function CommunityAlbum({ configured, user, onClose, onRequestLog
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", closeOnEscape);
     };
-  }, [createOpen, onClose, scoreSong, selectedSong]);
+  }, [closeCreateDialog, createOpen, onClose, scoreSong, selectedSong]);
 
   async function openAlbum(album: CommunityAlbumItem) {
     setSelectedAlbum(album);
@@ -181,17 +188,26 @@ export default function CommunityAlbum({ configured, user, onClose, onRequestLog
       setError("앨범 이름을 입력해 주세요.");
       return;
     }
+    const trimmedCode = albumCode.trim();
+    if (!trimmedCode) {
+      setError("인증코드를 입력해 주세요.");
+      return;
+    }
     setBusy(true);
     setError("");
     try {
       const { createCommunityAlbum } = await import("../firebase/communityAlbums");
-      const album = await createCommunityAlbum(user.uid, userName(user), trimmedName);
+      const album = await createCommunityAlbum(user.uid, userName(user), trimmedName, trimmedCode);
       setAlbums((current) => [album, ...current]);
       setAlbumName("");
+      setAlbumCode("");
       setCreateOpen(false);
     } catch (createError) {
       console.error(createError);
-      setError("앨범을 만들지 못했어요. 이름을 확인하고 다시 시도해 주세요.");
+      setError(createError && typeof createError === "object" && "code" in createError &&
+        createError.code === "permission-denied"
+        ? "인증코드나 로그인 상태를 확인해 주세요."
+        : "앨범을 만들지 못했어요. 잠시 뒤 다시 시도해 주세요.");
     } finally {
       setBusy(false);
     }
@@ -263,7 +279,7 @@ export default function CommunityAlbum({ configured, user, onClose, onRequestLog
           </div>
           <div className="community-header-actions">
             {!selectedAlbum && <button type="button" className="community-create-button"
-              onClick={() => { setCreateOpen(true); setError(""); }}><Plus size={17} /> 앨범 만들기</button>}
+              onClick={() => { setAlbumCode(""); setCreateOpen(true); setError(""); }}><Plus size={17} /> 앨범 만들기</button>}
             <button type="button" className="account-close" aria-label="모두의 앨범 닫기" onClick={onClose}><X size={20} /></button>
           </div>
         </header>
@@ -311,17 +327,19 @@ export default function CommunityAlbum({ configured, user, onClose, onRequestLog
 
       {createOpen && (
         <div className="album-subdialog-overlay" role="dialog" aria-modal="true" aria-label="앨범 만들기"
-          onMouseDown={(event) => { if (event.target === event.currentTarget) setCreateOpen(false); }}>
+          onMouseDown={(event) => { if (event.target === event.currentTarget) closeCreateDialog(); }}>
           <section className="album-subdialog album-create-dialog">
             <header className="album-subdialog-header"><div><Folder size={20} /><strong>앨범 만들기</strong></div>
-              <button type="button" aria-label="앨범 만들기 닫기" onClick={() => setCreateOpen(false)}><X size={20} /></button></header>
+              <button type="button" aria-label="앨범 만들기 닫기" onClick={closeCreateDialog}><X size={20} /></button></header>
             <form className="album-create-form" onSubmit={(event) => void submitAlbum(event)}>
               <label><span>앨범 이름</span><input type="text" value={albumName} maxLength={40} autoFocus
                 placeholder="예: 우리 반 여름 노래" onChange={(event) => { setAlbumName(event.target.value); setError(""); }} /></label>
+              <label><span>인증코드</span><input type="password" value={albumCode} maxLength={40} autoComplete="off"
+                placeholder="인증코드를 입력해 주세요" onChange={(event) => { setAlbumCode(event.target.value); setError(""); }} /></label>
               {!user && <div className="album-login-needed"><Lock size={18} /><span>로그인한 사용자만 앨범을 만들 수 있어요.</span>
                 <button type="button" onClick={onRequestLogin}>로그인</button></div>}
               {error && <p className="community-album-error" role="status">{error}</p>}
-              <button type="submit" className="account-primary" disabled={busy || !user || !albumName.trim()}>
+              <button type="submit" className="account-primary" disabled={busy || !user || !albumName.trim() || !albumCode.trim()}>
                 <Plus size={18} /> 앨범 만들기
               </button>
             </form>

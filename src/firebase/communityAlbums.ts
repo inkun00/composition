@@ -75,10 +75,13 @@ export async function listCommunityAlbums(): Promise<CommunityAlbum[]> {
   }).sort((a, b) => b.updatedAt - a.updatedAt || a.name.localeCompare(b.name, "ko"));
 }
 
-export async function createCommunityAlbum(ownerId: string, ownerName: string, name: string): Promise<CommunityAlbum> {
+export async function createCommunityAlbum(ownerId: string, ownerName: string, name: string, code: string): Promise<CommunityAlbum> {
   const trimmedName = name.trim();
   if (!trimmedName || trimmedName.length > 40) throw new Error("invalid-album-name");
-  const albumRef = doc(collection(requireFirestore(), "communityAlbums"));
+  if (!code.trim()) throw new Error("missing-album-code");
+  const db = requireFirestore();
+  await setDoc(doc(db, "albumCreatorAccess", ownerId), { code: code.trim() });
+  const albumRef = doc(collection(db, "communityAlbums"));
   await setDoc(albumRef, {
     name: trimmedName,
     ownerId,
