@@ -1,4 +1,5 @@
 import { findSoundEffect, SOUND_EFFECTS, type SoundEffectId, type SoundEffectCategory } from "../music/soundEffects";
+import { publicAssetUrl } from "../platform/portable";
 
 const sampleBufferCache = new Map<string, Promise<AudioBuffer>>();
 
@@ -111,7 +112,7 @@ function queueSyntheticEffect(context: BaseAudioContext, destination: AudioNode,
 function loadSampleBuffer(context: BaseAudioContext, source: string): Promise<AudioBuffer> {
   const cached = sampleBufferCache.get(source);
   if (cached) return cached;
-  const request = fetch(source)
+  const request = fetch(publicAssetUrl(source))
     .then((response) => {
       if (!response.ok) throw new Error(`Cannot load sound effect sample: ${source}`);
       return response.arrayBuffer();

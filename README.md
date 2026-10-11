@@ -34,6 +34,29 @@ npm run dev
 
 브라우저에서 [http://127.0.0.1:4173](http://127.0.0.1:4173)을 엽니다.
 
+## 제출용 ZIP 만들기
+
+```bash
+npm run build:portable
+```
+
+`artifacts/maeum-melody-portable/` 폴더와 `artifacts/maeum-melody-portable.zip`이 만들어집니다.
+ZIP을 원하는 위치에 모두 압축 해제한 뒤 `index.html`을 Edge·Chrome에서 열면 실행됩니다.
+이미지·효과음·비트 샘플과 앱 코드는 패키지에 포함하며, 악기 음원·글꼴과 기존 Firebase는 인터넷으로 연결합니다.
+수신 컴퓨터에는 npm이나 개발 서버가 필요 없습니다.
+
+Google 로그인은 `file://` 주소에서 지원되지 않으므로 Windows에서는 함께 제공하는
+`전체기능-실행.cmd`를 사용합니다. Windows 기본 PowerShell로 로컬 서버를 켜고
+Firebase 허용 도메인인 `http://localhost:4173`을 엽니다. 포트가 사용 중이면 빈 포트를 선택합니다.
+실행 창에서 Enter를 누르면 서버가 종료됩니다. Node.js 설치는 필요 없습니다.
+
+악보 사진 인식은 이 로컬 서버 화면에서 `start-score-reader.cmd`를 추가로 실행합니다.
+사진 인식 도우미에는 기존과 동일하게 Node.js 및 Python/인식 모델 준비가 필요합니다.
+MusicXML·MXL 가져오기는 도우미 없이 사용합니다. 자세한 안내는 패키지의 `실행안내.html`에 있습니다.
+
+로컬 공유 링크와 PDF QR은 현재 온라인 앱 `https://maeum-melody.vercel.app`을 사용합니다.
+다른 컴퓨터로 옮길 작업은 기존 클라우드 악보함에 저장해 주세요.
+
 ## Firebase 연결
 
 1. Firebase Console에서 프로젝트와 Web App을 만듭니다.

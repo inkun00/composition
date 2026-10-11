@@ -1,0 +1,128 @@
+/* Shared surface language for the app; score notation and printed PDF stay unchanged. */
+:root {
+  --app-surface-radius: 20px;
+  --app-card-radius: 14px;
+  --app-dialog-radius: 22px;
+  --app-surface-shadow: 0 8px 26px rgba(43, 34, 72, .07);
+  --app-card-shadow: 0 3px 12px rgba(43, 34, 72, .045);
+  --app-dialog-shadow: 0 24px 68px rgba(34, 27, 56, .24);
+}
+
+/* Large working surfaces share a quiet edge and depth. */
+.progress-card,
+.song-mood-setup,
+.preset-chooser,
+.meter-chooser,
+.length-chooser,
+.composition-section,
+.editor-card,
+.arrangement-section,
+.publish-with-guide,
+.publish-section,
+.accompaniment-builder,
+.sound-effect-editor,
+.beat-instrument-chooser,
+.song-structure-chooser {
+  border-radius: var(--app-surface-radius);
+  box-shadow: var(--app-surface-shadow);
+}
+
+.meter-badge,
+.story-focus,
+.mixer-board {
+  border-radius: var(--app-surface-radius);
+}
+
+.candidate-section.candidate-sidebar {
+  border-radius: var(--app-surface-radius);
+  box-shadow: var(--app-surface-shadow);
+}
+
+.candidate-sidebar .section-heading {
+  border-radius: 19px 19px 0 0;
+}
+
+/* Album, library, and action cards use a smaller common radius. */
+.account-profile,
+.account-score,
+.community-album-folder,
+.community-song,
+.album-login-needed,
+.album-song-actions button,
+.album-access-options > button,
+.publish-album-grid button,
+.publish-selected-album,
+.publish-action-group {
+  border-radius: var(--app-card-radius);
+  box-shadow: var(--app-card-shadow);
+}
+
+/* Flat choice cards retain their selected and hover emphasis. */
+.meter-option,
+.length-option,
+.preset-summary,
+.preview-instrument-picker,
+.candidate-card,
+.candidate-sidebar .candidate-card,
+.instrument-card,
+.selected-instrument,
+.accompaniment-summary,
+.accompaniment-style,
+.accompaniment-mode-grid button,
+.lyric-card,
+.mood-choice-group,
+.song-story-part,
+.song-structure-option,
+.beat-event-count,
+.beat-palette,
+.beat-track-picker,
+.beat-pattern-editor,
+.beat-role-group,
+.beat-track-tab,
+.beat-instrument-options button,
+.beat-pattern-measure,
+.recording-mode-options button {
+  border-radius: var(--app-card-radius);
+}
+
+/* Dialog shells use the same silhouette while preserving their own layout. */
+.account-library,
+.album-subdialog,
+.backing-export-dialog,
+.score-image-import-dialog,
+.homr-setup-dialog,
+.recording-guide-dialog,
+.measure-sound-dialog,
+.save-failure-dialog,
+.karaoke-window {
+  border-radius: var(--app-dialog-radius);
+  box-shadow: var(--app-dialog-shadow);
+}
+
+.karaoke-toolbar {
+  border-radius: var(--app-dialog-radius) var(--app-dialog-radius) 14px 14px;
+}
+
+.qr-playback-card {
+  border-radius: var(--app-dialog-radius);
+  box-shadow: 0 18px 48px rgba(58, 40, 106, .14);
+}
+
+@media (max-width: 620px) {
+  .account-library,
+  .album-subdialog,
+  .save-failure-dialog,
+  .homr-setup-dialog {
+    border-radius: var(--app-dialog-radius) var(--app-dialog-radius) 0 0;
+  }
+}
+
+@media (max-width: 900px) {
+  .karaoke-window {
+    border-radius: 0;
+  }
+
+  .karaoke-toolbar {
+    border-radius: 0 0 14px 14px;
+  }
+}

@@ -74,7 +74,7 @@
 
   .project-title .eyebrow {
     color: #858b98;
-    font-size: 11px;
+    font-size: 12px;
     letter-spacing: .04em;
   }
 
@@ -90,7 +90,7 @@
     border-color: #cae5da;
     background: #f2faf7;
     box-shadow: none;
-    font-size: 12px;
+    font-size: 13px;
   }
 
   .account-trigger {
@@ -187,7 +187,7 @@
 
   .mood-choice-group > p {
     color: #747b89;
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .tempo-mood-options button,
@@ -240,7 +240,7 @@
   .tempo-mood-options small,
   .rhythm-mood-options small {
     color: #727887;
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .setup-with-guide {
@@ -434,7 +434,7 @@
 
   .candidate-sidebar .section-heading p {
     color: #717887;
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .candidate-priority-note {
@@ -491,7 +491,7 @@
 
   .candidate-sidebar .card-top span {
     color: #707786;
-    font-size: 10px;
+    font-size: 12px;
     line-height: 1.45;
   }
 
@@ -586,7 +586,7 @@
   .note-tools button span {
     color: #626977;
     font-family: inherit;
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 700;
   }
 
@@ -632,6 +632,10 @@
     background: rgba(255, 255, 255, .9);
     box-shadow: 0 -10px 30px rgba(35, 29, 58, .08);
     backdrop-filter: blur(18px);
+  }
+
+  .bottom-bar .save-status-row {
+    display: none;
   }
 
   .bottom-bar button {

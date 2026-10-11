@@ -9,6 +9,7 @@ import { BEAT_INSTRUMENTS, isValidBeatInstrumentSelection, isValidBeatVolume, ty
 import { isValidBeatPattern, MAX_BEAT_PATTERN_EVENTS, type BeatPatternEvent } from "./beatPattern";
 import { isSongStructureForLength, type SongStructureId } from "./songStructure";
 import { isSongLength, type SongLength } from "./songLength";
+import { shareLocation } from "../platform/shareLocation";
 
 type CompactBeatEvent = [number, number, number];
 
@@ -374,19 +375,22 @@ export function readCompositionFromHash(hash: string): SharedComposition | null 
 }
 
 export function buildShareUrl(composition: SharedComposition, location: Pick<Location, "origin" | "pathname">): string {
-  return `${location.origin}${location.pathname}#song=${encodeSharedComposition(composition)}`;
+  const target = shareLocation(location);
+  return `${target.origin}${target.pathname}#song=${encodeSharedComposition(composition)}`;
 }
 
 export function buildQrPlaybackUrl(
   songId: string,
   location: Pick<Location, "origin" | "pathname">
 ): string {
-  return `${location.origin}${location.pathname}?play=qr&song=${encodeURIComponent(songId)}`;
+  const target = shareLocation(location);
+  return `${target.origin}${target.pathname}?play=qr&song=${encodeURIComponent(songId)}`;
 }
 
 export function buildEmbeddedQrPlaybackUrl(
   composition: SharedComposition,
   location: Pick<Location, "origin" | "pathname">
 ): string {
-  return `${location.origin}${location.pathname}?play=qr#song=${encodeSharedComposition(composition)}`;
+  const target = shareLocation(location);
+  return `${target.origin}${target.pathname}?play=qr#song=${encodeSharedComposition(composition)}`;
 }

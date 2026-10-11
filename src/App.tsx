@@ -8,6 +8,7 @@ import { reviewRecordedPitch, type RecordingPitchReview } from "./audio/pitchRev
 import PlayIcon from "./components/PlayIcon";
 import PdfScoreSheet from "./components/PdfScoreSheet";
 import RecordingGuideDialog from "./components/RecordingGuideDialog";
+import LyricVideoExportButton from "./components/LyricVideoExportButton";
 import ScoreMeasure from "./components/ScoreMeasure";
 import type { KaraokeGuideMode } from "./audio/karaokeGuide";
 import type { RecordingCaptureMode } from "./audio/vocalCapture";
@@ -25,6 +26,8 @@ import SongStoryMap from "./components/SongStoryMap";
 import SongStructureChooser from "./components/SongStructureChooser";
 import SongLengthChooser from "./components/SongLengthChooser";
 import CandidateFeelingTabs from "./components/CandidateFeelingTabs";
+import MobileEditorDisclosure from "./components/MobileEditorDisclosure";
+import MobileMeasureRange from "./components/MobileMeasureRange";
 import { useBeatPatternState } from "./hooks/useBeatPatternState";
 import { UNSAVED_WORK_WARNING, useUnsavedWorkWarning } from "./hooks/useUnsavedWorkWarning";
 import { backingDisplayNotes, repeatFourMeasures, rationalFromBeats } from "./components/backingDisplayNotes";
@@ -54,6 +57,9 @@ import { findSoundEffect, type SoundEffectId } from "./music/soundEffects";
 import { buildEmbeddedQrPlaybackUrl, buildQrPlaybackUrl, buildShareUrl, readCompositionFromHash, type SharedComposition } from "./music/share";
 import type { HarmonyStory, MelodyCandidate, NoteEvent, SoundEffectEvent } from "./music/types";
 import { useKaraokeAutoFocus } from "./hooks/useKaraokeAutoFocus";
+import { useLyricVideoExport } from "./hooks/useLyricVideoExport";
+import { publicAssetUrl } from "./platform/portable";
+import { buildLyricVideoPlan, type LyricVideoPlan } from "./video/lyricVideoPlan";
 
 type MeasureDraft = {
   story: HarmonyStory;
@@ -257,7 +263,7 @@ function isLocalHost(location: Pick<Location, "hostname">): boolean {
 
 function qrPlaybackLocation(location: Location): Pick<Location, "origin" | "pathname"> {
   return isLocalHost(location)
-    ? { origin: "https://composition-tan.vercel.app", pathname: "/" }
+    ? { origin: "https://maeum-melody.vercel.app", pathname: "/" }
     : location;
 }
 
@@ -402,6 +408,8 @@ export default function App() {
   const [recordingGuidePromptOpen, setRecordingGuidePromptOpen] = useState(false);
   const [recordingStatus, setRecordingStatus] = useState("");
   const [recordingDownloadUrl, setRecordingDownloadUrl] = useState("");
+  const [recordingVideoPlan, setRecordingVideoPlan] = useState<LyricVideoPlan | null>(null);
+  const lyricVideoExport = useLyricVideoExport();
   const [recordedAudioBuffer, setRecordedAudioBuffer] = useState<AudioBuffer | null>(null);
   const [recordedVocalBuffer, setRecordedVocalBuffer] = useState<AudioBuffer | null>(null);
   const [recordedBackingBuffer, setRecordedBackingBuffer] = useState<AudioBuffer | null>(null);
@@ -503,6 +511,12 @@ export default function App() {
   const completedCount = measures.filter((measure) => measure.notes !== null).length;
   const hasUnsavedWork = (completedCount > 0 || currentDraftFingerprint !== initialDraftFingerprint.current) &&
     currentDraftFingerprint !== cloudSavedFingerprint;
+  const localSaveFailed = saveStatus.includes("못했") || saveStatus.includes("실패");
+  const cloudSaveIsCurrent = Boolean(authUser) && currentDraftFingerprint === cloudSavedFingerprint;
+  const cloudSaveFailed = saveIssues.length > 0 && !cloudSaveIsCurrent;
+  const cloudSaveLabel = !firebaseConfigured ? "이 기기에만 저장" : !authReady ? "계정 확인 중" :
+    !authUser ? "계정 저장: 로그인 필요" : cloudSaveNotice.includes("저장 중") ? "계정 저장 중" :
+      cloudSaveIsCurrent ? "계정 저장 완료 ✓" : cloudSaveFailed ? "계정 저장 문제 확인" : "계정 저장 확인";
   const skipNextUnloadWarning = useUnsavedWorkWarning(
     !showOpening && !mobileRecordMode && !qrPlaybackMode && hasUnsavedWork
   );
@@ -512,7 +526,6 @@ export default function App() {
   // Completing every measure only unlocks the finish button.  Accompaniment is
   // deliberately held back until that button opens the arrangement stage.
   const accompanimentReady = showArrangement && allValid;
-  const activeStep = showArrangement ? 3 : 2;
   const playingSong = songPlaybackState !== "idle";
   const karaokeRunning = recordingSong || practicingSong;
   const isAnyPlaying = playingId !== null || playingSong || playingMeasure || karaokeRunning || presetPreviewing || beatPreviewing;
@@ -639,6 +652,7 @@ export default function App() {
         setAuthUser(user);
         setAuthReady(true);
         setActiveCloudScoreId(null);
+        setCloudSavedFingerprint(null);
         setCloudError("");
         setCloudSaveNotice("");
       });
@@ -872,7 +886,7 @@ export default function App() {
     return (
       <div className="preview-instrument-picker measure-instrument-picker" aria-label="가락 미리듣기 악기 선택">
         <div className="preview-instrument-intro">
-          <img className="workspace-guide preview-guide-instrument" src="/illustrations/character-instrument-keyboard-boy-v1.webp"
+          <img className="workspace-guide preview-guide-instrument" src={publicAssetUrl("/illustrations/character-instrument-keyboard-boy-v1.webp")}
             alt="" aria-hidden="true" draggable="false" />
           <div className="preview-instrument-copy">
             <span className="section-kicker">먼저 소리를 골라요</span>
@@ -1389,13 +1403,9 @@ export default function App() {
     setGeneratedShareUrl(url);
     try {
       await navigator.clipboard.writeText(url);
-      setShareStatus(isLocalHost(window.location)
-        ? "녹음 링크를 복사했어요. localhost 주소는 스마트폰에서 바로 열리지 않을 수 있어요."
-        : "스마트폰 녹음 링크를 복사했어요. QR을 스캔해도 바로 열 수 있어요.");
+      setShareStatus("스마트폰 녹음 링크를 복사했어요. QR을 스캔해도 바로 열 수 있어요.");
     } catch {
-      setShareStatus(isLocalHost(window.location)
-        ? "아래 링크를 길게 눌러 복사해 주세요. localhost 주소는 스마트폰에서 바로 열리지 않을 수 있어요."
-        : "아래 링크를 길게 눌러 복사하거나 QR을 스캔해 주세요.");
+      setShareStatus("아래 링크를 길게 눌러 복사하거나 QR을 스캔해 주세요.");
     }
   }
 
@@ -1663,6 +1673,7 @@ export default function App() {
     }
     setCloudBusy(true);
     setCloudError("");
+    setCloudSaveNotice("계정에 저장 중...");
     try {
       const { saveCloudScore } = await import("./firebase/scores");
       const savedScore = await saveCloudScore(authUser.uid, draft, asCopy ? undefined : activeCloudScoreId ?? undefined);
@@ -1812,6 +1823,8 @@ export default function App() {
     setMicrophoneLevel(0);
     setKaraokeHighlight({ section: "intro", measureIndex: null, noteId: null });
     setRecordingStatus("녹음을 준비하고 있어요.");
+    setRecordingVideoPlan(null);
+    lyricVideoExport.reset();
     if (recordingDownloadUrl) {
       URL.revokeObjectURL(recordingDownloadUrl);
       setRecordingDownloadUrl("");
@@ -1855,6 +1868,7 @@ export default function App() {
       setRecordedAudioBuffer(result.audioBuffer);
       setRecordedVocalBuffer(result.vocalAudioBuffer);
       setRecordedBackingBuffer(result.backingAudioBuffer);
+      setRecordingVideoPlan(buildLyricVideoPlan(songTitle, playable, bpm, result.introSeconds, result.audioBuffer.duration));
       setAnalyzingPitch(captureMode === "personal");
       // Run after the recording UI has settled so pitch checking never makes
       // the final recording feel slow. This is a gentle review, not a grade.
@@ -2007,6 +2021,11 @@ export default function App() {
     return karaokeMode === "practice" ? "연습 준비" : "녹음 준비";
   }
 
+  const lyricVideoButton = <LyricVideoExportButton hasLyrics={recordingVideoPlan?.hasLyrics ?? false}
+    busy={processingRecording || mixingPreview} exporting={lyricVideoExport.exporting}
+    progress={lyricVideoExport.progress} status={lyricVideoExport.status}
+    onSave={() => void lyricVideoExport.save(recordingDownloadUrl, recordingVideoPlan, safeSongFileName("mp4"))} />;
+
   if (qrPlaybackMode) return <QrSongPlayback composition={incomingShare} songId={qrSongId} />;
 
   return (
@@ -2016,8 +2035,8 @@ export default function App() {
       {showOpening && (
         <section className="opening-screen" aria-label="마음멜로디 시작 화면">
           <picture className="opening-visual" aria-hidden="true">
-            <source media="(max-width: 700px)" srcSet="/illustrations/opening-studio-mobile-v1.webp" />
-            <img src="/illustrations/opening-studio-desktop-v2.webp" alt="" fetchPriority="high" />
+            <source media="(max-width: 700px)" srcSet={publicAssetUrl("/illustrations/opening-studio-mobile-v1.webp")} />
+            <img src={publicAssetUrl("/illustrations/opening-studio-desktop-v2.webp")} alt="" fetchPriority="high" />
           </picture>
           <div className="opening-content">
             <div className="opening-brand-lockup">
@@ -2068,7 +2087,8 @@ export default function App() {
           <strong>{selectedPreset.childName} · {songLength}마디</strong>
         </div>
         <div className="topbar-actions">
-          <div className="save-button" role="status" aria-live="polite" data-testid="save-status">{saveStatus}</div>
+          <div className={localSaveFailed ? "save-button failed" : "save-button"} role="status" aria-live="polite" data-testid="save-status">{saveStatus}</div>
+          <span className={`topbar-cloud-status${cloudSaveIsCurrent ? " saved" : cloudSaveFailed ? " failed" : ""}`}>{cloudSaveLabel}</span>
           <button type="button" className={authUser ? "account-trigger signed-in" : "account-trigger"}
             data-testid="account-library-button" onClick={() => setAccountLibraryOpen(true)}>
             {authUser?.photoURL
@@ -2132,13 +2152,13 @@ export default function App() {
 
             <div className="backing-export-studio" aria-hidden="true">
               <figure className="backing-worker keyboard-worker">
-                <img src="/illustrations/backing-export-keyboard-boy-v2.webp" alt="" draggable="false" />
+                <img src={publicAssetUrl("/illustrations/backing-export-keyboard-boy-v2.webp")} alt="" draggable="false" />
               </figure>
               <figure className="backing-worker rhythm-worker">
-                <img src="/illustrations/backing-export-percussion-girl-v2.webp" alt="" draggable="false" />
+                <img src={publicAssetUrl("/illustrations/backing-export-percussion-girl-v2.webp")} alt="" draggable="false" />
               </figure>
               <figure className="backing-worker mix-worker">
-                <img src="/illustrations/backing-export-mixing-girl-v2.webp" alt="" draggable="false" />
+                <img src={publicAssetUrl("/illustrations/backing-export-mixing-girl-v2.webp")} alt="" draggable="false" />
               </figure>
               <div className="backing-export-note note-one">♪</div>
               <div className="backing-export-note note-two">♫</div>
@@ -2334,6 +2354,7 @@ export default function App() {
                   onClick={saveProcessedRecording}>
                   {processingRecording ? "보정 중..." : "이 느낌으로 MP3 저장"}
                 </button>
+                {lyricVideoButton}
               </div>
             )}
             {false && recordingDownloadUrl && (
@@ -2390,37 +2411,16 @@ export default function App() {
             </button>
             {recordingStatus && <p className="mobile-record-status" role="status">{recordingStatus}</p>}
             {recordingDownloadUrl && (
-              <button type="button" className="mobile-record-save action-button" onClick={saveProcessedRecording}>
+              <><button type="button" className="mobile-record-save action-button" onClick={saveProcessedRecording}>
                 MP3 저장
               </button>
+              {lyricVideoButton}</>
             )}
           </section>
         </main>
       )}
 
-      {false && <nav className="stepper" aria-label="작곡 단계">
-        {["화음 이야기", "박자와 길이", `${songLength}마디 가락`, "악기", "가사", "완성"].map((label, index) => (
-          <div className={index < activeStep ? "step done" : index === activeStep ? "step active" : "step"} key={label}>
-            <span>{index < activeStep ? "✓" : index + 1}</span>
-            <small>{label}</small>
-          </div>
-        ))}
-      </nav>}
-
       {!mobileRecordMode && <main>
-        {false && <section className="intro m1-intro">
-          <div>
-            <span className="section-kicker">M2 · 100가지 화음 이야기</span>
-            <h1>{songLength}마디의 음악 여행을 만들어요</h1>
-            <p>화음 이야기와 곡 길이를 고른 뒤, 각 마디에 어울리는 가락을 선택하세요.</p>
-          </div>
-          <div className="progress-card">
-            <span>완성한 마디</span>
-            <strong>{completedCount}<small>/{songLength}</small></strong>
-            <div><i style={{ width: `${completedCount / songLength * 100}%` }} /></div>
-          </div>
-        </section>}
-
         <SongMoodSetup bpm={bpm} rhythmStyleId={accompanimentStyleId} disabled={isAnyPlaying}
           onTempoChange={setBpm} onRhythmChange={setAccompanimentStyleId} />
 
@@ -2450,7 +2450,7 @@ export default function App() {
             })}
           </div>
           <img className="workspace-guide meter-guide-rhythm"
-            src="/illustrations/character-rhythm-shaker-girl-v1.webp"
+            src={publicAssetUrl("/illustrations/character-rhythm-shaker-girl-v1.webp")}
             alt="" aria-hidden="true" draggable="false" />
         </section>
 
@@ -2459,7 +2459,7 @@ export default function App() {
         <SongStructureChooser length={songLength} selectedId={structureTemplateId} onSelect={chooseStructure} />
 
         <div className="composition-workspace">
-          <div className="score-workspace-column">
+          <div className="score-workspace-column score-timeline-column">
         <section className="composition-section" aria-labelledby="composition-heading">
           <div className="compact-heading timeline-heading">
             <span className="number-badge">6</span>
@@ -2497,7 +2497,7 @@ export default function App() {
 
           {structurePlan && <SongStoryMap plan={structurePlan} activeIndex={activeIndex}
             completed={measures.map((measure) => measure.notes !== null)} onSelect={selectMeasure} />}
-          <div className="measure-timeline">
+          <MobileMeasureRange total={songLength} activeIndex={activeIndex}>
             {measures.map((measure, index) => (
               <div className="measure-cell" key={index}>
                 <button type="button" data-testid={`measure-${index + 1}`}
@@ -2538,8 +2538,65 @@ export default function App() {
                 </div>
               </div>
             ))}
+          </MobileMeasureRange>
+        </section>
+
+          </div>
+
+        <section className="candidate-section candidate-sidebar">
+          <div className="section-heading">
+            <div>
+              <span className={`dot ${activeMeasure.story}`} />
+              <h2>{activeIndex === measures.length - 1 ? "노래를 끝맺는 가락" : "이 마디에 어울리는 가락"}</h2>
+              <p>{activeIndex === measures.length - 1
+                ? "마지막 화음에 맞춰 편안하게 끝나는 가락만 골랐어요."
+                : `느낌을 고르면 ${meterKey(meter)}박자에 맞는 가락이 나와요.`}</p>
+            </div>
+            <span className="count-pill">{activeIndex + 1}/{songLength} 마디</span>
+          </div>
+          <CandidateFeelingTabs
+            groups={candidateFeelingGroups.map((group) => ({ ...group, count: group.candidates.length }))}
+            activeId={selectedFeelingGroup.id}
+            onChange={setActiveMelodyFeeling} />
+
+          <div className="preview-instrument-picker candidate-instrument-picker" aria-label="가락 미리듣기 악기 선택">
+            <div>
+              <span className="section-kicker">먼저 소리를 골라요</span>
+              <strong>가락을 어떤 악기로 들어 볼까요?</strong>
+              <small>여기서 고른 악기는 완성곡의 가락 악기로도 이어져요.</small>
+            </div>
+            <div className="preview-instrument-options">
+              {QUICK_PREVIEW_INSTRUMENTS.map((instrument) => (
+                <button key={instrument.id} type="button" data-testid={`candidate-preview-instrument-${instrument.id}`}
+                  className={selectedInstrumentId === instrument.id ? "active" : ""}
+                  aria-pressed={selectedInstrumentId === instrument.id}
+                  onClick={() => setSelectedInstrumentId(instrument.id)}>
+                  <span>{instrument.icon}</span><strong>{instrument.name}</strong>
+                </button>
+              ))}
+              <label className="preview-instrument-more">
+                <span>더 많은 악기</span>
+                <select data-testid="candidate-preview-instrument-more-select"
+                  aria-label="더 많은 악기 중에서 선택"
+                  value={MORE_PREVIEW_INSTRUMENTS.some((instrument) => instrument.id === selectedInstrumentId)
+                    ? selectedInstrumentId : ""}
+                  onChange={(event) => event.target.value && setSelectedInstrumentId(event.target.value)}>
+                  <option value="">악기를 골라 보세요</option>
+                  {MORE_PREVIEW_INSTRUMENTS.map((instrument) => (
+                    <option key={instrument.id} value={instrument.id}>{instrument.icon} {instrument.name}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div className="candidate-grid" id="melody-feeling-panel" role="tabpanel"
+            aria-labelledby={`melody-feeling-${selectedFeelingGroup.id}`}>
+            {selectedFeelingGroup.candidates.map(renderCandidateCard)}
           </div>
         </section>
+
+          <div className="score-workspace-column score-editor-column">
 
         <section className="editor-section">
           <div className="editor-copy">
@@ -2566,6 +2623,7 @@ export default function App() {
             </div>
           </div>
 
+          <MobileEditorDisclosure enabled={Boolean(activeMeasure.notes)}>
           <div className={activeMeasure.notes ? "editor-card" : "editor-card empty-editor"}>
             {activeMeasure.notes ? (
               <>
@@ -2632,6 +2690,7 @@ export default function App() {
               <div className="empty-message"><span>♪</span><strong>먼저 가락을 하나 골라 주세요</strong><p>느낌 탭을 누르고 마음에 드는 가락을 골라 보세요.</p></div>
             )}
           </div>
+          </MobileEditorDisclosure>
         </section>
 
         {renderPreviewInstrumentPicker()}
@@ -2649,58 +2708,6 @@ export default function App() {
         </section>
           </div>
 
-        <section className="candidate-section candidate-sidebar">
-          <div className="section-heading">
-            <div>
-              <span className={`dot ${activeMeasure.story}`} />
-              <h2>{activeIndex === measures.length - 1 ? "노래를 끝맺는 가락" : "이 마디에 어울리는 가락"}</h2>
-              <p>{activeIndex === measures.length - 1
-                ? "마지막 화음에 맞춰 편안하게 끝나는 가락만 골랐어요."
-                : `느낌을 고르면 ${meterKey(meter)}박자에 맞는 가락이 나와요.`}</p>
-            </div>
-            <span className="count-pill">{activeIndex + 1}/{songLength} 마디</span>
-          </div>
-          <CandidateFeelingTabs
-            groups={candidateFeelingGroups.map((group) => ({ ...group, count: group.candidates.length }))}
-            activeId={selectedFeelingGroup.id}
-            onChange={setActiveMelodyFeeling} />
-
-          <div className="preview-instrument-picker candidate-instrument-picker" aria-label="가락 미리듣기 악기 선택">
-            <div>
-              <span className="section-kicker">먼저 소리를 골라요</span>
-              <strong>가락을 어떤 악기로 들어 볼까요?</strong>
-              <small>여기서 고른 악기는 완성곡의 가락 악기로도 이어져요.</small>
-            </div>
-            <div className="preview-instrument-options">
-              {QUICK_PREVIEW_INSTRUMENTS.map((instrument) => (
-                <button key={instrument.id} type="button" data-testid={`preview-instrument-${instrument.id}`}
-                  className={selectedInstrumentId === instrument.id ? "active" : ""}
-                  aria-pressed={selectedInstrumentId === instrument.id}
-                  onClick={() => setSelectedInstrumentId(instrument.id)}>
-                  <span>{instrument.icon}</span><strong>{instrument.name}</strong>
-                </button>
-              ))}
-              <label className="preview-instrument-more">
-                <span>더 많은 악기</span>
-                <select data-testid="preview-instrument-more-select"
-                  aria-label="더 많은 악기 중에서 선택"
-                  value={MORE_PREVIEW_INSTRUMENTS.some((instrument) => instrument.id === selectedInstrumentId)
-                    ? selectedInstrumentId : ""}
-                  onChange={(event) => event.target.value && setSelectedInstrumentId(event.target.value)}>
-                  <option value="">악기를 골라 보세요</option>
-                  {MORE_PREVIEW_INSTRUMENTS.map((instrument) => (
-                    <option key={instrument.id} value={instrument.id}>{instrument.icon} {instrument.name}</option>
-                  ))}
-                </select>
-              </label>
-            </div>
-          </div>
-
-          <div className="candidate-grid" id="melody-feeling-panel" role="tabpanel"
-            aria-labelledby={`melody-feeling-${selectedFeelingGroup.id}`}>
-            {selectedFeelingGroup.candidates.map(renderCandidateCard)}
-          </div>
-        </section>
         </div>
 
         {showArrangement && (
@@ -2708,7 +2715,7 @@ export default function App() {
             {completionCelebration && (
               <div className="completion-celebration" role="status">
                 <img className="workspace-guide celebration-guide"
-                  src="/illustrations/character-song-complete-boy-v1.webp"
+                  src={publicAssetUrl("/illustrations/character-song-complete-boy-v1.webp")}
                   alt="" aria-hidden="true" draggable="false" />
                 <div>
                   <strong>{songLength}마디 가락을 완성했어요!</strong>
@@ -2854,7 +2861,7 @@ export default function App() {
                   </div>
                 </div>
                 <img className="workspace-guide accompaniment-guide-recorder"
-                  src="/illustrations/character-music-tip-recorder-boy-v1.webp"
+                  src={publicAssetUrl("/illustrations/character-music-tip-recorder-boy-v1.webp")}
                   alt="" aria-hidden="true" draggable="false" />
               </div>
 
@@ -2940,7 +2947,7 @@ export default function App() {
 
             <div className="publish-section publish-with-guide">
               <img className="workspace-guide publish-guide-singer"
-                src="/illustrations/character-recording-singer-girl-v1.webp"
+                src={publicAssetUrl("/illustrations/character-recording-singer-girl-v1.webp")}
                 alt="" aria-hidden="true" draggable="false" />
               <div className="publish-heading">
                 <div><span className="section-kicker">M4 · 저장과 공유</span><h2>내 악보를 세상에 보여 줘요</h2></div>
@@ -2968,51 +2975,73 @@ export default function App() {
                 <small>{songDescription.length}/600</small>
               </label>
               <div className="publish-actions">
-                <button type="button" className="project-save-button action-button" data-testid="save-project-file"
-                  onClick={saveProjectFile}>
-                  <FileDown size={18} /> 작품 파일 저장
-                </button>
-                <button type="button" className="project-load-button action-button" data-testid="load-project-file"
-                  onClick={() => projectFileInput.current?.click()}>
-                  <FileUp size={18} /> 작품 파일 불러오기
-                </button>
-                <button type="button" className="pdf-button action-button" data-testid="export-pdf"
-                  disabled={exportingPdf} onClick={() => void exportPdf(false)}>
-                  <FileDown size={18} /> {exportingPdf ? "악보 만드는 중..." : "악보 저장"}
-                </button>
-                <button type="button" className="pdf-button action-button" data-testid="export-pdf-with-accompaniment"
-                  disabled={exportingPdf} onClick={() => void exportPdf(true)}>
-                  <FileMusic size={18} /> {exportingPdf ? "악보 만드는 중..." : "악보 저장(반주 포함)"}
-                </button>
-                <button type="button" className="backing-mp3-button action-button" data-testid="export-backing-mp3"
-                  disabled={exportingBacking || !allValid} onClick={() => void exportBackingMp3()}>
-                  <Music2 size={18} /> {exportingBacking ? "반주 만드는 중..." : "반주 저장"}
-                </button>
-                <button type="button" className="mobile-record-link-button action-button" data-testid="create-mobile-recording-link"
-                  disabled={!allValid} onClick={() => void createMobileRecordingLink()}>
-                  <QrCode size={18} /> 스마트폰 녹음 링크
-                </button>
-                <div className="publish-share-pair">
-                  <button type="button" className="practice-song-button action-button" data-testid="practice-song"
-                    disabled={isAnyPlaying || !allValid} onClick={() => void practiceSong()}>
-                    <Music2 size={18} /> {practicingSong ? "연습 중..." : "노래 연습하기"}
+                {firebaseConfigured && <div className="publish-action-group publish-action-group-cloud">
+                  <h3>다른 기기에서도 이어 만들기</h3>
+                  <p>내 악보함에 저장하면 다른 컴퓨터에서도 이 노래를 볼 수 있어요.</p>
+                  <button type="button" className="publish-cloud-save action-button" disabled={cloudBusy}
+                    onClick={() => authUser ? void handleCloudSave(false) : setAccountLibraryOpen(true)}>
+                    <Library size={18} /> {cloudBusy ? "저장 중..." : authUser ? "내 악보함에 저장" : "로그인하고 저장"}
                   </button>
-                  <button type="button" className="record-mp3-button action-button" data-testid="record-song-mp3"
-                    disabled={isAnyPlaying || !allValid} onClick={() => setRecordingGuidePromptOpen(true)}>
-                    <Mic2 size={18} /> {recordingSong ? "녹음 중..." : "노래 녹음"}
-                  </button>
-                  <a className="samboard-share-button action-button" data-testid="open-samboard-share"
-                    href="https://samboard.vivasam.com/studentEntry/?brdId=brd-0QZ60VWZ56TNW"
-                    target="_blank" rel="noopener noreferrer">
-                    <ExternalLink size={18} /> 노래 공유
-                  </a>
+                </div>}
+                <div className="publish-action-group publish-action-group-files">
+                  <h3>파일로 받기</h3>
+                  <p>악보와 반주를 이 기기에 내려받아요.</p>
+                  <div className="publish-action-group-buttons">
+                    <button type="button" className="pdf-button action-button" data-testid="export-pdf"
+                      disabled={exportingPdf} onClick={() => void exportPdf(false)}>
+                      <FileDown size={18} /> {exportingPdf ? "악보 만드는 중..." : "악보 저장"}
+                    </button>
+                    <button type="button" className="pdf-button action-button" data-testid="export-pdf-with-accompaniment"
+                      disabled={exportingPdf} onClick={() => void exportPdf(true)}>
+                      <FileMusic size={18} /> {exportingPdf ? "악보 만드는 중..." : "악보 저장(반주 포함)"}
+                    </button>
+                    <button type="button" className="backing-mp3-button action-button" data-testid="export-backing-mp3"
+                      disabled={exportingBacking || !allValid} onClick={() => void exportBackingMp3()}>
+                      <Music2 size={18} /> {exportingBacking ? "반주 만드는 중..." : "반주 저장"}
+                    </button>
+                  </div>
+                  <details className="publish-advanced-files">
+                    <summary>작품 파일 저장·불러오기</summary>
+                    <div className="publish-action-group-buttons">
+                      <button type="button" className="project-save-button action-button" data-testid="save-project-file"
+                        onClick={saveProjectFile}><FileDown size={18} /> 작품 파일 저장</button>
+                      <button type="button" className="project-load-button action-button" data-testid="load-project-file"
+                        onClick={() => projectFileInput.current?.click()}><FileUp size={18} /> 작품 파일 불러오기</button>
+                    </div>
+                  </details>
+                </div>
+                <div className="publish-action-group publish-action-group-perform">
+                  <h3>듣고 노래하기</h3>
+                  <p>연습하거나 녹음하고 친구들과 나눠요.</p>
+                  <div className="publish-action-group-buttons">
+                    <button type="button" className="mobile-record-link-button action-button" data-testid="create-mobile-recording-link"
+                      disabled={!allValid} onClick={() => void createMobileRecordingLink()}>
+                      <QrCode size={18} /> 스마트폰 녹음 링크
+                    </button>
+                    <div className="publish-share-pair">
+                      <button type="button" className="practice-song-button action-button" data-testid="practice-song"
+                        disabled={isAnyPlaying || !allValid} onClick={() => void practiceSong()}>
+                        <Music2 size={18} /> {practicingSong ? "연습 중..." : "노래 연습하기"}
+                      </button>
+                      <button type="button" className="record-mp3-button action-button" data-testid="record-song-mp3"
+                        disabled={isAnyPlaying || !allValid} onClick={() => setRecordingGuidePromptOpen(true)}>
+                        <Mic2 size={18} /> {recordingSong ? "녹음 중..." : "노래 녹음"}
+                      </button>
+                      <a className="samboard-share-button action-button" data-testid="open-samboard-share"
+                        href="https://samboard.vivasam.com/studentEntry/?brdId=brd-0QZ60VWZ56TNW"
+                        target="_blank" rel="noopener noreferrer">
+                        <ExternalLink size={18} /> 노래 공유
+                      </a>
+                    </div>
+                  </div>
                 </div>
               </div>
               {recordingStatus && <p className="recording-status" role="status">{recordingStatus}</p>}
               {recordingDownloadUrl && (
-                <a className="recording-download" href={recordingDownloadUrl} download={safeSongFileName("mp3")}>
+                <><a className="recording-download" href={recordingDownloadUrl} download={safeSongFileName("mp3")}>
                   MP3 다시 저장하기
                 </a>
+                {lyricVideoButton}</>
               )}
               {shareStatus && <p className="share-status" role="status">{shareStatus}</p>}
               {generatedShareUrl && (
@@ -3058,6 +3087,10 @@ export default function App() {
 
       {!mobileRecordMode && <footer className="bottom-bar" onMouseDown={keepEditorFocus}
         onClickCapture={preserveViewportAfterButtonClick}>
+        <div className="save-status-row" role="status" aria-live="polite">
+          <span className={localSaveFailed ? "save-status-local failed" : "save-status-local saved"}>{saveStatus}</span>
+          <span className={`save-status-cloud${cloudSaveIsCurrent ? " saved" : cloudSaveFailed ? " failed" : ""}`}>{cloudSaveLabel}</span>
+        </div>
         <div>
           <span className="mini-label">{activeIndex + 1}번째 마디 · {meterKey(meter)}</span>
           <strong>{activeMeasure.candidateName ?? "아직 가락을 고르지 않았어요"}</strong>

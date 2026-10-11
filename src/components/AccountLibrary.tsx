@@ -53,6 +53,7 @@ export default function AccountLibrary({ configured, user, authReady, scores, li
   const [showPassword, setShowPassword] = useState(false);
   const [formError, setFormError] = useState("");
   const [resetSent, setResetSent] = useState(false);
+  const openedFromFile = window.location.protocol === "file:";
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -179,10 +180,19 @@ export default function AccountLibrary({ configured, user, authReady, scores, li
                 </button>
               )}
             </form>
-            <div className="account-divider"><span>또는</span></div>
-            <button type="button" className="account-secondary account-google" onClick={onGoogleSignIn} disabled={busy}>
-              <LogIn size={18} aria-hidden="true" /> Google로 계속하기
-            </button>
+            {openedFromFile ? (
+              <p className="account-sync-warning">
+                HTML 파일로 열었을 때는 이메일로 로그인할 수 있어요. Google 로그인은 작품 파일을 저장한 뒤
+                Windows에서 전체기능-실행.cmd를 실행해 주세요. <a href="./실행안내.html" target="_blank" rel="noreferrer">실행 안내 보기</a>
+              </p>
+            ) : (
+              <>
+                <div className="account-divider"><span>또는</span></div>
+                <button type="button" className="account-secondary account-google" onClick={onGoogleSignIn} disabled={busy}>
+                  <LogIn size={18} aria-hidden="true" /> Google로 계속하기
+                </button>
+              </>
+            )}
           </div>
         ) : (
           <>
@@ -194,7 +204,7 @@ export default function AccountLibrary({ configured, user, authReady, scores, li
             <p className="account-sync-explain">다른 기기에서도 보려면 같은 계정으로 로그인하고 계정 저장 완료를 확인해 주세요.<br />계정 번호: <code>{user.uid}</code></p>
             <div className="cloud-save-actions">
               <button type="button" className="account-primary" onClick={() => onSave(false)} disabled={busy}>
-                <Save size={18} aria-hidden="true" /> {currentScoreId ? "현재 악보 업데이트" : "현재 악보 저장"}
+                <Save size={18} aria-hidden="true" /> {currentScoreId ? "내 악보함에 다시 저장" : "내 악보함에 저장"}
               </button>
               {currentScoreId && (
                 <button type="button" className="account-secondary" onClick={() => onSave(true)} disabled={busy}>

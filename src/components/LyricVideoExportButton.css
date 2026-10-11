@@ -1,0 +1,25 @@
+.lyric-video-export {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.lyric-video-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.lyric-video-export progress {
+  width: 100%;
+  height: 12px;
+  accent-color: #7457c6;
+}
+
+.lyric-video-export small,
+.lyric-video-export p {
+  margin: 0;
+  color: #625d70;
+  font-size: 0.82rem;
+}

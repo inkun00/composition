@@ -96,6 +96,21 @@ describe("공유 링크", () => {
       .toMatch(/^https:\/\/example\.com\/song\?play=qr#song=/);
   });
 
+  it("HTML 직접 실행과 로컬 서버의 링크는 다른 기기에서 열 수 있는 온라인 주소를 사용한다", () => {
+    for (const location of [
+      { origin: "null", pathname: "/C:/제출 폴더/index.html" },
+      { origin: "file://", pathname: "/C:/제출 폴더/index.html" },
+      { origin: "http://localhost:4173", pathname: "/index.html" },
+      { origin: "http://127.0.0.1:4173", pathname: "/" }
+    ]) {
+      expect(buildShareUrl(sample, location)).toMatch(/^https:\/\/maeum-melody\.vercel\.app\/#song=/);
+      expect(buildQrPlaybackUrl("portable-song", location))
+        .toBe("https://maeum-melody.vercel.app/?play=qr&song=portable-song");
+      expect(buildEmbeddedQrPlaybackUrl(sample, location))
+        .toMatch(/^https:\/\/maeum-melody\.vercel\.app\/\?play=qr#song=/);
+    }
+  });
+
   it("공유 링크는 반주 악기 10개까지 복원한다", () => {
     const tenInstruments = ["acoustic_grand_piano", "bright_acoustic_piano", "xylophone", "glockenspiel",
       "acoustic_guitar_nylon", "electric_bass_finger", "violin", "cello", "flute", "trumpet"];

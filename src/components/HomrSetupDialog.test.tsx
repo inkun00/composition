@@ -41,6 +41,18 @@ afterEach(() => {
 });
 
 describe("악보 사진 읽기 준비 안내", () => {
+  it("제출용 패키지는 포함된 실행 파일을 안내하고 도우미를 따로 다운로드하지 않는다", async () => {
+    setDevice("Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
+    vi.stubGlobal("__PORTABLE_ASSETS__", {});
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("local helper missing"); }));
+    render(true);
+
+    await waitFor("homr-portable-helper-guide");
+    expect(document.querySelector('[data-testid="homr-helper-download"]')).toBeNull();
+    expect(document.body.textContent).toContain("압축을 푼 폴더의 start-score-reader.cmd");
+    expect(document.body.textContent).toContain("전체기능-실행.cmd로 앱을 연 뒤");
+  });
+
   it("배포판 Windows에서 도우미 다운로드와 연결 확인을 안내한다", async () => {
     setDevice("Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
     let connected = false;

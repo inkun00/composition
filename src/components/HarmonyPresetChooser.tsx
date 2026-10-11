@@ -11,6 +11,7 @@ import {
   recommendedEndingPitch
 } from "../music/recommendation";
 import { prioritizeCandidatesForRhythm } from "../music/rhythmPreference";
+import { publicAssetUrl } from "../platform/portable";
 import PlayIcon from "./PlayIcon";
 import ScoreImageImport from "./ScoreImageImport";
 import "./HarmonyPresetChooser.css";
@@ -199,7 +200,7 @@ export default function HarmonyPresetChooser({
         </div>
         <ScoreImageImport baseDraft={baseDraft} disabled={disabled} onImport={onImportScore} />
       </div>}
-      <img className="workspace-guide setup-guide-boy" src="/illustrations/guide-boy-v1.webp"
+      <img className="workspace-guide setup-guide-boy" src={publicAssetUrl("/illustrations/guide-boy-v1.webp")}
         alt="" aria-hidden="true" draggable="false" />
     </section>
   );

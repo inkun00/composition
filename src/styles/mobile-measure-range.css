@@ -1,0 +1,48 @@
+.mobile-measure-range {
+  display: none;
+}
+
+@media (max-width: 800px) {
+  .composition-workspace .composition-section .mobile-measure-range {
+    position: sticky;
+    z-index: 8;
+    left: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 3px 10px;
+    width: max-content;
+    max-width: calc(100vw - 52px);
+    margin: 10px 0 8px;
+    padding: 7px 11px;
+    border: 1px solid #d6cdf4;
+    border-radius: 11px;
+    background: #f5f1ff;
+    color: #5a48a4;
+    box-shadow: 0 3px 10px rgba(78, 62, 144, .08);
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .mobile-measure-range strong {
+    margin-left: 4px;
+    font-size: 13px;
+    font-weight: 900;
+    white-space: nowrap;
+  }
+
+  .mobile-measure-range small {
+    color: #716594;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .composition-workspace .composition-section .measure-timeline {
+    padding-bottom: 15px;
+  }
+
+  .composition-workspace .composition-section .measure-timeline::after {
+    display: none;
+    content: none;
+  }
+}

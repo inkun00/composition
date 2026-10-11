@@ -1,6 +1,72 @@
-.community-album-card-actions { position: absolute; top: 10px; right: 10px; display: grid; gap: 6px; }
-.community-album-card-actions .community-album-delete { position: static; }
-.community-album-rename { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid #d9d3e2; border-radius: 7px; background: #fff; color: #6253a6; cursor: pointer; }
-.community-album-rename:hover { border-color: #b7a5e7; background: #f6f2ff; }
-.community-album-rename:disabled { opacity: .5; cursor: wait; }
-.album-rename-dialog { width: min(440px, 100%); }
+.community-album-grid .community-album-folder {
+  min-height: 136px;
+  padding-right: 72px;
+  border-radius: 12px;
+}
+
+.community-album-grid .community-album-folder strong {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.community-album-grid .community-album-folder small {
+  font-size: 12px;
+}
+
+.community-album-card-actions {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  display: grid;
+  gap: 6px;
+  transform: translateY(-50%);
+}
+
+.community-album-card-actions .community-album-delete,
+.community-album-card-actions .community-album-rename {
+  position: static;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+}
+
+.community-album-rename {
+  border: 1px solid #d9d3e2;
+  background: #fff;
+  color: #6253a6;
+  cursor: pointer;
+}
+
+.community-album-rename:hover {
+  border-color: #b7a5e7;
+  background: #f6f2ff;
+}
+
+.community-album-rename:disabled {
+  opacity: .5;
+  cursor: wait;
+}
+
+.community-album-card-actions button:focus-visible {
+  outline: 3px solid #7560ca;
+  outline-offset: 2px;
+}
+
+.album-rename-dialog {
+  width: min(440px, 100%);
+}
+
+@media (max-width: 560px) {
+  .community-album-grid .community-album-folder {
+    min-height: 124px;
+  }
+}

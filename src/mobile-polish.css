@@ -18,7 +18,7 @@
 
   /* 2. 하단 고정 바가 페이지 최하단 콘텐츠를 가리지 않도록 main 하단 여백 확보 */
   main {
-    padding-bottom: 130px !important;
+    padding-bottom: 175px !important;
   }
 
   /* 3. 모바일 버튼 공통: 한국어 단어 중간 어색한 줄바꿈 방지 */
@@ -56,7 +56,7 @@
   }
 
   .meter-option small {
-    font-size: 11px;
+    font-size: 12px;
     letter-spacing: -0.04em;
     margin-top: 3px;
     white-space: nowrap;
@@ -81,7 +81,7 @@
   }
 
   .length-option span {
-    font-size: 11px;
+    font-size: 12px;
     letter-spacing: -0.02em;
     margin-top: 2px;
     white-space: nowrap;
@@ -115,6 +115,59 @@
     gap: 4px;
   }
 
+  /* 악보의 작은 설명과 가락 선택 버튼을 휴대폰에서도 쉽게 읽고 누를 수 있게 합니다. */
+  .measure-slot-header > strong,
+  .measure-lyric span,
+  .empty-score-label,
+  .note-lyrics > span,
+  .candidate-sidebar .section-heading p,
+  .candidate-priority-note span,
+  .candidate-sidebar .card-top span,
+  .note-tools button span {
+    font-size: 12px;
+  }
+
+  .measure-story-label,
+  .candidate-sidebar .count-pill,
+  .candidate-feeling-group > header span,
+  .candidate-feeling-group > header small,
+  .measure-slot.playing::after {
+    font-size: 12px;
+  }
+
+  .candidate-view-toggle button {
+    min-height: 44px;
+    font-size: 12px;
+  }
+
+  .candidate-sidebar .play-button {
+    width: 44px;
+    height: 44px;
+  }
+
+  .candidate-sidebar .select-row {
+    min-height: 44px;
+  }
+
+  .composition-workspace .composition-section {
+    scrollbar-color: #aa9ad8 #f4f1fb;
+    scrollbar-width: thin;
+  }
+
+  .composition-workspace .composition-section::-webkit-scrollbar {
+    height: 10px;
+  }
+
+  .composition-workspace .composition-section::-webkit-scrollbar-track {
+    background: #f4f1fb;
+  }
+
+  .composition-workspace .composition-section::-webkit-scrollbar-thumb {
+    border: 2px solid #f4f1fb;
+    border-radius: 999px;
+    background: #aa9ad8;
+  }
+
   /* 8. 하단 바 버튼: 줄바꿈 없이 한눈에 들어오도록 폰트와 패딩 정돈 */
   .bottom-bar {
     min-height: 72px;
@@ -124,6 +177,51 @@
     -webkit-backdrop-filter: blur(16px);
     border-top: 1px solid rgba(109, 92, 231, 0.12);
     box-shadow: 0 -4px 20px rgba(34, 28, 63, 0.08);
+  }
+
+  .bottom-bar .save-status-row {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 12px;
+    min-width: 0;
+    padding-bottom: 7px;
+    border-bottom: 1px solid #e9e5ef;
+    color: #5a5368;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
+  .bottom-bar .save-status-local,
+  .bottom-bar .save-status-cloud {
+    min-width: 0;
+  }
+
+  .bottom-bar .save-status-local::before,
+  .bottom-bar .save-status-cloud::before {
+    content: "";
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin: 0 5px 1px 0;
+    border-radius: 50%;
+    background: #6d5ce7;
+  }
+
+  .bottom-bar .save-status-cloud::before {
+    background: #8f83b4;
+  }
+
+  .bottom-bar .save-status-local.failed::before,
+  .bottom-bar .save-status-cloud.failed::before {
+    background: #c44940;
+  }
+
+  .bottom-bar .save-status-local.saved::before,
+  .bottom-bar .save-status-cloud.saved::before {
+    background: #258a6b;
   }
 
   .bottom-bar button {
@@ -160,6 +258,10 @@
 
 /* 430px 이하 소형 스마트폰 (iPhone SE, 소형 Galaxy) 추가 미세 조정 */
 @media (max-width: 430px) {
+  main {
+    padding-bottom: 205px !important;
+  }
+
   .meter-option {
     padding: 8px 10px;
   }
@@ -173,7 +275,7 @@
   }
 
   .meter-option small {
-    font-size: 10px;
+    font-size: 12px;
     letter-spacing: -0.05em;
   }
 
@@ -187,6 +289,27 @@
 
   .bottom-bar button {
     padding: 0 8px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 800px) {
+  .composition-workspace .measure-timeline {
+    position: relative;
+    padding-bottom: 38px;
+  }
+
+  .composition-workspace .measure-timeline::after {
+    content: "↔ 옆으로 밀어 다른 마디 보기";
+    position: absolute;
+    bottom: 5px;
+    left: 8px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: #f0edff;
+    color: #5846a5;
     font-size: 12px;
+    font-weight: 800;
+    pointer-events: none;
   }
 }

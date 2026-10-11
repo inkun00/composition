@@ -1,0 +1,297 @@
+/* Color communicates the action, not the section where the button appears. */
+:root {
+  --action-compose: #6750b5;
+  --action-compose-hover: #543f9d;
+  --action-compose-soft: #f3efff;
+  --action-compose-border: #b9a9e7;
+  --action-save: #187354;
+  --action-save-hover: #115d43;
+  --action-save-soft: #eef9f2;
+  --action-save-border: #afd8c3;
+  --action-listen: #914916;
+  --action-listen-hover: #78380d;
+  --action-listen-soft: #fff2df;
+  --action-listen-border: #e7bc87;
+  --action-danger: #a73832;
+  --action-danger-soft: #fff1ef;
+  --action-danger-border: #e5afa9;
+}
+
+/* Start, choose, and edit a composition. */
+.opening-start,
+.bottom-bar .primary:not(:disabled) {
+  border-color: var(--action-compose);
+  background: var(--action-compose);
+  color: #fff;
+  box-shadow: 0 9px 20px rgb(88 64 161 / 21%);
+}
+
+.opening-start:hover:not(:disabled),
+.bottom-bar .primary:hover:not(:disabled) {
+  border-color: var(--action-compose-hover);
+  background: var(--action-compose-hover);
+}
+
+.bottom-bar .primary:disabled {
+  border-color: #d2d3d7;
+  background: #e2e3e5;
+  color: #757982;
+  box-shadow: none;
+}
+
+.measure-sound-open,
+.note-tools button[data-testid="add-note"],
+.note-tools button[data-testid="add-rest"] {
+  border-color: var(--action-compose-border);
+  background: var(--action-compose-soft);
+  color: var(--action-compose-hover);
+}
+
+.measure-sound-open:hover:not(:disabled),
+.note-tools button[data-testid="add-note"]:hover:not(:disabled),
+.note-tools button[data-testid="add-rest"]:hover:not(:disabled) {
+  border-color: var(--action-compose);
+  background: #eae2ff;
+}
+
+.community-create-button,
+.community-create-button:hover:not(:disabled) {
+  border-color: var(--action-compose-border);
+  background: var(--action-compose-soft);
+  color: var(--action-compose-hover);
+}
+
+.sound-effect-palette .effect-add-button:hover:not(:disabled) {
+  border-color: var(--action-compose-border);
+  background: var(--action-compose-soft);
+}
+
+/* Save, export, and download. Authentication and creation remain purple. */
+.cloud-save-actions .account-primary,
+.album-rename-dialog .account-primary,
+.album-song-manage .account-primary,
+.album-password-dialog .save-album-password,
+.mobile-record-save,
+.mobile-record-qr-save,
+.karaoke-download {
+  border-color: var(--action-save);
+  background: var(--action-save);
+  color: #fff;
+  box-shadow: 0 7px 17px rgb(24 115 84 / 16%);
+}
+
+.cloud-save-actions .account-primary:hover:not(:disabled),
+.album-rename-dialog .account-primary:hover:not(:disabled),
+.album-song-manage .account-primary:hover:not(:disabled),
+.album-password-dialog .save-album-password:hover:not(:disabled),
+.mobile-record-save:hover:not(:disabled),
+.mobile-record-qr-save:hover:not(:disabled),
+.karaoke-download:hover:not(:disabled) {
+  border-color: var(--action-save-hover);
+  background: var(--action-save-hover);
+}
+
+.recording-download {
+  color: var(--action-save-hover);
+}
+
+.publish-actions .publish-cloud-save {
+  border-color: var(--action-save);
+  background: var(--action-save);
+  color: #fff;
+}
+
+.publish-actions .publish-cloud-save:hover:not(:disabled) {
+  border-color: var(--action-save-hover);
+  background: var(--action-save-hover);
+}
+
+.publish-actions .publish-action-group-files button {
+  border-color: var(--action-save-border) !important;
+  background: var(--action-save-soft);
+  color: var(--action-save-hover);
+}
+
+.publish-actions .publish-action-group-files button:hover:not(:disabled) {
+  border-color: var(--action-save) !important;
+  background: #def2e6;
+}
+
+/* Playback, preview, practice, and recording controls. */
+.timeline-actions .ghost-button,
+.timeline-actions .song-play,
+.timeline-actions .song-stop,
+.candidate-sidebar .play-button,
+.preset-preview-button,
+.beat-preview-button,
+.measure-sound-play,
+.sound-effect-palette .effect-preview-button,
+.album-song-actions button:first-child {
+  border-color: var(--action-listen-border);
+  background: var(--action-listen-soft);
+  color: var(--action-listen);
+  box-shadow: 0 5px 12px rgb(145 73 22 / 10%);
+}
+
+.timeline-actions .ghost-button:hover:not(:disabled),
+.timeline-actions .song-play:hover:not(:disabled),
+.timeline-actions .song-stop:hover:not(:disabled),
+.candidate-sidebar .play-button:hover:not(:disabled),
+.preset-preview-button:hover:not(:disabled),
+.beat-preview-button:hover:not(:disabled),
+.measure-sound-play:hover:not(:disabled),
+.sound-effect-palette .effect-preview-button:hover:not(:disabled) {
+  border-color: var(--action-listen);
+  background: #ffe9c9;
+  color: var(--action-listen-hover);
+}
+
+.preset-preview-button.playing {
+  border-color: var(--action-listen);
+  background: #ffe9c9;
+  color: var(--action-listen-hover);
+}
+
+.song-play .play-icon,
+.candidate-sidebar .play-button .play-icon {
+  border-left-color: var(--action-listen);
+}
+
+.candidate-sidebar .play-button .pause-icon i,
+.candidate-card.previewing .pause-icon i {
+  background: var(--action-listen);
+}
+
+.candidate-card.previewing {
+  border-color: #d9954f;
+  box-shadow: 0 12px 30px rgb(145 73 22 / 15%);
+}
+
+.candidate-card.previewing .play-button {
+  background: #ffe9c9;
+  box-shadow: 0 0 0 6px rgb(217 149 79 / 16%);
+  animation: listen-preview-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes listen-preview-pulse {
+  50% {
+    box-shadow: 0 0 0 10px rgb(217 149 79 / 8%);
+    transform: scale(1.04);
+  }
+}
+
+.listen-all,
+.easy-accompaniment-listen,
+.selected-instrument .arrangement-playback-controls button:not(.song-stop),
+.mobile-record-start,
+.qr-playback-start,
+.recording-guide-start {
+  border-color: var(--action-listen);
+  background: var(--action-listen);
+  color: #fff;
+  box-shadow: 0 7px 17px rgb(145 73 22 / 17%);
+}
+
+.listen-all:hover:not(:disabled),
+.easy-accompaniment-listen:hover:not(:disabled),
+.selected-instrument .arrangement-playback-controls button:not(.song-stop):hover:not(:disabled),
+.mobile-record-start:hover:not(:disabled),
+.qr-playback-start:hover:not(:disabled),
+.recording-guide-start:hover:not(:disabled) {
+  border-color: var(--action-listen-hover);
+  background: var(--action-listen-hover);
+}
+
+.selected-instrument .arrangement-playback-controls .song-stop {
+  border-color: var(--action-listen-border);
+  background: var(--action-listen-soft);
+  color: var(--action-listen);
+}
+
+.qr-playback-start .play-icon {
+  border-left-color: #fff;
+}
+
+.qr-lyrics-badge.playing,
+.karaoke-window.practice .practice-tips span {
+  border-color: var(--action-listen-border);
+  background: var(--action-listen-soft);
+  color: var(--action-listen);
+}
+
+.qr-pulse-dot {
+  background: var(--action-listen);
+}
+
+.qr-lyric-card.playing,
+.karaoke-window.practice .karaoke-song-measure.active {
+  border-color: var(--action-listen-border);
+  background: #fff8ee;
+  box-shadow: 0 4px 16px rgb(145 73 22 / 12%);
+}
+
+.qr-lyric-card.playing .qr-lyric-card-header strong,
+.qr-lyric-playing-label {
+  color: var(--action-listen);
+}
+
+.qr-lyric-token.active {
+  background: var(--action-listen);
+  box-shadow: 0 3px 10px rgb(145 73 22 / 27%);
+}
+
+.karaoke-window.practice .karaoke-toolbar {
+  background: #fffaf2;
+  border-bottom-color: var(--action-listen-border);
+}
+
+.karaoke-window.practice .karaoke-system.active {
+  border-color: var(--action-listen-border);
+  box-shadow: 0 12px 34px rgb(145 73 22 / 14%);
+}
+
+.publish-actions .publish-action-group-perform button,
+.publish-actions .publish-action-group-perform a {
+  border-color: var(--action-listen-border) !important;
+  background: var(--action-listen-soft);
+  color: var(--action-listen);
+}
+
+.publish-actions .publish-action-group-perform button:hover:not(:disabled),
+.publish-actions .publish-action-group-perform a:hover {
+  border-color: var(--action-listen) !important;
+  background: #ffe9c9;
+}
+
+/* Destructive edits stand apart from stopping a preview. */
+.note-tools .danger,
+.note-tools .reset,
+.mixer-remove,
+.community-album-delete,
+.account-score-delete,
+.album-delete-song,
+.album-password-remove,
+.score-image-note-controls .delete-note {
+  border-color: var(--action-danger-border);
+  background: var(--action-danger-soft);
+  color: var(--action-danger);
+}
+
+.note-tools .danger:hover:not(:disabled),
+.note-tools .reset:hover:not(:disabled),
+.mixer-remove:hover:not(:disabled),
+.community-album-delete:hover:not(:disabled),
+.account-score-delete:hover:not(:disabled),
+.album-delete-song:hover:not(:disabled),
+.album-password-remove:hover:not(:disabled),
+.score-image-note-controls .delete-note:hover:not(:disabled) {
+  border-color: var(--action-danger);
+  background: #ffe5e1;
+  color: #842722;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .candidate-card.previewing .play-button {
+    animation: none;
+  }
+}

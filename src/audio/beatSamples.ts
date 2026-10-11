@@ -2,6 +2,7 @@ import {
   isBeatInstrumentId,
   type BeatInstrumentId
 } from "../music/beatInstruments";
+import { publicAssetUrl } from "../platform/portable";
 
 export const BEAT_SAMPLE_URLS: Readonly<Record<BeatInstrumentId, string>> = {
   kick: "/beat-samples/kick.wav",
@@ -60,7 +61,7 @@ async function loadBeatSample(
 
   const request = (async () => {
     try {
-      const response = await fetch(BEAT_SAMPLE_URLS[instrumentId]);
+      const response = await fetch(publicAssetUrl(BEAT_SAMPLE_URLS[instrumentId]));
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const buffer = await context.decodeAudioData(await response.arrayBuffer());
       buffers.set(instrumentId, buffer);

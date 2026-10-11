@@ -6,6 +6,7 @@ import { scoreLayout } from "../music/scoreLayout";
 import { loadVexFlow } from "../music/vexflow";
 import type { NoteEvent } from "../music/types";
 import { displayedAccidentalSymbol, keySignatureName, midiToVexKey, staffDegreeForPitch } from "../music/accidental";
+import { publicAssetUrl } from "../platform/portable";
 
 type ScoreMeasureProps = {
   notes: readonly NoteEvent[];
@@ -76,7 +77,7 @@ function restSprite(duration: number, dotted?: boolean) {
 function renderRestMark(x: number, y: number, duration: number, dotted?: boolean) {
   const sprite = restSprite(duration, dotted);
   return (
-    <image href={`/notation/rests/${sprite.name}.png`}
+    <image href={publicAssetUrl(`/notation/rests/${sprite.name}.png`)}
       x={x - sprite.width / 2} y={y - sprite.height / 2}
       width={sprite.width} height={sprite.height}
       className="rest-mark rest-image"

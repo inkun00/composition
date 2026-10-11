@@ -74,7 +74,8 @@ export default function AlbumPasswordDialog({ album, mode, signedIn, onRequestLo
         {!signedIn && <div className="album-login-needed"><Lock size={18} /><span>암호를 확인하려면 먼저 로그인해 주세요.</span>
           <button type="button" onClick={onRequestLogin}>로그인</button></div>}
         {error && <p className="community-album-error" role="status">{error}</p>}
-        <button type="submit" className="account-primary" disabled={!signedIn || busy || !password.trim()}>
+        <button type="submit" className={manage ? "account-primary save-album-password" : "account-primary"}
+          disabled={!signedIn || busy || !password.trim()}>
           <Lock size={17} /> {busy ? "확인하는 중..." : manage ? "암호 저장" : "앨범 들어가기"}
         </button>
         {manage && album.locked && onRemove && <button type="button" className="album-password-remove"

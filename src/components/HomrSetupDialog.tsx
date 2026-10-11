@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Check, Download, ExternalLink, LoaderCircle, RotateCw, ScanLine, X } from "lucide-react";
+import { isPortableBuild, publicAssetUrl } from "../platform/portable";
 import {
   getHomrStatus,
   HomrLocalError,
@@ -45,8 +46,14 @@ export default function HomrSetupDialog({ open, onClose, onReady,
   const [error, setError] = useState("");
   const [errorCode, setErrorCode] = useState("");
   const device = currentDevice();
+  const portable = isPortableBuild();
+  const portableFile = portable && window.location.protocol === "file:";
 
   const checkStatus = useCallback(async (quiet = false) => {
+    if (portableFile) {
+      setPhase("helper-missing");
+      return;
+    }
     if (!quiet) {
       setPhase("checking");
       setError("");
@@ -66,17 +73,17 @@ export default function HomrSetupDialog({ open, onClose, onReady,
       setError(setupErrorMessage(statusError));
       setPhase("error");
     }
-  }, [hosted]);
+  }, [hosted, portableFile]);
 
   useEffect(() => {
     if (open) void checkStatus();
   }, [checkStatus, open]);
 
   useEffect(() => {
-    if (!open || phase !== "helper-missing") return;
+    if (!open || phase !== "helper-missing" || portableFile) return;
     const timer = window.setInterval(() => { void checkStatus(true); }, 3000);
     return () => window.clearInterval(timer);
-  }, [checkStatus, open, phase]);
+  }, [checkStatus, open, phase, portableFile]);
 
   useEffect(() => {
     if (!open) return;
@@ -131,7 +138,8 @@ export default function HomrSetupDialog({ open, onClose, onReady,
             {phase === "helper-missing" && <>
               <Download size={28} />
               <div><strong>이 컴퓨터에 도우미가 필요해요</strong>
-                <span>도우미를 켜면 이 화면이 자동으로 다음 단계로 넘어가요.</span></div>
+                <span>{portableFile ? "전체 기능 실행 화면에서 사진 읽기를 준비해 주세요." :
+                  "도우미를 켜면 이 화면이 자동으로 다음 단계로 넘어가요."}</span></div>
             </>}
             {phase === "runtime-missing" && <>
               <Download size={28} />
@@ -150,10 +158,19 @@ export default function HomrSetupDialog({ open, onClose, onReady,
               <div><strong>준비하지 못했어요</strong><span>{error}</span></div>
             </>}
           </div>
-          {phase === "helper-missing" && device === "windows" && <div className="homr-setup-guide">
+          {phase === "helper-missing" && device === "windows" && portable &&
+            <div className="homr-setup-guide" data-testid="homr-portable-helper-guide">
+              <strong>패키지에 포함된 도우미 실행하기</strong>
+              <p>압축을 푼 폴더의 <b>start-score-reader.cmd</b>를 실행해 주세요.</p>
+              <p>사진 읽기는 <b>전체기능-실행.cmd</b>로 앱을 연 뒤 이용해 주세요.</p>
+              <p className="homr-setup-tip">Node.js가 필요하다는 안내가 나오면
+                <a href={NODE_DOWNLOAD} target="_blank" rel="noopener noreferrer">Node.js 설치 페이지 <ExternalLink size={13} /></a>
+                에서 설치한 뒤 도우미를 다시 실행해 주세요.</p>
+            </div>}
+          {phase === "helper-missing" && device === "windows" && !portable && <div className="homr-setup-guide">
             <div className="homr-setup-guide-step"><span>1</span><div><strong>도우미 파일 받기</strong>
               <p>아래 버튼을 누르면 파일이 다운로드돼요.</p>
-              <a href="/start-score-reader.cmd" download data-testid="homr-helper-download">
+              <a href={publicAssetUrl("/start-score-reader.cmd")} download="start-score-reader.cmd" data-testid="homr-helper-download">
                 <Download size={16} /> 도우미 받기</a></div></div>
             <div className="homr-setup-guide-step"><span>2</span><div><strong>받은 파일 열기</strong>
               <p>다운로드 목록에서 <b>start-score-reader.cmd</b>를 열어 주세요. 앱이 다시 열리면 준비됐어요.
@@ -184,7 +201,7 @@ export default function HomrSetupDialog({ open, onClose, onReady,
 
         <footer>
           <button type="button" onClick={onClose} disabled={phase === "installing"}>나중에</button>
-          {phase === "helper-missing" && device === "windows" && (
+          {phase === "helper-missing" && device === "windows" && !portableFile && (
             <button type="button" className="primary" data-testid="homr-retry" onClick={() => void checkStatus()}>
               <RotateCw size={17} /> 연결 확인하기
             </button>
