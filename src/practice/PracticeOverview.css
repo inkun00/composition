@@ -1,0 +1,291 @@
+.practice-shared-tools {
+  margin: 20px 0;
+  padding: 15px;
+  border: 1px solid #e2e8e0;
+  border-radius: 12px;
+  background: #fbfcf9;
+}
+
+.practice-current-measure {
+  margin-bottom: 10px !important;
+  color: #47705b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.practice-measures-overview {
+  display: grid;
+  grid-template-columns: repeat(var(--practice-columns), minmax(0, 1fr));
+  align-items: start;
+  gap: 12px;
+}
+
+.practice-measure-card {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #dce5dd;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.practice-measure-card.is-active {
+  border-color: #75a98c;
+  box-shadow: 0 0 0 2px #75a98c15;
+}
+
+.practice-measure-card-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.practice-measure-card-heading button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 6px 9px;
+  border: 1px solid #d3e0d5;
+  border-radius: 8px;
+  background: #f8faf6;
+  color: #3b6b50;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.practice-measure-card-heading button[aria-pressed="true"] {
+  border-color: #689f7d;
+  background: #edf8f0;
+}
+
+.practice-measure-total {
+  color: #98713d;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.practice-measure-total.exact {
+  color: #397759;
+}
+
+.practice-measure-total.over {
+  color: #aa523d;
+}
+
+.practice-measure-card .practice-lyric-area {
+  margin-top: 12px;
+}
+
+.practice-measure-card .practice-lyric-area label {
+  color: #627762;
+  font-size: 12px;
+}
+
+.practice-measure-card .practice-lyric-entry {
+  flex-wrap: wrap;
+}
+
+.practice-measure-card .practice-lyric-entry input {
+  flex-basis: 100%;
+  min-height: 40px;
+  padding: 8px;
+  font-size: 13px;
+}
+
+.practice-measure-card .practice-lyric-entry button {
+  width: 100%;
+  min-height: 35px;
+  padding: 7px;
+  font-size: 11px;
+}
+
+.practice-measure-card .practice-lyric-warning {
+  font-size: 11px;
+}
+
+.practice-measure-validation {
+  margin-top: 10px !important;
+  padding: 8px;
+  border-radius: 8px;
+  background: #fff8eb;
+  color: #97703b;
+  font-size: 11px;
+}
+
+.practice-measure-validation.exact {
+  background: #eff8f1;
+  color: #397858;
+}
+
+.practice-measure-validation.over {
+  background: #fff1eb;
+  color: #aa513b;
+}
+
+.practice-measure-card .practice-fill-rest {
+  width: 100%;
+  padding: 7px;
+  font-size: 11px;
+}
+
+.practice-measure-card .practice-measure-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  min-height: 37px;
+  margin-top: 10px;
+  padding: 7px;
+  border: 1px solid #bed5dd;
+  border-radius: 8px;
+  background: #f1f8fb;
+  color: #37697e;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.practice-measure-preview:disabled {
+  opacity: .5;
+}
+
+.practice-measure-preview.is-playing {
+  border-color: #91b5c5;
+  background: #e4f2f8;
+}
+
+.practice-measure-harmony {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #eef1e9;
+}
+
+.practice-measure-harmony label {
+  font-size: 11px;
+}
+
+.practice-measure-harmony select {
+  min-height: 37px;
+  padding: 7px;
+  font-size: 12px;
+}
+
+.practice-measure-harmony .practice-harmony-warning {
+  margin-bottom: 0;
+  padding: 9px;
+}
+
+.practice-measure-harmony-good {
+  margin-top: 8px !important;
+  color: #648568;
+  font-size: 11px;
+}
+
+.practice-stage-next {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.practice-stage-next small {
+  color: #809083;
+  font-size: 12px;
+}
+
+.practice-main > .practice-listen-card {
+  margin-top: 24px;
+}
+
+.practice-listen-intro {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.practice-listen-intro .practice-card-icon {
+  flex-shrink: 0;
+  margin-bottom: 0;
+}
+
+.practice-listen-intro p {
+  margin-top: 6px;
+  color: #738171;
+  font-size: 13px;
+}
+
+.practice-listen-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(270px, 1fr);
+  align-items: center;
+  gap: 26px;
+  margin-top: 16px;
+}
+
+.practice-listen-controls .practice-instrument-fields {
+  grid-template-columns: 1fr;
+  padding: 0;
+}
+
+.practice-listen-buttons .practice-export-actions {
+  margin-bottom: 0;
+}
+
+.practice-main > .practice-listen-card > small {
+  margin-top: 14px;
+}
+
+.practice-overview-tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 20px;
+  color: #7a8060;
+}
+
+.practice-overview-tip svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+.practice-overview-tip p {
+  font-size: 13px;
+}
+
+@media (max-width: 1100px) {
+  .practice-measures-overview {
+    grid-template-columns: repeat(min(2, var(--practice-columns)), minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .practice-measures-overview {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .practice-shared-tools {
+    padding: 11px;
+  }
+
+  .practice-stage-next {
+    align-items: flex-end;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .practice-stage-next small {
+    max-width: 190px;
+    font-size: 10px;
+    text-align: right;
+  }
+
+  .practice-listen-controls {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .practice-listen-intro h2 {
+    font-size: 17px;
+  }
+}

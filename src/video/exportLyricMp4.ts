@@ -47,11 +47,17 @@ async function decodeRecording(audioUrl: string): Promise<AudioBuffer> {
 export async function exportLyricMp4(
   audioUrl: string,
   plan: LyricVideoPlan,
-  onProgress: (percent: number) => void
+  onProgress: (percent: number) => void,
+  signal?: AbortSignal
 ): Promise<Blob> {
+  const checkAbort = () => {
+    if (signal?.aborted) throw new DOMException("영상 만들기를 멈췄어요.", "AbortError");
+  };
+  checkAbort();
   if (!plan.hasLyrics) throw new Error("가사를 한 글자 이상 적은 뒤 다시 녹음해 주세요.");
   onProgress(2);
   const audioBuffer = await decodeRecording(audioUrl);
+  checkAbort();
   onProgress(8);
 
   const {
@@ -68,6 +74,7 @@ export async function exportLyricMp4(
       quality: audioQuality
     })
   ]);
+  checkAbort();
   if (!videoSupported || !audioSupported) {
     throw new Error("이 브라우저는 MP4 만들기를 지원하지 않아요. 최신 크롬이나 엣지에서 다시 시도해 주세요.");
   }
@@ -85,12 +92,15 @@ export async function exportLyricMp4(
   output.addAudioTrack(audio);
 
   try {
+    checkAbort();
     await output.start();
     await audio.add(audioBuffer);
+    checkAbort();
     onProgress(18);
 
     let previousMeasure: number | null = null;
     for (const [index, frame] of plan.frames.entries()) {
+      checkAbort();
       const endSeconds = Math.min(audioBuffer.duration, frame.endSeconds);
       if (frame.startSeconds >= endSeconds) continue;
       drawFrame(context, plan.title, frame);
@@ -102,7 +112,9 @@ export async function exportLyricMp4(
       if (index % 8 === 0) await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     }
 
+    checkAbort();
     await output.finalize();
+    checkAbort();
     if (!output.target.buffer) throw new Error("MP4 파일을 완성하지 못했어요.");
     onProgress(100);
     return new Blob([output.target.buffer], { type: "video/mp4" });

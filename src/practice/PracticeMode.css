@@ -1,0 +1,742 @@
+@import "./PracticeHelp.css";
+
+.opening-actions .opening-practice {
+  grid-column: 1 / -1;
+  justify-content: flex-start;
+  gap: 12px;
+  min-height: 76px;
+  padding: 12px 18px;
+  border: 1px solid #a8cbbf;
+  background: #eff9f4;
+  color: #1f6955;
+  box-shadow: 0 6px 16px rgba(26, 96, 73, .1);
+}
+
+.opening-practice > span {
+  flex: 1;
+  text-align: left;
+}
+
+.opening-practice strong, .opening-practice small {
+  display: block;
+}
+
+.opening-practice small {
+  margin-top: 5px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.practice-shell {
+  min-height: 100vh;
+  color: #263b3b;
+  background: #f7f9f5;
+}
+
+.practice-shell button, .practice-shell input, .practice-shell select {
+  font: inherit;
+}
+
+.practice-shell button {
+  cursor: pointer;
+}
+
+.practice-shell button:disabled {
+  cursor: not-allowed;
+}
+
+.practice-shell input, .practice-shell select {
+  width: 100%;
+  min-height: 44px;
+  padding: 9px 12px;
+  border: 1px solid #d1dfd7;
+  border-radius: 10px;
+  color: #263b3b;
+  background: #fff;
+}
+
+.practice-shell label {
+  display: grid;
+  gap: 7px;
+  color: #53675e;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.practice-shell fieldset {
+  min-width: 0;
+  margin: 0;
+  border: 0;
+}
+
+.practice-shell h1, .practice-shell h2, .practice-shell p {
+  margin: 0;
+}
+
+.practice-shell h2 {
+  color: #263b3b;
+  font-size: 19px;
+}
+
+.practice-shell p {
+  line-height: 1.7;
+}
+
+.practice-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 76px;
+  padding: 12px max(24px, calc((100vw - 1280px) / 2));
+  border-bottom: 1px solid #dde6de;
+  background: #fff;
+}
+
+.practice-back, .practice-help-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 9px 13px;
+  border: 1px solid #d5e2d9;
+  border-radius: 10px;
+  background: #fff;
+  color: #356953;
+  font-size: 13px;
+}
+
+.practice-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #246b56;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.practice-save-state {
+  color: #647970;
+  font-size: 12px;
+}
+
+.practice-save-state.failed {
+  color: #9b4631;
+}
+
+.practice-main {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 38px 24px 64px;
+}
+
+.practice-intro {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.practice-eyebrow {
+  display: block;
+  margin-bottom: 10px;
+  color: #39846c;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .05em;
+}
+
+.practice-intro h1 {
+  color: #243f35;
+  font-size: clamp(26px, 3vw, 35px);
+  letter-spacing: -.035em;
+}
+
+.practice-intro p {
+  margin-top: 10px;
+  color: #66776e;
+  font-size: 14px;
+}
+
+.practice-mobile-break {
+  display: none;
+}
+
+.practice-lesson h2 {
+  font-size: 17px;
+}
+
+.practice-lesson p {
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+.practice-lesson-controls button {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-height: 32px;
+  padding: 5px 8px;
+  border: 1px solid #ccddd0;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 11px;
+}
+
+.practice-settings {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 18px;
+  padding: 22px 0;
+}
+
+.practice-step-tabs {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0 23px;
+}
+
+.practice-step-tabs > svg {
+  color: #9aaca1;
+}
+
+.practice-step-tabs button {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 200px;
+  padding: 13px 18px;
+  border: 1px solid #d9e3dc;
+  border-radius: 14px;
+  background: #fff;
+  text-align: left;
+}
+
+.practice-step-tabs button > span {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #eaf0eb;
+  color: #6a7e71;
+  font-weight: 800;
+}
+
+.practice-step-tabs button strong, .practice-step-tabs button small {
+  display: block;
+}
+
+.practice-step-tabs button strong {
+  font-size: 16px;
+}
+
+.practice-step-tabs button small {
+  margin-top: 3px;
+  color: #7c8b81;
+  font-size: 11px;
+}
+
+.practice-step-tabs button[aria-selected="true"] {
+  border-color: #75af96;
+  background: #edf8f1;
+  box-shadow: 0 3px 10px #2c704e08;
+}
+
+.practice-step-tabs button[aria-selected="true"] > span {
+  color: #fff;
+  background: #337c5e;
+}
+
+.practice-workspace-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  align-items: start;
+  gap: 22px;
+}
+
+.practice-workspace {
+  min-width: 0;
+  padding: 24px;
+  border: 1px solid #dce5de;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 9px 28px #274c3305;
+}
+
+.practice-workspace-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.practice-workspace-heading p {
+  margin-top: 6px;
+  color: #7a867e;
+  font-size: 13px;
+}
+
+.practice-input-toggle {
+  display: flex;
+  flex-shrink: 0;
+  gap: 3px;
+  padding: 4px;
+  border-radius: 10px;
+  background: #f0f3f0;
+}
+
+.practice-input-toggle button {
+  min-height: 33px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #758078;
+  font-size: 12px;
+}
+
+.practice-input-toggle button[aria-pressed="true"] {
+  color: #2d6b51;
+  background: #fff;
+  box-shadow: 0 2px 6px #23482d10;
+  font-weight: 800;
+}
+
+.practice-measure-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 24px 0 19px;
+  padding-bottom: 17px;
+  border-bottom: 1px solid #edf1ed;
+}
+
+.practice-measure-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 8px 13px;
+  border: 1px solid #e0e6e0;
+  border-radius: 9px;
+  background: #fff;
+  color: #6a796f;
+  font-size: 12px;
+}
+
+.practice-measure-tabs button[aria-pressed="true"] {
+  border-color: #719b85;
+  color: #2b6b4f;
+  background: #f1f8f2;
+  font-weight: 800;
+}
+
+.practice-measure-tabs svg {
+  color: #3e9972;
+}
+
+.practice-unfilled-dot {
+  width: 7px;
+  height: 7px;
+  border: 1px solid #bccabf;
+  border-radius: 50%;
+}
+
+.practice-lyric-area {
+  padding: 0;
+}
+
+.practice-lyric-area label {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  color: #425d4e;
+}
+
+.practice-lyric-area label small {
+  color: #8a958d;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.practice-lyric-entry {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.practice-lyric-entry input {
+  flex: 1;
+  min-width: 0;
+}
+
+.practice-lyric-entry button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 12px;
+  border: 1px solid #ccdaca;
+  border-radius: 10px;
+  background: #f3f8ef;
+  color: #54703c;
+  font-size: 12px;
+}
+
+.practice-lyric-warning {
+  margin-top: 7px !important;
+  color: #a6652b;
+  font-size: 12px;
+}
+
+.practice-validation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 20px;
+  padding: 13px 15px;
+  border: 1px solid #efdab9;
+  border-radius: 12px;
+  background: #fff9ee;
+  color: #986b30;
+}
+
+.practice-validation strong, .practice-validation span {
+  display: block;
+}
+
+.practice-validation strong {
+  font-size: 13px;
+}
+
+.practice-validation span {
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+.practice-validation b {
+  flex-shrink: 0;
+  font-size: 17px;
+}
+
+.practice-validation.exact {
+  border-color: #c7e7d3;
+  background: #f0faf3;
+  color: #367751;
+}
+
+.practice-validation.over {
+  border-color: #efc3b9;
+  background: #fff4f0;
+  color: #ac573d;
+}
+
+.practice-fill-rest {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border: 1px solid #e4dbc8;
+  border-radius: 8px;
+  background: #fff;
+  color: #8d7853;
+  font-size: 12px;
+}
+
+.practice-notice {
+  margin-top: 12px !important;
+  color: #586c87;
+  font-size: 13px;
+}
+
+.practice-workspace-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin-top: 22px;
+  padding-top: 17px;
+  border-top: 1px solid #eef1ed;
+}
+
+.practice-workspace-footer > span {
+  color: #859087;
+  font-size: 12px;
+}
+
+.practice-workspace-footer button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 42px;
+  padding: 10px 14px;
+  border: 1px solid #ccddce;
+  border-radius: 10px;
+  background: #fff;
+  font-size: 13px;
+}
+
+.practice-workspace-footer .practice-primary {
+  border-color: #327455;
+  background: #327455;
+  color: #fff;
+}
+
+.practice-sidebar h2 {
+  font-size: 17px;
+}
+
+.practice-sidebar p {
+  margin-top: 9px;
+  color: #6e7d72;
+  font-size: 12px;
+}
+
+.practice-instrument-fields label {
+  font-size: 12px;
+}
+
+.practice-instrument-fields select {
+  font-size: 12px;
+}
+
+.practice-export-actions button {
+  display: inline-flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 39px;
+  padding: 8px;
+  border: 1px solid #d5e0d6;
+  border-radius: 9px;
+  background: #fff;
+  font-size: 12px;
+}
+
+.practice-export-progress button {
+  padding: 5px 9px;
+  border: 1px solid #d5e0d6;
+  border-radius: 8px;
+  background: white;
+  font-size: 12px;
+}
+
+.practice-hint-card select {
+  font-size: 12px;
+}
+
+.practice-harmony-warning button {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  width: 100%;
+  margin-top: 9px;
+  padding: 9px;
+  border: 1px solid #e8ddc8;
+  border-radius: 8px;
+  background: #fffef9;
+  color: #8b703e;
+  font-size: 12px;
+  line-height: 1.7;
+  text-align: left;
+}
+
+.practice-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 1080px) {
+  .practice-workspace-layout {
+    grid-template-columns: minmax(0, 1fr) 270px;
+    gap: 15px;
+  }
+
+  .practice-workspace {
+    padding: 19px;
+  }
+
+  .practice-workspace-heading {
+    flex-direction: column;
+    gap: 12px;
+  }
+}
+
+@media (max-width: 800px) {
+  .practice-workspace-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .opening-actions .opening-practice {
+    min-height: 67px;
+  }
+
+  .opening-practice small {
+    font-size: 11px;
+  }
+
+  .practice-topbar {
+    flex-wrap: wrap;
+    gap: 8px;
+    min-height: 84px;
+    padding: 10px 16px;
+  }
+
+  .practice-back {
+    min-height: 35px;
+    padding: 7px 9px;
+    font-size: 12px;
+  }
+
+  .practice-brand {
+    margin-left: auto;
+    font-size: 17px;
+  }
+
+  .practice-save-state {
+    width: 100%;
+    text-align: right;
+    font-size: 10px;
+  }
+
+  .practice-main {
+    padding: 23px 14px 40px;
+  }
+
+  .practice-intro {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .practice-intro h1 {
+    font-size: 28px;
+  }
+
+  .practice-intro p {
+    max-width: 330px;
+    font-size: 12px;
+  }
+
+  .practice-mobile-break {
+    display: block;
+  }
+
+  .practice-settings {
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    padding: 19px 0;
+  }
+
+  .practice-title-field {
+    grid-column: 1 / -1;
+  }
+
+  .practice-settings label {
+    font-size: 12px;
+  }
+
+  .practice-settings select {
+    padding: 8px;
+    font-size: 12px;
+  }
+
+  .practice-step-tabs {
+    gap: 7px;
+    margin-bottom: 17px;
+  }
+
+  .practice-step-tabs > svg {
+    width: 16px;
+  }
+
+  .practice-step-tabs button {
+    flex: 1;
+    min-width: 0;
+    gap: 8px;
+    padding: 11px 9px;
+  }
+
+  .practice-step-tabs button > span {
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+    font-size: 12px;
+  }
+
+  .practice-step-tabs button strong {
+    font-size: 13px;
+  }
+
+  .practice-step-tabs button small {
+    font-size: 9px;
+  }
+
+  .practice-workspace {
+    padding: 17px 13px;
+    border-radius: 16px;
+  }
+
+  .practice-workspace-heading h2 {
+    font-size: 17px;
+  }
+
+  .practice-workspace-heading p {
+    font-size: 12px;
+  }
+
+  .practice-lyric-entry {
+    flex-wrap: wrap;
+  }
+
+  .practice-lyric-entry input {
+    flex-basis: 100%;
+  }
+
+  .practice-lyric-entry button {
+    width: 100%;
+    min-height: 40px;
+  }
+
+  .practice-validation {
+    align-items: flex-start;
+    padding: 11px;
+  }
+
+  .practice-validation strong {
+    font-size: 12px;
+  }
+
+  .practice-validation span {
+    font-size: 11px;
+    line-height: 1.6;
+  }
+
+  .practice-validation b {
+    font-size: 14px;
+  }
+
+  .practice-workspace-footer {
+    gap: 8px;
+  }
+
+  .practice-workspace-footer > span {
+    font-size: 10px;
+  }
+
+  .practice-workspace-footer button {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+}

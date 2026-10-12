@@ -1,0 +1,212 @@
+.practice-tutorial {
+  width: min(340px, 36%);
+  text-align: right;
+}
+
+.practice-lesson {
+  position: relative;
+  z-index: 2;
+  margin-top: 10px;
+  padding: 18px;
+  border: 1px solid #b9d9c7;
+  border-radius: 16px;
+  background: #f0faf3;
+  text-align: left;
+  box-shadow: 0 8px 22px #315a3810;
+}
+
+.practice-lesson-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  color: #487861;
+  font-size: 12px;
+}
+
+.practice-lesson-heading button {
+  padding: 4px;
+  border: 0;
+  background: transparent;
+}
+
+.practice-lesson small {
+  display: block;
+  margin-top: 8px;
+  color: #63766b;
+  line-height: 1.6;
+}
+
+.practice-lesson-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-top: 15px;
+}
+
+.practice-lesson-controls > div {
+  display: flex;
+  gap: 4px;
+}
+
+.practice-lesson-controls button[aria-pressed="true"] {
+  background: #33765b;
+  color: #fff;
+}
+
+.practice-sidebar {
+  display: grid;
+  gap: 18px;
+}
+
+.practice-listen-card, .practice-hint-card {
+  padding: 23px;
+  border: 1px solid #dbe4db;
+  border-radius: 18px;
+  background: #fff;
+}
+
+.practice-card-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 15px;
+  border-radius: 15px;
+  background: #eaf3ef;
+  color: #467860;
+}
+
+.practice-instrument-fields {
+  display: grid;
+  gap: 13px;
+  padding: 18px 0 16px;
+}
+
+.practice-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 45px;
+  border: 1px solid #33775b;
+  border-radius: 11px;
+  background: #33775b;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.practice-export-actions {
+  display: flex;
+  gap: 8px;
+  margin: 10px 0 14px;
+}
+
+.practice-listen-card small, .practice-hint-card small {
+  display: block;
+  color: #8b978e;
+  font-size: 11px;
+  line-height: 1.8;
+}
+
+.practice-listen-card .practice-export-help {
+  margin-top: 12px;
+  color: #957950;
+}
+
+.practice-export-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.practice-export-progress progress {
+  flex: 1;
+  width: 100%;
+  accent-color: #33775b;
+}
+
+.practice-listen-card .practice-audio-status {
+  color: #526d5c;
+}
+
+.practice-hint-card {
+  background: #fbfcf6;
+}
+
+.practice-hint-card > svg {
+  margin-bottom: 9px;
+  color: #a08d44;
+}
+
+.practice-hint-card label {
+  margin-top: 15px;
+}
+
+.practice-harmony-warning {
+  margin: 14px 0;
+  padding: 12px;
+  border: 1px solid #e9d6b1;
+  border-radius: 11px;
+  background: #fff9eb;
+}
+
+.practice-harmony-warning > strong {
+  color: #926c2e;
+  font-size: 12px;
+}
+
+.practice-harmony-warning button svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.practice-harmony-good {
+  display: flex;
+  gap: 8px;
+  margin: 15px 0;
+  color: #5a8560;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.practice-harmony-good svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+@media (max-width: 1080px) {
+  .practice-sidebar > section {
+    padding: 19px;
+  }
+}
+
+@media (max-width: 800px) {
+  .practice-sidebar {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .practice-tutorial {
+    width: min(310px, 42%);
+  }
+}
+
+@media (max-width: 600px) {
+  .practice-tutorial {
+    width: 100%;
+    text-align: left;
+  }
+
+  .practice-sidebar {
+    grid-template-columns: 1fr;
+  }
+
+  .practice-instrument-fields {
+    grid-template-columns: 1fr 1fr;
+  }
+}

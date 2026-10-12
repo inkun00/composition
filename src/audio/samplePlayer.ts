@@ -1,4 +1,4 @@
-import { Soundfont } from "smplr";
+import { Scheduler, Soundfont } from "smplr";
 import { INSTRUMENTS, type InstrumentId } from "../music/instruments";
 
 type LoadedInstrument = Readonly<{ kind: "soundfont"; player: Soundfont }>;
@@ -67,10 +67,17 @@ async function loadSoundFont(
   destination: AudioNode,
   id: InstrumentId
 ): Promise<LoadedInstrument> {
+  // Offline rendering advances faster than wall-clock scheduler polling.
+  // Dispatch every voice before rendering begins; AudioNodes retain the exact
+  // requested future start time. Real-time contexts keep smplr's normal window.
+  const scheduler = typeof OfflineAudioContext !== "undefined" && context instanceof OfflineAudioContext
+    ? Scheduler(context, { lookaheadMs: context.length / context.sampleRate * 1000 + 1000 })
+    : undefined;
   const player = Soundfont(context, {
     instrument: mapInstrumentId(id),
     kit: "FluidR3_GM",
-    destination
+    destination,
+    ...(scheduler ? { scheduler } : {})
   });
   await player.ready;
   return { kind: "soundfont", player };
@@ -127,4 +134,13 @@ export function isSampleBackedInstrument(id: InstrumentId): boolean {
 
 export function resetSampleInstrumentCache(): void {
   loaded.clear();
+}
+
+/** Release one short-lived rendering context without interrupting other players. */
+export function releaseSampleInstrument(
+  context: BaseAudioContext,
+  destination: AudioNode,
+  id: InstrumentId
+): void {
+  loaded.delete(cacheKey(context, destination, id));
 }

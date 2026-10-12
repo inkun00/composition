@@ -10,6 +10,8 @@ import PdfScoreSheet from "./components/PdfScoreSheet";
 import RecordingGuideDialog from "./components/RecordingGuideDialog";
 import LyricVideoExportButton from "./components/LyricVideoExportButton";
 import ScoreMeasure from "./components/ScoreMeasure";
+import OpeningScreen from "./components/OpeningScreen";
+import PracticeMode from "./practice/PracticeMode";
 import type { KaraokeGuideMode } from "./audio/karaokeGuide";
 import type { RecordingCaptureMode } from "./audio/vocalCapture";
 import NoteLyrics from "./components/NoteLyrics";
@@ -298,6 +300,7 @@ export default function App() {
   const [showOpening, setShowOpening] = useState(() =>
     !mobileRecordMode && !qrPlaybackMode && new URLSearchParams(window.location.search).get("start") !== "new");
   const [showAppMenu, setShowAppMenu] = useState(false);
+  const [practiceOpen, setPracticeOpen] = useState(false);
   const [accountLibraryOpen, setAccountLibraryOpen] = useState(false);
   const [communityAlbumOpen, setCommunityAlbumOpen] = useState(false);
   const [publishingScore, setPublishingScore] = useState<CloudScore | null>(null);
@@ -2028,36 +2031,26 @@ export default function App() {
 
   if (qrPlaybackMode) return <QrSongPlayback composition={incomingShare} songId={qrSongId} />;
 
+  function openPractice() {
+    void stopPlayback();
+    resetPlaybackUi();
+    clearNoteAnimationTimers();
+    setPresetPreviewing(false);
+    setBeatPreviewing(false);
+    setPlayingMeasure(false);
+    setPlayingId(null);
+    setShowAppMenu(false);
+    setPracticeOpen(true);
+  }
+
+  if (practiceOpen) return <PracticeMode onClose={() => setPracticeOpen(false)} />;
+
   return (
     <div className="app-shell">
       <input ref={projectFileInput} className="project-file-input" type="file"
         accept="text/plain,.txt,application/json,.json" onChange={(event) => void loadProjectFile(event)} />
-      {showOpening && (
-        <section className="opening-screen" aria-label="마음멜로디 시작 화면">
-          <picture className="opening-visual" aria-hidden="true">
-            <source media="(max-width: 700px)" srcSet={publicAssetUrl("/illustrations/opening-studio-mobile-v1.webp")} />
-            <img src={publicAssetUrl("/illustrations/opening-studio-desktop-v2.webp")} alt="" fetchPriority="high" />
-          </picture>
-          <div className="opening-content">
-            <div className="opening-brand-lockup">
-              <span className="opening-mark"><Music2 size={31} /></span>
-              <span className="opening-kicker">나만의 멜로디 놀이터</span>
-            </div>
-            <h1>마음멜로디</h1>
-            <p><strong>네 마음속 장면이 노래가 되는 곳</strong><br />친구들과 함께 첫 멜로디를 만들어 봐요.</p>
-            <div className="opening-actions">
-              <button type="button" className="opening-start action-button" onClick={startNewProject}>
-                <WandSparkles size={20} /> 시작하기 <ArrowRight size={18} />
-              </button>
-              <button type="button" className="opening-continue action-button" disabled={!resumableDraft}
-                onClick={() => setShowOpening(false)}>
-                <Music2 size={19} /> 이어하기
-              </button>
-            </div>
-            <small className="opening-status">{resumableDraft ? "저장한 노래가 기다리고 있어요." : "오늘의 첫 노래를 시작해 볼까요?"}</small>
-          </div>
-        </section>
-      )}
+      {showOpening && <OpeningScreen hasDraft={Boolean(resumableDraft)} onStart={startNewProject}
+        onContinue={() => setShowOpening(false)} onPractice={openPractice} />}
       {!mobileRecordMode && <header className="topbar">
         <div className="brand-menu-wrap">
           <a className="brand" href="#" aria-label="마음멜로디 홈">
@@ -2071,6 +2064,8 @@ export default function App() {
             </button>
             {showAppMenu && <div className="app-menu-panel" role="menu">
               <button type="button" role="menuitem" onClick={startNewProject}><WandSparkles size={16} /> 새로 시작하기</button>
+              <button type="button" role="menuitem" disabled={isAnyPlaying || exportingBacking || exportingPdf || processingRecording || lyricVideoExport.exporting}
+                onClick={openPractice}><Music2 size={16} /> 기능 연습하기</button>
               <button type="button" role="menuitem" onClick={() => {
                 setShowAppMenu(false);
                 projectFileInput.current?.click();

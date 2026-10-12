@@ -1,0 +1,605 @@
+.practice-editors {
+  color: #293845;
+}
+
+.practice-editor-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-bottom: 16px;
+}
+
+.practice-editor-summary strong {
+  font-size: 15px;
+}
+
+.practice-editor-summary strong span {
+  margin-left: 8px;
+  color: #7351a5;
+  font-size: 19px;
+}
+
+.practice-beat-status {
+  padding: 7px 11px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.practice-beat-status-exact {
+  background: #e5f5ed;
+  color: #247455;
+}
+
+.practice-beat-status-short {
+  background: #fff4db;
+  color: #806021;
+}
+
+.practice-beat-status-over {
+  background: #ffebe6;
+  color: #a34031;
+}
+
+.practice-editors button {
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.practice-editors button:disabled {
+  opacity: .5;
+  cursor: default;
+}
+
+.practice-editors button:focus-visible,
+.practice-grid-scroll:focus-visible,
+.practice-score-scroll:focus-visible {
+  outline: 3px solid #3b779d;
+  outline-offset: 3px;
+}
+
+.practice-duration-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.practice-duration-options > button {
+  display: grid;
+  flex: 1 0 86px;
+  max-width: 138px;
+  justify-items: center;
+  gap: 3px;
+  min-height: 86px;
+  padding: 9px 7px;
+  border: 1px solid #d6dce1;
+  border-radius: 10px;
+  background: #fff;
+  color: #364757;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.practice-duration-options > button.is-active {
+  border-color: #7954b3;
+  background: #f5efff;
+  box-shadow: inset 0 0 0 1px #7954b3;
+}
+
+.practice-note-symbol {
+  font-family: "Segoe UI Symbol", "Noto Music", serif;
+  font-size: 26px;
+  line-height: 1.25;
+}
+
+.practice-duration-options small {
+  color: #617080;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.practice-note-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.practice-note-actions > button {
+  min-height: 44px;
+  padding: 9px 13px;
+  border: 1px solid #cbd7df;
+  border-radius: 8px;
+  background: #edf5f9;
+  color: #355b74;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.practice-note-actions > .practice-delete-note {
+  margin-left: auto;
+  border-color: #e3d6d1;
+  background: #fff8f5;
+  color: #8e5045;
+}
+
+.practice-editor-help,
+.practice-grid-legend {
+  margin: 12px 0;
+  color: #657280;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.practice-grid-legend strong {
+  color: #a34031;
+}
+
+.practice-grid-scroll,
+.practice-score-scroll {
+  max-width: 100%;
+  padding: 4px 3px 8px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
+.practice-grid-content,
+.practice-score-content {
+  width: 100%;
+}
+
+.practice-beat-header {
+  position: relative;
+  height: 30px;
+  color: #788798;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.practice-beat-header > span {
+  position: absolute;
+  padding-left: 10px;
+}
+
+.practice-beat-header > .practice-overflow-label {
+  color: #a34031;
+}
+
+.practice-rhythm-timeline,
+.practice-melody-timeline,
+.practice-lyric-timeline {
+  position: relative;
+  overflow: visible;
+}
+
+.practice-rhythm-timeline {
+  height: 112px;
+  border: 1px solid #708694;
+  border-right: 0;
+  border-radius: 3px;
+}
+
+.practice-timeline-base {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  pointer-events: none;
+}
+
+.practice-half-beat {
+  border-left: 1px dashed #93a1aa;
+  background: #fff;
+}
+
+.practice-beat-start {
+  border-left-style: solid;
+  border-left-color: #667a87;
+}
+
+.practice-half-beat:first-child {
+  border-left: 0;
+}
+
+.practice-overflow-slot {
+  background: #fff0eb;
+}
+
+.practice-capacity-line {
+  position: absolute;
+  z-index: 4;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: #667a87;
+  transform: translateX(-3px);
+}
+
+.practice-empty-slot,
+.practice-rhythm-block {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 4px;
+  border: 0;
+  border-right: 1px solid #708694;
+  border-radius: 0;
+  color: #344656;
+  background: transparent;
+}
+
+.practice-empty-slot {
+  border-right: 0;
+  color: #adb8c2;
+  font-size: 24px;
+}
+
+.practice-empty-slot:hover {
+  background: #f0f4ff;
+  color: #7954b3;
+}
+
+.practice-rhythm-block {
+  z-index: 1;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.practice-block-divisions {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.practice-block-divisions > span {
+  position: absolute;
+  inset-block: 0;
+  border-left: 1px dashed rgba(78, 88, 100, .35);
+}
+
+.practice-block-divisions > .is-whole-beat {
+  border-left-style: solid;
+}
+
+.practice-rhythm-block > span:not(.practice-block-divisions),
+.practice-rhythm-block > small {
+  position: relative;
+  z-index: 1;
+}
+
+.practice-rhythm-pink {
+  background-color: #fce4e9;
+}
+
+.practice-rhythm-yellow {
+  background-color: #fff1ce;
+}
+
+.practice-rest-block {
+  background-color: #ebeff3;
+}
+
+.practice-rest-block .practice-note-symbol {
+  font-family: inherit;
+  font-size: 18px;
+}
+
+.practice-rhythm-block small {
+  max-width: 100%;
+  overflow: hidden;
+  color: #735854;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.practice-rhythm-block.is-selected,
+.practice-melody-cell.is-selected,
+.practice-grid-rest.is-selected {
+  z-index: 2;
+  box-shadow: inset 0 0 0 3px #7253a8;
+}
+
+.practice-rhythm-block.is-playing,
+.practice-melody-cell.is-playing {
+  z-index: 3;
+  box-shadow: inset 0 0 0 4px #217b72;
+  filter: brightness(.95);
+}
+
+.practice-rhythm-block.is-overflowing {
+  border-bottom: 4px solid #cc6556;
+}
+
+.practice-lyric-timeline {
+  height: 45px;
+  margin-top: 8px;
+  border-top: 1px solid #dde4e9;
+  border-bottom: 1px solid #dde4e9;
+}
+
+.practice-lyric-timeline .practice-half-beat {
+  background: #fafbfd;
+  border-left-color: #dee3e9;
+}
+
+.practice-lyric-cell {
+  position: absolute;
+  inset-block: 0;
+  padding: 5px 3px;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  color: #63536f;
+  font-size: 16px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.practice-lyric-input,
+.practice-shell .practice-lyric-input {
+  min-width: 0;
+  min-height: 0;
+  padding: 5px 3px;
+  border: 0;
+  border-right: 1px solid #dee3e9;
+  border-radius: 0;
+  outline: 0;
+  background: transparent;
+  color: #63536f;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.practice-lyric-input:focus {
+  z-index: 5;
+  background: #fff;
+  box-shadow: inset 0 0 0 2px #7954b3;
+}
+
+.practice-lyric-input:disabled {
+  opacity: .5;
+}
+
+.practice-lyric-rest {
+  display: grid;
+  place-items: center;
+  color: #8b94a0;
+}
+
+.practice-melody-rows {
+  border-top: 1px solid #708694;
+}
+
+.practice-melody-row {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  height: 52px;
+}
+
+.practice-pitch-row-label {
+  display: grid;
+  align-self: center;
+  justify-self: start;
+  min-width: 62px;
+  height: 42px;
+  padding: 0 7px;
+  place-items: center;
+  border: 2px solid rgba(255, 255, 255, .6);
+  border-radius: 22px;
+  color: #2e3f4d;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.practice-melody-timeline {
+  border: 1px solid #708694;
+  border-top: 0;
+  border-right: 0;
+}
+
+.practice-melody-cell {
+  position: absolute;
+  inset-block: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 5px;
+  border: 0;
+  border-right: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: #293845;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.practice-melody-cell:hover {
+  background: #eef0fa;
+  box-shadow: inset 0 0 0 2px #9c8fbb;
+}
+
+.practice-melody-cell.is-filled {
+  border-right-color: #708694;
+}
+
+.practice-melody-cell.is-filled span:last-child {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.practice-grid-rest {
+  position: absolute;
+  inset-block: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-right: 1px dashed #b1bac1;
+  background: rgba(220, 226, 231, .45);
+  color: #74808e;
+  font-size: 12px;
+}
+
+.practice-timeline-offset {
+  margin-left: 72px;
+}
+
+.practice-pitch-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.practice-pitch-options > button {
+  min-width: 57px;
+  min-height: 44px;
+  padding: 7px 10px;
+  border: 2px solid transparent;
+  border-radius: 9px;
+  color: #293845;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.practice-pitch-options > button[aria-pressed="true"] {
+  border-color: #4b405f;
+  box-shadow: 0 0 0 2px #e6dfef;
+}
+
+.practice-pitch-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0;
+  font-size: 13px;
+}
+
+.practice-pitch-navigation > span {
+  margin-right: auto;
+  color: #657280;
+}
+
+.practice-pitch-navigation > button {
+  min-height: 44px;
+  padding: 7px 12px;
+  border: 1px solid #d6dce1;
+  border-radius: 8px;
+  background: #fff;
+  color: #485d70;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.practice-score-content .score-shell {
+  margin: 0;
+}
+
+.practice-editor-empty {
+  color: #657280;
+  font-size: 13px;
+}
+
+.practice-editors-compact .practice-grid-scroll,
+.practice-editors-compact .practice-score-scroll {
+  padding: 3px 0 0;
+  overflow-x: auto;
+}
+
+.practice-editors-compact .practice-beat-header {
+  height: 24px;
+  font-size: 12px;
+}
+
+.practice-editors-compact .practice-beat-header > span {
+  padding-left: 6px;
+}
+
+.practice-editors-compact .practice-rhythm-timeline {
+  height: 76px;
+}
+
+.practice-editors-compact .practice-rhythm-block {
+  gap: 2px;
+  padding: 2px;
+  font-size: 11px;
+}
+
+.practice-editors-compact .practice-rhythm-block .practice-note-symbol {
+  font-size: 22px;
+}
+
+.practice-editors-compact .practice-rhythm-block small {
+  font-size: 12px;
+}
+
+.practice-editors-compact .practice-melody-row {
+  grid-template-columns: 48px minmax(0, 1fr);
+  height: 36px;
+}
+
+.practice-editors-compact .practice-pitch-row-label {
+  min-width: 43px;
+  height: 30px;
+  padding: 0 3px;
+  font-size: 11px;
+}
+
+.practice-editors-compact .practice-melody-cell {
+  gap: 3px;
+  padding: 3px 2px;
+  font-size: 11px;
+}
+
+.practice-editors-compact .practice-timeline-offset {
+  margin-left: 48px;
+}
+
+.practice-editors-compact .practice-lyric-timeline {
+  height: 35px;
+  margin-top: 5px;
+}
+
+.practice-editors-compact .practice-lyric-cell {
+  font-size: 13px;
+}
+
+@media (max-width: 620px) {
+  .practice-editor-summary {
+    display: grid;
+  }
+
+  .practice-note-actions > button {
+    flex: 1 1 auto;
+  }
+
+  .practice-note-actions > .practice-delete-note {
+    margin-left: 0;
+  }
+
+  .practice-duration-options > button {
+    flex-basis: 84px;
+    max-width: none;
+  }
+
+  .practice-pitch-options > button {
+    flex: 1 1 60px;
+  }
+}
