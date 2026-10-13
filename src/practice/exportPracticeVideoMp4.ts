@@ -1,5 +1,5 @@
 import type { PracticeAudioInput, PracticeRenderedAudio } from "./practiceAudioTypes";
-import { PRACTICE_VIDEO_HEIGHT, PRACTICE_VIDEO_WIDTH } from "./practiceVideoLayout";
+import { PRACTICE_VIDEO_FPS, PRACTICE_VIDEO_HEIGHT, PRACTICE_VIDEO_WIDTH } from "./practiceVideoLayout";
 import { buildPracticeVideoPlan } from "./practiceVideoPlan";
 import { preparePracticeVideoRenderer } from "./practiceVideoRenderer";
 
@@ -27,7 +27,8 @@ export async function exportPracticeVideoMp4(
   const audioQuality = new Quality({ bitrate: 192_000 });
   const [videoSupported, audioSupported] = await Promise.all([
     canEncodeVideo("avc", {
-      width: PRACTICE_VIDEO_WIDTH, height: PRACTICE_VIDEO_HEIGHT, frameRate: 10, quality: videoQuality
+      width: PRACTICE_VIDEO_WIDTH, height: PRACTICE_VIDEO_HEIGHT,
+      frameRate: PRACTICE_VIDEO_FPS, quality: videoQuality
     }),
     canEncodeAudio("aac", {
       numberOfChannels: Math.min(2, rendered.buffer.numberOfChannels),

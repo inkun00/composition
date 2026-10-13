@@ -4,6 +4,7 @@ import { measureCapacity } from "../music/meter";
 import { toNumber } from "../music/rational";
 import { buildPracticeAudioPlan } from "./practiceAudioTimeline";
 import type { PracticeAudioInput, PracticeRenderedAudio, PracticeTimeline } from "./practiceAudioTypes";
+import { PRACTICE_VIDEO_FPS } from "./practiceVideoLayout";
 import type {
   PracticeVideoFrame, PracticeVideoMeasure, PracticeVideoNote, PracticeVideoPlan, PracticeVideoTrack
 } from "./practiceVideoTypes";
@@ -38,7 +39,9 @@ function mapTrack(
 
 function videoFrames(measures: readonly PracticeVideoMeasure[], durationSeconds: number): PracticeVideoFrame[] {
   const times = new Set<number>([0, durationSeconds]);
-  for (let frame = 1; frame / 10 < durationSeconds; frame += 1) times.add(frame / 10);
+  for (let frame = 1; frame / PRACTICE_VIDEO_FPS < durationSeconds; frame += 1) {
+    times.add(frame / PRACTICE_VIDEO_FPS);
+  }
   for (const measure of measures) {
     times.add(measure.startSeconds);
     for (const notes of measure.tracks) {
@@ -55,7 +58,7 @@ function videoFrames(measures: readonly PracticeVideoMeasure[], durationSeconds:
     const previous = boundaries.at(-1);
     if (previous === undefined || time - previous > 0.000001) boundaries.push(time);
     // Keep the later timestamp so floating-point rounding never highlights the
-    // preceding note for an extra 100 ms at an almost-equal frame boundary.
+    // preceding note for an extra frame at an almost-equal frame boundary.
     else if (boundaries.length > 1) boundaries[boundaries.length - 1] = time;
   }
   return boundaries.slice(0, -1).map((startSeconds, index) => ({

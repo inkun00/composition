@@ -2,16 +2,16 @@ import type { PracticeVideoMeasure, PracticeVideoPlan } from "./practiceVideoTyp
 
 export const PRACTICE_VIDEO_WIDTH = 1280;
 export const PRACTICE_VIDEO_HEIGHT = 720;
-export const PRACTICE_VIDEO_COLORS = ["#33896f", "#697ac3", "#bd7f36"];
+export const PRACTICE_VIDEO_FPS = 24;
 export const PRACTICE_VIDEO_FONT = '"Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
 
 export type VideoTrackBounds = Readonly<{ x: number; y: number; width: number; height: number }>;
 
 export function practiceVideoTrackBounds(trackIndex: number, trackCount: number): VideoTrackBounds {
-  const available = 548;
-  const gap = 14;
+  const available = 632;
+  const gap = 20;
   const height = (available - gap * (trackCount - 1)) / trackCount;
-  return { x: 34, y: 102 + trackIndex * (height + gap), width: 1212, height };
+  return { x: 48, y: 44 + trackIndex * (height + gap), width: 1184, height };
 }
 
 export function practiceVideoPage(plan: PracticeVideoPlan, seconds: number): readonly PracticeVideoMeasure[] {
@@ -31,7 +31,7 @@ export function roundedVideoRect(
 
 export function drawVideoText(
   context: CanvasRenderingContext2D, text: string, x: number, y: number,
-  maxWidth: number, size = 20, color = "#273d45", weight = 500
+  maxWidth: number, size = 20, color = "#fff", weight = 500
 ): void {
   context.fillStyle = color;
   context.font = `${weight} ${size}px ${PRACTICE_VIDEO_FONT}`;
