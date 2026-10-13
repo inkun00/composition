@@ -7,6 +7,7 @@ import { assignPracticeLyrics, createPracticeMeasures, lyricSyllables, makeLyric
 import { readPracticeDraft, writePracticeDraft, type PracticeDraft } from "./practiceStorage";
 import { getPracticeScores, hasPracticeScoreData, MAX_PRACTICE_SCORES, normalizePracticeRhythmInstrument } from "./practiceScores";
 import { normalizePracticePitch } from "./practicePitch";
+import { isAvailablePracticeChord, normalizePracticeHarmony } from "./practiceHarmony";
 
 function unassignedLyricSyllables(measure: PracticeMeasure) {
   // Deleted notes release their syllables without moving lyrics on other notes.
@@ -173,8 +174,9 @@ export function usePracticeState() {
       if (!window.confirm("마디 수를 줄이면 뒤쪽 마디의 가사와 음표가 지워져요. 줄일까요?")) return;
     }
     function resizeMeasures(measures: PracticeMeasure[], idPrefix: string) {
-      return count <= measures.length ? measures.slice(0, count)
+      const resized = count <= measures.length ? measures.slice(0, count)
         : [...measures, ...createPracticeMeasures(count - measures.length).map((measure, index) => ({ ...measure, id: `${idPrefix}-${measures.length + index + 1}` }))];
+      return normalizePracticeHarmony(resized);
     }
     updateDraft((previous) => ({
       ...previous,
@@ -312,11 +314,29 @@ export function usePracticeState() {
     setNotice("모든 마디의 리듬이 완성됐어요! 음높이를 바꾸며 가락을 만들고, 필요하면 리듬도 고쳐 보세요.");
   }
 
+  function setChord(chord: string, index = selectedMeasure.current, scoreIndex = selectedScore.current) {
+    const previous = latestDraft.current;
+    const measures = getPracticeScores(previous)[scoreIndex]?.measures;
+    if (!measures || !Number.isInteger(index) || index < 0 || index >= measures.length) return;
+    if (!isAvailablePracticeChord(chord, measures[index - 1]?.chord)) {
+      setNotice("앞 마디와 이어지는 목록에서 화음을 골라 주세요.");
+      return;
+    }
+    const next = normalizePracticeHarmony(measures.map((measure, targetIndex) => targetIndex === index ? { ...measure, chord } : measure));
+    const changedLater = next.filter((measure, targetIndex) => targetIndex > index && measure.chord !== measures[targetIndex].chord).length;
+    updateDraft((draft) => scoreIndex === 0
+      ? { ...draft, measures: next }
+      : { ...draft, rhythmLayers: draft.rhythmLayers.map((layer, targetIndex) => targetIndex === scoreIndex - 1 ? { ...layer, measures: next } : layer) });
+    setNotice(changedLater > 0
+      ? `뒤쪽 ${changedLater}개 마디의 화음도 어울리게 바꿨어요. 리듬과 가락은 그대로예요.`
+      : "");
+  }
+
   return {
     draft, active, activeIndex, activeScoreIndex, scores, step, editingStep, inputMode, selectedNoteId, notice, saved, validations, scoreValidations, complete,
     setStep, setInputMode, setSelectedNoteId: selectNote, selectMeasure, configure, resize, setMeter,
     selectScore, addRhythmScore, removeRhythmScore, setRhythmInstrument,
     addNote, setPitch, setDuration, deleteNote, setLyric, setNoteLyric, generateRhythm, fillRests, goToMelody,
-    setChord: (chord: string, index = selectedMeasure.current, scoreIndex = selectedScore.current) => updateMeasure((measure) => ({ ...measure, chord }), index, scoreIndex)
+    setChord
   };
 }

@@ -284,13 +284,29 @@ describe("리듬과 가락 연습 입력", () => {
     expect(props.onDuration).not.toHaveBeenCalled();
   });
 
-  it("재생 중인 쉼표도 리듬·가사·박자 번호에서 강조하고 멈추면 지운다", () => {
+  it.each(["rhythm", "melody"] as const)("%s 칸 위의 박자 번호를 없애고 음표·길이·가사는 그대로 보여 준다", (step) => {
+    mount({
+      notes: [{ id: "note", pitch: 67, duration: rational(3, 2), lyric: "봄" }], step
+    });
+    expect(container?.querySelector(".practice-beat-header")).toBeNull();
+    expect(container?.querySelector(".practice-grid-content")?.firstElementChild?.classList.contains(
+      step === "rhythm" ? "practice-rhythm-timeline" : "practice-melody-rows"
+    )).toBe(true);
+    expect(container?.querySelector(".practice-lyric-timeline")?.textContent).toContain("봄");
+    if (step === "rhythm") {
+      expect(button("practice-rhythm-note-note").textContent).toContain("1.5박");
+    } else {
+      expect(button("practice-melody-note-67").classList.contains("is-filled")).toBe(true);
+    }
+  });
+
+  it("박자 번호 없이도 재생 중인 쉼표를 리듬·가사에서 강조하고 멈추면 지운다", () => {
     const props = mount({
       notes: [{ id: "rest", pitch: null, duration: rational(2) }], playingNoteId: "rest",
       disabled: true, onNoteLyric: vi.fn()
     });
     expect(button("practice-rhythm-note-rest").classList.contains("is-playing")).toBe(true);
-    expect(container?.querySelectorAll(".practice-beat-header .is-playing")).toHaveLength(2);
+    expect(container?.querySelector(".practice-beat-header")).toBeNull();
     expect(container?.querySelector(".practice-lyric-rest.is-playing")).not.toBeNull();
     act(() => root?.render(<PracticeEditors {...props} step="melody" />));
     expect(button("practice-melody-rest-rest").classList.contains("is-playing")).toBe(true);

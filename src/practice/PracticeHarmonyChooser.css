@@ -1,0 +1,25 @@
+.practice-harmony-chooser {
+  display: grid;
+  gap: 7px;
+}
+
+.practice-harmony-chooser select {
+  width: 100%;
+}
+
+.practice-harmony-chooser .practice-harmony-connection {
+  margin: 0;
+  color: #607568;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.practice-harmony-chooser .practice-harmony-description {
+  margin: 0;
+  padding: 8px;
+  border-radius: 7px;
+  background: #f3f7ef;
+  color: #557343;
+  font-size: 11px;
+  line-height: 1.6;
+}

@@ -33,7 +33,6 @@ export type PracticeEditorsProps = {
 type TimelineProps = {
   slots: number;
   capacity: number;
-  playingNote?: PositionedNote;
 };
 
 function beatText(beats: number): string {
@@ -75,22 +74,6 @@ function TimelineBase({ slots, capacity }: TimelineProps) {
         ].filter(Boolean).join(" ")} />
       ))}
       <span className="practice-capacity-line" style={{ left: `${capacity * 2 / slots * 100}%` }} />
-    </div>
-  );
-}
-
-function TimelineHeader({ slots, capacity, playingNote }: TimelineProps) {
-  return (
-    <div className="practice-beat-header" aria-hidden="true">
-      {Array.from({ length: Math.ceil(slots / 2) }, (_, index) => (
-        <span key={index} className={[
-          index >= capacity ? "practice-overflow-label" : "",
-          playingNote && index + 1 > playingNote.onset && index < playingNote.onset + toNumber(playingNote.duration) ? "is-playing" : ""
-        ].filter(Boolean).join(" ")}
-          style={{ left: `${index * 2 / slots * 100}%`, width: `${2 / slots * 100}%` }}>
-          {index >= capacity ? "+" : ""}{index + 1}
-        </span>
-      ))}
     </div>
   );
 }
@@ -407,9 +390,6 @@ export default function PracticeEditors({
       {inputMode === "grid" ? (
         <div className="practice-grid-scroll" tabIndex={0} aria-label="옆으로 넘겨 전체 칸 보기">
           <div className="practice-grid-content" style={{ minWidth: `${gridMinWidth}px` }}>
-            <div className={step === "melody" ? "practice-timeline-offset" : ""}>
-              <TimelineHeader slots={slots} capacity={capacity} playingNote={positioned.find((note) => note.id === playingNoteId)} />
-            </div>
             {step === "rhythm" ? (
               <RhythmGrid notes={positioned} slots={slots} capacity={capacity} total={total}
                 selectedNoteId={selectedNoteId} playingNoteId={playingNoteId} disabled={disabled}

@@ -6,6 +6,7 @@ import type { NoteEvent } from "../music/types";
 import { assignPracticeLyrics, createPracticeMeasures, lyricSyllables, PRACTICE_DURATIONS, type PracticeMeasure } from "./practiceModel";
 import { MAX_PRACTICE_SCORES, normalizePracticeRhythmInstrument, type PracticeRhythmLayer } from "./practiceScores";
 import { isPracticePitch } from "./practicePitch";
+import { normalizePracticeHarmony } from "./practiceHarmony";
 
 export type { PracticeRhythmLayer } from "./practiceScores";
 
@@ -36,7 +37,7 @@ export function emptyPracticeDraft(): PracticeDraft {
 }
 
 function restoreMeasures(saved: PracticeMeasure[], ids: Set<string>, idPrefix: string): PracticeMeasure[] {
-  return saved.map((measure, index) => {
+  const restored = saved.map((measure, index) => {
     if (typeof measure.lyric !== "string" || !Array.isArray(measure.notes) || measure.notes.length > 64) throw new Error("Invalid measure");
     const lyric = measure.lyric.slice(0, 200);
     const hasSavedPlacement = measure.notes.every((note) => note.pitch === null || (
@@ -70,10 +71,11 @@ function restoreMeasures(saved: PracticeMeasure[], ids: Set<string>, idPrefix: s
     return {
       id: `${idPrefix}-${index + 1}`,
       lyric,
-      chord: ["C", "F", "G", "Am"].includes(measure.chord) ? measure.chord : "C",
+      chord: typeof measure.chord === "string" ? measure.chord : "C",
       notes: hasSavedPlacement && placementMatchesSource ? notes : assignPracticeLyrics(notes, lyric)
     };
   });
+  return normalizePracticeHarmony(restored);
 }
 
 function restoreLayers(saved: unknown, count: number, noteIds: Set<string>): PracticeRhythmLayer[] {

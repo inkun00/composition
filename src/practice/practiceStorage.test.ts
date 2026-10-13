@@ -50,6 +50,35 @@ afterEach(() => {
 });
 
 describe("연습 초안 저장과 복원", () => {
+  it("다양한 7화음과 연결 가능한 화음 선택을 새로고침 후에도 복원한다", () => {
+    const draft = storedExample();
+    draft.measures = ["Cmaj7", "Fmaj7", "Dm7", "G7"].map((chord, index) => ({
+      ...draft.measures[index % 2], id: `expanded-${index}`, chord,
+      notes: draft.measures[index % 2].notes.map((note) => ({ ...note, id: `${note.id}-${index}` }))
+    }));
+    writePracticeDraft(draft);
+    expect(readPracticeDraft().measures.map((measure) => measure.chord)).toEqual(["Cmaj7", "Fmaj7", "Dm7", "G7"]);
+  });
+
+  it("후보에서 벗어난 저장 화음만 복구하고 음표·가사·길이는 그대로 둔다", () => {
+    const draft = storedExample();
+    draft.measures[0].chord = "Dm";
+    draft.measures[1].chord = "F";
+    draft.rhythmLayers = [{ id: "harmony-layer", instrumentId: "beat:clap", measures: draft.measures.map((measure) => ({
+      ...measure, notes: measure.notes.map((note) => ({ ...note, id: `${note.id}-layer` }))
+    })) }];
+    writePracticeDraft(draft);
+    const restored = readPracticeDraft();
+    expect(restored.measures.map((measure) => measure.chord)).toEqual(["Dm", "G"]);
+    expect(restored.rhythmLayers[0].measures.map((measure) => measure.chord)).toEqual(["Dm", "G"]);
+    const noteContent = (notes: readonly NoteEvent[]) => notes.map((note) => ({
+      id: note.id, pitch: note.pitch, duration: note.duration,
+      dotted: Boolean(note.dotted), lyric: note.lyric ?? ""
+    }));
+    expect(restored.measures.map((measure) => noteContent(measure.notes))).toEqual(draft.measures.map((measure) => noteContent(measure.notes)));
+    expect(restored.measures.map((measure) => measure.lyric)).toEqual(draft.measures.map((measure) => measure.lyric));
+  });
+
   it("처음 방문하면 두 마디와 사용할 수 있는 기본 악기를 준비한다", () => {
     const draft = readPracticeDraft();
     expect(draft.measures).toHaveLength(2);

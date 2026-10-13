@@ -112,10 +112,6 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
               <h2>{step === "rhythm" ? "모든 마디에 리듬을 채워요" : "모든 마디의 가락을 만들어 봐요"}</h2>
               <p>{step === "rhythm" ? "마디 이름을 누르고 음표 길이를 고른 뒤 배치해요. 다른 음표를 골라도 이미 배치한 리듬은 바뀌지 않아요." : "완성한 리듬에 음높이를 붙여요. 칸 채우기와 악보에 넣기 중 편한 방식을 골라요."}</p>
             </div>
-            <div className="practice-input-toggle" role="group" aria-label="음표 입력 방식">
-              <button type="button" aria-pressed={inputMode === "grid"} disabled={busy} onClick={() => practice.setInputMode("grid")}>칸 채우기</button>
-              <button type="button" aria-pressed={inputMode === "score"} disabled={busy} onClick={() => practice.setInputMode("score")}>악보에 넣기</button>
-            </div>
           </div>
 
           <PracticeRhythmScores practice={practice} audio={audio} />
@@ -142,6 +138,13 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
                   </button>
                 </div>
               )}
+              <div className="practice-input-toggle practice-measure-input-toggle" role="group"
+                aria-label={scoreIndex === 0 ? "음표 입력 방식" : `${scoreIndex + 1}번 악보 음표 입력 방식`}>
+                <button type="button" aria-pressed={inputMode === "grid"} disabled={busy}
+                  onClick={() => practice.setInputMode("grid")}>칸 채우기</button>
+                <button type="button" aria-pressed={inputMode === "score"} disabled={busy}
+                  onClick={() => practice.setInputMode("score")}>악보에 넣기</button>
+              </div>
               <div className="practice-measures-overview" style={{ "--practice-columns": Math.min(4, draft.measures.length) } as CSSProperties}>
                 {score.measures.map((measure, index) => {
                   const previewActive = audio.previewMeasureIndex === index && audio.previewScoreIndex === scoreIndex;

@@ -3,6 +3,7 @@ import { measureCapacity, type Meter } from "../music/meter";
 import { toNumber } from "../music/rational";
 import type { MeasureValidation } from "../music/types";
 import PracticeEditors from "./PracticeEditors";
+import PracticeHarmonyChooser from "./PracticeHarmonyChooser";
 import PracticePlaybackIndicator from "./PracticePlaybackIndicator";
 import { getPracticeHarmonyHints, lyricSyllables, type PracticeMeasure } from "./practiceModel";
 import type { usePracticeState } from "./usePracticeState";
@@ -97,15 +98,9 @@ export default function PracticeMeasureCard({
 
       {step === "melody" && (
         <div className="practice-measure-harmony">
-          <label>어울릴 화음
-            <select aria-label={`${index + 1}마디 가락 연습 화음`} disabled={disabled} value={measure.chord}
-              onChange={(event) => practice.setChord(event.target.value, index, scoreIndex)}>
-              <option value="C">C · 도·미·솔</option>
-              <option value="F">F · 파·라·도</option>
-              <option value="G">G · 솔·시·레</option>
-              <option value="Am">Am · 라·도·미</option>
-            </select>
-          </label>
+          <PracticeHarmonyChooser chord={measure.chord} index={index} disabled={disabled}
+            previousChord={practice.scores[scoreIndex].measures[index - 1]?.chord}
+            onChange={(chord) => practice.setChord(chord, index, scoreIndex)} />
           {hints.length > 0 ? (
             <div className="practice-harmony-warning" role="alert">
               <strong>조금 불안정하게 들릴 수 있어요</strong>

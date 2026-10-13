@@ -55,6 +55,63 @@ afterEach(() => {
 });
 
 describe("리듬을 만들고 가락으로 이어 가는 연습 상태", () => {
+  it("앞 화음을 바꾸면 뒤 마디의 후보 밖 화음만 조정하고 가락·리듬·가사는 보존한다", () => {
+    mount(fullDraft());
+    act(() => { current.resize(4); });
+    const before = current.draft.measures;
+    act(() => { current.setChord("Dm", 0); });
+    expect(current.draft.measures.map((measure) => measure.chord)).toEqual(["Dm", "G", "C", "C"]);
+    expect(current.draft.measures.map((measure) => measure.notes)).toEqual(before.map((measure) => measure.notes));
+    expect(current.draft.measures.map((measure) => measure.lyric)).toEqual(before.map((measure) => measure.lyric));
+    expect(current.notice).toContain("뒤쪽 1개 마디");
+    expect(readPracticeDraft().measures.map((measure) => measure.chord)).toEqual(["Dm", "G", "C", "C"]);
+    const updated = current.draft;
+    act(() => { current.setChord("F", 1); });
+    expect(current.draft).toBe(updated);
+    expect(current.notice).toContain("앞 마디");
+  });
+
+  it("같은 이벤트에서 고른 새 화음을 다음 마디 후보 검증에 사용한다", () => {
+    mount(fullDraft());
+    act(() => {
+      current.setChord("Dm7", 0);
+      current.setChord("G7", 1);
+      current.resize(3);
+      current.setChord("Cmaj7", 2);
+    });
+    expect(current.draft.measures.map((measure) => measure.chord)).toEqual(["Dm7", "G7", "Cmaj7"]);
+    expect(current.draft.measures[0].notes.map((note) => note.lyric)).toEqual(["안", "녕"]);
+  });
+
+  it("마디를 늘릴 때 마지막 화음 뒤에 연결 가능한 기본 화음을 넣는다", () => {
+    mount();
+    act(() => {
+      current.resize(1);
+      current.setChord("Em7", 0);
+      current.resize(4);
+    });
+    expect(current.draft.measures.map((measure) => measure.chord)).toEqual(["Em7", "Am", "C", "C"]);
+    expect(current.draft.measures.every((measure) => measure.notes.length === 0)).toBe(true);
+  });
+
+  it("추가 리듬 악보의 화음 검증도 독립적이며 첫 악보를 변경하지 않는다", () => {
+    mount(fullDraft());
+    const primary = current.draft.measures;
+    act(() => {
+      current.addRhythmScore();
+      current.setChord("Dm", 0, 1);
+    });
+    expect(current.draft.measures).toBe(primary);
+    expect(current.draft.rhythmLayers[0].measures.map((measure) => measure.chord)).toEqual(["Dm", "G"]);
+    const previous = current.draft;
+    act(() => {
+      current.setChord("F", 1, 1);
+      current.setChord("C", -1, 1);
+      current.setChord("C", 0, 99);
+    });
+    expect(current.draft).toBe(previous);
+  });
+
   it("저장된 작업을 복원하고 편집한 가사와 설정을 자동 저장한다", () => {
     mount(fullDraft());
     expect(current.active.lyric).toBe("안녕");

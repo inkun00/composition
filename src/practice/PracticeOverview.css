@@ -1,3 +1,8 @@
+.practice-measure-input-toggle {
+  width: fit-content;
+  margin: 0 0 10px auto;
+}
+
 .practice-shared-tools {
   margin: 20px 0;
   padding: 15px;

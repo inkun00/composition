@@ -152,23 +152,6 @@
   width: 100%;
 }
 
-.practice-beat-header {
-  position: relative;
-  height: 30px;
-  color: #788798;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.practice-beat-header > span {
-  position: absolute;
-  padding-left: 10px;
-}
-
-.practice-beat-header > .practice-overflow-label {
-  color: #a34031;
-}
-
 .practice-rhythm-timeline,
 .practice-melody-timeline,
 .practice-lyric-timeline {
@@ -320,15 +303,6 @@
 
 .practice-rhythm-block.is-playing small {
   color: #fff;
-}
-
-.practice-beat-header > span.is-playing {
-  min-height: 22px;
-  padding-top: 2px;
-  border-radius: 5px;
-  background: #12645d;
-  color: #fff;
-  box-shadow: inset 0 -3px 0 #ffd166;
 }
 
 .practice-editors button.is-playing:disabled,
@@ -549,15 +523,6 @@
 .practice-editors-compact .practice-score-scroll {
   padding: 3px 0 0;
   overflow-x: auto;
-}
-
-.practice-editors-compact .practice-beat-header {
-  height: 24px;
-  font-size: 12px;
-}
-
-.practice-editors-compact .practice-beat-header > span {
-  padding-left: 6px;
 }
 
 .practice-editors-compact .practice-rhythm-timeline {
