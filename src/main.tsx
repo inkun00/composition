@@ -16,7 +16,7 @@ import "./styles/music-lab-studio.css";
 import "./styles/music-lab-rhythm.css";
 import "./styles/music-lab-production.css";
 import "./styles/music-lab-dialogs.css";
-import "./styles/music-lab-opening.css";
+import "./styles/opening-screen.css";
 import "./practice/PracticeMusicLab.css";
 
 preloadVexFlow();

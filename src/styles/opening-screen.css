@@ -1,0 +1,52 @@
+/* Keep the original welcome page independent from the studio theme. */
+.opening-screen {
+  --action-compose: #6750b5;
+  --action-compose-hover: #543f9d;
+  font-family: "Gowun Dodum", "Noto Sans KR", system-ui, sans-serif;
+}
+
+.app-shell:has(.opening-screen) > :not(.opening-screen) {
+  display: none;
+}
+
+.opening-screen .action-button {
+  letter-spacing: -.01em;
+  transition: transform .16s ease, box-shadow .18s ease, filter .18s ease,
+    border-color .18s ease, background .18s ease;
+}
+
+.opening-screen .action-button:not(:disabled):hover {
+  transform: translateY(-2px);
+  filter: saturate(1.06);
+}
+
+.opening-screen .action-button:not(:disabled):active {
+  transform: translateY(0) scale(.975);
+}
+
+.opening-screen button:focus-visible {
+  outline: 4px solid rgba(52, 127, 196, .28);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .opening-screen .action-button {
+    transition: none;
+  }
+
+  .opening-screen .action-button:not(:disabled):hover,
+  .opening-screen .action-button:not(:disabled):active {
+    transform: none;
+  }
+}
+
+@media (min-width: 901px) {
+  .opening-screen {
+    font-family: Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  }
+
+  .opening-screen button:focus-visible {
+    outline: 3px solid rgba(109, 92, 231, .24);
+    outline-offset: 2px;
+  }
+}
