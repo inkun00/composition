@@ -47,9 +47,7 @@ export default function MeasureSoundEffectDialog({
         aria-labelledby="measure-sound-title">
         <header className="measure-sound-header">
           <div>
-            <span>🎬 마디에 장면 소리 넣기</span>
-            <h2 id="measure-sound-title">{measureIndex + 1}마디의 어느 박자에 소리를 놓을까요?</h2>
-            <p>소리를 고른 뒤 아래 박자선에서 좌우로 끌어 위치를 바꿔 보세요.</p>
+            <h2 id="measure-sound-title">{measureIndex + 1}마디 효과음</h2>
           </div>
           <div className="measure-sound-header-actions">
             <button type="button" className="measure-sound-play" onClick={onPlay}>

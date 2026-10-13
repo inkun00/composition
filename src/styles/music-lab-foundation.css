@@ -1,0 +1,429 @@
+/* Flat, high contrast controls inspired by Chrome Music Lab. */
+:root {
+  --lab-ink: #2c3035;
+  --lab-muted: #647078;
+  --lab-border: #dce1e4;
+  --lab-surface: #f6f7f8;
+  --lab-pink: #ed4c85;
+  --lab-cyan: #45adc0;
+  --lab-yellow: #ffcf4b;
+  --lab-lime: #94c83d;
+  --lab-blue: #5969d7;
+  --lab-pink-dark: #bb285e;
+  --lab-cyan-dark: #176574;
+  --lab-lime-dark: #476e18;
+  --lab-danger: #b53d46;
+  --lab-pink-soft: #fff0f5;
+  --lab-cyan-soft: #eaf7fa;
+  --lab-yellow-soft: #fff8de;
+  --lab-lime-soft: #f2f8e6;
+  --lab-blue-soft: #eef0ff;
+  --ink: var(--lab-ink);
+  --muted: var(--lab-muted);
+  --cream: #fff;
+  --paper: #fff;
+  --line: var(--lab-border);
+  --orange: var(--lab-yellow);
+  --purple: var(--lab-blue);
+  --green: var(--lab-cyan-dark);
+  --violet-700: #4453b6;
+  --violet-500: var(--lab-blue);
+  --teal-700: var(--lab-cyan-dark);
+  --teal-500: var(--lab-cyan);
+  --blue-600: var(--lab-blue);
+  --coral-600: var(--lab-pink-dark);
+  --surface-border: var(--lab-border);
+  --shadow: none;
+  --shadow-soft: none;
+  --shadow-button: none;
+  --app-surface-radius: 8px;
+  --app-card-radius: 6px;
+  --app-dialog-radius: 8px;
+  --app-surface-shadow: none;
+  --app-card-shadow: none;
+  --app-dialog-shadow: 0 12px 40px rgb(25 37 45 / 18%);
+  --action-compose: var(--lab-pink-dark);
+  --action-compose-hover: #a72352;
+  --action-compose-soft: var(--lab-pink-soft);
+  --action-compose-border: #eaa9c1;
+  --action-save: var(--lab-cyan-dark);
+  --action-save-hover: #105261;
+  --action-save-soft: var(--lab-cyan-soft);
+  --action-save-border: #9bcdd7;
+  --action-listen: var(--lab-cyan-dark);
+  --action-listen-hover: #105261;
+  --action-listen-soft: var(--lab-cyan-soft);
+  --action-listen-border: #9bcdd7;
+  --action-danger: var(--lab-danger);
+  --action-danger-soft: #fff0f1;
+  --action-danger-border: #e2a4aa;
+  font-family: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  color: var(--lab-ink);
+  background: #fff;
+}
+
+body {
+  color: var(--lab-ink);
+  background: #fff;
+}
+
+button,
+select,
+input,
+textarea {
+  font-family: inherit;
+}
+
+button,
+a,
+select,
+input,
+textarea {
+  touch-action: manipulation;
+}
+
+button:focus-visible,
+a:focus-visible,
+select:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+  outline: 3px solid var(--lab-blue);
+  outline-offset: 3px;
+}
+
+.action-button {
+  font-weight: 700;
+  letter-spacing: 0;
+  transition: background-color .15s ease, border-color .15s ease;
+}
+
+.action-button:not(:disabled):hover,
+.action-button:not(:disabled):active {
+  transform: none;
+  filter: none;
+}
+
+.app-shell {
+  padding-bottom: 96px;
+}
+
+.topbar {
+  height: 72px;
+  padding: 0 clamp(20px, 3vw, 48px);
+  border-bottom: 1px solid var(--lab-border);
+  background: #fff;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.brand {
+  gap: 10px;
+  color: var(--lab-ink);
+  font: 800 21px/1.2 "Noto Sans KR", "Malgun Gothic", system-ui, sans-serif;
+  letter-spacing: -.04em;
+}
+
+.brand-mark {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  background: var(--lab-pink);
+  box-shadow: none;
+  transform: none;
+}
+
+.app-menu-trigger,
+.account-trigger {
+  min-height: 40px;
+  border: 1px solid var(--lab-border);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--lab-ink);
+  box-shadow: none;
+}
+
+.app-menu-trigger {
+  width: 40px;
+  height: 40px;
+}
+
+.app-menu-trigger:hover,
+.account-trigger:hover {
+  border-color: var(--lab-cyan);
+  background: var(--lab-cyan-soft);
+  transform: none;
+}
+
+.account-trigger.signed-in {
+  border-color: #acd3d9;
+  background: var(--lab-cyan-soft);
+  color: var(--lab-cyan-dark);
+}
+
+.app-menu-panel {
+  padding: 6px;
+  border-color: var(--lab-border);
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgb(25 37 45 / 12%);
+}
+
+.app-menu-panel button {
+  min-height: 42px;
+  border-radius: 4px;
+  color: var(--lab-ink);
+}
+
+.app-menu-panel button:hover {
+  background: var(--lab-cyan-soft);
+  color: var(--lab-cyan-dark);
+}
+
+.project-title strong {
+  color: var(--lab-ink);
+  font-size: 16px;
+}
+
+.project-title .eyebrow,
+.eyebrow {
+  color: var(--lab-muted);
+  font-size: 11px;
+  letter-spacing: .03em;
+}
+
+.topbar .save-button,
+.topbar-cloud-status {
+  padding: 9px 12px;
+  border: 1px solid var(--lab-border);
+  border-radius: 6px;
+  background: var(--lab-surface);
+  color: var(--lab-muted);
+  font-size: 12px;
+  box-shadow: none;
+}
+
+.topbar .save-button,
+.topbar-cloud-status.saved {
+  border-color: #acd3d9;
+  background: var(--lab-cyan-soft);
+  color: var(--lab-cyan-dark);
+}
+
+.topbar .save-button.failed,
+.topbar-cloud-status.failed {
+  border-color: var(--action-danger-border);
+  background: var(--action-danger-soft);
+  color: var(--lab-danger);
+}
+
+.stepper {
+  padding: 24px 20px 8px;
+}
+
+.step {
+  color: var(--lab-muted);
+}
+
+.step::before {
+  background: var(--lab-border);
+}
+
+.step span {
+  background: #eef0f2;
+  color: var(--lab-muted);
+  font-family: inherit;
+  box-shadow: none;
+}
+
+.step.active,
+.step.done {
+  color: var(--lab-ink);
+}
+
+.step.active span {
+  background: var(--lab-pink);
+  color: #fff;
+  box-shadow: none;
+}
+
+.step.done span {
+  background: var(--lab-cyan);
+  color: var(--lab-ink);
+}
+
+.step.active::before,
+.step.done::before {
+  background: var(--lab-cyan);
+}
+
+.app-shell > main {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 20px clamp(18px, 3vw, 48px) 64px;
+}
+
+.intro {
+  gap: 24px;
+  padding: 8px 0 24px;
+}
+
+.intro h1 {
+  margin: 0;
+  color: var(--lab-ink);
+  font: 800 clamp(28px, 3vw, 38px)/1.25 "Noto Sans KR", "Malgun Gothic", system-ui, sans-serif;
+  letter-spacing: -.04em;
+}
+
+.intro p,
+.editor-copy p {
+  color: var(--lab-muted);
+}
+
+.progress-card,
+.meter-badge {
+  min-width: 140px;
+  padding: 13px 16px;
+  border-color: var(--lab-border);
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: none;
+}
+
+.progress-card strong,
+.meter-badge strong {
+  color: var(--lab-blue);
+  font-family: inherit;
+}
+
+.progress-card > div {
+  height: 5px;
+  border-radius: 0;
+  background: #edf0f2;
+}
+
+.progress-card i {
+  border-radius: 0;
+  background: var(--lab-cyan);
+}
+
+.bottom-bar {
+  min-height: 80px;
+  padding: 12px max(20px, calc((100vw - 1504px) / 2));
+  border-top: 1px solid var(--lab-border);
+  background: #fff;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.bottom-bar button {
+  min-height: 46px;
+  border-radius: 6px;
+  box-shadow: none;
+}
+
+.secondary,
+.bottom-bar .secondary {
+  border-color: var(--lab-border);
+  background: #fff;
+  color: var(--lab-ink);
+  box-shadow: none;
+}
+
+.secondary:hover:not(:disabled),
+.bottom-bar .secondary:hover:not(:disabled) {
+  border-color: var(--lab-blue);
+  background: var(--lab-blue-soft);
+}
+
+.bottom-bar .primary:not(:disabled) {
+  border-color: var(--lab-pink-dark);
+  background: var(--lab-pink-dark);
+  color: #fff;
+  box-shadow: none;
+}
+
+.bottom-bar .primary:hover:not(:disabled) {
+  background: #a72352;
+}
+
+.bottom-bar .primary:disabled {
+  border-color: var(--lab-border);
+  background: #edf0f2;
+  color: #6f767c;
+}
+
+.finish-ready::after {
+  content: none;
+}
+
+.status-dot {
+  background: var(--lab-pink);
+}
+
+.status-dot.exact {
+  background: var(--lab-cyan);
+}
+
+@media (max-width: 900px) {
+  .app-shell > main {
+    padding: 18px 20px 48px;
+  }
+}
+
+@media (max-width: 620px) {
+  .topbar {
+    height: 64px;
+    padding: 0 14px;
+  }
+
+  .brand {
+    gap: 7px;
+    font-size: 18px;
+  }
+
+  .brand-mark {
+    width: 32px;
+    height: 32px;
+  }
+
+  .brand-menu-wrap,
+  .topbar-actions {
+    gap: 6px;
+  }
+
+  .app-shell {
+    padding-bottom: 118px;
+  }
+
+  .app-shell > main {
+    padding: 14px 12px 32px;
+  }
+
+  .stepper {
+    padding: 18px 12px 8px;
+  }
+
+  .intro {
+    gap: 12px;
+    padding: 8px 0 18px;
+  }
+
+  .intro h1 {
+    font-size: 26px;
+  }
+
+  .progress-card {
+    min-width: 100px;
+    padding: 10px;
+  }
+
+  .progress-card strong {
+    font-size: 25px;
+  }
+
+  .bottom-bar {
+    gap: 8px;
+    padding: 10px 12px max(10px, env(safe-area-inset-bottom));
+  }
+}

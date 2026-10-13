@@ -34,7 +34,6 @@ export default function CandidateFeelingTabs({ groups, activeId, onChange }: Pro
           </button>
         ))}
       </div>
-      <p>{active.description}</p>
     </div>
   );
 }

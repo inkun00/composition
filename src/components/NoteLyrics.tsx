@@ -55,7 +55,6 @@ export default function NoteLyrics({
             onChange={(event) => onChange(note.id, event.target.value)} placeholder="가" />
         );
       })}
-      {pitched.length === 0 && <span>가락을 고르면 음표마다 가사 칸이 생겨요</span>}
     </div>
   );
 }

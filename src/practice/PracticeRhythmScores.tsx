@@ -23,8 +23,7 @@ export default function PracticeRhythmScores({ practice, audio }: PracticeRhythm
     <section className="practice-rhythm-scores" aria-label="리듬 악보와 악기 선택">
       <div className="practice-rhythm-scores-heading">
         <div>
-          <h3>먼저 악기를 골라요</h3>
-          <p>악보마다 다른 리듬을 만들고 최대 3개의 악기를 겹쳐 들어요.</p>
+          <h3>악기</h3>
         </div>
         <button type="button" className="practice-add-score" disabled={busy || practice.scores.length >= 3}
           onClick={practice.addRhythmScore}>
@@ -55,7 +54,6 @@ export default function PracticeRhythmScores({ practice, audio }: PracticeRhythm
       </div>
       {practice.scores.length > 1 && (
         <div className="practice-score-mix">
-          <p>박자를 다 채우기 전에도 입력한 리듬을 함께 들을 수 있어요.</p>
           <button type="button" disabled={!hasSound || (busy && !audio.previewRhythmMixing)}
             onClick={() => audio.previewRhythmMixing ? audio.stop() : void audio.previewRhythmMix()}>
             {audio.previewRhythmMixing ? <Square size={16} /> : <Music2 size={18} />}

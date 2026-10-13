@@ -27,7 +27,7 @@ describe("녹음 가락 도움 선택", () => {
       <RecordingGuideSelector value="first-note" onChange={onChange} />
     ));
 
-    expect(container.textContent).toContain("완성된 녹음에는 들어가지 않아요");
+    expect(container.textContent).toContain("가락 도움은 녹음에 포함되지 않아요");
     expect(container.querySelectorAll("button")).toHaveLength(3);
     act(() => Array.from(container!.querySelectorAll("button"))
       .find((button) => button.textContent?.includes("가락 작게"))?.click());

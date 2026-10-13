@@ -112,7 +112,7 @@ export default function AccountLibrary({ configured, user, authReady, scores, li
       onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <section className="account-library">
         <header className="account-library-header">
-          <div><span><Library size={19} aria-hidden="true" /></span><div><h2>내 악보함</h2><p>로그인한 계정에서만 보이는 개인 악보예요.</p></div></div>
+          <div><span><Library size={19} aria-hidden="true" /></span><div><h2>내 악보함</h2></div></div>
           <button type="button" className="account-close" aria-label="내 악보함 닫기" onClick={onClose}><X size={20} /></button>
         </header>
 
@@ -120,7 +120,6 @@ export default function AccountLibrary({ configured, user, authReady, scores, li
           <div className="account-empty">
             <Cloud size={34} aria-hidden="true" />
             <strong>Firebase 연결이 필요해요</strong>
-            <p>관리자가 Firebase 프로젝트 정보를 배포 환경에 등록하면 로그인과 클라우드 저장이 열립니다.</p>
           </div>
         ) : !authReady ? (
           <div className="account-empty"><span className="account-spinner" /><strong>계정을 확인하고 있어요</strong></div>
@@ -128,8 +127,7 @@ export default function AccountLibrary({ configured, user, authReady, scores, li
           <div className="account-auth">
             <div className="account-auth-heading">
               <UserRound size={32} aria-hidden="true" />
-              <strong>내 악보를 안전하게 모아 두세요</strong>
-              <p>이메일 계정이나 Google 계정으로 어느 기기에서든 악보를 열 수 있어요.</p>
+              <strong>로그인</strong>
             </div>
             <div className="account-auth-tabs" role="tablist" aria-label="계정 방식">
               <button type="button" role="tab" aria-selected={authMode === "signin"}
@@ -201,7 +199,7 @@ export default function AccountLibrary({ configured, user, authReady, scores, li
               <div><strong>{user.displayName || "마음멜로디 사용자"}</strong><span>{user.email}</span></div>
               <button type="button" title="로그아웃" aria-label="로그아웃" onClick={onSignOut} disabled={busy}><LogOut size={18} /></button>
             </div>
-            <p className="account-sync-explain">다른 기기에서도 보려면 같은 계정으로 로그인하고 계정 저장 완료를 확인해 주세요.<br />계정 번호: <code>{user.uid}</code></p>
+            <p className="account-sync-explain">계정 번호: <code>{user.uid}</code></p>
             <div className="cloud-save-actions">
               <button type="button" className="account-primary" onClick={() => onSave(false)} disabled={busy}>
                 <Save size={18} aria-hidden="true" /> {currentScoreId ? "내 악보함에 다시 저장" : "내 악보함에 저장"}
@@ -212,7 +210,7 @@ export default function AccountLibrary({ configured, user, authReady, scores, li
                 </button>
               )}
             </div>
-            <p className="account-sync-explain">자동 임시저장은 이 기기에만 남아요. 위 버튼으로 계정에 저장해야 다른 기기에 나타나요.</p>
+            <p className="account-sync-explain">임시저장: 이 기기 · 내 악보함: 로그인한 계정</p>
             {saveNotice && <p className="account-sync-notice" role="status">{saveNotice}</p>}
             {error && <p className="account-error" role="status">{error}</p>}
             <div className="account-score-heading"><strong>저장된 악보</strong><span>{listStatus === "ready"

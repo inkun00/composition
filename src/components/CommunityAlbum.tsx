@@ -374,7 +374,7 @@ export default function CommunityAlbum({ configured, user, onClose, onRequestLog
             {selectedAlbum && <button type="button" className="community-back" aria-label="앨범 목록으로 돌아가기"
               onClick={() => { setSelectedAlbum(null); setSongs([]); setError(""); }}><ArrowLeft size={19} /></button>}
             <span><Library size={19} aria-hidden="true" /></span>
-            <div><h2>{selectedAlbum?.name ?? "모두의 앨범"}</h2><p>{selectedAlbum ? `${songs.length}개의 노래` : "친구들이 공개한 노래를 만나는 곳이에요."}</p></div>
+            <div><h2>{selectedAlbum?.name ?? "모두의 앨범"}</h2>{selectedAlbum && <p>{songs.length}개의 노래</p>}</div>
           </div>
           <div className="community-header-actions">
             {!selectedAlbum && <button type="button" className="community-create-button"
@@ -392,7 +392,7 @@ export default function CommunityAlbum({ configured, user, onClose, onRequestLog
           <div className="account-empty"><span className="account-spinner" /><strong>앨범을 불러오고 있어요</strong></div>
         ) : selectedAlbum ? (
           songs.length === 0 ? (
-            <div className="account-empty"><FileMusic size={34} /><strong>아직 공개된 노래가 없어요</strong><p>내 악보함에서 이 앨범에 첫 노래를 공개해 보세요.</p></div>
+            <div className="account-empty"><FileMusic size={34} /><strong>아직 공개된 노래가 없어요</strong></div>
           ) : (
             <div className="community-song-list">
               {songs.map((song) => (
@@ -405,7 +405,7 @@ export default function CommunityAlbum({ configured, user, onClose, onRequestLog
             </div>
           )
         ) : albums.length === 0 ? (
-          <div className="account-empty"><Folder size={36} /><strong>첫 앨범을 만들어 보세요</strong><p>오른쪽 위의 앨범 만들기 버튼으로 시작할 수 있어요.</p></div>
+          <div className="account-empty"><Folder size={36} /><strong>아직 앨범이 없어요</strong></div>
         ) : (
           <div className="community-album-grid">
             {albums.map((album) => (
@@ -503,7 +503,7 @@ export default function CommunityAlbum({ configured, user, onClose, onRequestLog
 
             {selectedSong.ownerId === user?.uid && (
               <section className="album-song-manage" aria-label="내 공개 음악 관리">
-                <div><strong>공개 범위 수정</strong><small>변경 내용은 바로 이 앨범에 적용돼요.</small></div>
+                <div><strong>공개 범위 수정</strong></div>
                 <div className="album-access-options compact">
                   {ACCESS_OPTIONS.map((option) => (
                     <button type="button" key={option.id} className={manageAccess === option.id ? "active" : ""}

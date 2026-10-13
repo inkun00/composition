@@ -73,10 +73,10 @@ export default function PracticeMeasureCard({
 
       <fieldset className="practice-lyric-area" disabled={disabled}>
         <legend className="practice-sr-only">{labelPrefix}{index + 1}마디 가사</legend>
-        <label htmlFor={lyricInputId}>{index + 1}마디 가사 한 줄 넣기</label>
+        <label htmlFor={lyricInputId}>가사</label>
         <div className="practice-lyric-entry">
           <input id={lyricInputId} aria-label={`${labelPrefix}${index + 1}마디 가사`}
-            placeholder="위 음표에 맞춰 가사를 적어요" maxLength={200} value={measure.lyric}
+            placeholder="가사 입력" maxLength={200} value={measure.lyric}
             onChange={(event) => practice.setLyric(event.target.value, index, scoreIndex)} />
         </div>
         {missingLyrics > 0 && (

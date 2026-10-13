@@ -1,5 +1,5 @@
 import { useState, type CSSProperties } from "react";
-import { ArrowLeft, ArrowRight, GraduationCap, Lightbulb } from "lucide-react";
+import { ArrowLeft, ArrowRight, GraduationCap } from "lucide-react";
 import { meterKey, SUPPORTED_METERS } from "../music/meter";
 import { useUnsavedWorkWarning } from "../hooks/useUnsavedWorkWarning";
 import { PracticeNoteTools } from "./PracticeEditors";
@@ -52,16 +52,12 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
         <button type="button" className="practice-back" onClick={close}><ArrowLeft size={19} /> 돌아가기</button>
         <span className="practice-brand"><GraduationCap size={23} /> 기능 연습하기</span>
         <span className={`practice-save-state${practice.saved ? "" : " failed"}`} role="status">
-          {practice.saved ? "이 기기에 자동 저장" : "저장 공간을 확인해 주세요"}
+          {practice.saved ? "자동 저장됨" : "저장 공간을 확인해 주세요"}
         </span>
       </header>
       <main className="practice-main">
         <div className="practice-intro">
-          <div>
-            <span className="practice-eyebrow">모든 마디를 함께 보며 연습해요</span>
-            <h1>리듬을 만들고<br className="practice-mobile-break" /> 원하면 가락도 더해요</h1>
-            <p>박자를 채우면 리듬만으로도 듣고 저장할 수 있어요. 가사와 가락은 원할 때 더해 보세요.</p>
-          </div>
+          <h1>음악 만들기</h1>
           <PracticeTutorial />
         </div>
 
@@ -106,20 +102,13 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
 
         <section className="practice-workspace" id="practice-workspace" role="tabpanel" hidden={saving}
           aria-labelledby={`practice-${step}-tab`}>
-          <div className="practice-workspace-heading">
-            <div>
-              <h2>{step === "rhythm" ? "모든 마디에 리듬을 채워요" : "모든 마디의 가락을 만들어 봐요"}</h2>
-              <p>{step === "rhythm" ? "마디 이름을 누르고 음표 길이를 고른 뒤 배치해요. 다른 음표를 골라도 이미 배치한 리듬은 바뀌지 않아요." : "완성한 리듬에 음높이를 붙여요. 칸 채우기와 악보에 넣기 중 편한 방식을 골라요."}</p>
-            </div>
-          </div>
+          <h2 className="practice-sr-only">{step === "rhythm" ? "리듬" : "가락"}</h2>
 
           <PracticeRhythmScores practice={practice} audio={audio} />
 
           <div className="practice-shared-tools">
-            <p className="practice-current-measure" role="status">{scores.length > 1 ? `${activeScoreIndex + 1}번 악보 · ` : ""}{activeIndex + 1}마디 편집 중 · {editingStep === "rhythm"
-              ? inputMode === "grid" ? "음표 선택 → 빈칸에 배치 · 배치한 칸을 다시 누르면 삭제돼요." : "음표 길이 선택 → 음표·쉼표 추가"
-              : "음표를 누르면 길이를 바꿀 수 있어요"}</p>
-            {draft.meter.beatUnit === 8 && <p className="practice-editor-help">이 표에서 1박은 4분음표 길이예요. 6/8박자는 0.5박 칸 6개를 채워요.</p>}
+            <p className="practice-current-measure" role="status">{scores.length > 1 ? `${activeScoreIndex + 1}번 악보 · ` : ""}{activeIndex + 1}마디 편집 중</p>
+            {draft.meter.beatUnit === 8 && <p className="practice-editor-help">6/8박자 · 1칸 = 8분음표</p>}
             <PracticeNoteTools notes={active.notes} meter={draft.meter} step={editingStep} inputMode={inputMode}
               selectedNoteId={practice.selectedNoteId} disabled={busy} appendDuration={appendDuration}
               onAppendDurationChange={setAppendDuration} onSelectNote={practice.setSelectedNoteId}
@@ -165,9 +154,6 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
             <span>{finishedCount} / {totalMeasures}마디 박자 완성</span>
             {step === "rhythm" ? (
               <div className="practice-stage-next">
-                <small>{complete
-                  ? "완성한 리듬은 음악 저장하기에서 간직해요. 가락 만들기는 선택이에요."
-                  : "모든 마디의 박자를 완성하면 저장하거나 가락을 만들 수 있어요."}</small>
                 <button type="button" className="practice-primary" disabled={busy || !complete} onClick={practice.goToMelody}>
                   가락 만들기로 <ArrowRight size={17} />
                 </button>
@@ -183,12 +169,6 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
         <PracticePlayback draft={draft} step={step} complete={complete} audio={audio} onConfigure={practice.configure}
           saving={saving} videoMode={videoMode} onVideoMode={setVideoMode} onSaveSettings={() => setSaving(true)}
           onReturnToEditing={() => setSaving(false)} />
-        <section className="practice-overview-tip" aria-label="연습 힌트" hidden={saving}>
-          <Lightbulb size={21} />
-          <p>{step === "rhythm"
-            ? "4분음표는 1박, 8분음표는 반 박이에요. 쉼표도 박자를 채워요. 음표 아래 빈칸에 가사를 한 글자씩 넣어 보세요."
-            : "가락을 만드는 중에도 리듬을 고칠 수 있어요. 박자가 부족하거나 넘치면 마디 아래 안내를 보고 다시 맞춰 주세요. 화음 힌트는 하나의 길잡이예요."}</p>
-        </section>
       </main>
     </div>
   );

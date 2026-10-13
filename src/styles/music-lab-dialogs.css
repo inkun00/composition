@@ -1,0 +1,540 @@
+/* The dialog controls change appearance; printed score rules remain separate. */
+.score-image-import-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 1px solid var(--lab-blue);
+  border-radius: 4px;
+  background: var(--lab-blue-soft);
+  color: var(--violet-700);
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.account-overlay,
+.album-subdialog-overlay,
+.recording-guide-overlay,
+.score-image-import-overlay,
+.homr-setup-overlay,
+.measure-sound-overlay,
+.save-failure-overlay,
+.backing-export-overlay,
+.karaoke-overlay {
+  background: rgb(26 36 43 / 46%);
+  backdrop-filter: none;
+}
+
+.account-library,
+.album-subdialog,
+.score-image-import-dialog,
+.homr-setup-dialog,
+.recording-guide-dialog,
+.measure-sound-dialog,
+.save-failure-dialog,
+.backing-export-dialog,
+.karaoke-window {
+  border: 1px solid var(--lab-border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--lab-ink);
+  box-shadow: 0 12px 40px rgb(25 37 45 / 18%);
+}
+
+.account-library-header,
+.album-subdialog-header,
+.score-image-import-header,
+.homr-setup-dialog > header,
+.measure-sound-header,
+.save-failure-dialog header,
+.backing-export-header,
+.karaoke-toolbar,
+.karaoke-window.practice .karaoke-toolbar {
+  border-bottom-color: var(--lab-border);
+  border-radius: 8px 8px 0 0;
+  background: #fff;
+  box-shadow: none;
+}
+
+.account-library-header h2,
+.score-image-import-header h2,
+.homr-setup-dialog > header h2,
+.recording-guide-dialog h2,
+.measure-sound-header h2,
+.save-failure-dialog h2,
+.backing-export-header h2,
+.karaoke-toolbar h2 {
+  color: var(--lab-ink);
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.account-library-header > div > span {
+  border-radius: 4px;
+  background: var(--lab-blue-soft);
+  color: #4453b6;
+}
+
+.account-close,
+.album-subdialog-header > button,
+.score-image-import-header > button,
+.homr-setup-dialog > header button,
+.measure-sound-header-actions button,
+.community-back,
+.community-album-password-button,
+.community-album-rename {
+  border-color: var(--lab-border);
+  border-radius: 4px;
+  background: var(--lab-surface);
+  color: var(--lab-ink);
+  box-shadow: none;
+}
+
+.account-profile,
+.account-score,
+.community-song,
+.album-login-needed,
+.album-song-actions button,
+.album-access-options > button,
+.publish-selected-album,
+.publish-album-grid button,
+.community-album-grid .community-album-folder {
+  border: 1px solid var(--lab-border);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--lab-ink);
+  box-shadow: none;
+}
+
+.account-profile {
+  background: var(--lab-cyan-soft);
+}
+
+.account-score.active,
+.community-song:hover,
+.album-access-options > button.active {
+  border-color: var(--lab-cyan);
+  background: var(--lab-cyan-soft);
+}
+
+.account-score-open strong,
+.community-song strong,
+.publish-album-grid strong,
+.publish-selected-album strong,
+.community-album-grid .community-album-folder strong,
+.album-subdialog-header strong,
+.account-auth-heading strong,
+.account-empty strong {
+  color: var(--lab-ink);
+}
+
+.account-score-open > svg {
+  color: var(--lab-blue);
+}
+
+.account-score-open small,
+.community-song small,
+.publish-album-grid small,
+.publish-selected-album small,
+.community-album-grid .community-album-folder small,
+.album-subdialog-header small,
+.account-profile span,
+.account-auth-heading p,
+.account-empty p {
+  color: var(--lab-muted);
+}
+
+.community-album-grid .community-album-folder {
+  min-height: 108px;
+  background: var(--lab-yellow-soft);
+  color: #8f7013;
+}
+
+.community-album-grid .community-album-folder:hover,
+.publish-album-grid button:hover {
+  border-color: #c7a239;
+  background: #ffedb1;
+  transform: none;
+}
+
+.community-album-folder > svg,
+.publish-album-grid button > svg {
+  fill: var(--lab-yellow);
+  color: #b58b10;
+}
+
+.community-song-icon {
+  border-radius: 4px;
+  background: var(--lab-cyan-soft);
+  color: var(--lab-cyan-dark);
+}
+
+.community-song em {
+  border-radius: 3px;
+  background: var(--lab-blue-soft);
+  color: #4453b6;
+}
+
+.account-primary,
+.account-secondary,
+.account-score-publish,
+.community-create-button,
+.album-song-actions button,
+.album-delete-song,
+.album-password-remove,
+.recording-guide-dialog footer button,
+.homr-setup-dialog > footer button,
+.homr-setup-dialog > footer a {
+  border-radius: 4px;
+  box-shadow: none;
+}
+
+.account-primary {
+  border-color: var(--lab-blue);
+  background: var(--lab-blue);
+  color: #fff;
+}
+
+.account-secondary,
+.recording-guide-cancel,
+.recording-guide-back {
+  border-color: var(--lab-border);
+  background: #fff;
+  color: var(--lab-ink);
+}
+
+.community-create-button {
+  border-color: #a9b0ed;
+  background: var(--lab-blue-soft);
+  color: #4453b6;
+}
+
+.community-create-button:hover:not(:disabled) {
+  background: #dfe4ff;
+}
+
+.account-score-publish,
+.cloud-save-actions .account-primary,
+.album-rename-dialog .account-primary,
+.album-song-manage .account-primary,
+.album-password-dialog .save-album-password {
+  border-color: #9bcdd7;
+  background: var(--lab-cyan-soft);
+  color: var(--lab-cyan-dark);
+  box-shadow: none;
+}
+
+.cloud-save-actions .account-primary:hover:not(:disabled),
+.album-rename-dialog .account-primary:hover:not(:disabled),
+.album-song-manage .account-primary:hover:not(:disabled),
+.album-password-dialog .save-album-password:hover:not(:disabled) {
+  background: #d8f0f5;
+}
+
+.account-auth-tabs {
+  padding: 3px;
+  border-color: var(--lab-border);
+  border-radius: 4px;
+  background: var(--lab-surface);
+}
+
+.account-auth-tabs button {
+  border-radius: 3px;
+  color: var(--lab-muted);
+}
+
+.account-auth-tabs button[aria-selected="true"] {
+  background: var(--lab-blue);
+  color: #fff;
+  box-shadow: none;
+}
+
+.account-input,
+.publish-album-password input,
+.album-create-form input,
+.album-rename-form input {
+  border-color: #cfd7dc;
+  border-radius: 4px;
+  background: #fff;
+  color: var(--lab-ink);
+}
+
+.account-input:focus-within {
+  border-color: var(--lab-blue);
+  box-shadow: 0 0 0 2px var(--lab-blue-soft);
+}
+
+.account-auth-form label > span {
+  color: var(--lab-ink);
+}
+
+.account-reset {
+  color: #4453b6;
+}
+
+.account-error,
+.community-album-error,
+.album-form-error,
+.score-image-import-error,
+.score-image-warnings,
+.save-failure-dialog li,
+.pitch-review {
+  border-color: var(--action-danger-border);
+  border-radius: 6px;
+  background: var(--action-danger-soft);
+  color: var(--lab-danger);
+}
+
+.account-notice,
+.account-sync-notice {
+  border-color: #acd3d9;
+  border-radius: 6px;
+  background: var(--lab-cyan-soft);
+  color: var(--lab-cyan-dark);
+}
+
+.account-sync-warning,
+.score-image-setup-note,
+.homr-setup-tip {
+  border-color: #d8c172;
+  border-radius: 6px;
+  background: var(--lab-yellow-soft);
+  color: #68510a;
+}
+
+.score-image-import-setup,
+.score-image-review-summary,
+.score-image-measure-card,
+.score-image-note-editor,
+.homr-setup-state,
+.homr-setup-guide-step,
+.recording-mode-options button,
+.choir-recording-guide > div {
+  border-color: var(--lab-border);
+  border-radius: 6px;
+  background: var(--lab-surface);
+  color: var(--lab-ink);
+  box-shadow: none;
+}
+
+.score-image-dropzone {
+  border-color: var(--lab-cyan);
+  border-radius: 6px;
+  background: var(--lab-cyan-soft);
+  color: var(--lab-cyan-dark);
+}
+
+.score-image-dropzone:hover {
+  border-color: var(--lab-cyan-dark);
+  box-shadow: none;
+  transform: none;
+}
+
+.score-image-photo-guide,
+.score-image-recognition-progress,
+.score-image-loaded-status {
+  border-color: var(--lab-border);
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: none;
+}
+
+.score-image-photo-guide span {
+  border-radius: 4px;
+  background: var(--lab-surface);
+}
+
+.score-image-measure-card.selected,
+.recording-mode-options button:hover {
+  border-color: var(--lab-blue);
+  background: var(--lab-blue-soft);
+  box-shadow: inset 0 0 0 1px var(--lab-blue);
+  transform: none;
+}
+
+.score-image-note-chips button,
+.score-image-note-editor button,
+.duration-controls button,
+.score-image-import-setup > footer button,
+.score-image-import-review > footer button {
+  border-color: var(--lab-border);
+  border-radius: 4px;
+  background: #fff;
+  color: var(--lab-ink);
+  box-shadow: none;
+}
+
+.score-image-note-chips button.selected,
+.duration-controls button.selected {
+  border-color: var(--lab-blue);
+  background: var(--lab-blue-soft);
+  color: #4453b6;
+}
+
+.score-image-import-setup > footer button.primary,
+.score-image-import-review > footer button.primary {
+  border-color: var(--lab-blue);
+  background: var(--lab-blue);
+  color: #fff;
+}
+
+.homr-setup-journey span,
+.homr-setup-guide-step > span {
+  border-radius: 4px;
+  background: var(--lab-surface);
+  color: var(--lab-muted);
+}
+
+.homr-setup-journey .current {
+  background: var(--lab-blue);
+  color: #fff;
+}
+
+.homr-setup-journey .done,
+.homr-setup-state.state-ready {
+  background: var(--lab-cyan-soft);
+  color: var(--lab-cyan-dark);
+}
+
+.homr-setup-state.state-error {
+  border-color: var(--action-danger-border);
+  background: var(--action-danger-soft);
+  color: var(--lab-danger);
+}
+
+.recording-mode-options button {
+  min-height: 132px;
+  padding: 18px;
+}
+
+.recording-mode-options em,
+.recording-guide-dialog header > span {
+  color: #4453b6;
+}
+
+.measure-sound-score,
+.measure-sound-dialog .sound-effect-editor {
+  border-color: var(--lab-border);
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: none;
+}
+
+.measure-sound-open {
+  border-radius: 4px;
+  box-shadow: none;
+}
+
+.measure-sound-count {
+  border-radius: 3px;
+  background: var(--lab-blue-soft);
+  color: #4453b6;
+}
+
+.backing-export-header > span {
+  border-radius: 4px;
+  background: var(--lab-blue-soft);
+  color: #4453b6;
+}
+
+.backing-export-studio {
+  height: 140px;
+  border-color: var(--lab-border);
+  background: var(--lab-cyan-soft);
+}
+
+.backing-export-studio::before,
+.backing-export-studio::after {
+  content: none;
+}
+
+.backing-export-note {
+  color: var(--lab-blue);
+  font-size: 32px;
+}
+
+.backing-export-note.note-two {
+  color: var(--lab-pink);
+}
+
+.backing-export-note.note-three {
+  color: var(--lab-cyan-dark);
+}
+
+.backing-export-complete-mark {
+  width: 72px;
+  height: 72px;
+  border: 0;
+  background: var(--lab-cyan-dark);
+  box-shadow: none;
+}
+
+.backing-export-complete-mark.error {
+  background: var(--lab-danger);
+}
+
+.backing-export-progress {
+  background: #fff;
+}
+
+.backing-export-progress-track,
+.backing-export-progress-track i {
+  border-radius: 0;
+}
+
+.backing-export-progress-track {
+  background: #edf0f2;
+}
+
+.backing-export-progress-track i {
+  background: var(--lab-cyan);
+}
+
+.backing-export-dialog.done .backing-export-progress-track i {
+  background: var(--lab-lime);
+}
+
+.backing-export-dialog.error .backing-export-progress-track i {
+  background: var(--lab-pink);
+}
+
+.backing-export-dialog.done .backing-export-header > span {
+  background: var(--lab-lime-soft);
+  color: var(--lab-lime-dark);
+}
+
+.backing-export-dialog.error .backing-export-header > span {
+  background: var(--action-danger-soft);
+  color: var(--lab-danger);
+}
+
+@media (max-width: 620px) {
+  .account-library,
+  .album-subdialog,
+  .save-failure-dialog,
+  .homr-setup-dialog {
+    border-radius: 8px 8px 0 0;
+  }
+
+  .karaoke-window {
+    border-radius: 8px;
+  }
+
+  .karaoke-toolbar {
+    border-radius: 8px 8px 0 0;
+  }
+
+  .community-album-grid .community-album-folder {
+    min-height: 88px;
+  }
+
+  .backing-export-studio {
+    height: 120px;
+  }
+
+  .backing-export-header h2 {
+    font-size: 20px;
+  }
+}

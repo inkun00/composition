@@ -39,6 +39,6 @@ describe("가락 느낌 탭", () => {
     expect(tabs[0].getAttribute("aria-selected")).toBe("true");
     act(() => tabs[1].click());
     expect(tabs[1].getAttribute("aria-selected")).toBe("true");
-    expect(container.textContent).toContain("짧은 음이 바쁘게 움직여요");
+    expect(tabs[0].getAttribute("aria-selected")).toBe("false");
   });
 });

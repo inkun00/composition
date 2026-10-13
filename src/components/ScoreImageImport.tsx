@@ -256,9 +256,7 @@ export default function ScoreImageImport({ baseDraft, disabled = false, onImport
             aria-labelledby="score-import-heading">
             <header className="score-image-import-header">
               <div>
-                <span><ScanLine size={15} /> 악보를 편곡 프로젝트로</span>
                 <h2 id="score-import-heading">내 악보 가져오기</h2>
-                <p>악보 사진이나 악보 파일을 골라 주세요.</p>
               </div>
               <button type="button" className="score-image-import-close" disabled={phase === "recognizing"}
                 onClick={() => reset(false)} aria-label="악보 가져오기 닫기"><X size={20} /></button>
@@ -281,8 +279,7 @@ export default function ScoreImageImport({ baseDraft, disabled = false, onImport
                       <img src={previewUrl} alt="가져올 악보 미리보기"
                         style={{ transform: `rotate(${rotation}deg) scale(${zoom})` }} />
                     ) : (
-                      <><Upload size={42} /><strong>악보 파일을 눌러 골라 주세요</strong>
-                        <span>악보 사진 또는 악보 파일</span></>
+                      <><Upload size={42} /><strong>사진 · PDF · MusicXML</strong></>
                     )}
                   </div>
                 </div>
@@ -317,7 +314,7 @@ export default function ScoreImageImport({ baseDraft, disabled = false, onImport
                 )}
                 <div className="score-image-photo-guide">
                   <strong>잘 읽히는 악보</strong><span>인쇄된 단선율</span><span>정면 촬영</span>
-                  <span>그림자 없이 선명하게</span><span>긴 악보도 읽을 수 있어요</span><span>내 컴퓨터에서만 처리</span>
+                  <span>그림자 없이 선명하게</span><span>내 컴퓨터에서만 처리</span>
                 </div>
                 {error && <p className="score-image-import-error" role="alert">{error}</p>}
                 <footer>

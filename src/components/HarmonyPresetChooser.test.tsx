@@ -33,7 +33,7 @@ afterEach(() => {
 });
 
 describe("화음 이야기 미리듣기", () => {
-  it("오른쪽 설명에는 제목을 반복하지 않고 연주가 주는 느낌을 알려 준다", () => {
+  it("화음 이름은 선택 목록에, 분류와 난이도는 요약에 표시한다", () => {
     const preset = findHarmonyPreset("H095");
     container = document.createElement("div");
     document.body.append(container);
@@ -50,9 +50,8 @@ describe("화음 이야기 미리듣기", () => {
     expect(selectedOption?.value).toBe("H095");
     expect(summary?.textContent).not.toContain(preset.childName);
     expect(summary?.textContent).not.toContain("이런 느낌의 연주예요");
-    expect(summary?.textContent).toContain(
-      "새로운 세계로 첫발을 내딛는 모험과 용기를 내야 하는 장면에 잘 어울려요."
-    );
+    expect(summary?.textContent).toContain(preset.category);
+    expect(summary?.textContent).toContain(preset.difficulty);
   });
 
   it("선택한 코드 구성에 맞는 추천 가락 네 마디를 만든다", () => {

@@ -60,7 +60,6 @@ import { buildEmbeddedQrPlaybackUrl, buildQrPlaybackUrl, buildShareUrl, readComp
 import type { HarmonyStory, MelodyCandidate, NoteEvent, SoundEffectEvent } from "./music/types";
 import { useKaraokeAutoFocus } from "./hooks/useKaraokeAutoFocus";
 import { useLyricVideoExport } from "./hooks/useLyricVideoExport";
-import { publicAssetUrl } from "./platform/portable";
 import { buildLyricVideoPlan, type LyricVideoPlan } from "./video/lyricVideoPlan";
 
 type MeasureDraft = {
@@ -861,7 +860,7 @@ export default function App() {
         data-playing={playingId === candidate.id ? "true" : undefined}
         onClick={() => chooseCandidate(candidate)}>
         <div className="card-top">
-          <div><strong>{candidate.name}</strong><span>{candidate.hint}</span></div>
+          <div><strong>{candidate.name}</strong></div>
           <button className="play-button" type="button" disabled={isAnyPlaying}
             aria-label={`${candidate.name} 들어보기`}
             aria-pressed={playingId === candidate.id}
@@ -889,12 +888,8 @@ export default function App() {
     return (
       <div className="preview-instrument-picker measure-instrument-picker" aria-label="가락 미리듣기 악기 선택">
         <div className="preview-instrument-intro">
-          <img className="workspace-guide preview-guide-instrument" src={publicAssetUrl("/illustrations/character-instrument-keyboard-boy-v1.webp")}
-            alt="" aria-hidden="true" draggable="false" />
           <div className="preview-instrument-copy">
-            <span className="section-kicker">먼저 소리를 골라요</span>
-            <strong>가락을 어떤 악기로 들어 볼까요?</strong>
-            <small>여기서 고른 악기는 완성곡의 가락 악기로도 이어져요.</small>
+            <strong>가락 악기</strong>
           </div>
         </div>
         <div className="preview-instrument-options">
@@ -2047,11 +2042,11 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <input ref={projectFileInput} className="project-file-input" type="file"
+      <input ref={projectFileInput} className="project-file-input" type="file" tabIndex={-1} aria-hidden="true"
         accept="text/plain,.txt,application/json,.json" onChange={(event) => void loadProjectFile(event)} />
       {showOpening && <OpeningScreen hasDraft={Boolean(resumableDraft)} onStart={startNewProject}
         onContinue={() => setShowOpening(false)} onPractice={openPractice} />}
-      {!mobileRecordMode && <header className="topbar">
+      {!mobileRecordMode && <header className="topbar" inert={showOpening} aria-hidden={showOpening}>
         <div className="brand-menu-wrap">
           <a className="brand" href="#" aria-label="마음멜로디 홈">
             <span className="brand-mark"><Music2 size={23} strokeWidth={2.4} /></span>
@@ -2136,25 +2131,16 @@ export default function App() {
               <span>{backingExportPhase === "done" ? "저장 완료" : backingExportPhase === "error" ? "다시 확인해요" : "반주 제작실"}</span>
               <h2 id="backing-export-title">
                 {backingExportPhase === "done" ? "반주 파일을 저장했어요!" :
-                  backingExportPhase === "error" ? "반주를 완성하지 못했어요" : "친구들이 반주를 만들고 있어요"}
+                  backingExportPhase === "error" ? "반주를 완성하지 못했어요" : "반주 파일 만드는 중"}
               </h2>
               <p id="backing-export-description">
                 {backingExportPhase === "done" ? "MP3 파일이 다운로드 폴더에 준비됐어요." :
                   backingExportPhase === "error" ? "잠시 후 반주 저장 버튼을 다시 눌러 주세요." :
-                    "리듬과 악기 소리를 차곡차곡 섞는 중이에요. 잠깐만 기다려 주세요."}
+                    "소리를 렌더링하고 있어요."}
               </p>
             </header>
 
             <div className="backing-export-studio" aria-hidden="true">
-              <figure className="backing-worker keyboard-worker">
-                <img src={publicAssetUrl("/illustrations/backing-export-keyboard-boy-v2.webp")} alt="" draggable="false" />
-              </figure>
-              <figure className="backing-worker rhythm-worker">
-                <img src={publicAssetUrl("/illustrations/backing-export-percussion-girl-v2.webp")} alt="" draggable="false" />
-              </figure>
-              <figure className="backing-worker mix-worker">
-                <img src={publicAssetUrl("/illustrations/backing-export-mixing-girl-v2.webp")} alt="" draggable="false" />
-              </figure>
               <div className="backing-export-note note-one">♪</div>
               <div className="backing-export-note note-two">♫</div>
               <div className="backing-export-note note-three">♪</div>
@@ -2180,9 +2166,7 @@ export default function App() {
               <div>
                 <span className={`karaoke-phase ${karaokePhase}`}>{karaokePhaseLabel()}</span>
                 <h2>{songTitle || "나의 노래"}</h2>
-                <p>{recordingStatus || (karaokeMode === "practice"
-                  ? "4마디 인트로 뒤에 메인 가락을 들으며 노래해요."
-                  : "4마디 인트로 뒤에 노래를 불러 주세요.")}</p>
+                {recordingStatus && <p role="status">{recordingStatus}</p>}
                 {karaokeMode === "recording" ? (
                   <>
                     <div className="microphone-level" aria-label="마이크 입력 크기">
@@ -2200,9 +2184,7 @@ export default function App() {
                   </>
                 ) : (
                   <div className="practice-tips" aria-label="노래 연습 도움말">
-                    <span>🎵 메인 가락을 따라 불러요</span>
                     <span>🔒 마이크·녹음 사용 안 함</span>
-                    <span>👀 주황색 음표를 따라가요</span>
                   </div>
                 )}
               </div>
@@ -2230,7 +2212,6 @@ export default function App() {
                         meter={meter} compact systemMeasure showSignature={index === 0}
                         playingNoteId={karaokeHighlight.section === "intro" && karaokeHighlight.measureIndex === index
                           ? karaokeHighlight.noteId : null} />
-                      <small>반주만 듣고 준비해요</small>
                     </div>
                   ))}
                 </div>
@@ -2239,7 +2220,7 @@ export default function App() {
               <div className={karaokePhase === "song" ? "karaoke-system active" : "karaoke-system"}
                 data-karaoke-section-panel="song">
                 <div className="karaoke-system-label">
-                  {karaokeMode === "practice" ? "메인 가락을 들으며 노래하는 부분" : "노래 부르는 부분"}
+                  가락
                 </div>
                 {Array.from({ length: Math.ceil(measures.length / 4) }, (_, rowIndex) => (
                   <div key={`song-row-${rowIndex}`} className="karaoke-measure-row">
@@ -2282,7 +2263,7 @@ export default function App() {
                         meter={meter} compact systemMeasure showSignature={index === 0}
                         playingNoteId={karaokeHighlight.section === "outro" && karaokeHighlight.measureIndex === index
                           ? karaokeHighlight.noteId : null} />
-                      <small>{karaokeMode === "practice" ? "마지막 반주까지 듣고 마무리해요" : "마지막 반주 뒤 자동 저장돼요"}</small>
+                      {karaokeMode === "recording" && <small>반주가 끝나면 자동 저장</small>}
                     </div>
                   ))}
                 </div>
@@ -2298,13 +2279,13 @@ export default function App() {
                     setReviewPlaybackNoteId(pitchReviews.find((review) => now >= review.startSeconds && now < review.endSeconds)?.noteId ?? null);
                   }}
                   onEnded={() => setReviewPlaybackNoteId(null)} />
-                <p className="local-preview-note">미리듣기 파일은 서버에 올리지 않고 이 브라우저 안에서만 임시로 만들어져요.</p>
+                <p className="local-preview-note">녹음 파일은 이 브라우저에만 임시 저장돼요.</p>
                 <label className="backing-preview-volume">
                   <span><strong>미리듣기 반주 크기</strong><b>{Math.round(previewBackingVolume * 100)}%</b></span>
                   <input type="range" min="0.05" max="1.5" step="0.05" value={previewBackingVolume}
                     disabled={!recordedVocalBuffer || !recordedBackingBuffer || mixingPreview}
                     onChange={(event) => void updatePreviewBackingVolume(Number(event.target.value))} />
-                  <small>{mixingPreview ? "반주 크기를 바꾸고 있어요..." : "내 목소리는 그대로 두고 반주만 조절해 보세요."}</small>
+                  {mixingPreview && <small role="status">반주 크기 조절 중...</small>}
                 </label>
                 <section className="pitch-review" aria-live="polite">
                   <div>
@@ -2381,9 +2362,7 @@ export default function App() {
           <section className="mobile-record-panel" aria-label="스마트폰 녹음 전용 화면">
             <span className="mobile-record-kicker"><Smartphone size={18} /> 스마트폰 녹음</span>
             <h1>{songTitle || "나의 노래"}</h1>
-            <p>
-              데스크탑에서 완성한 곡을 스마트폰 마이크로 녹음합니다. 이어폰을 끼면 반주가 다시 마이크에 들어가는 소리를 줄일 수 있어요.
-            </p>
+            <p>이어폰을 사용하면 반주가 마이크에 들어가는 소리를 줄일 수 있어요.</p>
             <div className="mobile-record-summary">
               <span>{songLength}마디</span>
               <span>{meterKey(meter)}</span>
@@ -2415,7 +2394,7 @@ export default function App() {
         </main>
       )}
 
-      {!mobileRecordMode && <main>
+      {!mobileRecordMode && <main inert={showOpening} aria-hidden={showOpening}>
         <SongMoodSetup bpm={bpm} rhythmStyleId={accompanimentStyleId} disabled={isAnyPlaying}
           onTempoChange={setBpm} onRhythmChange={setAccompanimentStyleId} />
 
@@ -2428,7 +2407,7 @@ export default function App() {
         <section className="meter-chooser meter-with-guide" aria-labelledby="meter-heading" data-save-target="settings">
           <div className="compact-heading">
             <span className="number-badge">3</span>
-            <div><h2 id="meter-heading">노래의 박자를 골라요</h2><p>박자를 바꾸면 작곡이 새로 시작돼요.</p></div>
+            <div><h2 id="meter-heading">박자</h2><p>변경하면 작곡이 초기화돼요.</p></div>
           </div>
           <div className="meter-options">
             {SUPPORTED_METERS.map((item) => {
@@ -2439,14 +2418,11 @@ export default function App() {
                 <button key={key} type="button" data-testid={`meter-${item.beats}-${item.beatUnit}`}
                   className={active ? "meter-option active" : "meter-option"}
                   aria-pressed={active} onClick={() => chooseMeter(item)}>
-                  <strong>{key}</strong><span>{detail.name}</span><small>{detail.clap}</small>
+                  <strong>{key}</strong><span>{detail.name}</span>
                 </button>
               );
             })}
           </div>
-          <img className="workspace-guide meter-guide-rhythm"
-            src={publicAssetUrl("/illustrations/character-rhythm-shaker-girl-v1.webp")}
-            alt="" aria-hidden="true" draggable="false" />
         </section>
 
         <SongLengthChooser length={songLength} onSelect={chooseLength} />
@@ -2458,7 +2434,7 @@ export default function App() {
         <section className="composition-section" aria-labelledby="composition-heading">
           <div className="compact-heading timeline-heading">
             <span className="number-badge">6</span>
-            <div><h2 id="composition-heading">{songLength}마디를 차례로 채워요</h2><p>색깔은 마디마다 어울리는 화음 느낌을 알려줘요.</p></div>
+            <div><h2 id="composition-heading">{songLength}마디</h2></div>
             <div className="timeline-actions">
               <label className="tempo-control">
                 <span>빠르기</span>
@@ -2521,11 +2497,10 @@ export default function App() {
                       </i>)}
                     </span>
                   )}
-                  {!measure.notes && <span className="empty-score-label">가락을 골라 주세요</span>}
                 </button>
                 <div className={lyrics[index]?.trim() ? "measure-lyric filled" : "measure-lyric"}
                   onFocus={() => setActiveIndex(index)}>
-                  <span>{index + 1}마디 · 음표마다 한 글자</span>
+                  <span>{index + 1}마디 가사</span>
                   <NoteLyrics notes={measure.notes ?? []} meter={meter} measureIndex={index} compact wide
                     showSignature={index % 4 === 0}
                     notePositions={timelineLyricNotePositions[index]}
@@ -2542,10 +2517,7 @@ export default function App() {
           <div className="section-heading">
             <div>
               <span className={`dot ${activeMeasure.story}`} />
-              <h2>{activeIndex === measures.length - 1 ? "노래를 끝맺는 가락" : "이 마디에 어울리는 가락"}</h2>
-              <p>{activeIndex === measures.length - 1
-                ? "마지막 화음에 맞춰 편안하게 끝나는 가락만 골랐어요."
-                : `느낌을 고르면 ${meterKey(meter)}박자에 맞는 가락이 나와요.`}</p>
+              <h2>가락</h2>
             </div>
             <span className="count-pill">{activeIndex + 1}/{songLength} 마디</span>
           </div>
@@ -2556,9 +2528,7 @@ export default function App() {
 
           <div className="preview-instrument-picker candidate-instrument-picker" aria-label="가락 미리듣기 악기 선택">
             <div>
-              <span className="section-kicker">먼저 소리를 골라요</span>
-              <strong>가락을 어떤 악기로 들어 볼까요?</strong>
-              <small>여기서 고른 악기는 완성곡의 가락 악기로도 이어져요.</small>
+              <strong>가락 악기</strong>
             </div>
             <div className="preview-instrument-options">
               {QUICK_PREVIEW_INSTRUMENTS.map((instrument) => (
@@ -2597,8 +2567,10 @@ export default function App() {
           <div className="editor-copy">
             <div className="editor-copy-text">
               <span className="section-kicker">선택 사항 · 직접 다듬기</span>
-              <h2>{activeIndex + 1}마디의 음표를 바꿔 보세요</h2>
-              <p>음표를 위아래로 끌면 높이가 바뀌어요. 여러 음표는 첫 음표를 누른 뒤 Shift를 누르고 마지막 음표를 골라요.</p>
+              <h2>{activeIndex + 1}마디 편집</h2>
+              <details className="editor-help"><summary>편집 도움말</summary>
+                <p>위아래로 끌어 음높이를 바꿔요. Shift와 마지막 음표를 누르면 여러 음표를 선택해요.</p>
+              </details>
             </div>
             <div className="editor-copy-actions">
               <button className="measure-sound-open" type="button"
@@ -2628,7 +2600,7 @@ export default function App() {
                   onSelectNote={selectNote} onMoveNote={moveNotePitch} onMovePosition={moveNotePosition}
                   onNoteLayout={(positions) => updateEditorLyricNotePositions(activeIndex, positions)} />
                 <div className="editor-note-lyrics">
-                  <div><strong>이 마디 가사</strong><span>음표마다 한 글자씩 적어요.</span></div>
+                  <div><strong>이 마디 가사</strong></div>
                   <NoteLyrics notes={activeNotes} meter={meter} measureIndex={activeIndex}
                     selectedNoteId={selectedNoteId} notePositions={editorLyricNotePositions[activeIndex]}
                     onFocusNote={(noteId) => selectNote(noteId)}
@@ -2682,7 +2654,7 @@ export default function App() {
                 {editStatus && <p className="edit-status" role="status">{editStatus}</p>}
               </>
             ) : (
-              <div className="empty-message"><span>♪</span><strong>먼저 가락을 하나 골라 주세요</strong><p>느낌 탭을 누르고 마음에 드는 가락을 골라 보세요.</p></div>
+              <div className="empty-message"><span>♪</span><strong>먼저 가락을 하나 골라 주세요</strong></div>
             )}
           </div>
           </MobileEditorDisclosure>
@@ -2698,7 +2670,7 @@ export default function App() {
           </div>
           <div className={`focus-story ${activeMeasure.story}`}>
             <span>{storyInfo[activeMeasure.story].icon}</span>
-            <div><strong>{storyInfo[activeMeasure.story].label}</strong><small>{storyInfo[activeMeasure.story].description}</small></div>
+            <div><strong>{storyInfo[activeMeasure.story].label}</strong></div>
           </div>
         </section>
           </div>
@@ -2709,12 +2681,8 @@ export default function App() {
           <section className="arrangement-section" id="arrangement" data-testid="arrangement-section">
             {completionCelebration && (
               <div className="completion-celebration" role="status">
-                <img className="workspace-guide celebration-guide"
-                  src={publicAssetUrl("/illustrations/character-song-complete-boy-v1.webp")}
-                  alt="" aria-hidden="true" draggable="false" />
                 <div>
                   <strong>{songLength}마디 가락을 완성했어요!</strong>
-                  <span>이제 반주 스타일과 악기를 골라 나만의 노래를 더 풍성하게 만들어 봐요.</span>
                 </div>
                 <button type="button" onClick={() => setCompletionCelebration(false)} aria-label="완성 안내 닫기">
                   <X size={17} aria-hidden="true" /> 시작하기
@@ -2724,8 +2692,7 @@ export default function App() {
             <div className="arrangement-heading">
               <div className="arrangement-heading-copy">
                 <span className="section-kicker">M3 · 악기와 가사</span>
-                <h2>내 노래에 어울리는 소리를 입혀요</h2>
-                <p>피아노가 기본이에요. 다른 악기를 눌러 소리를 바꿀 수 있어요.</p>
+                <h2>악기·가사</h2>
               </div>
               <div className="selected-instrument">
                 <span>{selectedInstrument.icon}</span>
@@ -2745,7 +2712,6 @@ export default function App() {
 
             <div className="instrument-library-heading">
               <div><Music2 size={18} aria-hidden="true" /><strong>가락을 연주할 악기</strong></div>
-              <span>한 가지 악기를 골라 노래의 중심 소리를 정해요.</span>
             </div>
             <div className="instrument-grid" aria-label="악기 선택">
               {INSTRUMENTS.map((instrument) => (
@@ -2754,8 +2720,7 @@ export default function App() {
                   aria-pressed={selectedInstrumentId === instrument.id}
                   onClick={() => setSelectedInstrumentId(instrument.id)}>
                   <span className="instrument-icon">{instrument.icon}</span>
-                  <span><strong>{instrument.name}</strong><small>{instrument.description}</small></span>
-                  <em>{instrument.group} · 실제 샘플</em>
+                  <span><strong>{instrument.name}</strong></span>
                 </button>
               ))}
             </div>
@@ -2765,8 +2730,7 @@ export default function App() {
                 <div className="accompaniment-heading">
                   <div>
                     <span className="section-kicker">자동 반주 만들기</span>
-                    <h2 id="accompaniment-heading">어떤 느낌으로 연주할까요?</h2>
-                    <p>마음에 드는 카드를 하나 누르면 반주가 바로 완성돼요.</p>
+                    <h2 id="accompaniment-heading">반주</h2>
                   </div>
                 </div>
                 <div className="accompaniment-summary">
@@ -2804,7 +2768,6 @@ export default function App() {
                                 }}>
                                 <span>{mode.icon}</span>
                                 <strong>{mode.name}</strong>
-                                <small>{mode.description}</small>
                               </button>
                             ))}
                         </div>
@@ -2818,7 +2781,6 @@ export default function App() {
                             <strong>{activeAccompanimentMode
                               ? `${activeAccompanimentMode.icon} ${activeAccompanimentMode.name} 반주가 준비됐어요`
                               : "카드를 눌러 반주를 골라 보세요"}</strong>
-                            <span>{activeAccompanimentMode?.description ?? "어려운 설정은 하지 않아도 괜찮아요."}</span>
                           </div>
                           <div className="easy-accompaniment-instruments" aria-label="함께 연주하는 악기">
                             {accompanimentInstrumentIds.map((instrumentId) => {
@@ -2837,9 +2799,6 @@ export default function App() {
                       </>
                     ) : (
                       <>
-                        <p className="custom-accompaniment-help">
-                          더 자세히 만들고 싶을 때만 사용해요. 연주 방법을 고른 뒤 아래에서 악기를 더하거나 빼 보세요.
-                        </p>
                         <div className="accompaniment-style-grid">
                           {ACCOMPANIMENT_PLAYING_STYLES.map((style) => (
                             <button key={style.id} type="button" data-testid={`accompaniment-style-${style.id}`}
@@ -2847,7 +2806,7 @@ export default function App() {
                               aria-pressed={accompanimentStyleId === style.id}
                               disabled={isAnyPlaying}
                               onClick={() => setAccompanimentStyleId(style.id)}>
-                              <span>{style.alias}</span><strong>{style.name}</strong><small>{style.description}</small>
+                              <span>{style.alias}</span><strong>{style.name}</strong>
                             </button>
                           ))}
                         </div>
@@ -2855,9 +2814,6 @@ export default function App() {
                     )}
                   </div>
                 </div>
-                <img className="workspace-guide accompaniment-guide-recorder"
-                  src={publicAssetUrl("/illustrations/character-music-tip-recorder-boy-v1.webp")}
-                  alt="" aria-hidden="true" draggable="false" />
               </div>
 
               {accompanimentStyleView === "playing" && (<>
@@ -2890,13 +2846,13 @@ export default function App() {
                   );
                 })}
                 {accompanimentInstrumentIds.length === 0 && (
-                  <div className="mixer-empty"><Volume2 size={18} aria-hidden="true" /> 아래에서 반주 악기를 추가해 보세요.</div>
+                  <div className="mixer-empty"><Volume2 size={18} aria-hidden="true" /> 반주 악기 없음</div>
                 )}
               </div>
 
               <div className="instrument-bank-heading">
                 <strong>반주 트랙 추가</strong>
-                <span>최대 {MAX_ACCOMPANIMENT_INSTRUMENTS}개까지 함께 연주할 수 있어요.</span>
+                <span>최대 {MAX_ACCOMPANIMENT_INSTRUMENTS}개</span>
               </div>
 
               <div className="accompaniment-instruments" aria-label="반주 악기 여러 개 선택">
@@ -2908,13 +2864,13 @@ export default function App() {
                       data-testid={`accompaniment-instrument-${instrument.id}`}
                       className={active ? "accompaniment-instrument active" : "accompaniment-instrument"}
                       aria-pressed={active} disabled={blocked} onClick={() => toggleAccompanimentInstrument(instrument.id)}>
-                      <span>{instrument.icon}</span><strong>{instrument.name}</strong><small>{active ? "함께 연주해요 ✓" : "반주에 더하기"}</small>
+                      <span>{instrument.icon}</span><strong>{instrument.name}</strong>
                     </button>
                   );
                 })}
               </div>
               {accompanimentInstrumentIds.length === 0 &&
-                <p className="accompaniment-warning">반주 악기를 하나 이상 골라 주세요. 지금은 가락만 연주돼요.</p>}
+                <p className="accompaniment-warning">반주 악기 없음 · 가락만 연주</p>}
               </>)}
 
               <BeatInstrumentChooser events={beatPattern}
@@ -2924,7 +2880,7 @@ export default function App() {
             </section>
 
             <div className="lyrics-heading">
-              <div><span className="number-badge">♪</span><div><h2>음표마다 가사를 맞춰 적어요</h2><p>각 음표 아래 칸에 그 음으로 부를 한 글자를 적어요.</p></div></div>
+              <div><span className="number-badge">♪</span><div><h2>가사</h2></div></div>
               <strong>{lyrics.filter((lyric) => lyric.trim()).length}/{songLength}마디 입력</strong>
             </div>
             <div className="lyrics-grid">
@@ -2941,12 +2897,8 @@ export default function App() {
             </div>
 
             <div className="publish-section publish-with-guide">
-              <img className="workspace-guide publish-guide-singer"
-                src={publicAssetUrl("/illustrations/character-recording-singer-girl-v1.webp")}
-                alt="" aria-hidden="true" draggable="false" />
               <div className="publish-heading">
-                <div><span className="section-kicker">M4 · 저장과 공유</span><h2>내 악보를 세상에 보여 줘요</h2></div>
-                <span>A4 PDF · 공유 링크 · 리메이크</span>
+                <div><h2>저장·공유</h2></div>
               </div>
               {originalCreator && (
                 <div className="original-credit" data-testid="original-credit">
@@ -2960,19 +2912,18 @@ export default function App() {
                 <label className={saveIssues.some((issue) => issue.target === "creator") ? "save-issue" : ""} data-save-target="creator"><span>{originalCreator ? "리메이크 작곡가" : "작곡가"}</span>
                   <input data-testid="creator-name" value={creatorName} maxLength={40}
                     onChange={(event) => { setCreatorName(event.target.value); setShareStatus(""); }}
-                    placeholder="이름이나 별명을 적어요" /></label>
+                    placeholder="이름 또는 별명" /></label>
               </div>
               <label className={`song-description-field${saveIssues.some((issue) => issue.target === "description") ? " save-issue" : ""}`} data-save-target="description">
                 <span>이 노래에 대한 이야기</span>
                 <textarea data-testid="song-description" value={songDescription} maxLength={600} rows={4}
                   onChange={(event) => { setSongDescription(event.target.value); setShareStatus(""); }}
-                  placeholder="왜 이 노래를 만들었는지, 어떤 장면이 떠오르는지, 가락이 주는 느낌을 자세히 적어 보세요." />
+                  placeholder="노래 이야기" />
                 <small>{songDescription.length}/600</small>
               </label>
               <div className="publish-actions">
                 {firebaseConfigured && <div className="publish-action-group publish-action-group-cloud">
                   <h3>다른 기기에서도 이어 만들기</h3>
-                  <p>내 악보함에 저장하면 다른 컴퓨터에서도 이 노래를 볼 수 있어요.</p>
                   <button type="button" className="publish-cloud-save action-button" disabled={cloudBusy}
                     onClick={() => authUser ? void handleCloudSave(false) : setAccountLibraryOpen(true)}>
                     <Library size={18} /> {cloudBusy ? "저장 중..." : authUser ? "내 악보함에 저장" : "로그인하고 저장"}
@@ -2980,7 +2931,6 @@ export default function App() {
                 </div>}
                 <div className="publish-action-group publish-action-group-files">
                   <h3>파일로 받기</h3>
-                  <p>악보와 반주를 이 기기에 내려받아요.</p>
                   <div className="publish-action-group-buttons">
                     <button type="button" className="pdf-button action-button" data-testid="export-pdf"
                       disabled={exportingPdf} onClick={() => void exportPdf(false)}>
@@ -3007,7 +2957,6 @@ export default function App() {
                 </div>
                 <div className="publish-action-group publish-action-group-perform">
                   <h3>듣고 노래하기</h3>
-                  <p>연습하거나 녹음하고 친구들과 나눠요.</p>
                   <div className="publish-action-group-buttons">
                     <button type="button" className="mobile-record-link-button action-button" data-testid="create-mobile-recording-link"
                       disabled={!allValid} onClick={() => void createMobileRecordingLink()}>
@@ -3054,9 +3003,7 @@ export default function App() {
                   )}
                   <div className="mobile-record-qr-copy">
                     <strong>{canRenderMobileRecordingQr ? "스마트폰 카메라로 스캔" : "링크를 복사해서 열기"}</strong>
-                    <p>{canRenderMobileRecordingQr
-                      ? "폰에서는 작곡 도구 대신 녹음 버튼과 저장 화면만 열립니다."
-                      : "곡 정보가 길어서 QR 대신 위 공유 주소를 스마트폰으로 보내 주세요."}</p>
+                    {!canRenderMobileRecordingQr && <p>곡 정보가 길어 QR을 만들 수 없어요. 공유 주소를 복사해 주세요.</p>}
                     {canRenderMobileRecordingQr && (
                       <button type="button" className="mobile-record-qr-save" data-testid="save-mobile-recording-qr"
                         onClick={() => void saveMobileRecordingQr()}>
@@ -3068,7 +3015,7 @@ export default function App() {
               )}
             </div>
             <p className="audio-credit">
-              ?? ??: FluidR3 SoundFont(MIT) ? ??? ??? THIRD_PARTY_NOTICES.md
+              음원: FluidR3 SoundFont(MIT) · 국립국악원 디지털 음원(공공누리 제1유형) · THIRD_PARTY_NOTICES.md
             </p>
             {allValid && printableMeasures.length === songLength && (
               <PdfScoreSheet title={songTitle} description={songDescription} creator={creatorName} originalCreator={originalCreator}
@@ -3080,7 +3027,7 @@ export default function App() {
         )}
       </main>}
 
-      {!mobileRecordMode && <footer className="bottom-bar" onMouseDown={keepEditorFocus}
+      {!mobileRecordMode && <footer className="bottom-bar" inert={showOpening} aria-hidden={showOpening} onMouseDown={keepEditorFocus}
         onClickCapture={preserveViewportAfterButtonClick}>
         <div className="save-status-row" role="status" aria-live="polite">
           <span className={localSaveFailed ? "save-status-local failed" : "save-status-local saved"}>{saveStatus}</span>

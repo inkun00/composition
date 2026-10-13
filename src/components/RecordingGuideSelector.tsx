@@ -18,7 +18,7 @@ export default function RecordingGuideSelector({ value, disabled, onChange }: Pr
     <section className="recording-guide-selector" aria-label="노래 녹음 가락 도움">
       <div>
         <strong>녹음할 때 가락 도움</strong>
-        <small>내 귀에만 들리고 완성된 녹음에는 들어가지 않아요.</small>
+        <small>가락 도움은 녹음에 포함되지 않아요.</small>
       </div>
       <div className="recording-guide-options" role="group" aria-label="가락 도움 선택">
         {OPTIONS.map((option) => (

@@ -118,7 +118,7 @@ export default function HomrSetupDialog({ open, onClose, onReady,
         aria-labelledby="homr-setup-heading" data-testid="homr-setup-dialog">
         <header>
           <div><h2 id="homr-setup-heading">악보 사진 읽기</h2>
-            <p>처음 한 번만 준비하면 다음에는 바로 읽을 수 있어요.</p></div>
+          </div>
           <button type="button" onClick={onClose} disabled={phase === "installing"}
             aria-label="악보 읽기 준비 창 닫기" data-testid="homr-setup-close"><X size={20} /></button>
         </header>
@@ -143,11 +143,11 @@ export default function HomrSetupDialog({ open, onClose, onReady,
             </>}
             {phase === "runtime-missing" && <>
               <Download size={28} />
-              <div><strong>읽기 도구를 준비할게요</strong><span>아래 버튼을 누르면 이 컴퓨터에서 준비를 시작해요.</span></div>
+              <div><strong>읽기 도구 준비</strong></div>
             </>}
             {phase === "installing" && <>
               <LoaderCircle className="spin" size={28} />
-              <div><strong>악보 읽기를 준비하고 있어요</strong><span>잠시만 기다려 주세요.</span></div>
+              <div><strong>악보 읽기 준비 중</strong></div>
             </>}
             {phase === "ready" && <>
               <Check size={28} />
@@ -169,7 +169,6 @@ export default function HomrSetupDialog({ open, onClose, onReady,
             </div>}
           {phase === "helper-missing" && device === "windows" && !portable && <div className="homr-setup-guide">
             <div className="homr-setup-guide-step"><span>1</span><div><strong>도우미 파일 받기</strong>
-              <p>아래 버튼을 누르면 파일이 다운로드돼요.</p>
               <a href={publicAssetUrl("/start-score-reader.cmd")} download="start-score-reader.cmd" data-testid="homr-helper-download">
                 <Download size={16} /> 도우미 받기</a></div></div>
             <div className="homr-setup-guide-step"><span>2</span><div><strong>받은 파일 열기</strong>

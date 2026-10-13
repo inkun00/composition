@@ -47,8 +47,8 @@ describe("악기별 4마디 비트 겹치기", () => {
     expect(container?.querySelectorAll('[data-testid^="beat-slot-"]')).toHaveLength(16);
     expect(container?.querySelectorAll(".beat-pattern-track-editor .beat-pattern-measure")).toHaveLength(4);
     expect(container?.textContent).toContain("겹친 악기1 / 3");
-    expect(container?.textContent).toContain("소리가 든 칸은 다시 눌러 지워요");
-    expect(container?.textContent).toContain("비트는 자동으로 들어가지 않아요");
+    expect(container?.querySelectorAll(".beat-slot.filled")).toHaveLength(0);
+    expect(container?.querySelector<HTMLButtonElement>('[data-testid="preview-selected-beat"]')?.disabled).toBe(true);
   });
 
   it("첫 악기 패턴을 만든 뒤 두 번째 악기를 추가해 모든 줄을 함께 편집한다", async () => {
@@ -59,7 +59,7 @@ describe("악기별 4마디 비트 겹치기", () => {
 
     expect(container?.querySelectorAll('[data-testid^="beat-track-"]')).toHaveLength(2);
     expect(container?.querySelectorAll('[data-testid^="beat-slot-"]')).toHaveLength(32);
-    expect(container?.textContent).toContain("2번 악기로 쓸 소리를 골라요");
+    expect(container?.textContent).toContain("2번 악기 소리");
     expect(container?.textContent).toContain("2번 · 작은북의 4마디");
 
     await click("beat-slot-1-0-0");

@@ -59,15 +59,13 @@ export default function SongMoodSetup({
       <div className="compact-heading">
         <span className="number-badge">1</span>
         <div>
-          <h2 id="song-mood-heading">노래 느낌을 먼저 골라요</h2>
-          <p>주제에 어울리는 빠르기와 음의 움직임을 정해 보세요.</p>
+          <h2 id="song-mood-heading">빠르기·리듬</h2>
         </div>
       </div>
 
       <div className="song-mood-top-row">
         <fieldset className="mood-choice-group">
-          <legend>① 얼마나 빠르게 갈까요?</legend>
-          <p>숫자가 클수록 더 빠르게 들려요. BPM은 1분 동안 세는 박자 수예요.</p>
+          <legend>빠르기</legend>
           <div className="tempo-mood-options">
             {TEMPO_CHOICES.map((choice) => (
               <button key={choice.id} type="button" disabled={disabled}
@@ -78,7 +76,6 @@ export default function SongMoodSetup({
                 <span className="mood-option-icon"><choice.Icon size={20} strokeWidth={2.1} /></span>
                 <strong>{choice.name}</strong>
                 <b>{choice.bpm} BPM</b>
-                <small>{choice.description}</small>
               </button>
             ))}
           </div>
@@ -87,8 +84,7 @@ export default function SongMoodSetup({
         </fieldset>
 
         <fieldset className="mood-choice-group">
-          <legend>② 음이 어떻게 움직일까요?</legend>
-          <p>같은 빠르기라도 짧은 음이 많으면 더 빠르게 느껴져요.</p>
+          <legend>리듬</legend>
           <div className="rhythm-mood-options">
             {RHYTHM_CHOICES.map((choice) => {
               const active = rhythmPreferenceForStyle(rhythmStyleId) === choice.id;
@@ -99,7 +95,6 @@ export default function SongMoodSetup({
                   onClick={() => onRhythmChange(choice.styleId)}>
                   <span className="mood-option-icon"><choice.Icon size={20} strokeWidth={2.1} /></span>
                   <strong>{choice.name}</strong>
-                  <small>{choice.description}</small>
                 </button>
               );
             })}

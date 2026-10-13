@@ -16,22 +16,19 @@ export default function SongStructureChooser({ length, selectedId, onSelect }: P
     <div className="compact-heading">
       <span className="number-badge">5</span>
       <div>
-        <h2 id="structure-heading">노래 모양을 골라요 <small>선택 사항</small></h2>
-        <p>먼저 노래의 흐름을 정해도 좋고, 고르지 않고 바로 만들어도 좋아요.</p>
+        <h2 id="structure-heading">노래 구조 <small>선택 사항</small></h2>
       </div>
     </div>
     <div className="song-structure-options">
       <button type="button" className={`song-structure-option${selectedId === null ? " active" : ""}`}
         aria-pressed={selectedId === null} onClick={() => onSelect(null)} data-testid="structure-free">
         <strong>자유롭게 만들기</strong>
-        <span>정해진 모양 없이 내 마음대로 만들어요.</span>
       </button>
       {(expanded ? structures : structures.slice(0, 3)).map((structure) => (
         <button type="button" key={structure.id} data-testid={`structure-${structure.id}`}
           className={`song-structure-option${selectedId === structure.id ? " active" : ""}`}
           aria-pressed={selectedId === structure.id} onClick={() => onSelect(structure.id)}>
           <strong>{structure.title}</strong>
-          <span>{structure.description}</span>
           <small>{structure.pattern}</small>
         </button>
       ))}
@@ -42,8 +39,8 @@ export default function SongStructureChooser({ length, selectedId, onSelect }: P
     </button>}
     {selectedId && <p className="song-structure-help" role="status">
       {songStructurePlan(selectedId, length)?.blocks.some((block) => block.reuse !== "new")
-        ? "앞부분의 가락을 고르면 다시 나오는 부분은 자동으로 채워져요. 언제든 직접 바꿀 수 있어요."
-        : "각 부분에 새로운 가락을 골라 보세요. 언제든 다른 가락으로 바꿀 수 있어요."}
+        ? "반복 부분은 자동으로 채워져요. 직접 수정할 수 있어요."
+        : "각 부분에 새 가락을 넣어요."}
     </p>}
   </section>;
 }

@@ -262,9 +262,7 @@ export default function BeatInstrumentChooser({
         <div className="beat-instrument-title">
           <span className="beat-instrument-icon"><Music2 size={20} aria-hidden="true" /></span>
           <div>
-            <small>비트를 직접 만들어요</small>
-            <h3 id="beat-instrument-heading">악기마다 네 마디 비트를 쌓아 보세요</h3>
-            <p>첫 악기의 박자를 만든 뒤 악기를 추가하면 최대 세 악기까지 함께 연주할 수 있어요.</p>
+            <h3 id="beat-instrument-heading">비트 만들기</h3>
           </div>
         </div>
         <div className="beat-event-count" aria-live="polite">
@@ -277,8 +275,7 @@ export default function BeatInstrumentChooser({
       <div className="beat-track-picker">
         <div className="beat-track-picker-heading">
           <div>
-            <strong>1. 편집할 악기 줄을 골라요</strong>
-            <span>각 악기는 저마다 다른 네 마디 박자를 가질 수 있어요.</span>
+            <strong>비트 악기</strong>
           </div>
           <button type="button" className="beat-add-track" data-testid="beat-add-instrument"
             disabled={disabled || trackInstrumentIds.length >= MAX_BEAT_PATTERN_INSTRUMENTS}
@@ -318,8 +315,8 @@ export default function BeatInstrumentChooser({
 
       <div className="beat-palette">
         <div className="beat-palette-heading">
-          <strong>{activeTrackIndex + 1}번 악기로 쓸 소리를 골라요</strong>
-          <span>{activeInstrument.icon} 지금은 <b>{activeInstrument.name}</b></span>
+          <strong>{activeTrackIndex + 1}번 악기 소리</strong>
+          <span>{activeInstrument.icon} <b>{activeInstrument.name}</b></span>
         </div>
         <div className="beat-role-groups">
           {roles.map((role) => (
@@ -350,8 +347,7 @@ export default function BeatInstrumentChooser({
       </div>
 
       <div className="beat-pattern-section-heading">
-        <strong>2. 중첩된 비트를 위아래로 보며 편집해요</strong>
-        <span>빈 칸은 눌러 소리를 넣고, 소리가 든 칸은 다시 눌러 지워요.</span>
+        <strong>4마디 비트</strong>
       </div>
       <div className="beat-pattern-stack">
         {trackInstrumentIds.map((instrumentId, trackIndex) => {
@@ -445,7 +441,7 @@ export default function BeatInstrumentChooser({
       <div className="beat-volume-control">
         <label htmlFor="beat-volume">
           <Volume2 size={18} aria-hidden="true" />
-          <span><strong>비트 소리 크기</strong><small>반주에 묻히면 최대 {MAX_BEAT_VOLUME}%까지 올려 보세요.</small></span>
+          <span><strong>비트 소리 크기</strong></span>
         </label>
         <input id="beat-volume" data-testid="beat-volume" type="range"
           min="0" max={MAX_BEAT_VOLUME} step="5" value={volume} disabled={disabled}
@@ -455,9 +451,6 @@ export default function BeatInstrumentChooser({
       </div>
 
       <div className="beat-listen-row">
-        <p>{normalizedEvents.length === 0
-          ? "아직 놓은 소리가 없어요. 비트는 자동으로 들어가지 않아요."
-          : `${trackInstrumentIds.length}개 악기로 만든 ${normalizedEvents.length}개 소리를 함께 들어 보세요.`}</p>
         <button type="button" className="beat-preview-button"
           data-testid="preview-selected-beat"
           disabled={(disabled && !playing) || normalizedEvents.length === 0}

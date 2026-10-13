@@ -231,7 +231,7 @@ export default function QrSongPlayback({ composition, songId = "" }: Readonly<{
   if (loadingSong) return (
     <main className="qr-playback-page"><section className="qr-playback-card" role="status" aria-live="polite">
       <QrPageCloseButton /><div className="qr-playback-disc" aria-hidden="true"><FileMusic size={42} /></div>
-      <h1>노래를 불러오고 있어요</h1><p className="qr-playback-creator">잠시만 기다려 주세요.</p>
+      <h1>노래를 불러오고 있어요</h1>
     </section></main>
   );
 

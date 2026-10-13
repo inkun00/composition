@@ -1,0 +1,694 @@
+.practice-shell {
+  --practice-ink: #263348;
+  --practice-line: #dce2e7;
+  --practice-cyan: #45adc0;
+  --practice-pink: #ed4c85;
+  --practice-yellow: #ffcf4b;
+  --practice-blue: #5969d7;
+  color: var(--practice-ink);
+  background: #fff;
+}
+
+.practice-shell :is(button, input, select, a) {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.practice-shell :is(button, input, select) {
+  border-radius: 4px;
+  box-shadow: none;
+}
+
+.practice-shell :is(button, input, select, a):focus-visible {
+  outline: 3px solid var(--practice-blue);
+  outline-offset: 3px;
+}
+
+.practice-shell button:disabled {
+  opacity: .45;
+}
+
+.practice-shell :is(input, select) {
+  min-height: 42px;
+  border-color: var(--practice-line);
+  color: var(--practice-ink);
+  background: #fff;
+}
+
+.practice-shell label {
+  gap: 6px;
+  color: #5c6878;
+  font-size: 12px;
+}
+
+.practice-shell .practice-topbar {
+  min-height: 66px;
+  padding: 10px max(24px, calc((100vw - 1400px) / 2));
+  border-bottom-color: var(--practice-line);
+}
+
+.practice-shell :is(.practice-back, .practice-help-button) {
+  min-height: 38px;
+  padding: 7px 11px;
+  border-color: var(--practice-line);
+  color: var(--practice-ink);
+}
+
+.practice-shell .practice-brand {
+  color: var(--practice-ink);
+  font-size: 18px;
+}
+
+.practice-shell .practice-brand svg {
+  color: var(--practice-cyan);
+}
+
+.practice-shell .practice-save-state {
+  color: #647080;
+}
+
+.practice-shell .practice-save-state.failed {
+  color: #b9325e;
+}
+
+.practice-shell .practice-main {
+  max-width: 1400px;
+  padding: 18px 24px 48px;
+}
+
+.practice-shell .practice-intro {
+  align-items: center;
+  gap: 16px;
+}
+
+.practice-shell .practice-intro h1 {
+  color: var(--practice-ink);
+  font-size: 25px;
+  letter-spacing: -.02em;
+}
+
+.practice-shell .practice-tutorial {
+  width: auto;
+  max-width: 360px;
+}
+
+.practice-shell .practice-settings {
+  gap: 14px;
+  padding: 14px 0 18px;
+}
+
+.practice-shell .practice-step-tabs.practice-composition-stages {
+  gap: 8px;
+  margin: 0 0 16px;
+}
+
+.practice-shell .practice-composition-stages :is(button, .practice-share-stage) {
+  min-height: 58px;
+  padding: 10px 16px;
+  border: 1px solid var(--practice-line);
+  border-bottom: 4px solid var(--practice-cyan);
+  border-radius: 4px;
+  color: var(--practice-ink);
+  background: #fff;
+  box-shadow: none;
+}
+
+.practice-shell #practice-melody-tab {
+  border-bottom-color: var(--practice-pink);
+}
+
+.practice-shell #practice-save-tab {
+  border-bottom-color: var(--practice-yellow);
+}
+
+.practice-shell .practice-composition-stages .practice-share-stage {
+  border-bottom-color: var(--practice-blue);
+}
+
+.practice-shell .practice-composition-stages :is(button, .practice-share-stage) > span {
+  width: 30px;
+  height: 30px;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 22px;
+  font-weight: 500;
+}
+
+.practice-shell .practice-composition-stages :is(button, .practice-share-stage) strong {
+  font-size: 15px;
+}
+
+.practice-shell .practice-composition-stages button[aria-selected="true"] {
+  border-color: var(--practice-cyan);
+  background: var(--practice-cyan);
+}
+
+.practice-shell #practice-melody-tab[aria-selected="true"] {
+  border-color: var(--practice-pink);
+  background: var(--practice-pink);
+}
+
+.practice-shell #practice-save-tab[aria-selected="true"] {
+  border-color: var(--practice-yellow);
+  background: var(--practice-yellow);
+}
+
+.practice-shell .practice-composition-stages button[aria-selected="true"] > span {
+  color: var(--practice-ink);
+  background: transparent;
+}
+
+.practice-shell .practice-share-stage:hover {
+  border-color: var(--practice-blue);
+  background: #eef0ff;
+}
+
+.practice-shell .practice-workspace {
+  padding: 16px;
+  border: 1px solid var(--practice-line);
+  border-radius: 4px;
+  box-shadow: none;
+}
+
+.practice-shell .practice-rhythm-scores {
+  margin: 0 0 10px;
+  padding: 0 0 10px;
+  border: 0;
+  border-bottom: 1px solid var(--practice-line);
+  border-radius: 0;
+  background: #fff;
+}
+
+.practice-shell .practice-rhythm-scores-heading {
+  margin-bottom: 6px;
+}
+
+.practice-shell :is(.practice-rhythm-scores h3, .practice-score-workspace-heading h3) {
+  color: var(--practice-ink);
+  font-size: 13px;
+}
+
+.practice-shell .practice-score-options {
+  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+  gap: 8px;
+}
+
+.practice-shell .practice-score-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border: 1px solid var(--practice-line);
+  border-radius: 4px;
+}
+
+.practice-shell .practice-score-option-heading {
+  flex-shrink: 0;
+  margin-bottom: 0;
+}
+
+.practice-shell .practice-score-option > label {
+  flex: 1;
+  min-width: 0;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  font-size: 11px;
+}
+
+.practice-shell .practice-score-option select {
+  min-height: 36px;
+  padding: 6px;
+  font-size: 12px;
+}
+
+.practice-shell .practice-score-option.is-active {
+  border-color: var(--practice-cyan);
+  box-shadow: inset 0 3px var(--practice-cyan);
+}
+
+.practice-shell :is(.practice-score-option-heading button, .practice-add-score, .practice-score-workspace-heading button) {
+  border-color: var(--practice-line);
+  color: var(--practice-ink);
+  background: #fff;
+}
+
+.practice-shell .practice-score-option-heading button[aria-pressed="true"] {
+  border-color: transparent;
+  background: #e9f6f8;
+}
+
+.practice-shell .practice-score-option-heading .practice-remove-score {
+  color: #b9325e;
+  background: #fff;
+}
+
+.practice-shell .practice-score-mix {
+  justify-content: flex-end;
+}
+
+.practice-shell .practice-score-mix button {
+  border-color: var(--practice-cyan);
+  background: #e9f6f8;
+  color: var(--practice-ink);
+}
+
+.practice-shell .practice-shared-tools {
+  margin: 10px 0 14px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: #fff;
+}
+
+.practice-shell .practice-current-measure {
+  margin-bottom: 8px !important;
+  color: #526071;
+  font-size: 12px;
+}
+
+.practice-shell .practice-duration-options {
+  gap: 6px;
+}
+
+.practice-shell .practice-duration-options > button {
+  grid-template-columns: 28px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-content: center;
+  justify-items: start;
+  gap: 1px 5px;
+  min-height: 60px;
+  max-width: 125px;
+  padding: 5px 7px;
+  border-color: var(--practice-line);
+  border-radius: 4px;
+  color: var(--practice-ink);
+  font-size: 12px;
+}
+
+.practice-shell .practice-duration-options .practice-note-symbol {
+  grid-row: span 2;
+  align-self: center;
+  line-height: 1;
+}
+
+.practice-shell .practice-duration-options > button.is-active {
+  border-color: #bd8f17;
+  background: var(--practice-yellow);
+  box-shadow: none;
+}
+
+.practice-shell .practice-note-symbol {
+  font-size: 24px;
+}
+
+.practice-shell .practice-note-actions > button {
+  min-height: 36px;
+  padding: 6px 10px;
+  border-color: var(--practice-line);
+  background: #f5f7f9;
+  color: var(--practice-ink);
+  font-size: 12px;
+}
+
+.practice-shell .practice-note-actions > .practice-delete-note {
+  background: #fff;
+  color: #b9325e;
+}
+
+.practice-shell .practice-input-toggle {
+  gap: 0;
+  padding: 0;
+  border: 1px solid var(--practice-line);
+  border-radius: 4px;
+  background: #fff;
+}
+
+.practice-shell .practice-input-toggle button {
+  min-height: 36px;
+  padding: 7px 14px;
+  border-radius: 0;
+  color: #586575;
+}
+
+.practice-shell .practice-input-toggle button[aria-pressed="true"] {
+  color: var(--practice-ink);
+  background: var(--practice-yellow);
+  box-shadow: none;
+}
+
+.practice-shell .practice-measures-overview {
+  gap: 10px;
+}
+
+.practice-shell .practice-measure-card {
+  padding: 11px;
+  border: 2px solid var(--practice-line);
+  border-radius: 4px;
+}
+
+.practice-shell .practice-measure-card.is-active {
+  border-color: var(--practice-cyan);
+  box-shadow: none;
+}
+
+.practice-shell .practice-measure-card-heading button {
+  min-height: 33px;
+  padding: 5px 8px;
+  border-color: transparent;
+  color: var(--practice-ink);
+  background: #f2f5f8;
+}
+
+.practice-shell .practice-measure-card-heading button[aria-pressed="true"] {
+  border-color: transparent;
+  background: var(--practice-cyan);
+}
+
+.practice-shell .practice-measure-total.exact {
+  color: #497c19;
+}
+
+.practice-shell :is(.practice-rhythm-timeline, .practice-melody-timeline, .practice-melody-rows) {
+  border-color: #9ca9b7;
+  border-radius: 0;
+}
+
+.practice-shell .practice-half-beat {
+  border-left-color: #cad1db;
+}
+
+.practice-shell .practice-beat-start {
+  border-left-color: #9ca9b7;
+}
+
+.practice-shell .practice-capacity-line {
+  background: #78899a;
+}
+
+.practice-shell .practice-empty-slot:hover {
+  color: var(--practice-ink);
+  background: #e9f6f8;
+}
+
+.practice-shell .practice-rhythm-pink {
+  background-color: var(--practice-pink);
+}
+
+.practice-shell .practice-rhythm-yellow {
+  background-color: var(--practice-yellow);
+}
+
+.practice-shell .practice-rhythm-block {
+  color: #202e40;
+  border-right-color: #78899a;
+}
+
+.practice-shell .practice-rhythm-block small {
+  color: #202e40;
+}
+
+.practice-shell :is(.practice-rhythm-block, .practice-melody-cell, .practice-grid-rest).is-selected {
+  box-shadow: inset 0 0 0 3px var(--practice-blue);
+}
+
+.practice-shell :is(.practice-rhythm-block, .practice-melody-cell, .practice-grid-rest).is-playing {
+  background-color: #273557 !important;
+  color: #fff;
+  box-shadow: inset 0 0 0 4px var(--practice-yellow);
+}
+
+.practice-shell .practice-rhythm-block.is-playing small {
+  color: #fff;
+}
+
+.practice-shell .practice-editors button.is-playing:disabled {
+  opacity: 1;
+}
+
+.practice-shell .practice-pitch-row-label {
+  border: 0;
+  border-radius: 2px;
+  color: #172134;
+}
+
+.practice-shell .practice-pitch-options > button {
+  border-radius: 3px;
+}
+
+.practice-shell .practice-pitch-options > button[aria-pressed="true"] {
+  border-color: var(--practice-ink);
+  box-shadow: none;
+}
+
+.practice-shell .practice-lyric-input:focus {
+  box-shadow: inset 0 0 0 2px var(--practice-blue);
+}
+
+.practice-shell .practice-editors .practice-lyric-cell.is-playing {
+  background: #273557;
+  box-shadow: inset 0 0 0 3px var(--practice-yellow);
+}
+
+.practice-shell .practice-playback-indicator {
+  padding: 7px 9px;
+  border-color: #273557;
+  border-radius: 3px;
+  background: var(--practice-yellow);
+  color: #273557;
+}
+
+.practice-shell .practice-measure-validation {
+  padding: 7px;
+  border-radius: 3px;
+}
+
+.practice-shell .practice-measure-validation.exact {
+  color: #467521;
+  background: #f1f7e7;
+}
+
+.practice-shell .practice-measure-card .practice-measure-preview {
+  min-height: 40px;
+  border-color: var(--practice-cyan);
+  border-radius: 3px;
+  background: #e9f6f8;
+  color: #244955;
+}
+
+.practice-shell .practice-measure-preview.is-playing {
+  background: var(--practice-cyan);
+  color: var(--practice-ink);
+}
+
+.practice-shell .practice-fill-rest {
+  border-color: var(--practice-line);
+  color: #647080;
+}
+
+.practice-shell .practice-harmony-warning {
+  border-radius: 3px;
+  background: #fff7da;
+}
+
+.practice-shell .practice-harmony-warning button {
+  border-radius: 3px;
+  color: #72562d;
+  background: #fff;
+}
+
+.practice-shell .practice-workspace-footer .practice-primary {
+  border-color: var(--practice-pink);
+  background: var(--practice-pink);
+  color: #172134;
+}
+
+.practice-shell .practice-listen-card {
+  padding: 20px;
+  border-color: var(--practice-line);
+  border-radius: 4px;
+  background: #fff;
+}
+
+.practice-shell .practice-card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 0;
+  color: var(--practice-cyan);
+  background: transparent;
+}
+
+.practice-shell .practice-listen-intro h2 {
+  color: var(--practice-ink);
+  font-size: 18px;
+}
+
+.practice-shell .practice-listen-controls {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 20px;
+}
+
+.practice-shell .practice-listen-controls.is-rhythm {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.practice-shell .practice-listen-buttons {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.practice-shell .practice-preview {
+  width: auto;
+  min-width: 190px;
+  min-height: 50px;
+  padding: 12px 20px;
+  border-color: var(--practice-cyan);
+  border-radius: 4px;
+  background: var(--practice-cyan);
+  color: #172134;
+  font-size: 14px;
+}
+
+.practice-shell .practice-export-actions {
+  gap: 6px;
+  margin: 0;
+}
+
+.practice-shell .practice-export-actions button {
+  min-height: 50px;
+  padding: 8px 14px;
+  border-color: var(--practice-line);
+  color: var(--practice-ink);
+}
+
+.practice-shell :is(.practice-return-to-editor, .practice-save-settings-shortcut) {
+  border-color: var(--practice-line);
+  color: #536174;
+  background: #fff;
+}
+
+.practice-shell .practice-video-modes legend {
+  color: var(--practice-ink);
+  font-size: 13px;
+}
+
+.practice-shell .practice-video-modes button {
+  min-height: 65px;
+  padding: 13px;
+  border: 1px solid var(--practice-line);
+  border-radius: 4px;
+  color: var(--practice-ink);
+}
+
+.practice-shell .practice-video-modes button[aria-pressed="true"] {
+  padding: 13px;
+  border: 1px solid #bd8f17;
+  background: var(--practice-yellow);
+  box-shadow: none;
+}
+
+.practice-shell .practice-bars-mode-icon i {
+  border-radius: 0;
+  background: var(--practice-ink);
+}
+
+.practice-shell .practice-video-preview-canvas {
+  border-color: var(--practice-line);
+  border-radius: 3px;
+}
+
+.practice-shell :is(.practice-video-preview input, .practice-export-progress progress) {
+  accent-color: var(--practice-cyan);
+}
+
+.practice-shell .practice-lesson {
+  padding: 16px;
+  border-color: var(--practice-line);
+  border-radius: 4px;
+  color: var(--practice-ink);
+  background: #fff7da;
+  box-shadow: none;
+}
+
+.practice-shell .practice-lesson-controls button[aria-pressed="true"] {
+  color: var(--practice-ink);
+  background: var(--practice-yellow);
+}
+
+@media (max-width: 900px) {
+  .practice-shell .practice-listen-controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .practice-shell .practice-listen-buttons {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 600px) {
+  .practice-shell .practice-topbar {
+    min-height: 64px;
+    padding: 9px 12px;
+  }
+
+  .practice-shell .practice-brand {
+    font-size: 15px;
+  }
+
+  .practice-shell .practice-main {
+    padding: 18px 12px 32px;
+  }
+
+  .practice-shell .practice-intro {
+    flex-direction: row;
+    gap: 12px;
+  }
+
+  .practice-shell .practice-intro h1 {
+    font-size: 22px;
+  }
+
+  .practice-shell .practice-tutorial {
+    text-align: right;
+  }
+
+  .practice-shell .practice-settings {
+    gap: 10px;
+    padding: 16px 0;
+  }
+
+  .practice-shell .practice-composition-stages :is(button, .practice-share-stage) {
+    min-height: 57px;
+    gap: 5px;
+    padding: 10px;
+  }
+
+  .practice-shell .practice-composition-stages :is(button, .practice-share-stage) strong {
+    font-size: 13px;
+  }
+
+  .practice-shell .practice-workspace {
+    padding: 13px 10px;
+  }
+
+  .practice-shell .practice-score-options {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .practice-shell .practice-duration-options > button {
+    flex-basis: calc(33.333% - 6px);
+    max-width: none;
+  }
+
+  .practice-shell .practice-listen-card {
+    padding: 16px 12px;
+  }
+
+  .practice-shell .practice-preview {
+    width: 100%;
+  }
+
+  .practice-shell .practice-export-actions {
+    width: 100%;
+  }
+}

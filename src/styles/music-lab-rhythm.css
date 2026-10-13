@@ -1,0 +1,255 @@
+/* Instrument and beat grids use the same flat tile language. */
+.preview-instrument-picker,
+.candidate-sidebar .preview-instrument-picker {
+  padding: 12px;
+  border-color: var(--lab-border);
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: none;
+}
+
+.preview-instrument-intro {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+}
+
+.preview-instrument-copy strong {
+  color: var(--lab-ink);
+  font-size: 14px;
+}
+
+.preview-instrument-options button {
+  min-height: 48px;
+  border: 1px solid var(--lab-border);
+  border-radius: 4px;
+  background: var(--lab-surface);
+  color: var(--lab-ink);
+  box-shadow: none;
+}
+
+.preview-instrument-options button.active {
+  border-color: var(--lab-blue);
+  background: var(--lab-blue-soft);
+  color: #4453b6;
+  box-shadow: inset 0 0 0 1px var(--lab-blue);
+}
+
+.candidate-sidebar .preview-instrument-options button:hover {
+  border-color: var(--lab-blue);
+  background: var(--lab-blue-soft);
+  box-shadow: none;
+  transform: none;
+}
+
+.preview-instrument-more {
+  color: var(--lab-muted);
+}
+
+.preview-instrument-more select {
+  border-color: var(--lab-border);
+  border-radius: 4px;
+  color: var(--lab-ink);
+}
+
+.beat-instrument-chooser {
+  padding: 22px;
+  border: 1px solid var(--lab-border);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: none;
+}
+
+.beat-instrument-icon {
+  border-radius: 6px;
+  background: var(--lab-yellow);
+  color: var(--lab-ink);
+}
+
+.beat-instrument-title h3 {
+  color: var(--lab-ink);
+  font-size: 20px;
+}
+
+.beat-instrument-title small {
+  color: var(--lab-muted);
+}
+
+.beat-event-count,
+.beat-palette,
+.beat-track-picker,
+.beat-pattern-editor,
+.beat-volume-control,
+.beat-listen-row,
+.beat-role-group,
+.beat-track-tab,
+.beat-pattern-measure {
+  border: 1px solid var(--lab-border);
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: none;
+}
+
+.beat-palette,
+.beat-volume-control,
+.beat-listen-row {
+  background: var(--lab-surface);
+}
+
+.beat-event-count strong,
+.beat-volume-control label,
+.beat-volume-control output {
+  color: var(--lab-cyan-dark);
+}
+
+.beat-role-group legend,
+.beat-track-picker-heading strong,
+.beat-palette-heading > strong,
+.beat-pattern-heading strong,
+.beat-pattern-section-heading strong,
+.beat-pattern-measure > header strong {
+  color: var(--lab-ink);
+}
+
+.beat-track-tab.active,
+.beat-pattern-track-editor.active {
+  border-color: var(--lab-cyan);
+  background: var(--lab-cyan-soft);
+  box-shadow: inset 0 0 0 1px var(--lab-cyan);
+}
+
+.beat-track-tab > [role="tab"] em,
+.beat-palette-heading > span,
+.beat-rhythm-controls > span,
+.beat-measure-controls > span,
+.beat-volume-control output {
+  border-color: #acd3d9;
+  border-radius: 3px;
+  background: var(--lab-cyan-soft);
+  color: var(--lab-cyan-dark);
+}
+
+.beat-instrument-options button {
+  border: 1px solid var(--lab-border);
+  border-radius: 4px;
+  background: #fff;
+  color: var(--lab-ink);
+  box-shadow: none;
+}
+
+.beat-instrument-options button.active {
+  border-color: #ba8a00;
+  background: var(--lab-yellow-soft);
+  color: #68510a;
+  box-shadow: inset 0 0 0 1px #ba8a00;
+}
+
+.beat-instrument-options button:hover:not(:disabled) {
+  border-color: #ba8a00;
+  background: var(--lab-yellow-soft);
+  box-shadow: none;
+  transform: none;
+}
+
+.beat-add-track,
+.beat-pattern-heading > .beat-clear-track,
+.beat-rhythm-controls > button,
+.beat-measure-controls > button,
+.beat-remove-track {
+  border-color: var(--lab-border);
+  border-radius: 4px;
+  background: #fff;
+  color: var(--lab-ink);
+  box-shadow: none;
+}
+
+.beat-add-track:hover:not(:disabled),
+.beat-rhythm-controls > button:hover:not(:disabled),
+.beat-measure-controls > button:hover:not(:disabled) {
+  border-color: var(--lab-blue);
+  background: var(--lab-blue-soft);
+  color: #4453b6;
+}
+
+.beat-rhythm-controls > .beat-delete-event,
+.beat-measure-controls > .beat-delete-event,
+.beat-remove-track {
+  border-color: var(--action-danger-border);
+  color: var(--lab-danger);
+}
+
+.beat-slot,
+.beat-slot-grid.subdivision-2 .beat-slot,
+.beat-slot-grid.subdivision-4 .beat-slot {
+  border-color: #cfd7dc;
+  border-radius: 0;
+  background: var(--lab-surface);
+}
+
+.beat-slot.filled {
+  border-color: #acd3d9;
+  background: var(--lab-cyan-soft);
+}
+
+.beat-slot.selected {
+  border-color: var(--lab-blue);
+  box-shadow: inset 0 0 0 2px var(--lab-blue);
+}
+
+.beat-slot > button {
+  border-radius: 0;
+}
+
+.beat-slot > button:hover:not(:disabled),
+.beat-slot > button.selected-sound {
+  background: var(--lab-blue-soft);
+  color: #4453b6;
+}
+
+.beat-slot-sounds button {
+  border-color: #acd3d9;
+  border-radius: 2px;
+  background: var(--lab-cyan);
+  color: #173a42;
+}
+
+.beat-slot-sounds button:hover:not(:disabled) {
+  border-color: var(--lab-danger);
+  background: var(--action-danger-soft);
+  color: var(--lab-danger);
+}
+
+.beat-volume-control input {
+  accent-color: var(--lab-cyan-dark);
+}
+
+.beat-preview-button {
+  border-color: #9bcdd7;
+  border-radius: 4px;
+  background: var(--lab-cyan-soft);
+  color: var(--lab-cyan-dark);
+  box-shadow: none;
+}
+
+.beat-preview-button:hover:not(:disabled) {
+  border-color: var(--lab-cyan-dark);
+  background: #d8f0f5;
+  color: var(--lab-cyan-dark);
+}
+
+@media (max-width: 620px) {
+  .beat-instrument-chooser {
+    padding: 16px 12px;
+  }
+
+  .preview-instrument-intro {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .beat-role-groups {
+    grid-template-columns: 1fr;
+  }
+
+  .beat-track-tabs {
+    grid-template-columns: 1fr;
+  }
+}

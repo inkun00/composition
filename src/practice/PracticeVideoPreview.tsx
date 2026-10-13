@@ -39,7 +39,7 @@ export default function PracticeVideoPreview({ draft, step, mode, disabled = fal
     renderer.current = null;
     setSeconds(0);
     if (!plan) {
-      setStatus("음표를 넣으면 저장할 영상의 모습을 살펴볼 수 있어요.");
+      setStatus("음표를 넣으면 영상 미리보기가 열려요.");
       return;
     }
     setStatus("영상 화면을 준비하고 있어요.");
@@ -70,7 +70,7 @@ export default function PracticeVideoPreview({ draft, step, mode, disabled = fal
     <figure className="practice-video-preview">
       <div ref={host} className="practice-video-preview-canvas" />
       {status && <p role="status">{status}</p>}
-      <figcaption>저장되는 영상 미리보기 · 위치를 옮겨 다른 마디도 살펴보세요.</figcaption>
+      <figcaption>영상 미리보기</figcaption>
       <label>미리보기 위치
         <input type="range" aria-label="영상 미리보기 위치" min={0} max={Math.max(0, duration - 0.001)}
           step={0.1} value={seconds} disabled={disabled || duration <= 0 || Boolean(status)}

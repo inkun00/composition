@@ -11,6 +11,13 @@ import "./styles/composition-flow.css";
 import "./styles/save-share-polish.css";
 import "./styles/card-consistency.css";
 import "./styles/semantic-colors.css";
+import "./styles/music-lab-foundation.css";
+import "./styles/music-lab-studio.css";
+import "./styles/music-lab-rhythm.css";
+import "./styles/music-lab-production.css";
+import "./styles/music-lab-dialogs.css";
+import "./styles/music-lab-opening.css";
+import "./practice/PracticeMusicLab.css";
 
 preloadVexFlow();
 

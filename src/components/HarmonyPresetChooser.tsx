@@ -11,7 +11,6 @@ import {
   recommendedEndingPitch
 } from "../music/recommendation";
 import { prioritizeCandidatesForRhythm } from "../music/rhythmPreference";
-import { publicAssetUrl } from "../platform/portable";
 import PlayIcon from "./PlayIcon";
 import ScoreImageImport from "./ScoreImageImport";
 import "./HarmonyPresetChooser.css";
@@ -85,7 +84,7 @@ export default function HarmonyPresetChooser({
   onImportScore
 }: HarmonyPresetChooserProps) {
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState("네 마디의 느낌을 먼저 들어 보세요.");
+  const [status, setStatus] = useState("");
   const timerRef = useRef<number | null>(null);
   const requestRef = useRef(0);
   const ownsPlaybackRef = useRef(false);
@@ -117,7 +116,7 @@ export default function HarmonyPresetChooser({
 
     const request = ++requestRef.current;
     setLoading(true);
-    setStatus("네 마디 음악을 준비하고 있어요…");
+    setStatus("음악 준비 중…");
     try {
       const measures = buildHarmonyPreviewMeasures(preset, meter, accompanimentStyleId);
       const duration = await playComposition(measures, "acoustic_grand_piano", bpm, {
@@ -133,9 +132,9 @@ export default function HarmonyPresetChooser({
       ownsPlaybackRef.current = true;
       setLoading(false);
       onPlayingChange(true);
-      setStatus("가락과 반주를 함께 듣고 있어요.");
+      setStatus("재생 중");
       timerRef.current = window.setTimeout(
-        () => finishPreview("다른 이야기도 골라서 비교해 보세요."),
+        () => finishPreview("미리듣기 완료"),
         duration * 1000
       );
     } catch {
@@ -163,8 +162,7 @@ export default function HarmonyPresetChooser({
       <div className="compact-heading">
         <span className="number-badge">2</span>
         <div>
-          <h2 id="preset-heading">화음 이야기를 골라요</h2>
-          <p>마디를 만들기 전에 네 마디 음악으로 느낌을 확인할 수 있어요.</p>
+          <h2 id="preset-heading">화음</h2>
         </div>
       </div>
       <div className="preset-picker">
@@ -179,7 +177,6 @@ export default function HarmonyPresetChooser({
         <div className="preset-summary">
           <div className="preset-summary-copy">
             <span>{preset.category} · {preset.difficulty}</span>
-            <p>{preset.description}</p>
           </div>
           <div className="preset-preview-actions">
             <button className={`preset-preview-button${playing ? " playing" : ""}`}
@@ -189,19 +186,13 @@ export default function HarmonyPresetChooser({
               <PlayIcon playing={playing} />
               {loading ? "음악 준비 중…" : playing ? "미리듣기 멈추기" : "4마디 미리듣기"}
             </button>
-            <p className="preset-preview-status" aria-live="polite">{status}</p>
+            {status && <p className="preset-preview-status" aria-live="polite">{status}</p>}
           </div>
         </div>
       </div>
       {baseDraft && onImportScore && <div className="preset-score-import-bar">
-        <div className="preset-score-import-info">
-          <strong>이미 만든 악보가 있나요?</strong>
-          <span>사진이나 악보 파일을 읽어 가락에 어울리는 화음을 자동으로 찾아요.</span>
-        </div>
         <ScoreImageImport baseDraft={baseDraft} disabled={disabled} onImport={onImportScore} />
       </div>}
-      <img className="workspace-guide setup-guide-boy" src={publicAssetUrl("/illustrations/guide-boy-v1.webp")}
-        alt="" aria-hidden="true" draggable="false" />
     </section>
   );
 }

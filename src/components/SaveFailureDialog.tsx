@@ -15,7 +15,7 @@ export default function SaveFailureDialog({ issues, onClose, onLocate }: SaveFai
       <section className="save-failure-dialog">
         <header>
           <span><AlertTriangle size={24} aria-hidden="true" /></span>
-          <div><h2 id="save-failure-title">악보를 저장하지 못했어요</h2><p>아래 부분을 확인한 뒤 다시 저장해 주세요.</p></div>
+          <div><h2 id="save-failure-title">악보를 저장하지 못했어요</h2></div>
           <button type="button" aria-label="저장 오류 닫기" onClick={onClose}><X size={20} /></button>
         </header>
         <ul>

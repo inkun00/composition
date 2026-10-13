@@ -46,7 +46,7 @@ afterEach(() => {
 describe("저장 영상 미리보기", () => {
   it("음표를 만들기 전에 저장 화면을 열어도 안내를 보여 주며 깨지지 않는다", async () => {
     await render(emptyPracticeDraft());
-    expect(host.textContent).toContain("음표를 넣으면 저장할 영상의 모습을");
+    expect(host.textContent).toContain("음표를 넣으면 영상 미리보기가 열려요.");
     expect(host.querySelector("canvas")).toBeNull();
     expect(host.querySelector<HTMLInputElement>('input[type="range"]')?.disabled).toBe(true);
     expect(preparePracticeVideoRenderer).not.toHaveBeenCalled();

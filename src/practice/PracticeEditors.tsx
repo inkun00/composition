@@ -278,29 +278,22 @@ function NoteTools({
           ))}
         </div>
         <div className="practice-note-actions">
-          <button type="button" disabled={disabled} data-testid="practice-add-note" onClick={() => append()}>
-            + {beatText(newDuration)}박 음표 추가
+          <button type="button" disabled={disabled} data-testid="practice-add-note"
+            aria-label={`${beatText(newDuration)}박 음표 추가`} onClick={() => append()}>
+            + 음표
           </button>
-          <button type="button" disabled={disabled} data-testid="practice-add-rest" onClick={() => append(true)}>
-            + {beatText(newDuration)}박 쉼표 추가
+          <button type="button" disabled={disabled} data-testid="practice-add-rest"
+            aria-label={`${beatText(newDuration)}박 쉼표 추가`} onClick={() => append(true)}>
+            + 쉼표
           </button>
           <button type="button" disabled={disabled || !selected} data-testid="practice-delete-note"
-            className="practice-delete-note" onClick={() => selected && onDelete(selected.id)}>
-            선택한 음표·쉼표 삭제
+            className="practice-delete-note" aria-label="선택한 음표·쉼표 삭제" onClick={() => selected && onDelete(selected.id)}>
+            삭제
           </button>
         </div>
-        <p className="practice-editor-help">
-          {step === "rhythm"
-            ? "음표 길이를 고른 뒤 배치해요. 다른 길이를 골라도 이미 배치한 음표·쉼표는 바뀌지 않아요."
-            : selected ? "선택한 음표·쉼표의 길이를 위에서 바꿀 수 있어요. 새 음표는 맨 뒤에 더해져요." : "음표를 선택하면 길이를 바꿀 수 있어요. 새 음표는 길이를 고른 뒤 추가해요."}
-          {inputMode === "score" && step === "rhythm" && " 고른 길이는 ‘음표 추가’나 ‘쉼표 추가’를 누르면 배치돼요."}
-          {inputMode === "grid" && step === "rhythm" && " 빈칸을 누르면 추가되고, 색칠한 칸을 다시 누르면 삭제돼요."}
-        </p>
       </div>
       {step === "melody" && (
         <div className="practice-melody-tools">
-          <p className="practice-editor-help">음표를 선택해 음높이를 바꿔요. 필요하면 위에서 길이를 바꾸거나 음표·쉼표를 더하고 지울 수 있어요.</p>
-          {inputMode === "score" && <p className="practice-editor-help">악보의 음표를 위아래로 끌거나 ↑·↓ 키로 반음씩 옮겨요. 올리면 샤프(♯), 내리면 플랫(♭)이 자동으로 붙고, 자연음으로 옮기면 사라져요.</p>}
           <div className="practice-pitch-options" role="group" aria-label="선택한 음표의 음높이">
             {PRACTICE_PITCHES.map((entry) => (
               <button type="button" key={entry.pitch} disabled={disabled || !selected || selected.pitch === null}
@@ -379,7 +372,7 @@ export default function PracticeEditors({
       )}
       {showTools && (
         <>
-          {meter.beatUnit === 8 && <p className="practice-editor-help">이 표에서 1박은 4분음표 길이예요. 6/8박자는 0.5박 칸 6개를 채워요.</p>}
+          {meter.beatUnit === 8 && <p className="practice-editor-help">6/8박자 · 1칸 = 8분음표</p>}
           <NoteTools notes={notes} meter={meter} step={step} inputMode={inputMode}
             selectedNoteId={selectedNoteId} disabled={disabled} onSelectNote={onSelectNote}
             onPitch={onPitch} onDuration={onDuration} onDelete={onDelete} onAdd={onAdd}
@@ -414,9 +407,8 @@ export default function PracticeEditors({
           </div>
         </div>
       )}
-      {!compact && <p className="practice-grid-legend">
-        {inputMode === "grid" ? "실선은 1박, 점선은 0.5박이에요. 색칠한 한 덩어리가 음표 하나예요." : "악보 아래 가사는 음표와 같은 순서예요. 음표를 눌러 선택할 수 있어요."}
-        {validation.state === "over" && <strong> 굵은 끝선 오른쪽은 넘친 박자예요. 길이를 줄이거나 음표를 지워 주세요.</strong>}
+      {!compact && validation.state === "over" && <p className="practice-grid-legend">
+        <strong>끝선 오른쪽은 넘친 박자예요. 음표 길이를 줄이거나 지워 주세요.</strong>
       </p>}
     </div>
   );

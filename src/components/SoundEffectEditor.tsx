@@ -3,7 +3,6 @@ import { Play } from "lucide-react";
 import { previewSoundEffect } from "../audio/soundEffects";
 import { findSoundEffect, SOUND_EFFECTS, type SoundEffectCategory, type SoundEffectId } from "../music/soundEffects";
 import type { SoundEffectEvent } from "../music/types";
-import { publicAssetUrl } from "../platform/portable";
 
 type SoundEffectEditorProps = Readonly<{
   measureIndex: number;
@@ -58,12 +57,8 @@ export default function SoundEffectEditor({
     <section className={`sound-effect-editor${compact ? " compact" : ""}`}
       aria-label={`${measureIndex + 1}마디 효과음 편집`}>
       {!compact && <>
-        <img className="workspace-guide sound-effect-guide"
-          src={publicAssetUrl("/illustrations/character-sound-preview-girl-v1.webp")}
-          alt="" aria-hidden="true" draggable="false" />
         <div className="sound-effect-heading">
-          <div><span className="section-kicker">소리 추가</span><h2>{measureIndex + 1}마디에 짧은 소리를 놓아요</h2></div>
-          <p>아이콘을 누른 뒤, 아래 선에서 좌우로 끌어 재생 시간을 정해요.</p>
+          <div><h2>{measureIndex + 1}마디 효과음</h2></div>
         </div>
       </>}
       <label className="sound-effect-filter">
