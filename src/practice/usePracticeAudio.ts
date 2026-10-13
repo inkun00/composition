@@ -235,7 +235,8 @@ export function usePracticeAudio(input: PracticeAudioInput) {
   async function save(format: "mp3" | "mp4"): Promise<void> {
     const session = begin();
     if (!session) return;
-    setStatus(format === "mp4" ? "검은 화면으로 연습 곡 MP4를 만들고 있어요." : "연습 곡 MP3를 만들고 있어요.");
+    const videoLabel = input.videoMode === "score" ? "악보" : "막대";
+    setStatus(format === "mp4" ? `${videoLabel} 화면으로 연습 곡 MP4를 만들고 있어요.` : "연습 곡 MP3를 만들고 있어요.");
     try {
       const rendered = await prepare(session, 45);
       if (!isCurrent(session)) return;

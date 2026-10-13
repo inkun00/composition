@@ -228,12 +228,12 @@ try {
     canvas.height = video.videoHeight;
     const drawing = canvas.getContext("2d");
     const yellowPositions = [];
-    let blackCorner = false;
+    let visualBackground = false;
     for (const seconds of [0.2, 2.1]) {
       await new Promise((resolve) => { video.onseeked = resolve; video.currentTime = seconds; });
       drawing.drawImage(video, 0, 0);
       const corner = drawing.getImageData(10, 10, 1, 1).data;
-      blackCorner = corner[0] < 10 && corner[1] < 10 && corner[2] < 10;
+      visualBackground = corner[0] > 220 && corner[1] > 230 && corner[2] > 220;
       const pixels = drawing.getImageData(0, 280, canvas.width, 160).data;
       let count = 0;
       let totalX = 0;
@@ -248,7 +248,7 @@ try {
     const result = {
       audioDuration: buffer.duration, energy, frequencies, videoDuration: video.duration,
       videoAudioDuration: videoAudio.duration, videoAudioEnergy,
-      videoWidth: video.videoWidth, videoHeight: video.videoHeight, blackCorner, yellowPositions
+      videoWidth: video.videoWidth, videoHeight: video.videoHeight, visualBackground, yellowPositions
     };
     URL.revokeObjectURL(url);
     return result;
@@ -263,7 +263,7 @@ try {
   assert.ok(media.videoAudioEnergy > 0.000001);
   assert.equal(media.videoWidth, 1280);
   assert.equal(media.videoHeight, 720);
-  assert.equal(media.blackCorner, true);
+  assert.equal(media.visualBackground, true);
   assert.ok(media.yellowPositions[0] > 0 && media.yellowPositions[1] > media.yellowPositions[0]);
 
   // Reloading and returning to practice preserves all entered data.

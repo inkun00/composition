@@ -264,6 +264,19 @@ describe("연습 미리듣기와 파일 저장", () => {
     expect(mocks.mp4.mock.calls[0][1]).toBe(input);
   });
 
+  it("막대와 악보 모드를 바꿔도 음원을 재사용하고 현재 선택한 화면으로 MP4를 만든다", async () => {
+    const bars: PracticeAudioInput = { ...input, videoMode: "bars" };
+    await act(async () => root.render(<Harness settings={bars} />));
+    await act(async () => current.save("mp4"));
+    const score: PracticeAudioInput = { ...input, videoMode: "score" };
+    await act(async () => root.render(<Harness settings={score} />));
+    await act(async () => current.save("mp4"));
+    expect(mocks.render).toHaveBeenCalledOnce();
+    expect(mocks.mp4.mock.calls.map((args) => args[1].videoMode)).toEqual(["bars", "score"]);
+    expect(mocks.mp4.mock.calls.every((args) => args[0].buffer === rendered.buffer)).toBe(true);
+    expect(mocks.mp4.mock.calls.every((args) => args[1].step === "melody")).toBe(true);
+  });
+
   it("가사 없는 리듬도 가락으로 전환하지 않고 MP3와 MP4에 같은 버퍼를 저장한다", async () => {
     const settings: PracticeAudioInput = {
       ...input,

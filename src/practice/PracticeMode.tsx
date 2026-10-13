@@ -6,12 +6,15 @@ import { PracticeNoteTools } from "./PracticeEditors";
 import PracticeMeasureCard from "./PracticeMeasureCard";
 import PracticePlayback from "./PracticePlayback";
 import PracticeRhythmScores from "./PracticeRhythmScores";
+import PracticeStages from "./PracticeStages";
 import PracticeTutorial from "./PracticeTutorial";
+import type { PracticeVideoMode } from "./practiceVideoTypes";
 import { usePracticeAudio } from "./usePracticeAudio";
 import { usePracticeState } from "./usePracticeState";
 import "./PracticeMode.css";
 import "./PracticeOverview.css";
 import "./PracticeRhythmScores.css";
+import "./PracticeSaving.css";
 
 type PracticeModeProps = { onClose: () => void };
 
@@ -19,6 +22,8 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
   const practice = usePracticeState();
   const { draft, active, activeIndex, activeScoreIndex, editingStep, scores, scoreValidations, step, inputMode, complete } = practice;
   const [appendDuration, setAppendDuration] = useState(1);
+  const [saving, setSaving] = useState(false);
+  const [videoMode, setVideoMode] = useState<PracticeVideoMode>("bars");
   const audio = usePracticeAudio({
     measures: draft.measures,
     bpm: draft.bpm,
@@ -27,6 +32,7 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
     rhythmLayers: draft.rhythmLayers,
     meter: draft.meter,
     step,
+    videoMode,
     title: draft.title
   });
   useUnsavedWorkWarning(!practice.saved);
@@ -59,7 +65,7 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
           <PracticeTutorial />
         </div>
 
-        <fieldset className="practice-settings" disabled={busy}>
+        <fieldset className="practice-settings" disabled={busy} hidden={saving}>
           <legend className="practice-sr-only">연습할 곡 설정</legend>
           <label className="practice-title-field">가락 이름
             <input aria-label="연습 가락 이름" maxLength={80} value={draft.title}
@@ -94,19 +100,12 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
           </label>
         </fieldset>
 
-        <div className="practice-step-tabs" role="tablist" aria-label="연습 단계">
-          <button type="button" role="tab" id="practice-rhythm-tab" aria-controls="practice-workspace"
-            aria-selected={step === "rhythm"} disabled={busy} onClick={() => practice.setStep("rhythm")}>
-            <span>1</span><div><strong>리듬 만들기</strong><small>모든 마디의 박자 채우기</small></div>
-          </button>
-          <ArrowRight size={20} aria-hidden="true" />
-          <button type="button" role="tab" id="practice-melody-tab" aria-controls="practice-workspace"
-            aria-selected={step === "melody"} disabled={busy || (step !== "melody" && !complete)} onClick={practice.goToMelody}>
-            <span>2</span><div><strong>가락 만들기</strong><small>선택 · 음높이와 리듬 다듬기</small></div>
-          </button>
-        </div>
+        <PracticeStages step={step} saving={saving} busy={busy} complete={complete}
+          onRhythm={() => { setSaving(false); practice.setStep("rhythm"); }}
+          onMelody={() => { setSaving(false); practice.goToMelody(); }} onSave={() => setSaving(true)} />
 
-        <section className="practice-workspace" id="practice-workspace" role="tabpanel" aria-labelledby={`practice-${step}-tab`}>
+        <section className="practice-workspace" id="practice-workspace" role="tabpanel" hidden={saving}
+          aria-labelledby={`practice-${step}-tab`}>
           <div className="practice-workspace-heading">
             <div>
               <h2>{step === "rhythm" ? "모든 마디에 리듬을 채워요" : "모든 마디의 가락을 만들어 봐요"}</h2>
@@ -167,7 +166,7 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
             {step === "rhythm" ? (
               <div className="practice-stage-next">
                 <small>{complete
-                  ? "완성한 리듬은 아래에서 바로 저장해요. 가락 만들기는 선택이에요."
+                  ? "완성한 리듬은 음악 저장하기에서 간직해요. 가락 만들기는 선택이에요."
                   : "모든 마디의 박자를 완성하면 저장하거나 가락을 만들 수 있어요."}</small>
                 <button type="button" className="practice-primary" disabled={busy || !complete} onClick={practice.goToMelody}>
                   가락 만들기로 <ArrowRight size={17} />
@@ -181,8 +180,10 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
           </div>
         </section>
 
-        <PracticePlayback draft={draft} step={step} complete={complete} audio={audio} onConfigure={practice.configure} />
-        <section className="practice-overview-tip" aria-label="연습 힌트">
+        <PracticePlayback draft={draft} step={step} complete={complete} audio={audio} onConfigure={practice.configure}
+          saving={saving} videoMode={videoMode} onVideoMode={setVideoMode} onSaveSettings={() => setSaving(true)}
+          onReturnToEditing={() => setSaving(false)} />
+        <section className="practice-overview-tip" aria-label="연습 힌트" hidden={saving}>
           <Lightbulb size={21} />
           <p>{step === "rhythm"
             ? "4분음표는 1박, 8분음표는 반 박이에요. 쉼표도 박자를 채워요. 음표 아래 빈칸에 가사를 한 글자씩 넣어 보세요."

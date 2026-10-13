@@ -21,7 +21,7 @@ vi.mock("../audio/samplePlayer", () => ({
 vi.mock("../audio/beatSamples", () => ({
   preloadBeatSamples: mocks.preloadBeat, scheduleLoadedBeatSample: mocks.scheduleBeat
 }));
-vi.mock("../video/exportLyricMp4", () => ({ exportLyricMp4: mocks.mp4 }));
+vi.mock("./exportPracticeVideoMp4", () => ({ exportPracticeVideoMp4: mocks.mp4 }));
 
 function note(id: string, beats: number, pitch: number | null = 60, lyric?: string): NoteEvent {
   return { id, pitch, duration: rational(beats * 2, 2), lyric };
@@ -220,24 +220,13 @@ describe("세 악보의 독립 리듬과 동시 연주", () => {
     }] })).toThrow("음표 길이");
   });
 
-  it("MP4 가사는 공통 마디 시작을 따르고 추가 악보의 가사를 표시하지 않는다", async () => {
-    const created = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:layered-wav");
-    const revoke = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+  it("MP4 화면에 모든 악보와 공통 마디 시작을 가진 렌더 시간을 전달한다", async () => {
     mocks.mp4.mockResolvedValue(new Blob(["mp4"]));
-    try {
-      const result = await renderPracticeAudio(layered);
-      await exportPracticeMp4(result, layered);
-      const plan = mocks.mp4.mock.calls[0][1];
-      expect(plan.frames).toEqual([
-        { startSeconds: 0, endSeconds: 0.5, syllables: ["봄"], activeSyllable: 0, measureIndex: 0 },
-        { startSeconds: 0.5, endSeconds: 2, syllables: [], activeSyllable: null, measureIndex: null },
-        { startSeconds: 2, endSeconds: 2.5, syllables: ["날"], activeSyllable: 0, measureIndex: 1 }
-      ]);
-      expect(created.mock.calls[0][0]).toBeInstanceOf(Blob);
-      expect(revoke).toHaveBeenCalledWith("blob:layered-wav");
-    } finally {
-      created.mockRestore();
-      revoke.mockRestore();
-    }
+    const result = await renderPracticeAudio(layered);
+    await exportPracticeMp4(result, layered);
+    expect(mocks.mp4).toHaveBeenCalledWith(result, layered, {});
+    expect(result.layerTimelines).toHaveLength(2);
+    expect(result.timeline.events.map((event) => event.startSeconds)).toEqual([0, 2]);
+    expect(result.buffer.duration).toBe(2.5);
   });
 });

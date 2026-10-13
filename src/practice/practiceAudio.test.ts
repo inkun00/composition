@@ -21,7 +21,7 @@ vi.mock("../audio/samplePlayer", () => ({
 vi.mock("../audio/beatSamples", () => ({
   preloadBeatSamples: mocks.preloadBeat, scheduleLoadedBeatSample: mocks.scheduleBeat
 }));
-vi.mock("../video/exportLyricMp4", () => ({ exportLyricMp4: mocks.mp4 }));
+vi.mock("./exportPracticeVideoMp4", () => ({ exportPracticeVideoMp4: mocks.mp4 }));
 
 const input: PracticeAudioInput = {
   measures: [{ notes: [
@@ -211,58 +211,34 @@ describe("연습 파일 내보내기", () => {
     expect(progress).toHaveBeenLastCalledWith(100);
   });
 
-  it("MP4에 무손실 렌더 오디오와 전주 없는 가사 시간을 전달하고 임시 URL을 해제한다", async () => {
-    const created = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:practice-wav");
-    const revoke = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+  it("MP4 화면에 렌더된 음원과 입력한 가락·가사를 그대로 전달한다", async () => {
     mocks.mp4.mockResolvedValue(new Blob(["mp4"], { type: "video/mp4" }));
     const buffer = audioBuffer(44100);
-    await exportPracticeMp4({ buffer, timeline: buildPracticeTimeline(input), usedFallback: false }, input);
-    const [url, plan] = mocks.mp4.mock.calls[0];
-    expect(url).toBe("blob:practice-wav");
-    expect((created.mock.calls[0][0] as Blob).type).toBe("audio/wav");
-    expect(plan.frames[0]).toMatchObject({ startSeconds: 0, endSeconds: 0.5, syllables: ["나", "비"], activeSyllable: 0 });
-    expect(plan.frames.at(-1).endSeconds).toBe(1);
-    expect(revoke).toHaveBeenCalledWith("blob:practice-wav");
-    created.mockRestore();
-    revoke.mockRestore();
+    const rendered = { buffer, timeline: buildPracticeTimeline(input), usedFallback: false };
+    await exportPracticeMp4(rendered, input);
+    expect(mocks.mp4).toHaveBeenCalledWith(rendered, input, {});
   });
 
-  it("영상 오류가 나도 임시 WAV URL을 해제한다", async () => {
-    const created = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:failed");
-    const revoke = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+  it("영상 오류를 호출자에게 전달한다", async () => {
     mocks.mp4.mockRejectedValue(new Error("지원하지 않는 브라우저"));
     await expect(exportPracticeMp4({ buffer: audioBuffer(44100), timeline: buildPracticeTimeline(input), usedFallback: false }, input))
       .rejects.toThrow("지원하지 않는");
-    expect(revoke).toHaveBeenCalledWith("blob:failed");
-    created.mockRestore();
-    revoke.mockRestore();
   });
 
-  it("가사 없는 리듬도 전체 길이의 검은 화면 MP4 계획으로 내보낸다", async () => {
-    const created = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:rhythm-wav");
-    const revoke = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+  it("가사 없는 리듬도 선택한 화면 모드와 취소 신호를 전달한다", async () => {
     const controller = new AbortController();
     const rhythm: PracticeAudioInput = {
       ...input,
       step: "rhythm",
+      videoMode: "score",
       measures: input.measures.map((measure) => ({
         notes: measure.notes.map((note) => ({ ...note, lyric: "" }))
       }))
     };
     mocks.mp4.mockResolvedValue(new Blob(["mp4"], { type: "video/mp4" }));
-    await exportPracticeMp4({
-      buffer: audioBuffer(44100), timeline: buildPracticeTimeline(rhythm), usedFallback: false
-    }, rhythm, { signal: controller.signal });
-    const [, plan, , signal, options] = mocks.mp4.mock.calls[0];
-    expect(plan.hasLyrics).toBe(false);
-    expect(plan.frames.every((frame: { syllables: string[] }) => frame.syllables.length === 0)).toBe(true);
-    expect(plan.frames[0].startSeconds).toBe(0);
-    expect(plan.frames.at(-1).endSeconds).toBe(1);
-    expect(signal).toBe(controller.signal);
-    expect(options).toEqual({ allowEmptyLyrics: true });
-    expect(revoke).toHaveBeenCalledWith("blob:rhythm-wav");
-    created.mockRestore();
-    revoke.mockRestore();
+    const rendered = { buffer: audioBuffer(44100), timeline: buildPracticeTimeline(rhythm), usedFallback: false };
+    await exportPracticeMp4(rendered, rhythm, { signal: controller.signal });
+    expect(mocks.mp4).toHaveBeenCalledWith(rendered, rhythm, { signal: controller.signal });
   });
 
   it("다운로드 이름에서 잘못된 파일 문자를 지운다", () => {

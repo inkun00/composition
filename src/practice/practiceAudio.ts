@@ -1,11 +1,9 @@
 import { Mp3Encoder } from "@breezystack/lamejs";
 import { preloadBeatSamples, scheduleLoadedBeatSample } from "../audio/beatSamples";
-import { encodeAudioBufferToWav } from "../audio/pcmRecorder";
 import { loadSampleInstrument, queueSampleNote, releaseSampleInstrument } from "../audio/samplePlayer";
 import { isBeatInstrumentId } from "../music/beatInstruments";
 import { findInstrument, isValidInstrumentId, type Instrument } from "../music/instruments";
 import { buildPracticeAudioPlan } from "./practiceAudioTimeline";
-import { buildPracticeLyricVideoPlan } from "./practiceAudioLyrics";
 import type { PracticeAudioEvent, PracticeAudioInput, PracticeAudioTrack, PracticeRenderedAudio, PracticeTimeline } from "./practiceAudioTypes";
 
 export {
@@ -246,17 +244,9 @@ export async function exportPracticeMp4(
   options: RenderOptions = {}
 ): Promise<Blob> {
   checkAbort(options.signal);
-  const plan = buildPracticeLyricVideoPlan(input, rendered);
-  const url = URL.createObjectURL(encodeAudioBufferToWav(rendered.buffer));
-  try {
-    const { exportLyricMp4 } = await import("../video/exportLyricMp4");
-    checkAbort(options.signal);
-    return await exportLyricMp4(url, plan, options.onProgress ?? (() => undefined), options.signal, {
-      allowEmptyLyrics: true
-    });
-  } finally {
-    URL.revokeObjectURL(url);
-  }
+  const { exportPracticeVideoMp4 } = await import("./exportPracticeVideoMp4");
+  checkAbort(options.signal);
+  return exportPracticeVideoMp4(rendered, input, options);
 }
 
 export function practiceAudioFileName(title: string, format: "mp3" | "mp4"): string {

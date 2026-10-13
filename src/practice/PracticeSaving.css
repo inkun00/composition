@@ -1,0 +1,247 @@
+.practice-step-tabs.practice-composition-stages {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 14px;
+}
+
+.practice-stage-tablist {
+  display: contents;
+}
+
+.practice-composition-stages button,
+.practice-composition-stages .practice-share-stage {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 13px 16px;
+  border: 1px solid #d9e3dc;
+  border-radius: 14px;
+  background: #fff;
+  color: #223d39;
+  text-align: left;
+  text-decoration: none;
+}
+
+.practice-composition-stages button > span,
+.practice-share-stage > span {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #eaf0eb;
+  color: #6a7e71;
+  font-weight: 800;
+}
+
+.practice-share-stage strong,
+.practice-share-stage small {
+  display: block;
+}
+
+.practice-share-stage strong {
+  font-size: 16px;
+}
+
+.practice-share-stage strong svg {
+  vertical-align: -2px;
+}
+
+.practice-share-stage small {
+  margin-top: 3px;
+  color: #7c8b81;
+  font-size: 11px;
+}
+
+.practice-share-stage:hover {
+  border-color: #75af96;
+  background: #f1f8f3;
+}
+
+.practice-shell [hidden] {
+  display: none !important;
+}
+
+.practice-return-to-editor,
+.practice-save-settings-shortcut {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 10px 13px;
+  border: 1px solid #ccdcd2;
+  border-radius: 9px;
+  background: #f6faf7;
+  color: #365d49;
+  font-size: 13px;
+}
+
+.practice-return-to-editor {
+  margin-left: auto;
+}
+
+.practice-save-settings-shortcut {
+  margin-top: 12px;
+}
+
+.practice-video-modes {
+  padding: 0;
+  margin: 25px 0 18px;
+  border: 0;
+}
+
+.practice-video-modes legend {
+  margin-bottom: 10px;
+  color: #375c46;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.practice-video-modes > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.practice-video-modes button {
+  display: grid;
+  grid-template-columns: 30px 1fr;
+  align-items: center;
+  gap: 5px 12px;
+  padding: 16px;
+  border: 1px solid #d5e0d8;
+  border-radius: 12px;
+  background: #fff;
+  color: #3b5948;
+  text-align: left;
+}
+
+.practice-video-modes button[aria-pressed="true"] {
+  border: 2px solid #377d5c;
+  padding: 15px;
+  background: #eef8f1;
+  box-shadow: 0 0 0 2px #377d5c12;
+}
+
+.practice-video-modes button small {
+  grid-column: 2;
+  color: #677f6f;
+  font-size: 12px;
+}
+
+.practice-bars-mode-icon {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 24px;
+}
+
+.practice-bars-mode-icon i {
+  width: 6px;
+  height: 15px;
+  border-radius: 2px;
+  background: #4c9270;
+}
+
+.practice-bars-mode-icon i:nth-child(2) {
+  height: 23px;
+}
+
+.practice-bars-mode-icon i:nth-child(3) {
+  height: 10px;
+}
+
+.practice-video-preview {
+  max-width: 900px;
+  margin: 0 auto 23px;
+}
+
+.practice-video-preview-canvas {
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  border: 1px solid #d6e3db;
+  border-radius: 12px;
+  background: #f4f8f5;
+}
+
+.practice-video-preview canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.practice-video-preview figcaption {
+  margin: 10px 0;
+  color: #697e70;
+  font-size: 12px;
+}
+
+.practice-video-preview label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #52705e;
+  font-size: 12px;
+}
+
+.practice-video-preview input {
+  flex: 1;
+  min-width: 0;
+  accent-color: #377d5c;
+}
+
+.practice-video-preview output {
+  flex-shrink: 0;
+}
+
+@media (max-width: 1000px) {
+  .practice-step-tabs.practice-composition-stages {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+}
+
+@media (max-width: 600px) {
+  .practice-composition-stages button,
+  .practice-composition-stages .practice-share-stage {
+    gap: 8px;
+    padding: 11px 9px;
+  }
+
+  .practice-share-stage > span {
+    width: 26px;
+    height: 26px;
+    font-size: 12px;
+  }
+
+  .practice-share-stage strong {
+    font-size: 13px;
+  }
+
+  .practice-share-stage small {
+    font-size: 9px;
+  }
+
+  .practice-save-panel .practice-listen-intro {
+    flex-wrap: wrap;
+  }
+
+  .practice-return-to-editor {
+    margin-left: 0;
+  }
+
+  .practice-video-modes > div {
+    grid-template-columns: 1fr;
+  }
+
+  .practice-video-preview label {
+    flex-wrap: wrap;
+  }
+
+  .practice-video-preview input {
+    flex-basis: 45%;
+  }
+}
