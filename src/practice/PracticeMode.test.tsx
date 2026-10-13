@@ -239,8 +239,12 @@ describe("악보를 겹쳐 리듬 만들기", () => {
     const lyric = scoreCard(1, 0).querySelector<HTMLInputElement>('[aria-label="1번째 음표 가사"]');
     click(lyric as HTMLInputElement);
     click(testButton("practice-duration-2"));
+    expect(savedDraft()).toEqual(before);
+    click(testButton("practice-add-note"));
     expect(savedDraft().measures[0].notes).toEqual(primary);
-    expect(savedDraft().rhythmLayers[0].measures[0].notes[0].duration)
+    expect(savedDraft().rhythmLayers[0].measures[0].notes.slice(0, -1))
+      .toEqual(before.rhythmLayers[0].measures[0].notes);
+    expect(savedDraft().rhythmLayers[0].measures[0].notes.at(-1)?.duration)
       .toEqual({ numerator: 2, denominator: 1 });
   });
 
@@ -328,6 +332,11 @@ describe("악보를 겹쳐 리듬 만들기", () => {
     click(lyric as HTMLInputElement);
     click(testButton("practice-duration-2"));
     expect(savedDraft().measures[0].notes).toEqual(primary);
+    expect(button("MP3 저장").disabled).toBe(false);
+    expect(button("MP4 저장").disabled).toBe(false);
+    click(testButton("practice-add-note"));
+    expect(savedDraft().rhythmLayers[0].measures[0].notes.at(-1)?.duration)
+      .toEqual({ numerator: 2, denominator: 1 });
     expect(button("MP3 저장").disabled).toBe(true);
     expect(button("MP4 저장").disabled).toBe(true);
     expect(melodyTab.getAttribute("aria-selected")).toBe("true");
@@ -384,6 +393,36 @@ describe("악보를 겹쳐 리듬 만들기", () => {
 });
 
 describe("기능 연습하기 전체 흐름", () => {
+  it("길이를 먼저 고르고 빈칸에 배치하며 이후 길이 선택은 다음 음표에만 적용한다", () => {
+    mount();
+    changeValue("연습할 마디 수", "1");
+    changeValue("1마디 가사", "봄날");
+    click(testButton("practice-duration-0.5"));
+    expect(savedDraft().measures[0].notes).toHaveLength(0);
+    click(measureCard(0).querySelector<HTMLButtonElement>(".practice-empty-slot") as HTMLButtonElement);
+    const first = savedDraft().measures[0].notes[0];
+    expect(first).toMatchObject({ duration: { numerator: 1, denominator: 2 }, lyric: "봄" });
+    click(testButton("practice-duration-2"));
+    expect(savedDraft().measures[0].notes).toEqual([first]);
+    expect(testButton("practice-duration-2").getAttribute("aria-pressed")).toBe("true");
+    click(measureCard(0).querySelector<HTMLButtonElement>(".practice-empty-slot") as HTMLButtonElement);
+    const second = savedDraft().measures[0].notes[1];
+    expect(second).toMatchObject({ duration: { numerator: 2, denominator: 1 }, lyric: "날" });
+    expect(savedDraft().measures[0].notes[0]).toEqual(first);
+    click(measureCard(0).querySelector<HTMLInputElement>('[aria-label="1번째 음표 가사"]') as HTMLInputElement);
+    click(testButton("practice-duration-1.5"));
+    expect(savedDraft().measures[0].notes).toEqual([first, second]);
+    expect(testButton("practice-duration-1.5").getAttribute("aria-pressed")).toBe("true");
+    click(testButton("practice-add-rest"));
+    const notes = savedDraft().measures[0].notes;
+    expect(notes.slice(0, 2)).toEqual([first, second]);
+    expect(notes[2]).toMatchObject({ pitch: null, duration: { numerator: 3, denominator: 2 }, dotted: true });
+    expect(validateMeasure(notes, savedDraft().meter).state).toBe("exact");
+    click(testButton("practice-duration-0.5"));
+    expect(savedDraft().measures[0].notes).toEqual(notes);
+    expect(button("MP3 저장").disabled).toBe(false);
+  });
+
   it("가락 만들기나 가락 악기 선택 없이 완성한 리듬을 MP3와 MP4로 저장한다", () => {
     mount();
     changeValue("리듬 연주 악기", "beat:shaker");

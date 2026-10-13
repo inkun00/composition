@@ -260,7 +260,7 @@ function NoteTools({
 }: NoteToolsProps) {
   const selected = notes.find((note) => note.id === selectedNoteId);
   const durationChoice = PRACTICE_DURATIONS.find((duration) => duration.beats === newDuration);
-  const selectedDuration = selected ? toNumber(selected.duration) : newDuration;
+  const selectedDuration = step === "melody" && selected ? toNumber(selected.duration) : newDuration;
   const append = (rest = false) => onAdd(newDuration, rest ? null : 60, durationChoice?.dotted);
 
   function moveSelectedPitch(direction: number) {
@@ -282,7 +282,7 @@ function NoteTools({
               data-testid={`practice-duration-${duration.beats}`}
               onClick={() => {
                 onNewDuration(duration.beats);
-                if (selected) onDuration(selected.id, duration.beats, duration.dotted);
+                if (step === "melody" && selected) onDuration(selected.id, duration.beats, duration.dotted);
               }}>
               <span className="practice-note-symbol" aria-hidden="true">{duration.symbol}</span>
               <span>{duration.label.split(" · ")[0]}</span>
@@ -303,7 +303,10 @@ function NoteTools({
           </button>
         </div>
         <p className="practice-editor-help">
-          {selected ? "선택한 음표·쉼표의 길이를 위에서 바꿀 수 있어요. 새 음표는 맨 뒤에 더해져요." : "길이를 고르고 음표를 추가해요. 음표 아래 가사 칸이나 악보에서 선택하면 길이를 바꿀 수 있어요."}
+          {step === "rhythm"
+            ? "음표 길이를 고른 뒤 배치해요. 다른 길이를 골라도 이미 배치한 음표·쉼표는 바뀌지 않아요."
+            : selected ? "선택한 음표·쉼표의 길이를 위에서 바꿀 수 있어요. 새 음표는 맨 뒤에 더해져요." : "음표를 선택하면 길이를 바꿀 수 있어요. 새 음표는 길이를 고른 뒤 추가해요."}
+          {inputMode === "score" && step === "rhythm" && " 고른 길이는 ‘음표 추가’나 ‘쉼표 추가’를 누르면 배치돼요."}
           {inputMode === "grid" && step === "rhythm" && " 빈칸을 누르면 추가되고, 색칠한 칸을 다시 누르면 삭제돼요."}
         </p>
       </div>

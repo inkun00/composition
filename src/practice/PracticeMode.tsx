@@ -110,7 +110,7 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
           <div className="practice-workspace-heading">
             <div>
               <h2>{step === "rhythm" ? "모든 마디에 리듬을 채워요" : "모든 마디의 가락을 만들어 봐요"}</h2>
-              <p>{step === "rhythm" ? "마디 이름을 누르고 길이를 골라 음표나 쉼표를 넣어요. 칸 채우기에서는 배치한 칸을 다시 누르면 삭제돼요." : "음높이를 바꾸고, 필요하면 음표 길이와 쉼표도 바로 고쳐요."}</p>
+              <p>{step === "rhythm" ? "마디 이름을 누르고 음표 길이를 고른 뒤 배치해요. 다른 음표를 골라도 이미 배치한 리듬은 바뀌지 않아요." : "음높이를 바꾸고, 필요하면 음표 길이와 쉼표도 바로 고쳐요."}</p>
             </div>
             <div className="practice-input-toggle" role="group" aria-label="음표 입력 방식">
               <button type="button" aria-pressed={inputMode === "grid"} disabled={busy} onClick={() => practice.setInputMode("grid")}>칸 채우기</button>
@@ -121,8 +121,8 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
           <PracticeRhythmScores practice={practice} audio={audio} />
 
           <div className="practice-shared-tools">
-            <p className="practice-current-measure" role="status">{scores.length > 1 ? `${activeScoreIndex + 1}번 악보 · ` : ""}{activeIndex + 1}마디 편집 중 · {inputMode === "grid" && editingStep === "rhythm"
-              ? "배치한 칸을 누르면 삭제돼요. 길이는 아래 가사 칸을 눌러 선택한 뒤 바꿔요."
+            <p className="practice-current-measure" role="status">{scores.length > 1 ? `${activeScoreIndex + 1}번 악보 · ` : ""}{activeIndex + 1}마디 편집 중 · {editingStep === "rhythm"
+              ? inputMode === "grid" ? "음표 선택 → 빈칸에 배치 · 배치한 칸을 다시 누르면 삭제돼요." : "음표 길이 선택 → 음표·쉼표 추가"
               : "음표를 누르면 길이를 바꿀 수 있어요"}</p>
             {draft.meter.beatUnit === 8 && <p className="practice-editor-help">이 표에서 1박은 4분음표 길이예요. 6/8박자는 0.5박 칸 6개를 채워요.</p>}
             <PracticeNoteTools notes={active.notes} meter={draft.meter} step={editingStep} inputMode={inputMode}

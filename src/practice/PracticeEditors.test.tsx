@@ -75,7 +75,7 @@ describe("리듬과 가락 연습 입력", () => {
     expect(props.onDuration).not.toHaveBeenCalled();
   });
 
-  it("마디를 넘친 음표도 보이고 선택해 길이를 줄이거나 삭제할 수 있다", () => {
+  it("마디를 넘친 음표도 보이고 다음 음표 길이를 골라도 기존 음표는 유지하며 삭제할 수 있다", () => {
     const props = mount({
       notes: [
         { id: "long", pitch: 60, duration: rational(4), lyric: "봄" },
@@ -91,9 +91,38 @@ describe("리듬과 가락 연습 입력", () => {
     act(() => lyric?.click());
     expect(props.onSelectNote).toHaveBeenCalledWith("overflow");
     act(() => button("practice-duration-0.5").click());
-    expect(props.onDuration).toHaveBeenCalledWith("overflow", .5, undefined);
+    expect(props.onDuration).not.toHaveBeenCalled();
+    act(() => button("practice-add-note").click());
+    expect(props.onAdd).toHaveBeenCalledWith(.5, 60, undefined);
     act(() => button("practice-delete-note").click());
     expect(props.onDelete).toHaveBeenCalledWith("overflow");
+  });
+
+  it.each([
+    { inputMode: "grid" as const, pitch: 60 },
+    { inputMode: "grid" as const, pitch: null },
+    { inputMode: "score" as const, pitch: 60 },
+    { inputMode: "score" as const, pitch: null }
+  ])("리듬 단계의 $inputMode에서 선택한 pitch=$pitch 음표·쉼표는 길이 선택으로 바뀌지 않는다", ({ inputMode, pitch }) => {
+    const note = { id: "placed", pitch, duration: rational(1, 2), lyric: "봄" };
+    const props = mount({ notes: [note], selectedNoteId: note.id, inputMode, onAppendDurationChange: vi.fn() });
+    expect(button("practice-duration-1").getAttribute("aria-pressed")).toBe("true");
+    expect(button("practice-duration-0.5").getAttribute("aria-pressed")).toBe("false");
+    const select = inputMode === "score" ? button("score-note-placed") : container?.querySelector<HTMLButtonElement>(
+      `[aria-label="1번째 ${pitch === null ? "쉼표" : "음표"} 가사 봄 선택"]`
+    );
+    act(() => select?.click());
+    expect(props.onSelectNote).toHaveBeenCalledWith(note.id);
+    act(() => button("practice-duration-2").click());
+    expect(button("practice-duration-2").getAttribute("aria-pressed")).toBe("true");
+    expect(props.onAppendDurationChange).toHaveBeenCalledWith(2);
+    expect(props.onDuration).not.toHaveBeenCalled();
+    expect(props.onDelete).not.toHaveBeenCalled();
+    expect(note.duration).toEqual(rational(1, 2));
+    act(() => button("practice-add-note").click());
+    expect(props.onAdd).toHaveBeenLastCalledWith(2, 60, undefined);
+    act(() => button("practice-add-rest").click());
+    expect(props.onAdd).toHaveBeenLastCalledWith(2, null, undefined);
   });
 
   it.each([
