@@ -3,8 +3,9 @@ import { isBeatInstrumentId } from "../music/beatInstruments";
 import { meterKey, SUPPORTED_METERS, type Meter } from "../music/meter";
 import { rational, toNumber } from "../music/rational";
 import type { NoteEvent } from "../music/types";
-import { assignPracticeLyrics, createPracticeMeasures, lyricSyllables, PRACTICE_DURATIONS, PRACTICE_PITCHES, type PracticeMeasure } from "./practiceModel";
+import { assignPracticeLyrics, createPracticeMeasures, lyricSyllables, PRACTICE_DURATIONS, type PracticeMeasure } from "./practiceModel";
 import { MAX_PRACTICE_SCORES, normalizePracticeRhythmInstrument, type PracticeRhythmLayer } from "./practiceScores";
+import { isPracticePitch } from "./practicePitch";
 
 export type { PracticeRhythmLayer } from "./practiceScores";
 
@@ -47,12 +48,14 @@ function restoreMeasures(saved: PracticeMeasure[], ids: Set<string>, idPrefix: s
       if (!note.duration || !Number.isInteger(note.duration.numerator) || !Number.isInteger(note.duration.denominator) || note.duration.denominator <= 0) throw new Error("Invalid duration");
       const beats = toNumber(note.duration);
       const duration = PRACTICE_DURATIONS.find((item) => item.beats === beats);
-      if (!duration || (note.pitch !== null && !PRACTICE_PITCHES.some((item) => item.pitch === note.pitch))) throw new Error("Invalid note");
+      if (!duration || (note.pitch !== null && !isPracticePitch(note.pitch))) throw new Error("Invalid note");
+      const accidental = ["sharp", "flat", "natural"].includes(note.accidental ?? "") ? note.accidental : undefined;
       return {
         id: note.id,
         pitch: note.pitch,
         duration: rational(note.duration.numerator, note.duration.denominator),
         dotted: duration.dotted,
+        ...(note.pitch !== null && accidental ? { accidental } : {}),
         ...(note.pitch !== null && typeof note.lyric === "string" ? { lyric: lyricSyllables(note.lyric).join("") } : {})
       };
     });

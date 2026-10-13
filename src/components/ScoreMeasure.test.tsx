@@ -8,6 +8,18 @@ const notes = [
 ];
 
 describe("ScoreMeasure VexFlow 좌표 오버레이", () => {
+  it("요청한 악보에 계이름과 샤프·플랫을 함께 표시하고 쉼표에는 붙이지 않는다", () => {
+    const markup = renderToStaticMarkup(<ScoreMeasure showPitchNames notes={[
+      { id: "sharp", pitch: 61, accidental: "sharp", duration: { numerator: 1, denominator: 1 } },
+      { id: "flat", pitch: 63, accidental: "flat", duration: { numerator: 1, denominator: 1 } },
+      { id: "rest", pitch: null, duration: { numerator: 1, denominator: 1 } }
+    ]} />);
+    expect(markup.match(/class="score-pitch-name"/g)).toHaveLength(2);
+    expect(markup).toContain("도♯</text>");
+    expect(markup).toContain("미♭</text>");
+    expect(renderToStaticMarkup(<ScoreMeasure notes={notes} />)).not.toContain("score-pitch-name");
+  });
+
   it("현재 연주되는 음표만 재생 클래스를 가진다", () => {
     const markup = renderToStaticMarkup(<ScoreMeasure notes={notes} playingNoteId="note-b" />);
     expect(markup.match(/note-playing/g)).toHaveLength(1);

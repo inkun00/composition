@@ -1,8 +1,9 @@
-import { CheckCircle2, Lightbulb, Square, Volume2, WandSparkles } from "lucide-react";
+import { CheckCircle2, Lightbulb, Square, Volume2 } from "lucide-react";
 import { measureCapacity, type Meter } from "../music/meter";
 import { toNumber } from "../music/rational";
 import type { MeasureValidation } from "../music/types";
 import PracticeEditors from "./PracticeEditors";
+import PracticePlaybackIndicator from "./PracticePlaybackIndicator";
 import { getPracticeHarmonyHints, lyricSyllables, type PracticeMeasure } from "./practiceModel";
 import type { usePracticeState } from "./usePracticeState";
 
@@ -52,6 +53,9 @@ export default function PracticeMeasureCard({
         <span className={`practice-measure-total ${validation.state}`}>{used} / {capacity}박</span>
       </div>
 
+      <PracticePlaybackIndicator notes={measure.notes} playingNoteId={playingNoteId}
+        active={previewActive} preparing={previewPreparing} />
+
       <PracticeEditors notes={measure.notes} meter={meter} step={step} inputMode={practice.inputMode}
         selectedNoteId={practice.selectedNoteId} playingNoteId={playingNoteId} disabled={disabled}
         showTools={false} showSummary={false} compact appendDuration={appendDuration}
@@ -66,11 +70,6 @@ export default function PracticeMeasureCard({
           <input id={lyricInputId} aria-label={`${labelPrefix}${index + 1}마디 가사`}
             placeholder="위 음표에 맞춰 가사를 적어요" maxLength={200} value={measure.lyric}
             onChange={(event) => practice.setLyric(event.target.value, index, scoreIndex)} />
-          {step === "rhythm" && (
-            <button type="button" onClick={() => practice.generateRhythm(index, scoreIndex)} disabled={!measure.lyric.trim()}>
-              <WandSparkles size={15} /> 가사에 음표 붙이기
-            </button>
-          )}
         </div>
         {missingLyrics > 0 && (
           <p className="practice-lyric-warning" role="alert">

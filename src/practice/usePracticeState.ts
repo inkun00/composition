@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { measureCapacity, validateMeasure, type Meter } from "../music/meter";
 import { rational, toNumber } from "../music/rational";
+import { withEditedPitch } from "../music/score";
 import type { NoteEvent } from "../music/types";
-import { assignPracticeLyrics, createPracticeMeasures, lyricSyllables, makeLyricRhythm, PRACTICE_DURATIONS, PRACTICE_PITCHES, type PracticeMeasure } from "./practiceModel";
+import { assignPracticeLyrics, createPracticeMeasures, lyricSyllables, makeLyricRhythm, PRACTICE_DURATIONS, type PracticeMeasure } from "./practiceModel";
 import { readPracticeDraft, writePracticeDraft, type PracticeDraft } from "./practiceStorage";
 import { getPracticeScores, hasPracticeScoreData, MAX_PRACTICE_SCORES, normalizePracticeRhythmInstrument } from "./practiceScores";
+import { normalizePracticePitch } from "./practicePitch";
 
 function unassignedLyricSyllables(measure: PracticeMeasure) {
   // Deleted notes release their syllables without moving lyrics on other notes.
@@ -204,12 +206,11 @@ export function usePracticeState() {
 
   function setPitch(id: string, pitch: number) {
     const owner = noteOwner(id);
-    if (!owner) return;
-    // The staff can drag chromatic pitches; snap them to the eight practice notes.
-    const nearest = PRACTICE_PITCHES.reduce((best, option) => Math.abs(option.pitch - pitch) < Math.abs(best.pitch - pitch) ? option : best);
+    const nextPitch = normalizePracticePitch(pitch);
+    if (!owner || nextPitch === null) return;
     updateMeasure((measure) => ({
       ...measure,
-      notes: measure.notes.map((note) => note.id === id && note.pitch !== null ? { ...note, pitch: nearest.pitch } : note)
+      notes: measure.notes.map((note) => note.id === id ? withEditedPitch(note, nextPitch) : note)
     }), owner.index, owner.scoreIndex);
     selectNote(id);
   }

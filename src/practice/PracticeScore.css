@@ -1,0 +1,20 @@
+.practice-score-content .score-pitch-name {
+  fill: #304d65;
+  font-family: inherit;
+  font-size: 22px;
+  font-weight: 800;
+  paint-order: stroke;
+  stroke: #fff;
+  stroke-width: 5px;
+  stroke-linejoin: round;
+}
+
+.practice-score-content .note-playing .score-pitch-name {
+  fill: #075a50;
+  stroke: #fff5b5;
+}
+
+.practice-melody-cell small {
+  font-size: inherit;
+  font-weight: 900;
+}

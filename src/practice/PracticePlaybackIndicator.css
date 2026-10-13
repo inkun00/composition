@@ -1,0 +1,18 @@
+.practice-playback-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 9px 11px;
+  border: 2px solid #12645d;
+  border-radius: 8px;
+  background: #fff4cc;
+  color: #174d48;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.practice-playback-indicator-icon {
+  flex-shrink: 0;
+}

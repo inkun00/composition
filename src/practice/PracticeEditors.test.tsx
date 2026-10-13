@@ -250,7 +250,7 @@ describe("리듬과 가락 연습 입력", () => {
     expect(container?.querySelector(".practice-lyric-rest")?.textContent).toBe("—");
   });
 
-  it("악보에서 끌거나 키보드로 바꾼 음은 연습 음계에 맞추고 팔레트도 같은 음표를 편집한다", () => {
+  it("악보에서 끌거나 키보드로 반음을 입력하고 팔레트도 같은 음표를 편집한다", () => {
     const props = mount({
       notes: [{ id: "note", pitch: 60, duration: rational(1) }],
       step: "melody",
@@ -261,10 +261,41 @@ describe("리듬과 가락 연습 입력", () => {
     expect(props.onSelectNote).toHaveBeenCalledWith("note");
     expect(props.onDelete).not.toHaveBeenCalled();
     act(() => button("score-note-note").dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true })));
-    expect(props.onPitch).toHaveBeenCalledWith("note", 62);
+    expect(props.onPitch).toHaveBeenCalledWith("note", 61);
     act(() => button("practice-pitch-72").click());
     expect(props.onPitch).toHaveBeenLastCalledWith("note", 72);
     expect(props.onDuration).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { pitch: 61, accidental: "sharp" as const, row: 60, name: "도♯" },
+    { pitch: 61, accidental: "flat" as const, row: 62, name: "레♭" }
+  ])("악보에서 만든 $name 음표를 칸으로 바꿔도 음표와 리듬이 보인다", ({ pitch, accidental, row, name }) => {
+    const props = mount({
+      notes: [{ id: "chromatic", pitch, accidental, duration: rational(1) }],
+      step: "melody", selectedNoteId: "chromatic"
+    });
+    const filled = button(`practice-melody-chromatic-${row}`);
+    expect(filled.classList.contains("is-filled")).toBe(true);
+    expect(filled.textContent).toContain(name);
+    expect(container?.querySelectorAll(".practice-melody-cell.is-filled")).toHaveLength(1);
+    act(() => filled.click());
+    expect(props.onPitch).toHaveBeenCalledWith("chromatic", row);
+    expect(props.onDuration).not.toHaveBeenCalled();
+  });
+
+  it("재생 중인 쉼표도 리듬·가사·박자 번호에서 강조하고 멈추면 지운다", () => {
+    const props = mount({
+      notes: [{ id: "rest", pitch: null, duration: rational(2) }], playingNoteId: "rest",
+      disabled: true, onNoteLyric: vi.fn()
+    });
+    expect(button("practice-rhythm-note-rest").classList.contains("is-playing")).toBe(true);
+    expect(container?.querySelectorAll(".practice-beat-header .is-playing")).toHaveLength(2);
+    expect(container?.querySelector(".practice-lyric-rest.is-playing")).not.toBeNull();
+    act(() => root?.render(<PracticeEditors {...props} step="melody" />));
+    expect(button("practice-melody-rest-rest").classList.contains("is-playing")).toBe(true);
+    act(() => root?.render(<PracticeEditors {...props} playingNoteId={null} />));
+    expect(container?.querySelectorAll(".is-playing")).toHaveLength(0);
   });
 
   it("연주·내보내기 중 비활성 상태에서는 칸과 악보가 변경되지 않는다", () => {

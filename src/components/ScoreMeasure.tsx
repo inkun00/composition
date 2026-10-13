@@ -26,6 +26,7 @@ type ScoreMeasureProps = {
   keyFifths?: number;
   systemMeasure?: boolean;
   expandedStaff?: boolean;
+  showPitchNames?: boolean;
   renderBackend?: "svg" | "canvas";
   connectedSystem?: boolean;
   endBarline?: "single" | "final";
@@ -109,6 +110,7 @@ export default function ScoreMeasure({
   keyFifths = 0,
   systemMeasure = false,
   expandedStaff = false,
+  showPitchNames = false,
   renderBackend = "svg",
   connectedSystem = false,
   endBarline = "single"
@@ -569,6 +571,10 @@ export default function ScoreMeasure({
               : `${noteIndex + 1}번째 ${pitchName(note.pitch, note.accidental)} 음표`}>
             <rect x={displayX - 12} y={y - 23} width="28" height="48" rx="9"
               className={selected ? "note-hit selected" : "note-hit"} />
+            {showPitchNames && <text x={displayX} y={y + 22} textAnchor="middle"
+              className="score-pitch-name" pointerEvents="none" aria-hidden="true">
+              {pitchName(note.pitch, note.accidental)}
+            </text>}
             {!useVexLayer && <ellipse cx={displayX} cy={y} rx="7" ry="5" className={isHalf ? "note-head hollow" : "note-head"}
               transform={`rotate(-14 ${displayX} ${y})`} />}
             {!useVexLayer && duration < 4 && <line x1={stemX} x2={stemX} y1={y}

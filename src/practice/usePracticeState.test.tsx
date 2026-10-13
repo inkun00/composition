@@ -4,6 +4,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { rational } from "../music/rational";
+import { buildPracticeTimeline } from "./practiceAudioTimeline";
 import { emptyPracticeDraft, readPracticeDraft, writePracticeDraft, type PracticeDraft } from "./practiceStorage";
 import { usePracticeState } from "./usePracticeState";
 
@@ -143,6 +144,78 @@ describe("리듬을 만들고 가락으로 이어 가는 연습 상태", () => {
     act(() => { current.goToMelody(); });
     expect(current.step).toBe("rhythm");
     expect(current.notice).toContain("음표");
+  });
+
+  it("리듬에서 만든 음표의 길이, 쉼표, 가사와 순서를 그대로 가락의 기본 음표로 사용한다", () => {
+    const draft = fullDraft();
+    draft.measures[0].notes = [
+      { id: "rhythm-a", pitch: 60, duration: rational(1, 2), lyric: "안" },
+      { id: "rhythm-rest", pitch: null, duration: rational(1, 2) },
+      { id: "rhythm-b", pitch: 60, duration: rational(3), dotted: true, lyric: "녕" }
+    ];
+    mount(draft);
+    const rhythm = current.draft.measures;
+    act(() => { current.goToMelody(); });
+    expect(current.step).toBe("melody");
+    expect(current.draft.measures).toBe(rhythm);
+    act(() => {
+      current.setInputMode("score");
+      current.setInputMode("grid");
+    });
+    expect(current.draft.measures).toBe(rhythm);
+  });
+
+  it("악보에서 반음 위로 옮기면 샤프, 반음 아래로 옮기면 플랫을 붙이고 실제 반음으로 재생한다", () => {
+    mount(fullDraft());
+    act(() => {
+      current.goToMelody();
+      current.setInputMode("score");
+      current.setPitch("first-a", 61);
+      current.setPitch("first-b", 63);
+    });
+    expect(current.active.notes[0]).toMatchObject({ pitch: 61, accidental: "sharp", lyric: "안", duration: rational(2) });
+    expect(current.active.notes[1]).toMatchObject({ pitch: 63, accidental: "flat", lyric: "녕", duration: rational(2) });
+    const restored = readPracticeDraft();
+    expect(restored.measures[0].notes.map(({ pitch, accidental }) => ({ pitch, accidental }))).toEqual([
+      { pitch: 61, accidental: "sharp" },
+      { pitch: 63, accidental: "flat" }
+    ]);
+    const timeline = buildPracticeTimeline({ ...restored, step: "melody" });
+    expect(timeline.events.map((event) => event.pitch)).toEqual([61, 63, 67, 72]);
+    expect(timeline.events.map((event) => event.startSeconds)).toEqual([0, 1.25, 2.5, 4.375]);
+    expect(current.complete).toBe(true);
+  });
+
+  it("반음에서 자연음으로 돌아오면 임시표를 해제하고 음역 밖과 잘못된 높이를 제한한다", () => {
+    const draft = fullDraft();
+    draft.measures[0].notes = [
+      { id: "sharp", pitch: 61, accidental: "sharp", duration: rational(1), lyric: "안" },
+      { id: "flat", pitch: 63, accidental: "flat", duration: rational(1), lyric: "녕" },
+      { id: "rest", pitch: null, duration: rational(2) }
+    ];
+    mount(draft);
+    act(() => {
+      current.setPitch("sharp", 60);
+      current.setPitch("flat", 64);
+      current.setPitch("rest", 65);
+    });
+    expect(current.active.notes.map(({ pitch, accidental }) => ({ pitch, accidental }))).toEqual([
+      { pitch: 60, accidental: undefined },
+      { pitch: 64, accidental: undefined },
+      { pitch: null, accidental: undefined }
+    ]);
+    act(() => {
+      current.setPitch("sharp", 59);
+      current.setPitch("flat", 75);
+    });
+    expect(current.active.notes.map((note) => note.pitch)).toEqual([60, 72, null]);
+    const beforeInvalid = current.draft;
+    act(() => {
+      current.setPitch("sharp", Number.NaN);
+      current.setPitch("flat", Infinity);
+    });
+    expect(current.draft).toBe(beforeInvalid);
+    expect(readPracticeDraft().measures[0].notes.map((note) => note.pitch)).toEqual([60, 72, null]);
   });
 
   it("가락 단계에서도 리듬을 고치며 부족한 박자를 채우면 저장 가능 상태가 복구된다", () => {

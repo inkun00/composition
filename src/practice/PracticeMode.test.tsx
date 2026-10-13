@@ -1,10 +1,10 @@
-import { act } from "react";
-import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SUPPORTED_METERS, validateMeasure } from "../music/meter";
-import { PRACTICE_STORAGE_KEY, type PracticeDraft } from "./practiceStorage";
-import PracticeMode from "./PracticeMode";
-import { usePracticeAudio } from "./usePracticeAudio";
+import {
+  button, changeInput, changeValue, click, completeMeasure, completeOneMeasure,
+  completeScoreMeasure, container, latestAudioInput, measureCard, mount, placeNote,
+  rerender, savedDraft, scoreCard, testButton, unmount
+} from "./PracticeMode.test.helpers";
 
 const audio = vi.hoisted(() => ({
   busy: false,
@@ -25,115 +25,6 @@ const audio = vi.hoisted(() => ({
 
 vi.mock("./usePracticeAudio", () => ({ usePracticeAudio: vi.fn(() => audio) }));
 vi.mock("../components/ScoreMeasure", () => ({ default: () => <div aria-label="연습 악보" /> }));
-
-(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
-
-let root: Root | null = null;
-let container: HTMLDivElement | null = null;
-
-function mount(onClose = vi.fn()): ReturnType<typeof vi.fn> {
-  container = document.createElement("div");
-  document.body.append(container);
-  root = createRoot(container);
-  act(() => root?.render(<PracticeMode onClose={onClose} />));
-  return onClose;
-}
-
-function unmount(): void {
-  act(() => root?.unmount());
-  container?.remove();
-  root = null;
-  container = null;
-}
-
-function rerender(): void {
-  act(() => root?.render(<PracticeMode onClose={vi.fn()} />));
-}
-
-function button(text: string): HTMLButtonElement {
-  const found = [...(container?.querySelectorAll<HTMLButtonElement>("button") ?? [])]
-    .find((item) => item.textContent?.trim() === text || item.getAttribute("aria-label") === text || (
-      text === "악보 추가하기" && item.textContent?.trim().startsWith(text)
-    ));
-  if (!found) throw new Error(`${text} 버튼을 찾지 못했습니다.`);
-  return found;
-}
-
-function testButton(testId: string): HTMLButtonElement {
-  const found = container?.querySelector<HTMLButtonElement>(`[data-testid="${testId}"]`);
-  if (!found) throw new Error(`${testId} 버튼을 찾지 못했습니다.`);
-  return found;
-}
-
-function measureCard(index: number): HTMLElement {
-  const found = container?.querySelector<HTMLElement>(`[data-testid="practice-measure-card-${index}"]`);
-  if (!found) throw new Error(`${index + 1}마디 화면을 찾지 못했습니다.`);
-  return found;
-}
-
-function scoreCard(scoreIndex: number, measureIndex: number): HTMLElement {
-  if (scoreIndex === 0) return measureCard(measureIndex);
-  const found = container?.querySelector<HTMLElement>(
-    `[data-testid="practice-score-${scoreIndex}-measure-card-${measureIndex}"]`
-  );
-  if (!found) throw new Error(`${scoreIndex + 1}번 악보 ${measureIndex + 1}마디를 찾지 못했습니다.`);
-  return found;
-}
-
-function completeScoreMeasure(scoreIndex: number, measureIndex: number, lyric = "반짝별아"): void {
-  const card = scoreCard(scoreIndex, measureIndex);
-  const input = card.querySelector<HTMLInputElement>(".practice-lyric-entry input");
-  if (!input) throw new Error("마디 전체 가사 입력을 찾지 못했습니다.");
-  changeInput(input, lyric);
-  const generate = [...card.querySelectorAll<HTMLButtonElement>("button")]
-    .find((item) => item.textContent?.trim() === "가사에 음표 붙이기");
-  if (!generate) throw new Error("가사에 음표 붙이기 버튼을 찾지 못했습니다.");
-  click(generate);
-}
-
-function completeMeasure(index: number, lyric = "반짝별아"): void {
-  changeValue(`${index + 1}마디 가사`, lyric);
-  const generate = [...measureCard(index).querySelectorAll<HTMLButtonElement>("button")]
-    .find((item) => item.textContent?.trim() === "가사에 음표 붙이기");
-  if (!generate) throw new Error(`${index + 1}마디 가사에 음표 붙이기 버튼을 찾지 못했습니다.`);
-  click(generate);
-}
-
-function click(target: HTMLElement): void {
-  act(() => target.click());
-}
-
-function changeValue(label: string, value: string): void {
-  const input = container?.querySelector<HTMLInputElement | HTMLSelectElement>(`[aria-label="${label}"]`);
-  if (!input) throw new Error(`${label} 입력을 찾지 못했습니다.`);
-  changeInput(input, value);
-}
-
-function changeInput(input: HTMLInputElement | HTMLSelectElement, value: string): void {
-  const prototype = input instanceof HTMLSelectElement ? HTMLSelectElement.prototype : HTMLInputElement.prototype;
-  act(() => {
-    Object.getOwnPropertyDescriptor(prototype, "value")?.set?.call(input, value);
-    input.dispatchEvent(new Event(input instanceof HTMLSelectElement ? "change" : "input", { bubbles: true }));
-  });
-}
-
-function savedDraft(): PracticeDraft {
-  const raw = localStorage.getItem(PRACTICE_STORAGE_KEY);
-  if (!raw) throw new Error("연습 가락이 자동 저장되지 않았습니다.");
-  return JSON.parse(raw) as PracticeDraft;
-}
-
-function latestAudioInput(): Parameters<typeof usePracticeAudio>[0] {
-  const input = vi.mocked(usePracticeAudio).mock.calls.at(-1)?.[0];
-  if (!input) throw new Error("연주에 전달된 연습 가락이 없습니다.");
-  return input;
-}
-
-function completeOneMeasure(lyric = "반짝별아"): void {
-  changeValue("연습할 마디 수", "1");
-  changeValue("1마디 가사", lyric);
-  click(button("가사에 음표 붙이기"));
-}
 
 beforeEach(() => {
   localStorage.clear();
@@ -393,6 +284,56 @@ describe("악보를 겹쳐 리듬 만들기", () => {
 });
 
 describe("기능 연습하기 전체 흐름", () => {
+  it("가사는 직접 만든 리듬에 넣고 자동으로 음표를 붙이는 버튼과 안내를 표시하지 않는다", () => {
+    mount();
+    changeValue("1마디 가사", "봄날아");
+    expect(savedDraft().measures[0].notes).toHaveLength(0);
+    click(button("악보 추가하기"));
+    for (let scoreIndex = 0; scoreIndex < 2; scoreIndex += 1) {
+      for (let measureIndex = 0; measureIndex < 2; measureIndex += 1) {
+        expect(scoreCard(scoreIndex, measureIndex).textContent).not.toContain("가사에 음표 붙이기");
+      }
+    }
+    placeNote(0, 0, 1);
+    expect(savedDraft().measures[0].notes[0].lyric).toBe("봄");
+    const first = savedDraft().measures[0].notes[0];
+    changeValue("1마디 가사", "여름아");
+    expect(savedDraft().measures[0].notes).toEqual([{ ...first, lyric: "여" }]);
+    click(button("처음이라면? 연습 안내"));
+    click(button("다음 안내"));
+    const tutorial = container?.querySelector('[aria-label="연습 튜토리얼"]');
+    expect(tutorial?.textContent).toContain("음표를 선택한 뒤 빈칸에 배치");
+    expect(tutorial?.textContent).not.toContain("가사에 음표 붙이기");
+  });
+
+  it("완성한 음표·쉼표·가사를 그대로 가락의 기본으로 쓰고 칸과 악보 사이에서 같은 음표를 편집한다", () => {
+    mount();
+    changeValue("연습할 마디 수", "1");
+    changeValue("1마디 가사", "봄날아");
+    placeNote(0, 0, 0.5);
+    click(testButton("practice-add-rest"));
+    placeNote(0, 0, 1);
+    placeNote(0, 0, 2);
+    const rhythmNotes = savedDraft().measures[0].notes;
+    expect(rhythmNotes.map((note) => note.pitch)).toEqual([60, null, 60, 60]);
+    expect(rhythmNotes.map((note) => note.lyric)).toEqual(["봄", undefined, "날", "아"]);
+    expect(validateMeasure(rhythmNotes, savedDraft().meter).state).toBe("exact");
+    click(container?.querySelector<HTMLElement>("#practice-melody-tab") as HTMLElement);
+    expect(savedDraft().measures[0].notes).toEqual(rhythmNotes);
+    expect(button("칸 채우기").getAttribute("aria-pressed")).toBe("true");
+    click(testButton(`practice-melody-${rhythmNotes[0].id}-67`));
+    const melodyNotes = savedDraft().measures[0].notes;
+    expect(melodyNotes).toEqual([{ ...rhythmNotes[0], pitch: 67 }, ...rhythmNotes.slice(1)]);
+    click(button("악보에 넣기"));
+    expect(button("악보에 넣기").getAttribute("aria-pressed")).toBe("true");
+    expect(measureCard(0).querySelector('[aria-label="연습 악보"]')).not.toBeNull();
+    expect(measureCard(0).querySelector(".practice-melody-grid")).toBeNull();
+    expect(savedDraft().measures[0].notes).toEqual(melodyNotes);
+    click(button("칸 채우기"));
+    expect(testButton(`practice-melody-${rhythmNotes[0].id}-67`).getAttribute("aria-pressed")).toBe("true");
+    expect(savedDraft().measures[0].notes).toEqual(melodyNotes);
+  });
+
   it("길이를 먼저 고르고 빈칸에 배치하며 이후 길이 선택은 다음 음표에만 적용한다", () => {
     mount();
     changeValue("연습할 마디 수", "1");
@@ -564,12 +505,14 @@ describe("기능 연습하기 전체 흐름", () => {
     expect(button("MP3 저장").disabled).toBe(true);
   });
 
-  it.each(SUPPORTED_METERS)("$beats/$beatUnit박자에서 가사를 리듬으로 만들고 길이를 유지하며 높은 도에 놓는다", (meter) => {
+  it.each(SUPPORTED_METERS)("$beats/$beatUnit박자에서 직접 만든 리듬과 가사를 그대로 가락의 높은 도에 놓는다", (meter) => {
     mount();
     changeValue("연습할 마디 수", "1");
     changeValue("연습 박자", `${meter.beats}/${meter.beatUnit}`);
     changeValue("1마디 가사", "반짝별아");
-    click(button("가사에 음표 붙이기"));
+    const durations = meter.beats === 4 ? [1, 1, 1, 1]
+      : meter.beats === 2 ? [0.5, 0.5, 0.5, 0.5] : [0.5, 0.5, 1, 1];
+    durations.forEach((beats) => placeNote(0, 0, beats));
 
     expect(container?.textContent).toContain("1 / 1마디 박자 완성");
     expect(button("MP3 저장").disabled).toBe(false);
@@ -579,6 +522,7 @@ describe("기능 연습하기 전체 흐름", () => {
 
     click(container?.querySelector<HTMLElement>("#practice-melody-tab") as HTMLElement);
     expect(container?.querySelector("#practice-melody-tab")?.getAttribute("aria-selected")).toBe("true");
+    expect(savedDraft().measures[0].notes).toEqual(rhythmNotes);
     expect(container?.querySelectorAll(".practice-melody-row")).toHaveLength(8);
     expect(container?.querySelectorAll(".practice-pitch-row-label")[0]?.textContent).toBe("높은 도");
     expect(container?.querySelectorAll(".practice-pitch-row-label")[7]?.textContent).toBe("낮은 도");
