@@ -6,6 +6,7 @@ import PracticeEditors from "./PracticeEditors";
 import PracticeHarmonyChooser from "./PracticeHarmonyChooser";
 import PracticePlaybackIndicator from "./PracticePlaybackIndicator";
 import { getPracticeHarmonyHints, lyricSyllables, type PracticeMeasure } from "./practiceModel";
+import { getPracticeHarmonySummary } from "./practiceHarmonyHints";
 import type { usePracticeState } from "./usePracticeState";
 
 type PracticeMeasureCardProps = {
@@ -36,7 +37,13 @@ export default function PracticeMeasureCard({
   const capacity = toNumber(measureCapacity(meter));
   const assignedLyrics = measure.notes.reduce((sum, note) => sum + (note.pitch === null ? 0 : lyricSyllables(note.lyric ?? "").length), 0);
   const missingLyrics = Math.max(0, lyricSyllables(measure.lyric).length - assignedLyrics);
-  const hints = step === "melody" ? getPracticeHarmonyHints(measure.notes, measure.chord, meter) : [];
+  const scoreMeasures = practice.scores[scoreIndex].measures;
+  const harmonyContext = {
+    previousMeasure: scoreMeasures[index - 1],
+    nextMeasure: scoreMeasures[index + 1],
+    isFinalMeasure: index === scoreMeasures.length - 1
+  };
+  const hints = step === "melody" ? getPracticeHarmonyHints(measure.notes, measure.chord, meter, harmonyContext) : [];
   const hasSound = measure.notes.some((note) => note.pitch !== null);
   const previewLabel = `${labelPrefix}${index + 1}마디 ${previewActive
     ? previewPreparing ? "준비 취소" : "연주 멈추기"
@@ -103,16 +110,18 @@ export default function PracticeMeasureCard({
             onChange={(chord) => practice.setChord(chord, index, scoreIndex)} />
           {hints.length > 0 ? (
             <div className="practice-harmony-warning" role="alert">
-              <strong>조금 불안정하게 들릴 수 있어요</strong>
+              <strong>가락과 화음을 함께 살펴봐요</strong>
               {hints.map((hint) => (
-                <button type="button" key={hint.noteId} disabled={disabled}
+                <button type="button" key={`${hint.noteId}-${hint.kind}`} disabled={disabled}
                   onClick={() => practice.setSelectedNoteId(hint.noteId)}>
                   <Lightbulb size={16} /><span>{hint.message}</span>
                 </button>
               ))}
             </div>
           ) : (
-            <p className="practice-measure-harmony-good">화음과 편안하게 어울려요.</p>
+            <p className="practice-measure-harmony-good">
+              {getPracticeHarmonySummary(measure.notes, measure.chord, meter, harmonyContext)}
+            </p>
           )}
         </div>
       )}

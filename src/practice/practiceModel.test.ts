@@ -84,6 +84,7 @@ describe("처음 작곡하는 사람의 연습 모델", () => {
     const hints = getPracticeHarmonyHints([note("d", 62, 1), note("c", 60, 3)], "C", commonTime);
     expect(hints).toHaveLength(1);
     expect(hints[0].noteId).toBe("d");
+    expect(hints[0].kind).toBe("non-chord");
     expect(hints[0].message).toContain("힘주는 박");
     expect(hints[0].suggestedPitches).toEqual([60, 64, 67]);
   });
@@ -97,21 +98,23 @@ describe("처음 작곡하는 사람의 연습 모델", () => {
 
   it("6/8박자에서는 두 번째 큰 박에 놓인 긴 비화음음을 짚는다", () => {
     const hints = getPracticeHarmonyHints(
-      [note("c", 60, 1.5), note("d", 62, 1), note("e", 64, 0.5)],
+      [note("c", 60, 1.5), note("d", 62, 1), note("f", 65, 0.5)],
       "C", { beats: 6, beatUnit: 8 }
     );
-    expect(hints.map((hint) => hint.noteId)).toEqual(["d"]);
+    expect(hints.map((hint) => hint.noteId)).toEqual(["d", "f"]);
     expect(hints[0].message).toContain("힘주는 박");
   });
 
-  it("마디 끝의 긴장 음은 선택적인 마무리 힌트로 안내한다", () => {
+  it("곡 마지막 마디의 긴장 음은 선택적인 마무리 힌트로 안내한다", () => {
     const notes = [note("c", 60, 1), note("e", 64, 1), note("g", 67, 1), note("b", 71, 1)];
-    const hints = getPracticeHarmonyHints(notes, "C", commonTime);
+    const hints = getPracticeHarmonyHints(notes, "C", commonTime, { isFinalMeasure: true });
     expect(hints).toHaveLength(1);
     expect(hints[0].noteId).toBe("b");
+    expect(hints[0].kind).toBe("ending");
     expect(hints[0].message).toContain("편안하게 마치고 싶다면");
     expect(hints[0].suggestedPitches[0]).toBe(72);
-    expect(getPracticeHarmonyHints(notes, "G", commonTime).some((hint) => hint.noteId === "b")).toBe(false);
+    expect(getPracticeHarmonyHints(notes, "G", commonTime, { isFinalMeasure: true })
+      .some((hint) => hint.noteId === "b")).toBe(false);
   });
 
   it("큰 도약에 걸음 힌트를 주되 쉼표 너머의 음을 도약으로 판단하지 않는다", () => {

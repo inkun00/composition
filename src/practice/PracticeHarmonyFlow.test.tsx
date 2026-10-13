@@ -72,7 +72,7 @@ describe("연습 가락의 화음 이어 고르기", () => {
     expect(chordChoices(1).length).toBeLessThan(chordChoices(0).length);
     changeValue("1마디 가락 연습 화음", "Fmaj7");
     expect(chordChoices(1)).toEqual(getAvailablePracticeChords("Fmaj7").map((option) => option.value));
-    expect(container?.textContent).toContain("1마디의 Fmaj7 화음에 자연스럽게 이어지는 화음만 보여요.");
+    expect(container?.textContent).toContain("1마디의 Fmaj7 화음 뒤에 자주 쓰는 화음 연결 후보예요. 가락과 함께 들어 보세요.");
     const firstDescription = getAvailablePracticeChords().find((option) => option.value === "Fmaj7")?.description;
     expect(container?.querySelector("#practice-harmony-description-0")?.textContent).toBe(firstDescription);
   });

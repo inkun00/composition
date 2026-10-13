@@ -682,9 +682,9 @@ describe("기능 연습하기 전체 흐름", () => {
     const firstId = savedDraft().measures[0].notes[0].id;
     click(testButton(`practice-melody-${firstId}-71`));
     const beforeHint = savedDraft().measures[0].notes;
-    expect(container?.textContent).toContain("조금 불안정하게 들릴 수 있어요");
+    expect(container?.textContent).toContain("가락과 화음을 함께 살펴봐요");
     const hint = container?.querySelector<HTMLButtonElement>(".practice-harmony-warning button");
-    expect(hint?.textContent).toContain("가까운 음");
+    expect(hint?.textContent).toMatch(/가까운.*음/);
     click(hint as HTMLButtonElement);
     expect(savedDraft().measures[0].notes).toEqual(beforeHint);
     expect(testButton(`practice-melody-${firstId}-71`).classList.contains("is-selected")).toBe(true);
