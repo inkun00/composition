@@ -228,6 +228,18 @@
   padding: 0;
 }
 
+.practice-rhythm-save-intro {
+  color: #5a7464;
+  font-size: 13px;
+}
+
+.practice-rhythm-save-intro strong {
+  display: block;
+  margin-bottom: 5px;
+  color: #367551;
+  font-size: 15px;
+}
+
 .practice-listen-buttons .practice-export-actions {
   margin-bottom: 0;
 }

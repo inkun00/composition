@@ -247,12 +247,13 @@ export async function exportPracticeMp4(
 ): Promise<Blob> {
   checkAbort(options.signal);
   const plan = buildPracticeLyricVideoPlan(input, rendered);
-  if (!plan.hasLyrics) throw new Error("가사를 한 글자 이상 넣으면 검은 화면에 가사가 나오는 MP4를 만들 수 있어요.");
   const url = URL.createObjectURL(encodeAudioBufferToWav(rendered.buffer));
   try {
     const { exportLyricMp4 } = await import("../video/exportLyricMp4");
     checkAbort(options.signal);
-    return await exportLyricMp4(url, plan, options.onProgress ?? (() => undefined), options.signal);
+    return await exportLyricMp4(url, plan, options.onProgress ?? (() => undefined), options.signal, {
+      allowEmptyLyrics: true
+    });
   } finally {
     URL.revokeObjectURL(url);
   }

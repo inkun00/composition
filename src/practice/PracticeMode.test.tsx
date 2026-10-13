@@ -282,6 +282,11 @@ describe("악보를 겹쳐 리듬 만들기", () => {
     expect(melodyTab.disabled).toBe(false);
     expect(button("MP3 저장").disabled).toBe(false);
     expect(button("MP4 저장").disabled).toBe(false);
+    click(button("MP3 저장"));
+    click(button("MP4 저장"));
+    expect(audio.save.mock.calls).toEqual([["mp3"], ["mp4"]]);
+    expect(latestAudioInput().step).toBe("rhythm");
+    expect(latestAudioInput().rhythmLayers).toHaveLength(2);
     click(melodyTab);
     expect(measureCard(0).querySelectorAll(".practice-melody-row")).toHaveLength(8);
     expect(scoreCard(1, 0).querySelector(".practice-rhythm-timeline")).not.toBeNull();
@@ -293,6 +298,7 @@ describe("악보를 겹쳐 리듬 만들기", () => {
     click(testButton("practice-duration-2"));
     expect(savedDraft().measures[0].notes).toEqual(primary);
     expect(button("MP3 저장").disabled).toBe(true);
+    expect(button("MP4 저장").disabled).toBe(true);
     expect(melodyTab.getAttribute("aria-selected")).toBe("true");
   });
 
@@ -347,6 +353,42 @@ describe("악보를 겹쳐 리듬 만들기", () => {
 });
 
 describe("기능 연습하기 전체 흐름", () => {
+  it("가락 만들기나 가락 악기 선택 없이 완성한 리듬을 MP3와 MP4로 저장한다", () => {
+    mount();
+    changeValue("리듬 연주 악기", "beat:shaker");
+    const melodyInstrument = savedDraft().melodyInstrumentId;
+    completeOneMeasure();
+    const before = savedDraft();
+    expect(container?.querySelector("#practice-rhythm-tab")?.getAttribute("aria-selected")).toBe("true");
+    expect(container?.querySelector('[aria-label="가락 연주 악기"]')).toBeNull();
+    expect(button("MP3 저장").disabled).toBe(false);
+    expect(button("MP4 저장").disabled).toBe(false);
+    click(button("MP3 저장"));
+    click(button("MP4 저장"));
+    expect(audio.save.mock.calls).toEqual([["mp3"], ["mp4"]]);
+    expect(latestAudioInput()).toMatchObject({ step: "rhythm", rhythmInstrumentId: "beat:shaker" });
+    expect(savedDraft()).toEqual(before);
+    expect(savedDraft().melodyInstrumentId).toBe(melodyInstrument);
+    expect(container?.querySelector("#practice-melody-tab")?.getAttribute("aria-selected")).toBe("false");
+  });
+
+  it("가사 없이 박자를 완성해도 리듬 단계에서 MP4로 저장한다", () => {
+    mount();
+    changeValue("연습할 마디 수", "1");
+    click(testButton("practice-duration-4"));
+    click(testButton("practice-add-note"));
+    const before = savedDraft();
+    expect(before.measures[0].lyric).toBe("");
+    expect(before.measures[0].notes.every((note) => !note.lyric)).toBe(true);
+    expect(validateMeasure(before.measures[0].notes, before.meter).state).toBe("exact");
+    expect(button("MP3 저장").disabled).toBe(false);
+    expect(button("MP4 저장").disabled).toBe(false);
+    click(button("MP4 저장"));
+    expect(audio.save).toHaveBeenCalledWith("mp4");
+    expect(latestAudioInput().step).toBe("rhythm");
+    expect(savedDraft()).toEqual(before);
+  });
+
   it("다른 마디가 비어 있어도 미완성 마디의 리듬을 듣고 가사와 음표를 그대로 유지한다", () => {
     mount();
     changeValue("연습할 마디 수", "4");
@@ -598,8 +640,8 @@ describe("기능 연습하기 전체 흐름", () => {
     changeValue("연습 가락 이름", "우리들의 봄 가락");
     changeValue("연습 빠르기", "72");
     changeValue("리듬 연주 악기", "beat:clap");
-    changeValue("가락 연주 악기", "violin");
     click(container?.querySelector<HTMLElement>("#practice-melody-tab") as HTMLElement);
+    changeValue("가락 연주 악기", "violin");
     const firstId = savedDraft().measures[0].notes[0].id;
     click(testButton(`practice-melody-${firstId}-67`));
     const before = savedDraft();
@@ -608,13 +650,14 @@ describe("기능 연습하기 전체 흐름", () => {
 
     expect(container?.querySelector<HTMLInputElement>('[aria-label="연습 가락 이름"]')?.value).toBe("우리들의 봄 가락");
     expect(container?.querySelector<HTMLInputElement>('[aria-label="1마디 가사"]')?.value).toBe("반짝별아");
-    expect(container?.querySelector<HTMLSelectElement>('[aria-label="가락 연주 악기"]')?.value).toBe("violin");
+    expect(savedDraft().melodyInstrumentId).toBe("violin");
     expect(container?.querySelector<HTMLSelectElement>('[aria-label="리듬 연주 악기"]')?.value).toBe("beat:clap");
     expect(container?.querySelector<HTMLSelectElement>('[aria-label="연습 빠르기"]')?.value).toBe("72");
     expect(latestAudioInput().measures).toEqual(before.measures);
     expect(latestAudioInput().title).toBe("우리들의 봄 가락");
     expect(button("MP3 저장").disabled).toBe(false);
     click(container?.querySelector<HTMLElement>("#practice-melody-tab") as HTMLElement);
+    expect(container?.querySelector<HTMLSelectElement>('[aria-label="가락 연주 악기"]')?.value).toBe("violin");
     expect(testButton(`practice-melody-${firstId}-67`).getAttribute("aria-pressed")).toBe("true");
   });
 
@@ -636,7 +679,7 @@ describe("기능 연습하기 전체 흐름", () => {
   it("네 단계 안내를 순서대로 보여 주고 마지막 안내에서 닫는다", () => {
     mount();
     click(button("처음이라면? 연습 안내"));
-    const expectedTitles = ["작은 목표를 골라요", "말을 리듬으로 바꿔요", "리듬에 높낮이를 붙여요", "귀로 확인하고 간직해요"];
+    const expectedTitles = ["작은 목표를 골라요", "말을 리듬으로 바꿔요", "원하면 높낮이를 붙여요", "귀로 확인하고 간직해요"];
     expectedTitles.forEach((title, index) => {
       const tutorial = container?.querySelector('[aria-label="연습 튜토리얼"]');
       expect(tutorial?.querySelector("h2")?.textContent).toBe(title);

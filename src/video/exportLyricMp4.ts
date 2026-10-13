@@ -48,13 +48,16 @@ export async function exportLyricMp4(
   audioUrl: string,
   plan: LyricVideoPlan,
   onProgress: (percent: number) => void,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  options: Readonly<{ allowEmptyLyrics?: boolean }> = {}
 ): Promise<Blob> {
   const checkAbort = () => {
     if (signal?.aborted) throw new DOMException("영상 만들기를 멈췄어요.", "AbortError");
   };
   checkAbort();
-  if (!plan.hasLyrics) throw new Error("가사를 한 글자 이상 적은 뒤 다시 녹음해 주세요.");
+  if (!plan.hasLyrics && !options.allowEmptyLyrics) {
+    throw new Error("가사를 한 글자 이상 적은 뒤 다시 녹음해 주세요.");
+  }
   onProgress(2);
   const audioBuffer = await decodeRecording(audioUrl);
   checkAbort();

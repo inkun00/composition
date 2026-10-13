@@ -28,12 +28,12 @@ export default function PracticePlayback({ draft, step, complete, audio, onConfi
       <div className="practice-listen-intro">
         <span className="practice-card-icon"><Headphones size={25} /></span>
         <div>
-          <h2>내가 만든 소리 듣기</h2>
+          <h2>{step === "rhythm" ? "리듬 듣고 저장하기" : "가락 듣고 저장하기"}</h2>
           <p>각 마디를 따로 듣거나, 위에서 고른 악기들의 리듬을 함께 들어 보세요.</p>
         </div>
       </div>
       <div className="practice-listen-controls">
-        <fieldset disabled={busy} className="practice-instrument-fields">
+        {step === "melody" ? <fieldset disabled={busy} className="practice-instrument-fields">
           <legend className="practice-sr-only">연습 악기 선택</legend>
           <label>가락 악기
             <select aria-label="가락 연주 악기" value={draft.melodyInstrumentId}
@@ -43,7 +43,10 @@ export default function PracticePlayback({ draft, step, complete, audio, onConfi
               ))}
             </select>
           </label>
-        </fieldset>
+        </fieldset> : <p className="practice-rhythm-save-intro">
+          <strong>리듬만 완성해도 저장할 수 있어요.</strong>
+          모든 악보의 박자를 채우고 MP3 또는 MP4 저장을 눌러요. 가락 만들기는 원하는 때 선택해요.
+        </p>}
         <div className="practice-listen-buttons">
           <button type="button" className="practice-preview" disabled={!complete || audio.busy || separatePreviewActive}
             onClick={() => wholePlaying ? audio.stop() : void audio.preview()}>
@@ -54,17 +57,17 @@ export default function PracticePlayback({ draft, step, complete, audio, onConfi
             <button type="button" disabled={!complete || busy} onClick={() => void audio.save("mp3")}>
               <Download size={17} /> MP3 저장
             </button>
-            <button type="button" disabled={!complete || busy || !hasLyrics || !allLyricsPlaced}
+            <button type="button" disabled={!complete || busy || !allLyricsPlaced}
               onClick={() => void audio.save("mp4")}>
               <Video size={17} /> MP4 저장
             </button>
           </div>
         </div>
       </div>
-      <small>MP3: 모든 악보를 함께 연주한 소리 · MP4: 검은 화면 + 첫 악보 가사 + 함께 연주한 소리</small>
+      <small>MP3: 모든 악보를 함께 연주한 소리 · MP4: 검은 화면과 함께 연주한 소리, 가사를 넣으면 첫 악보의 가사도 표시해요.</small>
       {!complete && <p className="practice-export-help">마디별 리듬은 완성 전에도 들을 수 있어요. 전체 미리듣기와 저장은 모든 마디의 박자를 채우면 열려요.</p>}
-      {complete && (!hasLyrics || !allLyricsPlaced) && (
-        <p className="practice-export-help">MP4는 가사를 적고 각 글자에 음표를 붙인 뒤 저장할 수 있어요.</p>
+      {complete && hasLyrics && !allLyricsPlaced && (
+        <p className="practice-export-help">가사가 있는 MP4는 모든 가사 글자에 음표를 붙인 뒤 저장할 수 있어요.</p>
       )}
       {audio.busy && (
         <div className="practice-export-progress">

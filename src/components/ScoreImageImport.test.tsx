@@ -99,10 +99,10 @@ describe("악보 이미지·MusicXML 가져오기", () => {
       value: [new File([longMusicXml(48)], "long.musicxml", { type: "application/xml" })]
     });
     act(() => input?.dispatchEvent(new Event("change", { bubbles: true })));
-    await act(async () => {
+    act(() => {
       button("score-import-recognize").click();
-      await new Promise((resolve) => window.setTimeout(resolve, 20));
     });
+    await waitForTestId("score-import-apply");
 
     expect(document.querySelectorAll(".score-image-measure-card")).toHaveLength(12);
     expect(document.body.textContent).toContain("48마디를 찾았어요");
@@ -127,10 +127,10 @@ describe("악보 이미지·MusicXML 가져오기", () => {
     const file = new File([shortMusicXml], "song.musicxml", { type: "application/xml" });
     Object.defineProperty(input, "files", { configurable: true, value: [file] });
     act(() => input?.dispatchEvent(new Event("change", { bubbles: true })));
-    await act(async () => {
+    act(() => {
       button("score-import-recognize").click();
-      await new Promise((resolve) => window.setTimeout(resolve, 20));
     });
+    await waitForTestId("score-import-apply");
 
     expect(button("score-import-apply").disabled).toBe(true);
     act(() => button("score-import-fill-rest").click());

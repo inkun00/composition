@@ -264,14 +264,24 @@ describe("연습 미리듣기와 파일 저장", () => {
     expect(mocks.mp4.mock.calls[0][1]).toBe(input);
   });
 
-  it("가사가 없는 MP4는 악기 준비 전에 이유를 안내한다", async () => {
-    await act(async () => root.render(<Harness settings={{ ...input, measures: [{ notes: [
-      { id: "x", pitch: 60, duration: rational(1) }
-    ] }] }} />));
+  it("가사 없는 리듬도 가락으로 전환하지 않고 MP3와 MP4에 같은 버퍼를 저장한다", async () => {
+    const settings: PracticeAudioInput = {
+      ...input,
+      step: "rhythm",
+      rhythmInstrumentId: "beat:shaker",
+      measures: [{ notes: [{ id: "x", pitch: 60, duration: rational(4) }] }]
+    };
+    await act(async () => root.render(<Harness settings={settings} />));
+    await act(async () => current.save("mp3"));
     await act(async () => current.save("mp4"));
-    expect(mocks.render).not.toHaveBeenCalled();
-    expect(mocks.mp4).not.toHaveBeenCalled();
-    expect(current.status).toContain("가사를 한 글자 이상");
+    expect(mocks.render).toHaveBeenCalledOnce();
+    expect(mocks.render.mock.calls[0][0]).toBe(settings);
+    expect(mocks.render.mock.calls[0][0].step).toBe("rhythm");
+    expect(mocks.encode.mock.calls[0][0]).toBe(rendered.buffer);
+    expect(mocks.mp4.mock.calls[0][0]).toBe(rendered);
+    expect(mocks.mp4.mock.calls[0][1]).toBe(settings);
+    expect(click).toHaveBeenCalledTimes(2);
+    expect(current.status).toContain("MP4 파일을 저장했어요");
     expect(current.busy).toBe(false);
   });
 

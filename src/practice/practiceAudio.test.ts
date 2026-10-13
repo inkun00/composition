@@ -238,6 +238,33 @@ describe("연습 파일 내보내기", () => {
     revoke.mockRestore();
   });
 
+  it("가사 없는 리듬도 전체 길이의 검은 화면 MP4 계획으로 내보낸다", async () => {
+    const created = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:rhythm-wav");
+    const revoke = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    const controller = new AbortController();
+    const rhythm: PracticeAudioInput = {
+      ...input,
+      step: "rhythm",
+      measures: input.measures.map((measure) => ({
+        notes: measure.notes.map((note) => ({ ...note, lyric: "" }))
+      }))
+    };
+    mocks.mp4.mockResolvedValue(new Blob(["mp4"], { type: "video/mp4" }));
+    await exportPracticeMp4({
+      buffer: audioBuffer(44100), timeline: buildPracticeTimeline(rhythm), usedFallback: false
+    }, rhythm, { signal: controller.signal });
+    const [, plan, , signal, options] = mocks.mp4.mock.calls[0];
+    expect(plan.hasLyrics).toBe(false);
+    expect(plan.frames.every((frame: { syllables: string[] }) => frame.syllables.length === 0)).toBe(true);
+    expect(plan.frames[0].startSeconds).toBe(0);
+    expect(plan.frames.at(-1).endSeconds).toBe(1);
+    expect(signal).toBe(controller.signal);
+    expect(options).toEqual({ allowEmptyLyrics: true });
+    expect(revoke).toHaveBeenCalledWith("blob:rhythm-wav");
+    created.mockRestore();
+    revoke.mockRestore();
+  });
+
   it("다운로드 이름에서 잘못된 파일 문자를 지운다", () => {
     expect(practiceAudioFileName('봄:나비/노래?', "mp3")).toBe("봄나비노래.mp3");
     expect(practiceAudioFileName(" ", "mp4")).toBe("나의 연습 가락.mp4");

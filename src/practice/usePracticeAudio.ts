@@ -235,13 +235,8 @@ export function usePracticeAudio(input: PracticeAudioInput) {
   async function save(format: "mp3" | "mp4"): Promise<void> {
     const session = begin();
     if (!session) return;
-    setStatus(format === "mp4" ? "검은 화면에 가사가 나오는 MP4를 만들고 있어요." : "연습 곡 MP3를 만들고 있어요.");
+    setStatus(format === "mp4" ? "검은 화면으로 연습 곡 MP4를 만들고 있어요." : "연습 곡 MP3를 만들고 있어요.");
     try {
-      if (format === "mp4" && !input.measures.some((measure) =>
-        measure.notes.some((note) => note.pitch !== null && note.lyric?.trim())
-      )) {
-        throw new Error("가사를 한 글자 이상 넣으면 검은 화면에 가사가 나오는 MP4를 만들 수 있어요.");
-      }
       const rendered = await prepare(session, 45);
       if (!isCurrent(session)) return;
       const options = {

@@ -53,8 +53,8 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
         <div className="practice-intro">
           <div>
             <span className="practice-eyebrow">모든 마디를 함께 보며 연습해요</span>
-            <h1>리듬을 채우고<br className="practice-mobile-break" /> 가락을 그려요</h1>
-            <p>먼저 박자를 채우고, 그 아래에 가사를 넣어 나만의 가락을 만들어 보세요.</p>
+            <h1>리듬을 만들고<br className="practice-mobile-break" /> 원하면 가락도 더해요</h1>
+            <p>박자를 채우면 리듬만으로도 듣고 저장할 수 있어요. 가사와 가락은 원할 때 더해 보세요.</p>
           </div>
           <PracticeTutorial />
         </div>
@@ -102,7 +102,7 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
           <ArrowRight size={20} aria-hidden="true" />
           <button type="button" role="tab" id="practice-melody-tab" aria-controls="practice-workspace"
             aria-selected={step === "melody"} disabled={busy || (step !== "melody" && !complete)} onClick={practice.goToMelody}>
-            <span>2</span><div><strong>가락 만들기</strong><small>음높이와 리듬 다듬기</small></div>
+            <span>2</span><div><strong>가락 만들기</strong><small>선택 · 음높이와 리듬 다듬기</small></div>
           </button>
         </div>
 
@@ -161,7 +161,9 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
             <span>{finishedCount} / {totalMeasures}마디 박자 완성</span>
             {step === "rhythm" ? (
               <div className="practice-stage-next">
-                {!complete && <small>모든 마디의 박자를 완성하면 넘어갈 수 있어요.</small>}
+                <small>{complete
+                  ? "완성한 리듬은 아래에서 바로 저장해요. 가락 만들기는 선택이에요."
+                  : "모든 마디의 박자를 완성하면 저장하거나 가락을 만들 수 있어요."}</small>
                 <button type="button" className="practice-primary" disabled={busy || !complete} onClick={practice.goToMelody}>
                   가락 만들기로 <ArrowRight size={17} />
                 </button>
