@@ -87,12 +87,37 @@ describe("리듬과 가락 연습 입력", () => {
     expect(container?.textContent).toContain("1박이 넘쳤어요");
     expect(button("practice-rhythm-note-overflow").getAttribute("style")).toContain("left: 80%");
     expect(container?.querySelectorAll(".practice-overflow-slot").length).toBeGreaterThan(0);
-    act(() => button("practice-rhythm-note-overflow").click());
+    const lyric = container?.querySelector<HTMLButtonElement>('[aria-label="2번째 음표 가사 날 선택"]');
+    act(() => lyric?.click());
     expect(props.onSelectNote).toHaveBeenCalledWith("overflow");
     act(() => button("practice-duration-0.5").click());
     expect(props.onDuration).toHaveBeenCalledWith("overflow", .5, undefined);
     act(() => button("practice-delete-note").click());
     expect(props.onDelete).toHaveBeenCalledWith("overflow");
+  });
+
+  it.each([
+    { id: "short", pitch: 60, duration: rational(1, 2) },
+    { id: "rest", pitch: null, duration: rational(3, 2) }
+  ])("배치된 $id 리듬 칸은 선택 여부와 무관하게 한 번 누르면 삭제한다", (note) => {
+    const props = mount({ notes: [note], selectedNoteId: note.pitch === null ? null : note.id });
+    const block = button(`practice-rhythm-note-${note.id}`);
+    expect(block.getAttribute("aria-label")).toContain("삭제");
+    expect(block.hasAttribute("aria-pressed")).toBe(false);
+    act(() => block.click());
+    expect(props.onDelete).toHaveBeenCalledExactlyOnceWith(note.id);
+    expect(props.onSelectNote).not.toHaveBeenCalled();
+    expect(props.onAdd).not.toHaveBeenCalled();
+  });
+
+  it("연주·저장 중에는 리듬 칸을 눌러도 음표를 삭제하거나 추가하지 않는다", () => {
+    const props = mount({ notes: [{ id: "note", pitch: 60, duration: rational(1) }], disabled: true });
+    act(() => {
+      button("practice-rhythm-note-note").click();
+      container?.querySelector<HTMLButtonElement>(".practice-empty-slot")?.click();
+    });
+    expect(props.onDelete).not.toHaveBeenCalled();
+    expect(props.onAdd).not.toHaveBeenCalled();
   });
 
   it("가락 칸은 낮은 도~높은 도에서 음높이만 바꾸고 쉼표와 리듬 길이를 보존한다", () => {
@@ -203,6 +228,9 @@ describe("리듬과 가락 연습 입력", () => {
       inputMode: "score",
       selectedNoteId: "note"
     });
+    act(() => button("score-note-note").click());
+    expect(props.onSelectNote).toHaveBeenCalledWith("note");
+    expect(props.onDelete).not.toHaveBeenCalled();
     act(() => button("score-note-note").dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true })));
     expect(props.onPitch).toHaveBeenCalledWith("note", 62);
     act(() => button("practice-pitch-72").click());

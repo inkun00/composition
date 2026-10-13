@@ -124,7 +124,7 @@ function LyricTimeline({ notes, slots, capacity, disabled, onSelectNote, onNoteL
   );
 }
 
-function RhythmGrid({ notes, slots, capacity, total, selectedNoteId, playingNoteId, disabled, onSelectNote, onAppend }: {
+function RhythmGrid({ notes, slots, capacity, total, selectedNoteId, playingNoteId, disabled, onDelete, onAppend }: {
   notes: readonly PositionedNote[];
   slots: number;
   capacity: number;
@@ -132,7 +132,7 @@ function RhythmGrid({ notes, slots, capacity, total, selectedNoteId, playingNote
   selectedNoteId: string | null;
   playingNoteId?: string | null;
   disabled: boolean;
-  onSelectNote: (id: string) => void;
+  onDelete: (id: string) => void;
   onAppend: () => void;
 }) {
   const emptySlots = Array.from({ length: slots }, (_, index) => index)
@@ -158,8 +158,9 @@ function RhythmGrid({ notes, slots, capacity, total, selectedNoteId, playingNote
             note.onset + toNumber(note.duration) > capacity ? "is-overflowing" : ""
           ].filter(Boolean).join(" ")}
           style={positionStyle(note, slots)} data-testid={`practice-rhythm-note-${note.id}`}
-          onClick={() => onSelectNote(note.id)} aria-pressed={selectedNoteId === note.id}
-          aria-label={`${index + 1}번째 ${note.pitch === null ? "쉼표" : "음표"}, ${beatText(toNumber(note.duration))}박 선택`}>
+          onClick={() => onDelete(note.id)}
+          aria-label={`${index + 1}번째 ${note.pitch === null ? "쉼표" : "음표"}, ${beatText(toNumber(note.duration))}박 삭제`}
+          title="다시 누르면 삭제돼요">
           <span className="practice-block-divisions" aria-hidden="true">
             {Array.from({ length: Math.max(0, Math.ceil(toNumber(note.duration) * 2) - 1) }, (_, division) => (
               <span key={division}
@@ -302,7 +303,8 @@ function NoteTools({
           </button>
         </div>
         <p className="practice-editor-help">
-          {selected ? "선택한 음표·쉼표의 길이를 위에서 바꿀 수 있어요. 새 음표는 맨 뒤에 더해져요." : "길이를 고르고 음표를 추가해요. 색칠한 칸을 누르면 길이를 바꾸거나 지울 수 있어요."}
+          {selected ? "선택한 음표·쉼표의 길이를 위에서 바꿀 수 있어요. 새 음표는 맨 뒤에 더해져요." : "길이를 고르고 음표를 추가해요. 음표 아래 가사 칸이나 악보에서 선택하면 길이를 바꿀 수 있어요."}
+          {inputMode === "grid" && step === "rhythm" && " 빈칸을 누르면 추가되고, 색칠한 칸을 다시 누르면 삭제돼요."}
         </p>
       </div>
       {step === "melody" && (
@@ -404,7 +406,7 @@ export default function PracticeEditors({
             {step === "rhythm" ? (
               <RhythmGrid notes={positioned} slots={slots} capacity={capacity} total={total}
                 selectedNoteId={selectedNoteId} playingNoteId={playingNoteId} disabled={disabled}
-                onSelectNote={onSelectNote} onAppend={append} />
+                onDelete={onDelete} onAppend={append} />
             ) : (
               <MelodyGrid notes={positioned} slots={slots} capacity={capacity}
                 selectedNoteId={selectedNoteId} playingNoteId={playingNoteId} disabled={disabled}
