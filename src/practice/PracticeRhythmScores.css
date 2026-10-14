@@ -150,6 +150,26 @@
   font-size: 14px;
 }
 
+.practice-score-workspace-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.practice-shell .practice-score-workspace-heading .practice-score-preview {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  border-color: #80aeb4;
+  background: #e9f6f8;
+  color: #18344f;
+  font-weight: 700;
+}
+
 .practice-score-workspace-heading button {
   min-height: 32px;
   padding: 5px 10px;
@@ -161,6 +181,10 @@
 }
 
 @media (max-width: 600px) {
+  .practice-score-workspace-heading {
+    flex-wrap: wrap;
+  }
+
   .practice-rhythm-scores {
     padding: 12px;
   }

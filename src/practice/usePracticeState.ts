@@ -202,7 +202,7 @@ export function usePracticeState() {
       return;
     }
     const id = `practice-note-${Date.now()}-${sequence.current++}`;
-    updateNotes((notes) => [...notes, { id, pitch, duration: rational(beats * 2, 2), dotted }], index, scoreIndex);
+    updateNotes((notes) => [...notes, { id, pitch, duration: rational(beats * 4, 4), dotted }], index, scoreIndex);
     selectNote(id);
   }
 
@@ -223,7 +223,7 @@ export function usePracticeState() {
     if (!owner) return;
     updateMeasure((measure) => ({
       ...measure,
-      notes: measure.notes.map((note) => note.id === id ? { ...note, duration: rational(beats * 2, 2), dotted } : note)
+      notes: measure.notes.map((note) => note.id === id ? { ...note, duration: rational(beats * 4, 4), dotted } : note)
     }), owner.index, owner.scoreIndex);
     selectNote(id);
   }
@@ -280,9 +280,9 @@ export function usePracticeState() {
     let remaining = toNumber(measureCapacity(previous.meter)) - target.notes.reduce((sum, note) => sum + toNumber(note.duration), 0);
     if (remaining <= 0) return;
     const rests: NoteEvent[] = [];
-    for (const beats of [4, 3, 2, 1.5, 1, 0.5]) {
+    for (const beats of [...PRACTICE_DURATIONS].reverse().map((duration) => duration.beats)) {
       while (remaining >= beats) {
-        rests.push({ id: `practice-rest-${Date.now()}-${sequence.current++}`, pitch: null, duration: rational(beats * 2, 2), dotted: beats === 3 || beats === 1.5 });
+        rests.push({ id: `practice-rest-${Date.now()}-${sequence.current++}`, pitch: null, duration: rational(beats * 4, 4), dotted: beats === 3 || beats === 1.5 });
         remaining -= beats;
       }
     }
@@ -291,27 +291,11 @@ export function usePracticeState() {
 
   function goToMelody() {
     const previous = latestDraft.current;
-    for (const [scoreIndex, score] of getPracticeScores(previous).entries()) {
-      const currentValidations = score.measures.map((measure) => validateMeasure(measure.notes, previous.meter));
-      const invalid = currentValidations.findIndex((validation) => validation.state !== "exact");
-      if (invalid >= 0) {
-        setStep("rhythm");
-        selectMeasure(invalid, scoreIndex);
-        const scoreName = scoreIndex === 0 ? "" : `악보 ${scoreIndex + 1}의 `;
-        setNotice(`${scoreName}${invalid + 1}마디의 박자가 맞지 않아요. ${currentValidations[invalid].message}`);
-        return;
-      }
-    }
-    if (!previous.measures.some((measure) => measure.notes.some((note) => note.pitch !== null))) {
-      setStep("rhythm");
-      selectMeasure(0, 0);
-      setNotice("첫 악보가 쉼표뿐이면 가락을 만들 수 없어요. 첫 악보에 소리가 나는 음표도 넣어 주세요.");
-      return;
-    }
+    const index = Math.max(0, Math.min(selectedMeasure.current, previous.measures.length - 1));
     setStep("melody");
-    activateMeasure(selectedMeasure.current, 0);
-    setSelectedNote(previous.measures[selectedMeasure.current].notes.find((note) => note.pitch !== null)?.id ?? null);
-    setNotice("모든 마디의 리듬이 완성됐어요! 음높이를 바꾸며 가락을 만들고, 필요하면 리듬도 고쳐 보세요.");
+    activateMeasure(index, 0);
+    setSelectedNote(previous.measures[index].notes.find((note) => note.pitch !== null)?.id ?? null);
+    setNotice("음표를 넣고 음높이를 바꾸며 나만의 가락을 만들어 보세요.");
   }
 
   function setChord(chord: string, index = selectedMeasure.current, scoreIndex = selectedScore.current) {

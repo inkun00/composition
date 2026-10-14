@@ -16,6 +16,7 @@ const audio = vi.hoisted(() => ({
   progress: 0,
   preview: vi.fn(),
   previewMeasure: vi.fn(),
+  previewScore: vi.fn(),
   previewRhythmMix: vi.fn(),
   save: vi.fn(),
   stop: vi.fn()

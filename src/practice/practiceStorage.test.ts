@@ -115,6 +115,30 @@ describe("연습 초안 저장과 복원", () => {
     expect(new Set(restored.measures.map((measure) => measure.id)).size).toBe(2);
   });
 
+  it("16분음표와 쉼표를 첫 악보 및 추가 악보에서 위치와 가사까지 복원한다", () => {
+    const draft = emptyPracticeDraft();
+    draft.measures[0].lyric = "가".repeat(8);
+    draft.measures[0].notes = Array.from({ length: 16 }, (_, index) => ({
+      id: `sixteenth-${index}`, pitch: index % 2 === 0 ? 60 : null,
+      duration: rational(1, 4), ...(index % 2 === 0 ? { lyric: "가" } : {})
+    }));
+    const extraMeasures = createPracticeMeasures(2);
+    extraMeasures[0] = {
+      ...extraMeasures[0], lyric: "짝", notes: [
+        { id: "extra-sixteenth", pitch: 60, duration: rational(1, 4), lyric: "짝" },
+        { id: "extra-short-rest", pitch: null, duration: rational(1, 4) },
+        { id: "extra-long-rest", pitch: null, duration: rational(3) },
+        { id: "extra-eighth-rest", pitch: null, duration: rational(1, 2) }
+      ]
+    };
+    draft.rhythmLayers = [{ id: "sixteenth-layer", instrumentId: "beat:clap", measures: extraMeasures }];
+    expect(writePracticeDraft(draft)).toBe(true);
+    const restored = readPracticeDraft();
+    expect(restored.measures[0].notes).toEqual(draft.measures[0].notes.map((note) => ({ ...note, dotted: undefined })));
+    expect(restored.rhythmLayers[0].measures[0].notes.map(({ id, pitch, duration, lyric }) => ({ id, pitch, duration, lyric })))
+      .toEqual(extraMeasures[0].notes.map(({ id, pitch, duration, lyric }) => ({ id, pitch, duration, lyric })));
+  });
+
   it("가사가 음표보다 길어도 원문을 버리지 않아 다음 마디로 옮길 수 있다", () => {
     const draft = emptyPracticeDraft();
     draft.measures[0].lyric = "가나다라마바사아자";

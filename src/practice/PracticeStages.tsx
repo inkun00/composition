@@ -7,13 +7,12 @@ type PracticeStagesProps = {
   step: "rhythm" | "melody";
   saving: boolean;
   busy: boolean;
-  complete: boolean;
   onRhythm: () => void;
   onMelody: () => void;
   onSave: () => void;
 };
 
-export default function PracticeStages({ step, saving, busy, complete, onRhythm, onMelody, onSave }: PracticeStagesProps) {
+export default function PracticeStages({ step, saving, busy, onRhythm, onMelody, onSave }: PracticeStagesProps) {
   function navigateTabs(event: KeyboardEvent<HTMLDivElement>) {
     if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
     const tabs = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')]
@@ -37,7 +36,7 @@ export default function PracticeStages({ step, saving, busy, complete, onRhythm,
         </button>
         <button type="button" role="tab" id="practice-melody-tab" aria-controls="practice-workspace"
           aria-selected={!saving && step === "melody"} tabIndex={!saving && step === "melody" ? 0 : -1}
-          disabled={busy || (step !== "melody" && !complete)} onClick={onMelody}>
+          disabled={busy} onClick={onMelody}>
           <span>2</span><strong>가락 만들기</strong>
         </button>
         <button type="button" role="tab" id="practice-save-tab" aria-controls="practice-save-panel"

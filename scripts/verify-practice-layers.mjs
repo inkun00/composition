@@ -44,6 +44,7 @@ try {
     : `practice-score-${scoreIndex}-measure-preview-0`);
   const workspace = (scoreIndex) => page.getByTestId(`practice-score-workspace-${scoreIndex}`);
   const tools = (scoreIndex) => workspace(scoreIndex).getByTestId(`practice-score-tools-${scoreIndex}`);
+  const fullPreview = (scoreIndex) => workspace(scoreIndex).getByTestId(`practice-score-preview-${scoreIndex}`);
   const instruments = page.getByRole("region", { name: "리듬 악보와 악기 선택", exact: true });
   const instrumentBounds = await instruments.boundingBox();
   const workspaceBounds = await workspace(0).boundingBox();
@@ -91,9 +92,14 @@ try {
     assert.ok(paletteBounds.y + paletteBounds.height <= cardBounds.y);
     assert.equal(await tools(scoreIndex).getByTestId("practice-duration-0.5").count(), 1);
     assert.equal(await tools(scoreIndex).getByTestId("practice-rest-0.5").count(), 1);
+    assert.equal(await tools(scoreIndex).getByTestId("practice-duration-0.25").count(), 1);
+    assert.equal(await tools(scoreIndex).getByTestId("practice-rest-0.25").count(), 1);
+    assert.equal(await preview(scoreIndex).innerText(), "미리듣기");
+    assert.equal(await fullPreview(scoreIndex).innerText(), `악보${scoreIndex + 1} 미리듣기`);
+    assert.equal(await fullPreview(scoreIndex).isEnabled(), true);
   }
   assert.equal(await page.getByRole("button", { name: /악보 추가하기/ }).isEnabled(), false);
-  assert.equal(await page.getByRole("tab", { name: /가락 만들기/ }).isEnabled(), false);
+  assert.equal(await page.getByRole("tab", { name: /가락 만들기/ }).isEnabled(), true);
   assert.equal(await page.getByRole("button", { name: "MP3 저장", exact: true }).isEnabled(), false);
   assert.equal(await page.getByRole("button", { name: "리듬 함께 듣기", exact: true }).isEnabled(), true);
 
@@ -105,12 +111,48 @@ try {
     return before;
   }
 
+  const fullScoreDurations = [];
+  const fullScoreBuffers = [];
+  for (let scoreIndex = 0; scoreIndex < 3; scoreIndex += 1) {
+    const before = await page.evaluate(() => window.practicePlaybackBuffers.length);
+    await fullPreview(scoreIndex).click();
+    await page.waitForFunction((count) => window.practicePlaybackBuffers.length > count, before);
+    assert.equal(await fullPreview(scoreIndex).innerText(), `악보${scoreIndex + 1} 멈추기`);
+    assert.equal(await fullPreview(scoreIndex).isEnabled(), true);
+    for (let other = 0; other < 3; other += 1) {
+      if (other !== scoreIndex) assert.equal(await fullPreview(other).isEnabled(), false);
+      assert.equal(await preview(other).isEnabled(), false);
+    }
+    await card(scoreIndex).locator(".practice-playback-indicator").waitFor();
+    fullScoreDurations.push(await page.evaluate((index) => window.practicePlaybackBuffers[index].duration, before));
+    fullScoreBuffers.push(before);
+    await fullPreview(scoreIndex).click();
+    assert.equal(await fullPreview(scoreIndex).innerText(), `악보${scoreIndex + 1} 미리듣기`);
+  }
+  assert.ok(fullScoreDurations.every((duration) => Math.abs(duration - 4) < 0.01));
+  assert.deepEqual(await draft(), entered);
+
   const solos = [];
   for (let scoreIndex = 0; scoreIndex < 3; scoreIndex += 1) {
     solos.push(await capturePreview(preview(scoreIndex), scoreIndex === 0
       ? "1마디 연주 멈추기"
       : `${scoreIndex + 1}번 악보 1마디 연주 멈추기`));
   }
+  const soloIdentityErrors = await page.evaluate(({ fullScoreBuffers, solos }) => {
+    return solos.map((soloIndex, scoreIndex) => {
+      const buffer = window.practicePlaybackBuffers[soloIndex];
+      const full = window.practicePlaybackBuffers[fullScoreBuffers[scoreIndex]].samples;
+      const length = Math.min(buffer.samples.length, Math.floor(buffer.sampleRate * 0.9));
+      let energy = 0;
+      let difference = 0;
+      for (let index = 0; index < length; index += 1) {
+        energy += buffer.samples[index] ** 2;
+        difference += (buffer.samples[index] - full[index]) ** 2;
+      }
+      return difference / energy;
+    });
+  }, { fullScoreBuffers, solos });
+  assert.ok(soloIdentityErrors.every((error) => error < 0.000001), JSON.stringify(soloIdentityErrors));
   const mix = await capturePreview(
     page.getByRole("button", { name: "리듬 함께 듣기", exact: true }),
     "겹친 리듬 멈추기"
@@ -179,7 +221,7 @@ try {
     })
   }));
   assert.equal(compactDesktop.pageWidth, compactDesktop.viewport);
-  assert.equal(compactDesktop.paletteButtons, 36);
+  assert.equal(compactDesktop.paletteButtons, 42);
   assert.equal(compactDesktop.palettesFit, true);
   await page.screenshot({ path: path.join(outputDir, "three-rhythms-1280.png"), fullPage: true });
   await tools(1).screenshot({ path: path.join(outputDir, "score-tools-1280.png") });
@@ -196,6 +238,41 @@ try {
     layouts.push(bounds);
   }
   await page.screenshot({ path: path.join(outputDir, "three-scores-four-bars.png"), fullPage: true });
+
+  // Sixteenth notes and rests remain exact after reload; whole-score audio keeps the empty bars silent.
+  await card(0, 3).getByTestId("practice-measure-3").click();
+  await tools(0).getByTestId("practice-duration-0.25").click();
+  await tools(0).getByTestId("practice-rest-0.25").click();
+  const sixteenths = await draft();
+  assert.deepEqual(sixteenths.measures[3].notes.map((note) => note.pitch), [60, null]);
+  assert.ok(sixteenths.measures[3].notes.every((note) => note.duration.numerator === 1 && note.duration.denominator === 4));
+  await page.reload();
+  await page.getByRole("button", { name: "기능 연습하기", exact: false }).first().click();
+  assert.deepEqual(await draft(), sixteenths);
+  const fullBufferIndex = await page.evaluate(() => window.practicePlaybackBuffers.length);
+  await fullPreview(0).click();
+  await page.waitForFunction((count) => window.practicePlaybackBuffers.length > count, fullBufferIndex);
+  const silentBars = await page.evaluate((index) => {
+    const buffer = window.practicePlaybackBuffers[index];
+    const energyBetween = (start, end) => {
+      const values = buffer.samples.slice(Math.floor(start * buffer.sampleRate), Math.floor(end * buffer.sampleRate));
+      return values.reduce((sum, value) => sum + value ** 2, 0) / values.length;
+    };
+    return { duration: buffer.duration, silent: energyBetween(4.5, 7.5), lastNote: energyBetween(12.02, 12.2) };
+  }, fullBufferIndex);
+  assert.ok(Math.abs(silentBars.duration - 16) < 0.01);
+  assert.ok(silentBars.silent < 0.00000001);
+  assert.ok(silentBars.lastNote > 0.000001);
+  await fullPreview(0).click();
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await tools(0).screenshot({ path: path.join(outputDir, "sixteenth-score-tools-1280.png") });
+  await workspace(0).locator(".practice-score-workspace-heading").screenshot({ path: path.join(outputDir, "full-score-preview-1280.png") });
+  await card(0, 3).screenshot({ path: path.join(outputDir, "sixteenth-grid-1280.png") });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await tools(0).screenshot({ path: path.join(outputDir, "sixteenth-score-tools-mobile.png") });
+  await card(0, 3).screenshot({ path: path.join(outputDir, "sixteenth-grid-mobile.png") });
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), 390);
+  await page.setViewportSize({ width: 1440, height: 1080 });
   await page.getByLabel("연습할 마디 수", { exact: true }).selectOption("1");
   for (let scoreIndex = 0; scoreIndex < 3; scoreIndex += 1) {
     const current = await draft();
@@ -208,7 +285,7 @@ try {
     for (let beat = 0; beat < 4; beat += 1) {
       await tools(scoreIndex).getByTestId("practice-duration-1").click();
     }
-    assert.equal(await page.getByRole("tab", { name: /가락 만들기/ }).isEnabled(), scoreIndex === 2);
+    assert.equal(await page.getByRole("tab", { name: /가락 만들기/ }).isEnabled(), true);
   }
 
   // A downloaded melody file contains both C4 melody and C5 rhythm voices.
@@ -271,7 +348,7 @@ try {
   await page.screenshot({ path: path.join(outputDir, "three-rhythms-mobile.png"), fullPage: true });
   await tools(1).screenshot({ path: path.join(outputDir, "mobile-score-tools.png") });
   assert.deepEqual(errors, []);
-  console.log(JSON.stringify({ result: "passed", pcm, media, layouts, compactDesktop, mobile, outputs: outputDir }, null, 2));
+  console.log(JSON.stringify({ result: "passed", pcm, media, layouts, compactDesktop, mobile, fullScoreDurations, soloIdentityErrors, silentBars, outputs: outputDir }, null, 2));
 } finally {
   await browser.close();
 }

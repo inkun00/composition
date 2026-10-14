@@ -98,7 +98,7 @@ describe("연습 곡의 실제 음표와 시간", () => {
     { label: "박자가 초과된", beats: rational(9, 2), duration: 2.25 }
   ])("$label 마디도 입력한 길이까지만 리듬 악기로 연주한다", async ({ beats, duration }) => {
     const selected = { notes: [{ id: "selected", pitch: 65, duration: beats }] };
-    const draft = { ...input, measures: [input.measures[0], selected, { notes: [] }] };
+    const draft: PracticeAudioInput = { ...input, step: "rhythm", measures: [input.measures[0], selected, { notes: [] }] };
     const preview = practiceMeasureAudioInput(draft, 1);
     const result = await renderPracticeAudio(preview);
     expect(preview.measures).toEqual([selected]);
@@ -109,15 +109,51 @@ describe("연습 곡의 실제 음표와 시간", () => {
     expect(result.timeline.events.map((event) => event.noteId)).toEqual(["selected"]);
     expect(result.buffer.duration).toBe(duration);
     expect(draft.measures[1].notes).toHaveLength(1);
-    expect(draft.step).toBe("melody");
+    expect(draft.step).toBe("rhythm");
   });
 
   it("한 마디 리듬에서도 입력된 쉼표를 유지하고 다른 마디 음표는 포함하지 않는다", () => {
-    const preview = practiceMeasureAudioInput({ ...input, measures: [{ notes: [] }, input.measures[0]] }, 1);
+    const preview = practiceMeasureAudioInput({ ...input, step: "rhythm", measures: [{ notes: [] }, input.measures[0]] }, 1);
     const timeline = buildPracticeTimeline(preview);
     expect(timeline.events.map((event) => event.noteId)).toEqual(["low", "rest", "high"]);
     expect(timeline.events.map((event) => event.pitch)).toEqual([72, null, 72]);
     expect(timeline.durationSeconds).toBe(1);
+  });
+
+  it("가락의 마디 듣기는 입력한 높이와 16분음표·쉼표·가사를 가락 악기로 그대로 연주한다", async () => {
+    const selected = { notes: [
+      { id: "rest-start", pitch: null, duration: rational(1, 4) },
+      { id: "low-sixteenth", pitch: 60, duration: rational(1, 4), lyric: "봄" },
+      { id: "high-eighth", pitch: 67, duration: rational(1, 2), lyric: "날" },
+      { id: "rest-end", pitch: null, duration: rational(1, 4) }
+    ] };
+    const draft: PracticeAudioInput = {
+      ...input,
+      melodyInstrumentId: "clarinet",
+      rhythmInstrumentId: "beat:woodblock",
+      measures: [input.measures[0], selected, { notes: [] }],
+      rhythmLayers: [{ id: "other", instrumentId: "beat:shaker", measures: [input.measures[0]] }]
+    };
+    const preview = practiceMeasureAudioInput(draft, 1);
+    const result = await renderPracticeAudio(preview);
+    expect(preview.step).toBe("melody");
+    expect(preview.measures).toEqual([selected]);
+    expect(preview.measures[0]).toBe(selected);
+    expect(preview.rhythmLayers).toBeUndefined();
+    expect(mocks.load.mock.calls.map((args) => args[2])).toEqual(["clarinet"]);
+    expect(mocks.preloadBeat).not.toHaveBeenCalled();
+    expect(mocks.queue.mock.calls.map((args) => args.slice(3, 6))).toEqual([
+      [60, 0.125, 0.125], [67, 0.25, 0.25]
+    ]);
+    expect(result.timeline.events.map((event) => [event.noteId, event.pitch])).toEqual([
+      ["rest-start", null], ["low-sixteenth", 60], ["high-eighth", 67], ["rest-end", null]
+    ]);
+    expect(result.timeline.durationSeconds).toBe(0.625);
+    expect(result.buffer.duration).toBe(Math.ceil(0.625 * 44100) / 44100);
+    expect(result.layerTimelines).toBeUndefined();
+    expect(draft.measures[1].notes).toEqual(selected.notes);
+    expect(draft.measures[1].notes.map((note) => note.lyric)).toEqual([undefined, "봄", "날", undefined]);
+    expect(mocks.release).toHaveBeenCalledWith(expect.anything(), expect.anything(), "clarinet");
   });
 
   it("빈 마디와 쉼표만 있는 마디는 소리 음표를 넣도록 안내한다", () => {

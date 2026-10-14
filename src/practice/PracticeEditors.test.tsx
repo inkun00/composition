@@ -87,6 +87,61 @@ describe("리듬과 가락 연습 입력", () => {
     expect(props.onDuration).not.toHaveBeenCalled();
   });
 
+  it("16분음표나 쉼표를 선택하면 1/4박 빈칸을 보여 주고 선택한 길이로 추가한다", () => {
+    const props = mount();
+    expect(container?.querySelectorAll(".practice-empty-slot")).toHaveLength(8);
+    act(() => button("practice-duration-0.25").click());
+    expect(props.onAdd).toHaveBeenLastCalledWith(0.25, 60, undefined);
+    expect(container?.querySelectorAll(".practice-empty-slot")).toHaveLength(16);
+    const secondSlot = container?.querySelectorAll<HTMLButtonElement>(".practice-empty-slot")[1];
+    expect(secondSlot?.getAttribute("aria-label")).toBe("1.25박 빈칸, 다음 음표 추가");
+    expect(secondSlot?.style.left).toBe("6.25%");
+    expect(secondSlot?.style.width).toBe("6.25%");
+    act(() => button("practice-rest-0.25").click());
+    expect(props.onAdd).toHaveBeenLastCalledWith(0.25, null, undefined);
+    act(() => secondSlot?.click());
+    expect(props.onAdd).toHaveBeenLastCalledWith(0.25, null, undefined);
+  });
+
+  it("16분음표와 쉼표의 가사·시작점·박자 구분선을 정확히 보여 준다", () => {
+    const notes = [
+      { id: "sixteenth", pitch: 60, duration: rational(1, 4), lyric: "봄" },
+      { id: "quarter", pitch: 64, duration: rational(1), lyric: "날" },
+      { id: "rest", pitch: null, duration: rational(1, 4) }
+    ];
+    mount({ notes, compact: true, showTools: false, onNoteLyric: vi.fn() });
+    const first = button("practice-rhythm-note-sixteenth");
+    expect(first.classList.contains("practice-sixteenth-block")).toBe(true);
+    expect(first.getAttribute("aria-label")).toContain("0.25박 삭제");
+    expect(first.querySelector(".practice-note-symbol")?.textContent).toBe("𝅘𝅥𝅯");
+    expect(first.style.width).toBe("6.25%");
+    const quarter = button("practice-rhythm-note-quarter");
+    expect(quarter.style.left).toBe("6.25%");
+    expect(quarter.style.width).toBe("25%");
+    expect(quarter.querySelectorAll(".practice-block-divisions > span")).toHaveLength(3);
+    expect(quarter.querySelector(".practice-block-divisions > .is-whole-beat")?.getAttribute("style")).toContain("left: 75%");
+    expect(button("practice-rhythm-note-rest").style.left).toBe("31.25%");
+    expect(lyricInput("1번째 음표 가사").style.width).toBe("6.25%");
+    expect(container?.querySelectorAll(".practice-empty-slot")).toHaveLength(10);
+    expect(container?.querySelector(".practice-grid-content")?.getAttribute("style")).toContain("min-width: 256px");
+  });
+
+  it("16분음표의 가락 칸에서도 같은 리듬 길이를 유지해 음높이만 바꾼다", () => {
+    const props = mount({
+      notes: [
+        { id: "short", pitch: 60, duration: rational(1, 4), lyric: "반" },
+        { id: "next", pitch: 62, duration: rational(1, 4), lyric: "짝" }
+      ], step: "melody", showTools: false
+    });
+    const next = button("practice-melody-next-72");
+    expect(next.style.left).toBe("6.25%");
+    expect(next.style.width).toBe("6.25%");
+    expect(next.getAttribute("aria-label")).toContain("0.25박 유지");
+    act(() => next.click());
+    expect(props.onPitch).toHaveBeenCalledWith("next", 72);
+    expect(props.onDuration).not.toHaveBeenCalled();
+  });
+
   it("마디를 넘친 음표도 보이고 다음 음표 길이를 골라도 기존 음표는 유지하며 삭제할 수 있다", () => {
     const props = mount({
       notes: [

@@ -1,58 +1,13 @@
 // @vitest-environment jsdom
 
 import { act } from "react";
-import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { rational } from "../music/rational";
 import { buildPracticeTimeline } from "./practiceAudioTimeline";
-import { emptyPracticeDraft, readPracticeDraft, writePracticeDraft, type PracticeDraft } from "./practiceStorage";
-import { usePracticeState } from "./usePracticeState";
+import { emptyPracticeDraft, readPracticeDraft } from "./practiceStorage";
+import { current, fullDraft, mount, setupPracticeStateTests } from "./usePracticeState.test.helpers";
 
-(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
-
-let container: HTMLDivElement;
-let root: Root;
-let current: ReturnType<typeof usePracticeState>;
-
-function Harness() {
-  current = usePracticeState();
-  return null;
-}
-
-function mount(draft?: PracticeDraft) {
-  if (draft) writePracticeDraft(draft);
-  act(() => { root.render(<Harness />); });
-}
-
-function fullDraft(): PracticeDraft {
-  const draft = emptyPracticeDraft();
-  draft.measures[0].lyric = "안녕";
-  draft.measures[0].notes = [
-    { id: "first-a", pitch: 60, duration: rational(2), lyric: "안" },
-    { id: "first-b", pitch: 64, duration: rational(2), lyric: "녕" }
-  ];
-  draft.measures[1].lyric = "친구";
-  draft.measures[1].notes = [
-    { id: "second-a", pitch: 67, duration: rational(3), dotted: true, lyric: "친" },
-    { id: "second-b", pitch: 72, duration: rational(1), lyric: "구" }
-  ];
-  return draft;
-}
-
-beforeEach(() => {
-  localStorage.clear();
-  vi.spyOn(window, "confirm").mockReturnValue(true);
-  container = document.createElement("div");
-  document.body.appendChild(container);
-  root = createRoot(container);
-});
-
-afterEach(() => {
-  act(() => { root.unmount(); });
-  container.remove();
-  vi.restoreAllMocks();
-  localStorage.clear();
-});
+setupPracticeStateTests();
 
 describe("리듬을 만들고 가락으로 이어 가는 연습 상태", () => {
   it("앞 화음을 바꾸면 뒤 마디의 후보 밖 화음만 조정하고 가락·리듬·가사는 보존한다", () => {
@@ -176,14 +131,17 @@ describe("리듬을 만들고 가락으로 이어 가는 연습 상태", () => {
     expect(readPracticeDraft().measures).toHaveLength(1);
   });
 
-  it("모든 마디의 박자가 정확해야 가락 만들기로 넘어간다", () => {
+  it("박자가 부족한 마디가 있어도 가락 만들기로 넘어가고 완성 여부는 계속 검증한다", () => {
     const draft = fullDraft();
     draft.measures[1].notes = [{ id: "short", pitch: 67, duration: rational(1) }];
     mount(draft);
+    act(() => { current.selectMeasure(1); });
+    const previous = current.draft;
     act(() => { current.goToMelody(); });
-    expect(current.step).toBe("rhythm");
+    expect(current.step).toBe("melody");
     expect(current.activeIndex).toBe(1);
-    expect(current.notice).toContain("2마디의 박자가 맞지 않아요");
+    expect(current.draft).toBe(previous);
+    expect(current.selectedNoteId).toBe("short");
     expect(current.complete).toBe(false);
     act(() => { current.addNote(3, 72, true); });
     expect(current.complete).toBe(true);
@@ -192,15 +150,18 @@ describe("리듬을 만들고 가락으로 이어 가는 연습 상태", () => {
     expect(current.active.notes.some((note) => note.id === current.selectedNoteId && note.pitch !== null)).toBe(true);
   });
 
-  it("쉼표만으로 채운 마디는 가락을 만들 음표가 없어 넘어가지 않는다", () => {
+  it("쉼표만으로 채운 마디도 그대로 가락 단계로 넘어가고 완성 상태는 유지한다", () => {
     const draft = emptyPracticeDraft();
     draft.measures = [{ id: "rest-only", notes: [{ id: "rest", pitch: null, duration: rational(4) }], lyric: "", chord: "C" }];
     mount(draft);
     expect(current.validations[0].state).toBe("exact");
     expect(current.complete).toBe(false);
+    const previous = current.draft;
     act(() => { current.goToMelody(); });
-    expect(current.step).toBe("rhythm");
-    expect(current.notice).toContain("음표");
+    expect(current.step).toBe("melody");
+    expect(current.selectedNoteId).toBeNull();
+    expect(current.draft).toBe(previous);
+    expect(current.complete).toBe(false);
   });
 
   it("리듬에서 만든 음표의 길이, 쉼표, 가사와 순서를 그대로 가락의 기본 음표로 사용한다", () => {
@@ -320,14 +281,15 @@ describe("리듬을 만들고 가락으로 이어 가는 연습 상태", () => {
     expect(current.active.lyric).toBe("친구");
   });
 
-  it("네 마디 전체의 리듬이 완성된 후에만 가락 단계로 넘어간다", () => {
+  it("네 마디 중 빈 마디가 있어도 가락 단계로 넘어가고 직접 채워 완성한다", () => {
     mount(fullDraft());
     act(() => { current.resize(4); });
     act(() => { current.addNote(4, 60, undefined, 2); });
     act(() => { current.goToMelody(); });
-    expect(current.step).toBe("rhythm");
-    expect(current.activeIndex).toBe(3);
-    expect(current.notice).toContain("4마디의 박자가 맞지 않아요");
+    expect(current.step).toBe("melody");
+    expect(current.activeIndex).toBe(2);
+    expect(current.draft.measures[3].notes).toEqual([]);
+    expect(current.complete).toBe(false);
     act(() => {
       current.addNote(4, 60, undefined, 3);
       current.goToMelody();
@@ -506,19 +468,74 @@ describe("리듬을 만들고 가락으로 이어 가는 연습 상태", () => {
     expect(current.complete).toBe(false);
   });
 
+  it.each([
+    { meter: { beats: 4, beatUnit: 4 as const }, count: 16 },
+    { meter: { beats: 3, beatUnit: 4 as const }, count: 12 },
+    { meter: { beats: 2, beatUnit: 4 as const }, count: 8 },
+    { meter: { beats: 6, beatUnit: 8 as const }, count: 12 }
+  ])("$meter.beats/$meter.beatUnit박자를 16분음표로 정확히 채우고 자동 저장한다", ({ meter, count }) => {
+    mount();
+    act(() => {
+      current.resize(1);
+      current.setMeter(meter);
+      for (let index = 0; index < count; index += 1) {
+        current.addNote(0.25, index % 2 === 0 ? 60 : null);
+      }
+    });
+    expect(current.active.notes).toHaveLength(count);
+    expect(current.active.notes.every((note) => note.duration.numerator === 1 && note.duration.denominator === 4)).toBe(true);
+    expect(current.validations[0].state).toBe("exact");
+    expect(current.complete).toBe(true);
+    expect(readPracticeDraft().measures[0].notes).toEqual(current.active.notes);
+    act(() => { current.goToMelody(); });
+    expect(current.step).toBe("melody");
+  });
+
+  it("16분음표로 길이를 바꾼 뒤 남은 마지막 1/4박도 쉼표로 채운다", () => {
+    mount(fullDraft());
+    act(() => {
+      current.resize(1);
+      current.setDuration("first-a", 0.25);
+      current.fillRests();
+    });
+    expect(current.active.notes.map((note) => note.duration)).toEqual([
+      rational(1, 4), rational(2), rational(3, 2), rational(1, 4)
+    ]);
+    expect(current.active.notes.at(-1)).toMatchObject({ pitch: null, duration: rational(1, 4), dotted: false });
+    expect(current.active.notes.map((note) => note.lyric)).toEqual(["안", "녕", undefined, undefined]);
+    expect(current.validations[0].state).toBe("exact");
+    expect(readPracticeDraft().measures[0].notes).toEqual(current.active.notes.map((note) => ({ ...note, dotted: note.dotted || undefined })));
+  });
+
+  it("추가 악보에서도 16분음표·쉼표를 독립적으로 추가하고 마지막 빈 박자를 채운다", () => {
+    mount(fullDraft());
+    const primary = current.draft.measures;
+    act(() => {
+      current.addRhythmScore();
+      current.addNote(0.25, 60);
+      current.addNote(0.25, null);
+      current.fillRests();
+    });
+    expect(current.draft.measures).toBe(primary);
+    expect(current.scoreValidations[1][0].state).toBe("exact");
+    expect(current.active.notes.slice(0, 2).map((note) => note.duration)).toEqual([rational(1, 4), rational(1, 4)]);
+    expect(readPracticeDraft().rhythmLayers[0].measures[0].notes.map((note) => note.duration)).toEqual(current.active.notes.map((note) => note.duration));
+  });
+
   it("너무 긴 가사는 오류를 알리되 기존 리듬과 가사 원문을 버리지 않는다", () => {
     mount(fullDraft());
     const existingNotes = current.active.notes;
-    act(() => { current.setLyric("가나다라마바사아자"); });
+    const longLyric = "가".repeat(17);
+    act(() => { current.setLyric(longLyric); });
     const withLongLyrics = current.active.notes;
     act(() => { current.generateRhythm(); });
-    expect(current.notice).toContain("가사 9글자는 이 마디에 모두 들어가지 않아요");
-    expect(current.active.lyric).toBe("가나다라마바사아자");
+    expect(current.notice).toContain("가사 17글자는 이 마디에 모두 들어가지 않아요");
+    expect(current.active.lyric).toBe(longLyric);
     expect(current.active.notes).toEqual(withLongLyrics);
     expect(current.active.notes.map((note) => ({ id: note.id, duration: note.duration, pitch: note.pitch })))
       .toEqual(existingNotes.map((note) => ({ id: note.id, duration: note.duration, pitch: note.pitch })));
-    expect(current.active.notes.map((note) => note.lyric)).toEqual(["가", "나"]);
-    expect(readPracticeDraft().measures[0].lyric).toBe("가나다라마바사아자");
+    expect(current.active.notes.map((note) => note.lyric)).toEqual(["가", "가"]);
+    expect(readPracticeDraft().measures[0].lyric).toBe(longLyric);
     expect(current.complete).toBe(true);
   });
 
@@ -621,17 +638,18 @@ describe("악보를 최대 세 개 겹쳐 만드는 리듬 상태", () => {
     expect(current.scores.every((score) => score.measures.every((measure) => measure.notes.length === 0))).toBe(true);
   });
 
-  it("모든 악보의 박자가 맞아야 가락 단계로 넘어가며 틀린 악보의 마디를 선택한다", () => {
+  it("추가 악보의 박자가 부족해도 첫 악보의 가락을 만들고 전체 완성은 따로 검증한다", () => {
     mount(fullDraft());
     act(() => {
       current.addRhythmScore();
       current.fillRests(0, 1);
       current.goToMelody();
     });
-    expect(current.step).toBe("rhythm");
-    expect(current.activeScoreIndex).toBe(1);
-    expect(current.activeIndex).toBe(1);
-    expect(current.notice).toContain("악보 2의 2마디");
+    expect(current.step).toBe("melody");
+    expect(current.activeScoreIndex).toBe(0);
+    expect(current.activeIndex).toBe(0);
+    expect(current.selectedNoteId).toBe("first-a");
+    expect(current.draft.rhythmLayers[0].measures[1].notes).toEqual([]);
     expect(current.complete).toBe(false);
     act(() => {
       current.fillRests(1, 1);
@@ -654,7 +672,7 @@ describe("악보를 최대 세 개 겹쳐 만드는 리듬 상태", () => {
     expect(current.complete).toBe(true);
   });
 
-  it("추가 악보에서 소리가 나도 첫 악보가 쉼표뿐이면 가락 만들기를 안내한다", () => {
+  it("첫 악보가 쉼표뿐이어도 추가 악보를 보존하며 가락 단계로 넘어간다", () => {
     mount();
     act(() => {
       current.fillRests(0, 0);
@@ -665,8 +683,11 @@ describe("악보를 최대 세 개 겹쳐 만드는 리듬 상태", () => {
       current.goToMelody();
     });
     expect(current.complete).toBe(true);
-    expect(current.step).toBe("rhythm");
-    expect(current.notice).toContain("소리가 나는 음표");
+    expect(current.step).toBe("melody");
+    expect(current.activeScoreIndex).toBe(0);
+    expect(current.selectedNoteId).toBeNull();
+    expect(current.draft.measures.every((measure) => measure.notes.every((note) => note.pitch === null))).toBe(true);
+    expect(current.draft.rhythmLayers[0].measures[0].notes[0].pitch).toBe(60);
   });
 
   it("마디 수를 모든 악보에서 함께 바꾸고 추가 악보의 뒤쪽 작업 삭제도 확인한다", () => {

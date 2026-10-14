@@ -4,6 +4,7 @@ import {
   exportPracticeMp4,
   practiceAudioFileName,
   practiceMeasureAudioInput,
+  practiceScoreAudioInput,
   practiceNoteAtTime,
   practiceNotesAtTime,
   renderPracticeAudio,
@@ -109,7 +110,8 @@ export function usePracticeAudio(input: PracticeAudioInput) {
     rhythmMix = false
   ): Promise<PracticeRenderedAudio> {
     const key = JSON.stringify({
-      scope: rhythmMix ? "rhythm-mix" : measureIndex === null ? "all" : { measureIndex, scoreIndex },
+      scope: rhythmMix ? "rhythm-mix" : measureIndex !== null ? { measureIndex, scoreIndex }
+        : scoreIndex !== null ? { scoreIndex } : "all",
       measures: renderInput.measures,
       rhythmLayers: renderInput.rhythmLayers,
       meter: renderInput.meter,
@@ -154,8 +156,10 @@ export function usePracticeAudio(input: PracticeAudioInput) {
     setStatus("연주할 악기를 준비하고 있어요.");
     try {
       const renderInput = measureIndex === null
-        ? rhythmMix ? { ...input, step: "rhythm" as const } : input
+        ? rhythmMix ? { ...input, step: "rhythm" as const }
+          : scoreIndex !== null ? practiceScoreAudioInput(input, scoreIndex) : input
         : practiceMeasureAudioInput(input, measureIndex, scoreIndex ?? 0);
+      const soundLabel = renderInput.step === "melody" ? "가락" : "리듬";
       // Create and resume synchronously inside the click, before awaiting rendering.
       session.context = new AudioContext();
       const resuming = session.context.resume();
@@ -172,8 +176,9 @@ export function usePracticeAudio(input: PracticeAudioInput) {
       source.onended = () => {
         if (!isCurrent(session)) return;
         setProgress(100);
-        const label = rhythmMix ? "리듬 함께 듣기 " : measureIndex === null ? "" :
-          `${scoreIndex ? `${scoreIndex + 1}번 악보 ` : ""}${measureIndex + 1}마디 리듬 `;
+        const label = rhythmMix ? "리듬 함께 듣기 " : measureIndex === null
+          ? scoreIndex !== null ? `악보${scoreIndex + 1} ` : "" :
+          `${scoreIndex ? `${scoreIndex + 1}번 악보 ` : ""}${measureIndex + 1}마디 ${soundLabel} `;
         finish(session, `${label}미리듣기를 마쳤어요.${fallbackMessage(rendered)}`);
       };
       const update = () => {
@@ -188,8 +193,8 @@ export function usePracticeAudio(input: PracticeAudioInput) {
       setBusy(false);
       setPlaying(true);
       const label = rhythmMix ? "여러 악보의 리듬을 함께" : measureIndex === null
-        ? `내가 만든 ${renderInput.step === "rhythm" ? "리듬" : "가락"}`
-        : `${scoreIndex ? `${scoreIndex + 1}번 악보 ` : ""}${measureIndex + 1}마디에 입력한 리듬`;
+        ? `${scoreIndex !== null ? `악보${scoreIndex + 1}의` : "내가 만든"} ${soundLabel}`
+        : `${scoreIndex ? `${scoreIndex + 1}번 악보 ` : ""}${measureIndex + 1}마디에 입력한 ${soundLabel}`;
       setStatus(`${label}${rhythmMix ? " " : "을 "}듣고 있어요.${fallbackMessage(rendered)}`);
       update();
     } catch (error) {
@@ -205,6 +210,10 @@ export function usePracticeAudio(input: PracticeAudioInput) {
 
   function previewMeasure(index: number, scoreIndex = 0): Promise<void> {
     return playPreview(index, scoreIndex);
+  }
+
+  function previewScore(index: number): Promise<void> {
+    return playPreview(null, index);
   }
 
   function previewRhythmMix(): Promise<void> {
@@ -270,6 +279,7 @@ export function usePracticeAudio(input: PracticeAudioInput) {
     previewRhythmMixing,
     preview,
     previewMeasure,
+    previewScore,
     previewRhythmMix,
     stop,
     save

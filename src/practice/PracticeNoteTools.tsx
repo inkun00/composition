@@ -5,6 +5,7 @@ import { PRACTICE_DURATIONS, PRACTICE_PITCHES } from "./practiceModel";
 import type { PracticeEditorsProps } from "./practiceEditorTypes";
 
 const REST_SYMBOLS: Readonly<Record<number, string>> = {
+  0.25: "𝄿",
   0.5: "𝄾",
   1: "𝄽",
   1.5: "𝄽·",

@@ -14,7 +14,7 @@ import {
 
 const commonTime = { beats: 4, beatUnit: 4 as const };
 function note(id: string, pitch: number | null, beats: number, lyric?: string): NoteEvent {
-  return { id, pitch, duration: rational(beats * 2, 2), ...(lyric ? { lyric } : {}) };
+  return { id, pitch, duration: rational(beats * 4, 4), ...(lyric ? { lyric } : {}) };
 }
 
 describe("처음 작곡하는 사람의 연습 모델", () => {
@@ -22,6 +22,7 @@ describe("처음 작곡하는 사람의 연습 모델", () => {
     expect(PRACTICE_PITCHES.map((option) => option.pitch)).toEqual([60, 62, 64, 65, 67, 69, 71, 72]);
     expect(PRACTICE_DURATIONS.filter((duration) => duration.dotted).map((duration) => duration.beats))
       .toEqual([1.5, 3]);
+    expect(PRACTICE_DURATIONS[0]).toMatchObject({ beats: 0.25, label: "16분음표 · 1/4박", symbol: "𝅘𝅥𝅯" });
   });
 
   it("마디마다 가사, 화음과 음표를 독립적으로 편집할 수 있다", () => {
@@ -47,7 +48,7 @@ describe("처음 작곡하는 사람의 연습 모델", () => {
   });
 
   it.each(SUPPORTED_METERS)("$beats/$beatUnit박자에서 가능한 모든 가사 길이를 빠짐없이 맞춘다", (meter) => {
-    const maxSyllables = toNumber(measureCapacity(meter)) * 2;
+    const maxSyllables = toNumber(measureCapacity(meter)) * 4;
     for (let count = 1; count <= maxSyllables; count += 1) {
       const notes = makeLyricRhythm("가".repeat(count), meter, `measure-${count}`);
       expect(notes).toHaveLength(count);
@@ -68,10 +69,19 @@ describe("처음 작곡하는 사람의 연습 모델", () => {
   });
 
   it("긴 가사를 잘라 버리지 않고 다음 마디에 나누라고 알린다", () => {
-    expect(() => makeLyricRhythm("가나다라마바사아자", commonTime, "long"))
-      .toThrow("가사 9글자는 이 마디에 모두 들어가지 않아요");
-    expect(() => makeLyricRhythm("가나다라마", { beats: 2, beatUnit: 4 }, "short"))
-      .toThrow("최대 4글자");
+    expect(() => makeLyricRhythm("가".repeat(17), commonTime, "long"))
+      .toThrow("가사 17글자는 이 마디에 모두 들어가지 않아요");
+    expect(() => makeLyricRhythm("가".repeat(9), { beats: 2, beatUnit: 4 }, "short"))
+      .toThrow("최대 8글자");
+  });
+
+  it("16개 음절을 16분음표로 만들고 쉼표까지 1/4박 길이로 계산한다", () => {
+    const notes = makeLyricRhythm("가나다라마바사아자차카타파하하하", commonTime, "sixteenth");
+    expect(notes).toHaveLength(16);
+    expect(notes.every((event) => event.duration.numerator === 1 && event.duration.denominator === 4)).toBe(true);
+    const measures = createPracticeMeasures(1);
+    measures[0].notes = [note("sound", 60, 0.25), note("rest", null, 0.25)];
+    expect(practiceDurationSeconds(measures, 120)).toBe(0.25);
   });
 
   it("다른 마디의 음표 ID가 서로 겹치지 않는다", () => {

@@ -1,5 +1,5 @@
 import { useState, type CSSProperties } from "react";
-import { ArrowLeft, ArrowRight, GraduationCap } from "lucide-react";
+import { ArrowLeft, ArrowRight, GraduationCap, Square, Volume2 } from "lucide-react";
 import { meterKey, SUPPORTED_METERS } from "../music/meter";
 import { useUnsavedWorkWarning } from "../hooks/useUnsavedWorkWarning";
 import { PracticeNoteTools } from "./PracticeEditors";
@@ -97,7 +97,7 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
           </label>
         </fieldset>
 
-        <PracticeStages step={step} saving={saving} busy={busy} complete={complete}
+        <PracticeStages step={step} saving={saving} busy={busy}
           onRhythm={() => { setSaving(false); practice.setStep("rhythm"); }}
           onMelody={() => { setSaving(false); practice.goToMelody(); }} onSave={() => setSaving(true)} />
 
@@ -107,21 +107,35 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
 
           <PracticeRhythmScores practice={practice} audio={audio} />
 
-          {scores.map((score, scoreIndex) => (
+          {scores.map((score, scoreIndex) => {
+            const scorePreviewActive = audio.previewScoreIndex === scoreIndex && audio.previewMeasureIndex === null;
+            const hasSound = score.measures.some((measure) => measure.notes.some((note) => note.pitch !== null));
+            const scorePreviewLabel = `악보${scoreIndex + 1} ${scorePreviewActive
+              ? audio.busy ? "준비 취소" : "멈추기"
+              : "미리듣기"}`;
+            return (
             <section key={score.id} className="practice-score-workspace" data-testid={`practice-score-workspace-${scoreIndex}`}>
-              {scores.length > 1 && (
-                <div className="practice-score-workspace-heading">
-                  <h3>악보 {scoreIndex + 1} · {scoreIndex === 0 && step === "melody" ? "가락" : "리듬"}</h3>
-                  <button type="button" disabled={busy} onClick={() => practice.selectScore(scoreIndex)}>
-                    {activeScoreIndex === scoreIndex ? "편집 중" : "이 악보 편집"}
+              <div className="practice-score-workspace-heading">
+                <h3>악보 {scoreIndex + 1} · {scoreIndex === 0 && step === "melody" ? "가락" : "리듬"}</h3>
+                <div className="practice-score-workspace-actions">
+                  <button type="button" className="practice-score-preview" data-testid={`practice-score-preview-${scoreIndex}`}
+                    disabled={!hasSound || (busy && !scorePreviewActive)} aria-pressed={scorePreviewActive}
+                    onClick={() => scorePreviewActive ? audio.stop() : void audio.previewScore(scoreIndex)}>
+                    {scorePreviewActive ? <Square size={16} /> : <Volume2 size={17} />}
+                    {scorePreviewLabel}
                   </button>
+                  {scores.length > 1 && (
+                    <button type="button" disabled={busy} onClick={() => practice.selectScore(scoreIndex)}>
+                      {activeScoreIndex === scoreIndex ? "편집 중" : "이 악보 편집"}
+                    </button>
+                  )}
                 </div>
-              )}
+              </div>
               <div className="practice-shared-tools" data-testid={`practice-score-tools-${scoreIndex}`}>
                 <p className="practice-current-measure" role={activeScoreIndex === scoreIndex ? "status" : undefined}>
                   {scores.length > 1 ? `${scoreIndex + 1}번 악보 · ` : ""}{activeIndex + 1}마디에 넣기
                 </p>
-                {draft.meter.beatUnit === 8 && <p className="practice-editor-help">6/8박자 · 1칸 = 8분음표</p>}
+                {draft.meter.beatUnit === 8 && <p className="practice-editor-help">6/8박자 · 8분음표 6개가 한 마디예요.</p>}
                 <PracticeNoteTools notes={score.measures[activeIndex].notes} meter={draft.meter}
                   step={scoreIndex === 0 ? step : "rhythm"} inputMode={inputMode}
                   selectedNoteId={practice.selectedNoteId} disabled={busy}
@@ -142,24 +156,26 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
                 {score.measures.map((measure, index) => {
                   const previewActive = audio.previewMeasureIndex === index && audio.previewScoreIndex === scoreIndex;
                   const playingNoteId = audio.playingNoteIds.find((id) => measure.notes.some((note) => note.id === id)) ?? audio.playingNoteId;
+                  const playbackActive = scorePreviewActive && measure.notes.some((note) => note.id === playingNoteId);
                   return (
                     <PracticeMeasureCard key={measure.id} measure={measure} index={index} scoreIndex={scoreIndex} meter={draft.meter}
                       validation={scoreValidations[scoreIndex][index]} practice={practice} disabled={busy}
                       playingNoteId={playingNoteId} appendDuration={appendDuration} appendRest={appendRest}
-                      previewActive={previewActive} previewPreparing={audio.busy}
+                      previewActive={previewActive} playbackActive={playbackActive} previewPreparing={audio.busy}
                       onPreviewRhythm={() => previewActive ? audio.stop() : void audio.previewMeasure(index, scoreIndex)} />
                   );
                 })}
               </div>
             </section>
-          ))}
+            );
+          })}
 
           {practice.notice && <p className="practice-notice" role="status">{practice.notice}</p>}
           <div className="practice-workspace-footer">
             <span>{finishedCount} / {totalMeasures}마디 박자 완성</span>
             {step === "rhythm" ? (
               <div className="practice-stage-next">
-                <button type="button" className="practice-primary" disabled={busy || !complete} onClick={practice.goToMelody}>
+                <button type="button" className="practice-primary" disabled={busy} onClick={practice.goToMelody}>
                   가락 만들기로 <ArrowRight size={17} />
                 </button>
               </div>

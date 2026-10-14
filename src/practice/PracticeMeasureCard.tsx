@@ -21,13 +21,14 @@ type PracticeMeasureCardProps = {
   appendDuration: number;
   appendRest: boolean;
   previewActive: boolean;
+  playbackActive?: boolean;
   previewPreparing: boolean;
   onPreviewRhythm: () => void;
 };
 
 export default function PracticeMeasureCard({
   measure, index, scoreIndex, meter, validation, practice, disabled, playingNoteId, appendDuration, appendRest,
-  previewActive, previewPreparing, onPreviewRhythm
+  previewActive, playbackActive = false, previewPreparing, onPreviewRhythm
 }: PracticeMeasureCardProps) {
   const active = practice.activeIndex === index && practice.activeScoreIndex === scoreIndex;
   const step = scoreIndex === 0 ? practice.step : "rhythm";
@@ -36,6 +37,7 @@ export default function PracticeMeasureCard({
   const lyricInputId = `practice-lyric-input-${scoreIndex}-${index}`;
   const used = measure.notes.reduce((sum, note) => sum + toNumber(note.duration), 0);
   const capacity = toNumber(measureCapacity(meter));
+  const validationMessage = validation.message.replace(/^\d+(?:\/\d+)?박/, `${Math.abs(capacity - used)}박`);
   const assignedLyrics = measure.notes.reduce((sum, note) => sum + (note.pitch === null ? 0 : lyricSyllables(note.lyric ?? "").length), 0);
   const missingLyrics = Math.max(0, lyricSyllables(measure.lyric).length - assignedLyrics);
   const scoreMeasures = practice.scores[scoreIndex].measures;
@@ -48,7 +50,7 @@ export default function PracticeMeasureCard({
   const hasSound = measure.notes.some((note) => note.pitch !== null);
   const previewLabel = `${labelPrefix}${index + 1}마디 ${previewActive
     ? previewPreparing ? "준비 취소" : "연주 멈추기"
-    : "리듬 미리듣기"}`;
+    : step === "melody" ? "가락 미리 듣기" : "리듬 미리듣기"}`;
 
   return (
     <section className={`practice-measure-card${active ? " is-active" : ""}`}
@@ -63,7 +65,7 @@ export default function PracticeMeasureCard({
       </div>
 
       <PracticePlaybackIndicator notes={measure.notes} playingNoteId={playingNoteId}
-        active={previewActive} preparing={previewPreparing} />
+        active={previewActive || playbackActive} preparing={previewPreparing} />
 
       <PracticeEditors notes={measure.notes} meter={meter} step={step} inputMode={practice.inputMode}
         selectedNoteId={practice.selectedNoteId} playingNoteId={playingNoteId} disabled={disabled}
@@ -89,7 +91,7 @@ export default function PracticeMeasureCard({
 
       <p className={`practice-measure-validation ${validation.state}`}
         role={validation.state === "exact" ? "status" : "alert"}>
-        {validation.state === "exact" ? "박자가 딱 맞아요!" : `박자가 맞지 않아요. ${validation.message}`}
+        {validation.state === "exact" ? "박자가 딱 맞아요!" : `박자가 맞지 않아요. ${validationMessage}`}
       </p>
       {validation.state === "short" && measure.notes.length > 0 && (
         <button type="button" className="practice-fill-rest" disabled={disabled} onClick={() => practice.fillRests(index, scoreIndex)}>
@@ -101,7 +103,7 @@ export default function PracticeMeasureCard({
         data-testid={`${idPrefix}-measure-preview-${index}`} aria-label={previewLabel}
         disabled={!hasSound || (disabled && !previewActive)} onClick={onPreviewRhythm}>
         {previewActive ? <Square size={15} /> : <Volume2 size={16} />}
-        {previewLabel}
+        {previewActive ? previewPreparing ? "준비 취소" : "멈추기" : step === "melody" ? "미리 듣기" : "미리듣기"}
       </button>
 
       {step === "melody" && (

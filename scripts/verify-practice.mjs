@@ -31,12 +31,17 @@ try {
   const toolsBounds = await tools.boundingBox();
   const firstCardBounds = await card(0).boundingBox();
   assert.ok(toolsBounds.y + toolsBounds.height <= firstCardBounds.y);
-  for (const beats of [4, 3, 2, 1.5, 1, 0.5]) {
+  for (const beats of [4, 3, 2, 1.5, 1, 0.5, 0.25]) {
     const noteBounds = await tools.getByTestId(`practice-duration-${beats}`).boundingBox();
     const restBounds = await tools.getByTestId(`practice-rest-${beats}`).boundingBox();
     assert.ok(Math.abs(noteBounds.y - restBounds.y) < 1);
     assert.ok(restBounds.x >= noteBounds.x + noteBounds.width);
   }
+  assert.equal(await tools.getByTestId("practice-duration-0.25").locator("small").innerText(), "0.25박");
+  assert.equal(await tools.getByTestId("practice-duration-0.25").getByText("16분음표", { exact: true }).innerText(), "16분음표");
+  assert.equal(await tools.getByTestId("practice-rest-0.25").getByText("16분쉼표", { exact: true }).innerText(), "16분쉼표");
+  assert.equal(await page.getByTestId("practice-score-preview-0").innerText(), "악보1 미리듣기");
+  assert.equal(await page.getByTestId("practice-score-preview-0").isEnabled(), false);
   const fourMeasureLayout = await Promise.all(
     [0, 1, 2, 3].map((index) => card(index).boundingBox())
   );
@@ -45,6 +50,7 @@ try {
   // Listen to one entered beat while the remaining three measures are still empty.
   for (let index = 0; index < 4; index += 1) {
     assert.equal(await page.getByTestId(`practice-measure-preview-${index}`).isEnabled(), false);
+    assert.equal(await page.getByTestId(`practice-measure-preview-${index}`).innerText(), "미리듣기");
   }
   await page.getByLabel("연습 빠르기", { exact: true }).selectOption("60");
   await page.getByTestId("practice-measure-2").click();
@@ -58,7 +64,7 @@ try {
   assert.equal(await page.getByRole("button", { name: "리듬 미리듣기", exact: true }).isEnabled(), false);
   assert.equal(await page.getByRole("button", { name: "MP3 저장", exact: true }).isEnabled(), false);
   assert.equal(await page.getByRole("button", { name: "MP4 저장", exact: true }).isEnabled(), false);
-  assert.equal(await melodyTab.isEnabled(), false);
+  assert.equal(await melodyTab.isEnabled(), true);
   await page.getByTestId("practice-measure-preview-2").click();
   await page.getByRole("button", { name: "3마디 연주 멈추기", exact: true }).waitFor();
   const partialPlayback = await page.evaluate(() => {
@@ -74,7 +80,7 @@ try {
       saveDisabled: save.disabled,
       draft: JSON.parse(localStorage.getItem("maeum-melody-practice-v1"))
     };
-    if (result.stopLabel !== "3마디 연주 멈추기") throw new Error("마디 연주가 너무 일찍 끝났습니다.");
+    if (result.stopLabel !== "멈추기") throw new Error("마디 연주가 너무 일찍 끝났습니다.");
     preview.click();
     return result;
   });
@@ -96,13 +102,13 @@ try {
     const rhythmBounds = await card(index).locator(".practice-rhythm-timeline").boundingBox();
     const lyricBounds = await card(index).getByLabel(`${index + 1}마디 가사`, { exact: true }).boundingBox();
     assert.ok(lyricBounds.y >= rhythmBounds.y + rhythmBounds.height);
-    assert.equal(await melodyTab.isEnabled(), false);
+    assert.equal(await melodyTab.isEnabled(), true);
     await card(index).getByLabel(`${index + 1}마디 가사`, { exact: true }).fill("반짝별아");
     await page.getByTestId(`practice-measure-${index}`).click();
     for (let beat = 0; beat < 4; beat += 1) {
       await tools.getByTestId("practice-duration-1").click();
     }
-    assert.equal(await melodyTab.isEnabled(), index === 3);
+    assert.equal(await melodyTab.isEnabled(), true);
   }
   const workspaceBounds = await page.locator(".practice-workspace").boundingBox();
   const listenBounds = await page.locator(".practice-listen-card").boundingBox();
@@ -123,7 +129,7 @@ try {
   await tools.getByTestId("practice-duration-2").click();
   assert.match(await card(0).locator(".practice-measure-validation").innerText(), /맞지 않아요/);
   assert.equal(await page.getByRole("button", { name: "MP3 저장", exact: true }).isEnabled(), false);
-  assert.equal(await melodyTab.isEnabled(), false);
+  assert.equal(await melodyTab.isEnabled(), true);
   assert.equal(await page.getByRole("tab", { name: /리듬 만들기/ }).getAttribute("aria-selected"), "true");
   await tools.getByTestId("practice-delete-note").click();
   assert.deepEqual((await draft()).measures[0].notes, initial.measures[0].notes);

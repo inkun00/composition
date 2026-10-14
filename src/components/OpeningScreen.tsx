@@ -32,7 +32,7 @@ export default function OpeningScreen({ hasDraft, onStart, onContinue, onPractic
           </button>
           <button type="button" className="opening-practice action-button" onClick={onPractice}>
             <GraduationCap size={22} />
-            <span><strong>기능 연습하기</strong><small>리듬부터 가락까지, 한 마디씩 배워요</small></span>
+            <span><strong>기능 연습하기</strong><small>리듬이나 가락을 한 마디씩 만들어요</small></span>
             <ArrowRight size={18} />
           </button>
         </div>

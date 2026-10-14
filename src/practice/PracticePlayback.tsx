@@ -22,7 +22,7 @@ type PracticePlaybackProps = {
 export default function PracticePlayback({ draft, step, complete, audio, onConfigure, saving, videoMode,
   onVideoMode, onSaveSettings, onReturnToEditing }: PracticePlaybackProps) {
   const busy = audio.busy || audio.playing;
-  const separatePreviewActive = audio.previewMeasureIndex !== null || audio.previewRhythmMixing;
+  const separatePreviewActive = audio.previewScoreIndex !== null || audio.previewMeasureIndex !== null || audio.previewRhythmMixing;
   const wholePlaying = audio.playing && !separatePreviewActive;
   const allMeasures = [draft.measures, ...draft.rhythmLayers.map((layer) => layer.measures)].flat();
   const hasLyrics = allMeasures.some((measure) => lyricSyllables(measure.lyric).length > 0);

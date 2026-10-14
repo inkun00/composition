@@ -9,6 +9,7 @@ import type { PracticeAudioEvent, PracticeAudioInput, PracticeAudioTrack, Practi
 export {
   buildPracticeTimeline,
   practiceMeasureAudioInput,
+  practiceScoreAudioInput,
   practiceNoteAtTime,
   practiceNotesAtTime
 } from "./practiceAudioTimeline";

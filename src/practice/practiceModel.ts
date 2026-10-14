@@ -19,6 +19,7 @@ export const PRACTICE_DURATIONS: readonly {
   symbol: string;
   dotted?: boolean;
 }[] = [
+  { beats: 0.25, label: "16분음표 · 1/4박", symbol: "𝅘𝅥𝅯" },
   { beats: 0.5, label: "8분음표 · 반 박", symbol: "♪" },
   { beats: 1, label: "4분음표 · 1박", symbol: "♩" },
   { beats: 1.5, label: "점4분음표 · 1박 반", symbol: "♩·", dotted: true },
@@ -62,13 +63,13 @@ export function assignPracticeLyrics(notes: readonly NoteEvent[], lyric: string)
 }
 
 function draftRhythmSlots(totalSlots: number, syllableCount: number): number[] | null {
-  const allowed = PRACTICE_DURATIONS.map((duration) => duration.beats * 2);
+  const allowed = PRACTICE_DURATIONS.map((duration) => duration.beats * 4);
   const average = totalSlots / syllableCount;
   const memo = new Map<string, { slots: number[]; cost: number } | null>();
 
   function choose(remaining: number, count: number): { slots: number[]; cost: number } | null {
     if (count === 0) return remaining === 0 ? { slots: [], cost: 0 } : null;
-    if (remaining < count || remaining > count * 8) return null;
+    if (remaining < count || remaining > count * 16) return null;
     const key = `${remaining}:${count}`;
     if (memo.has(key)) return memo.get(key) ?? null;
     let best: { slots: number[]; cost: number } | null = null;
@@ -92,23 +93,23 @@ export function makeLyricRhythm(lyric: string, meter: Meter, idPrefix: string): 
     throw new Error("가사를 먼저 적어 주세요. 글자마다 리듬 음표를 만들어 드려요.");
   }
   const capacity = measureCapacity(meter);
-  const totalSlots = toNumber(capacity) * 2;
+  const totalSlots = toNumber(capacity) * 4;
   if (!Number.isSafeInteger(totalSlots) || totalSlots < 1) {
-    throw new Error("이 박자는 반 박 칸으로 만들 수 없어요. 다른 박자를 골라 주세요.");
+    throw new Error("이 박자는 1/4박 칸으로 만들 수 없어요. 다른 박자를 골라 주세요.");
   }
   if (syllables.length > totalSlots) {
-    throw new Error(`가사 ${syllables.length}글자는 이 마디에 모두 들어가지 않아요. 반 박 음표로 최대 ${totalSlots}글자를 넣을 수 있어요. 가사를 다음 마디에 나눠 적어 주세요.`);
+    throw new Error(`가사 ${syllables.length}글자는 이 마디에 모두 들어가지 않아요. 16분음표로 최대 ${totalSlots}글자를 넣을 수 있어요. 가사를 다음 마디에 나눠 적어 주세요.`);
   }
   const slots = draftRhythmSlots(totalSlots, syllables.length);
   if (!slots) {
     throw new Error("이 가사와 박자는 한 음표씩 맞추기 어려워요. 가사를 더 넣거나 마디를 나눠 주세요.");
   }
   return syllables.map((syllable, index) => {
-    const beats = slots[index] / 2;
+    const beats = slots[index] / 4;
     return {
       id: `${idPrefix}-${index + 1}`,
       pitch: 60,
-      duration: rational(slots[index], 2),
+      duration: rational(slots[index], 4),
       ...(beats === 1.5 || beats === 3 ? { dotted: true } : {}),
       lyric: syllable
     };

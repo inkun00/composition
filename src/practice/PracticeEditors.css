@@ -64,7 +64,7 @@
 
 .practice-duration-options {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -570,6 +570,18 @@
   font-size: 12px;
 }
 
+.practice-editors-compact .practice-sixteenth-block .practice-note-symbol {
+  font-size: 18px;
+}
+
+.practice-editors-compact .practice-sixteenth-block .practice-block-length {
+  display: none;
+}
+
+.practice-editors-compact .practice-sixteenth-block small {
+  font-size: 11px;
+}
+
 .practice-editors-compact .practice-melody-row {
   grid-template-columns: 48px minmax(0, 1fr);
   height: 36px;
@@ -601,7 +613,13 @@
   font-size: 13px;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1300px) {
+  .practice-duration-options {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
   .practice-duration-options {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }

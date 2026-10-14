@@ -7,6 +7,7 @@ import {
   encodePracticeMp3,
   exportPracticeMp4,
   practiceMeasureAudioInput,
+  practiceScoreAudioInput,
   practiceNotesAtTime,
   renderPracticeAudio,
   type PracticeAudioInput
@@ -167,6 +168,64 @@ describe("세 악보의 독립 리듬과 동시 연주", () => {
     expect(result.timeline.events).toEqual([]);
     expect(result.timeline.durationSeconds).toBe(0.5);
     expect(practiceNotesAtTime(result, 0)).toEqual(["b-a"]);
+  });
+
+  it("악보 전체 듣기는 해당 악기의 모든 마디만 순서대로 연주하고 빈 마디의 시간을 지킨다", async () => {
+    const measures = [{ notes: [] }, layered.rhythmLayers![0].measures[0], { notes: [] }];
+    const source = { ...layered, rhythmLayers: [{ ...layered.rhythmLayers![0], measures }] };
+    const selected = practiceScoreAudioInput(source, 1);
+    const result = await renderPracticeAudio(selected);
+    expect(selected.step).toBe("rhythm");
+    expect(selected.rhythmLayers).toBeUndefined();
+    expect(mocks.load.mock.calls.map((args) => args[2])).toEqual(["clarinet"]);
+    expect(mocks.queue.mock.calls.map((args) => [args[0].instrumentId, ...args.slice(3, 6)])).toEqual([
+      ["clarinet", 72, 2, 0.25], ["clarinet", 72, 2.25, 0.25]
+    ]);
+    expect(result.buffer.duration).toBe(6);
+    expect(result.layerTimelines).toBeUndefined();
+    expect(practiceNotesAtTime(result, 0)).toEqual([]);
+    expect(practiceNotesAtTime(result, 2.1)).toEqual(["b-a"]);
+    expect(practiceNotesAtTime(result, 2.3)).toEqual(["b-b"]);
+    expect(practiceNotesAtTime(result, 4.1)).toEqual([]);
+    expect(source.rhythmLayers[0].measures).toBe(measures);
+    expect(measures[0].notes).toEqual([]);
+    expect(measures[1].notes).toHaveLength(2);
+    expect(measures[2].notes).toEqual([]);
+  });
+
+  it("첫 악보 전체 듣기는 현재 가락·리듬 모드의 음높이와 악기를 사용한다", async () => {
+    const selected = practiceScoreAudioInput(layered, 0);
+    await renderPracticeAudio(selected);
+    expect(selected.step).toBe("melody");
+    expect(mocks.load.mock.calls.map((args) => args[2])).toEqual(["flute"]);
+    expect(mocks.queue.mock.calls.map((args) => [args[3], args[4]])).toEqual([[60, 0], [64, 2]]);
+    mocks.load.mockClear();
+    mocks.queue.mockClear();
+    await renderPracticeAudio(practiceScoreAudioInput({ ...layered, step: "rhythm" }, 0));
+    expect(mocks.load.mock.calls.map((args) => args[2])).toEqual(["piano"]);
+    expect(mocks.queue.mock.calls.map((args) => [args[3], args[4]])).toEqual([[72, 0], [72, 2]]);
+  });
+
+  it("6/8 빈 마디를 유지하고 초과 마디 다음에도 선택한 악보의 순서를 보존한다", () => {
+    const measures = [layered.measures[0], { notes: [] }, layered.measures[1]];
+    const timeline = buildPracticeTimeline(practiceScoreAudioInput({ ...layered, measures, meter: { beats: 6, beatUnit: 8 } }));
+    expect(timeline.events.filter((event) => event.pitch !== null).map((event) => event.startSeconds)).toEqual([0, 3]);
+    expect(timeline.durationSeconds).toBe(4.5);
+    const overflowing = buildPracticeTimeline(practiceScoreAudioInput({
+      ...layered, measures: [{ notes: [note("over", 5)] }, layered.measures[1]]
+    }));
+    expect(overflowing.events.find((event) => event.noteId === "main-b")?.startSeconds).toBe(2.5);
+    expect(overflowing.durationSeconds).toBe(4.5);
+  });
+
+  it("선택한 악보가 비어 있으면 다른 악보의 소리로 대신하지 않고 안내한다", () => {
+    expect(() => practiceScoreAudioInput({ ...layered, measures: [{ notes: [] }] }, 0)).toThrow("악보1에 소리 나는 음표");
+    expect(() => practiceScoreAudioInput({
+      ...layered, rhythmLayers: [{ ...layered.rhythmLayers![0], measures: [{ notes: [note("rest", 4, null)] }] }]
+    }, 1)).toThrow("악보2에 소리 나는 음표");
+    for (const index of [-1, 0.5, 3, NaN]) {
+      expect(() => practiceScoreAudioInput(layered, index)).toThrow("악보를 다시");
+    }
   });
 
   it("세 소리의 피크를 한 번에 줄여 클리핑 없이 좌우 비율을 보존한다", async () => {

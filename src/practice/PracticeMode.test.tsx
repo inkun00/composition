@@ -18,6 +18,7 @@ const audio = vi.hoisted(() => ({
   progress: 0,
   preview: vi.fn(),
   previewMeasure: vi.fn(),
+  previewScore: vi.fn(),
   previewRhythmMix: vi.fn(),
   save: vi.fn(),
   stop: vi.fn()
@@ -71,8 +72,8 @@ describe("악보를 겹쳐 리듬 만들기", () => {
       const tools = container?.querySelector(`[data-testid="practice-score-tools-${scoreIndex}"]`) as Element;
       expect(tools.closest(".practice-score-workspace")?.getAttribute("data-testid"))
         .toBe(`practice-score-workspace-${scoreIndex}`);
-      expect(tools.querySelectorAll('[data-testid^="practice-duration-"]')).toHaveLength(6);
-      expect(tools.querySelectorAll('[data-testid^="practice-rest-"]')).toHaveLength(6);
+      expect(tools.querySelectorAll('[data-testid^="practice-duration-"]')).toHaveLength(7);
+      expect(tools.querySelectorAll('[data-testid^="practice-rest-"]')).toHaveLength(7);
     }
     expect(container?.querySelector('[data-testid="practice-add-note"]')).toBeNull();
     expect(container?.querySelector('[data-testid="practice-add-rest"]')).toBeNull();
@@ -196,7 +197,8 @@ describe("악보를 겹쳐 리듬 만들기", () => {
     audio.previewMeasureIndex = 0;
     rerender();
     const extraPreview = testButton("practice-score-1-measure-preview-0");
-    expect(extraPreview.textContent).toContain("2번 악보 1마디 준비 취소");
+    expect(extraPreview.textContent?.trim()).toBe("준비 취소");
+    expect(extraPreview.getAttribute("aria-label")).toBe("2번 악보 1마디 준비 취소");
     expect(extraPreview.disabled).toBe(false);
     expect(testButton("practice-measure-preview-0").disabled).toBe(true);
     expect(button("리듬 함께 듣기").disabled).toBe(true);
@@ -205,18 +207,18 @@ describe("악보를 겹쳐 리듬 만들기", () => {
     expect(audio.previewMeasure).not.toHaveBeenCalled();
   });
 
-  it("모든 악보의 박자를 완성해야 가락과 저장을 열고 추가 악보는 가락 단계에서도 리듬으로 수정한다", () => {
+  it("가락은 추가 악보를 완성하기 전에도 열고 저장은 모든 악보 완성을 기다린다", () => {
     mount();
     changeValue("연습할 마디 수", "1");
     completeMeasure(0);
     click(button("악보 추가하기"));
     click(button("악보 추가하기"));
     const melodyTab = container?.querySelector<HTMLButtonElement>("#practice-melody-tab") as HTMLButtonElement;
-    expect(melodyTab.disabled).toBe(true);
+    expect(melodyTab.disabled).toBe(false);
     expect(button("MP3 저장").disabled).toBe(true);
     expect(button("MP4 저장").disabled).toBe(true);
     completeScoreMeasure(1, 0, "작은새야");
-    expect(melodyTab.disabled).toBe(true);
+    expect(melodyTab.disabled).toBe(false);
     completeScoreMeasure(2, 0, "노래하자");
     expect(melodyTab.disabled).toBe(false);
     expect(button("MP3 저장").disabled).toBe(false);
@@ -425,8 +427,8 @@ describe("기능 연습하기 전체 흐름", () => {
     expect(button("리듬 미리듣기").disabled).toBe(true);
     expect(button("MP3 저장").disabled).toBe(true);
     expect(button("MP4 저장").disabled).toBe(true);
-    expect(button("가락 만들기로").disabled).toBe(true);
-    expect(container?.querySelector<HTMLButtonElement>("#practice-melody-tab")?.disabled).toBe(true);
+    expect(button("가락 만들기로").disabled).toBe(false);
+    expect(container?.querySelector<HTMLButtonElement>("#practice-melody-tab")?.disabled).toBe(false);
   });
 
   it("소리 나는 음표가 있으면 초과 박자도 들을 수 있고 빈 마디와 쉼표뿐인 마디는 듣기를 막는다", () => {
@@ -460,7 +462,7 @@ describe("기능 연습하기 전체 흐름", () => {
     audio.previewScoreIndex = 0;
     rerender();
     const cancel = testButton("practice-measure-preview-1");
-    expect(cancel.textContent).toContain("2마디 준비 취소");
+    expect(cancel.textContent?.trim()).toBe("준비 취소");
     expect(cancel.disabled).toBe(false);
     expect(testButton("practice-measure-preview-0").disabled).toBe(true);
     expect(button("리듬 미리듣기").disabled).toBe(true);
@@ -473,7 +475,7 @@ describe("기능 연습하기 전체 흐름", () => {
     audio.playing = true;
     rerender();
     const stop = testButton("practice-measure-preview-1");
-    expect(stop.textContent).toContain("2마디 연주 멈추기");
+    expect(stop.textContent?.trim()).toBe("멈추기");
     expect(stop.disabled).toBe(false);
     expect(testButton("practice-measure-preview-0").disabled).toBe(true);
     expect(button("리듬 미리듣기").disabled).toBe(true);
@@ -495,7 +497,7 @@ describe("기능 연습하기 전체 흐름", () => {
     expect(testButton("practice-measure-preview-1").disabled).toBe(true);
   });
 
-  it("가락 단계에서 리듬을 미완성으로 고친 뒤에도 해당 마디의 리듬 듣기를 유지한다", () => {
+  it("가락 단계에서 박자를 미완성으로 고친 뒤에도 해당 마디의 가락 듣기를 유지한다", () => {
     mount();
     completeOneMeasure();
     click(container?.querySelector<HTMLElement>("#practice-melody-tab") as HTMLElement);
@@ -550,7 +552,7 @@ describe("기능 연습하기 전체 흐름", () => {
     expect(audio.save.mock.calls).toEqual([["mp3"], ["mp4"]]);
   });
 
-  it("설정한 네 마디를 함께 보여 주고 모든 마디의 리듬을 완성해야 가락 단계로 넘어간다", () => {
+  it("설정한 네 마디를 함께 보여 주고 미완성 상태에서도 가락 단계로 넘어간다", () => {
     mount();
     changeValue("연습할 마디 수", "4");
     expect(container?.querySelectorAll(".practice-measure-card")).toHaveLength(4);
@@ -562,17 +564,17 @@ describe("기능 연습하기 전체 흐름", () => {
     }
     completeMeasure(0);
     expect(container?.textContent).toContain("1 / 4마디 박자 완성");
-    expect(melodyTab.disabled).toBe(true);
+    expect(melodyTab.disabled).toBe(false);
     click(melodyTab);
-    expect(container?.querySelector("#practice-rhythm-tab")?.getAttribute("aria-selected")).toBe("true");
+    expect(melodyTab.getAttribute("aria-selected")).toBe("true");
     expect(button("MP3 저장").disabled).toBe(true);
     expect(button("MP4 저장").disabled).toBe(true);
-    expect(button("리듬 미리듣기").disabled).toBe(true);
+    expect(button("가락 미리듣기").disabled).toBe(true);
     click(button("MP3 저장"));
     expect(audio.save).not.toHaveBeenCalled();
     for (let index = 1; index < 4; index += 1) {
       completeMeasure(index);
-      expect(melodyTab.disabled).toBe(index < 3);
+      expect(melodyTab.disabled).toBe(false);
     }
     expect(container?.textContent).toContain("4 / 4마디 박자 완성");
     click(melodyTab);

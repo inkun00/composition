@@ -1,5 +1,5 @@
 import { measureCapacity } from "../music/meter";
-import { toNumber } from "../music/rational";
+import { compare, subtract, sum, toNumber } from "../music/rational";
 import type { NoteEvent } from "../music/types";
 import type {
   PracticeAudioEvent,
@@ -9,30 +9,64 @@ import type {
   PracticeTimeline
 } from "./practiceAudioTypes";
 
+function selectedScore(
+  input: PracticeAudioInput,
+  scoreIndex: number
+) {
+  if (!Number.isInteger(scoreIndex) || scoreIndex < 0 || scoreIndex > (input.rhythmLayers?.length ?? 0)) {
+    throw new Error("미리 들을 악보를 다시 골라 주세요.");
+  }
+  const layer = scoreIndex === 0 ? null : input.rhythmLayers![scoreIndex - 1];
+  return layer;
+}
+
+/** A score preview keeps empty bars silent and excludes every other instrument. */
+export function practiceScoreAudioInput(input: PracticeAudioInput, scoreIndex = 0): PracticeAudioInput {
+  const layer = selectedScore(input, scoreIndex);
+  const measures = layer?.measures ?? input.measures;
+  if (!measures.some((measure) => measure.notes.some((note) => note.pitch !== null))) {
+    throw new Error(`악보${scoreIndex + 1}에 소리 나는 음표를 한 개 이상 넣은 뒤 미리 들어 보세요.`);
+  }
+  const capacity = measureCapacity(input.meter ?? { beats: 4, beatUnit: 4 });
+  if (!Number.isFinite(toNumber(capacity)) || toNumber(capacity) <= 0) {
+    throw new Error("박자표를 올바르게 정한 뒤 다시 시도해 주세요.");
+  }
+  return {
+    ...input,
+    measures: measures.map((measure) => {
+      for (const note of measure.notes) noteBeats(note);
+      const used = sum(measure.notes.map((note) => note.duration));
+      if (compare(used, capacity) >= 0) return measure;
+      // A playback-only rest has no UI note ID, so silent gaps stay unhighlighted.
+      return { notes: [...measure.notes, { id: "", pitch: null, duration: subtract(capacity, used) }] };
+    }),
+    rhythmLayers: undefined,
+    rhythmInstrumentId: layer?.instrumentId ?? input.rhythmInstrumentId,
+    step: layer ? "rhythm" : input.step
+  };
+}
+
 /** A bar preview uses only the chosen score, without changing or padding it. */
 export function practiceMeasureAudioInput(
   input: PracticeAudioInput,
   index: number,
   scoreIndex = 0
 ): PracticeAudioInput {
-  if (!Number.isInteger(scoreIndex) || scoreIndex < 0 || scoreIndex > (input.rhythmLayers?.length ?? 0)) {
-    throw new Error("리듬을 들을 악보를 다시 골라 주세요.");
-  }
-  const layer = scoreIndex === 0 ? null : input.rhythmLayers![scoreIndex - 1];
+  const layer = selectedScore(input, scoreIndex);
   const measures = layer?.measures ?? input.measures;
   if (!Number.isInteger(index) || index < 0 || index >= measures.length) {
-    throw new Error("리듬을 들을 마디를 다시 골라 주세요.");
+    throw new Error("미리 들을 마디를 다시 골라 주세요.");
   }
   const measure = measures[index];
   if (!measure.notes.some((note) => note.pitch !== null)) {
-    throw new Error(`${index + 1}마디에 소리 나는 음표를 한 개 이상 넣은 뒤 리듬을 들어 보세요.`);
+    throw new Error(`${index + 1}마디에 소리 나는 음표를 한 개 이상 넣은 뒤 미리 들어 보세요.`);
   }
   return {
     ...input,
     measures: [measure],
     rhythmLayers: undefined,
     rhythmInstrumentId: layer?.instrumentId ?? input.rhythmInstrumentId,
-    step: "rhythm"
+    step: layer ? "rhythm" : input.step
   };
 }
 
@@ -132,7 +166,7 @@ export function buildPracticeTimeline(input: PracticeAudioInput): PracticeTimeli
 }
 
 export function practiceNoteAtTime(timeline: PracticeTimeline, seconds: number): string | null {
-  return timeline.events.find((event) => seconds >= event.startSeconds && seconds < event.endSeconds)?.noteId ?? null;
+  return timeline.events.find((event) => seconds >= event.startSeconds && seconds < event.endSeconds)?.noteId || null;
 }
 
 export function practiceNotesAtTime(rendered: PracticeRenderedAudio, seconds: number): string[] {
