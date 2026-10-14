@@ -224,7 +224,8 @@ describe("16분음표와 쉼표 입력", () => {
       expect(noteButton.querySelector("small")?.textContent).toBe("0.25박");
       expect(restButton.textContent).toContain("16분쉼표");
       expect(restButton.querySelector("small")?.textContent).toBe("0.25박");
-      expect(noteButton.parentElement).toBe(restButton.parentElement);
+      expect(noteButton.closest('[role="group"]')?.getAttribute("aria-label")).toBe("음표 넣기");
+      expect(restButton.closest('[role="group"]')?.getAttribute("aria-label")).toBe("쉼표 넣기");
       click(noteButton);
       click(restButton);
       const message = scoreCard(scoreIndex, 0).querySelector(".practice-measure-validation")?.textContent;

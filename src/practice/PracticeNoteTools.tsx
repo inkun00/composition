@@ -54,15 +54,17 @@ export default function PracticeNoteTools({
     <div className="practice-editors practice-note-tools">
       {!rhythmLocked && <div className="practice-rhythm-tools">
         <div className="practice-duration-options" role="group" aria-label="음표와 쉼표 넣기">
-          {PRACTICE_DURATIONS.map((duration) => {
-            const noteName = duration.label.split(" · ")[0];
-            const restName = noteName.replace("음표", "쉼표");
-            return (
-              <div className="practice-duration-pair" key={duration.beats}>
-                {[false, true].map((rest) => {
+          {[false, true].map((rest) => (
+            <div className="practice-duration-group" key={String(rest)} role="group"
+              aria-label={rest ? "쉼표 넣기" : "음표 넣기"}>
+              <strong className="practice-duration-heading">{rest ? "쉼표" : "음표"}</strong>
+              <div className="practice-duration-buttons">
+                {PRACTICE_DURATIONS.map((duration) => {
+                  const noteName = duration.label.split(" · ")[0];
+                  const restName = noteName.replace("음표", "쉼표");
                   const active = nextDuration === duration.beats && nextRest === rest;
                   return (
-                    <button type="button" key={String(rest)} disabled={disabled}
+                    <button type="button" key={duration.beats} disabled={disabled}
                       className={[rest ? "practice-rest-option" : "", active ? "is-active" : ""].filter(Boolean).join(" ")}
                       aria-pressed={active}
                       aria-label={`${rest ? restName : noteName}, ${beatText(duration.beats)}박 넣기`}
@@ -75,8 +77,8 @@ export default function PracticeNoteTools({
                   );
                 })}
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
         <div className="practice-note-actions">
           <button type="button" disabled={disabled || !selected} data-testid="practice-delete-note"

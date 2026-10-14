@@ -35,12 +35,27 @@ try {
   const toolsBounds = await tools.boundingBox();
   const firstCardBounds = await card(0).boundingBox();
   assert.ok(toolsBounds.y + toolsBounds.height <= firstCardBounds.y);
-  for (const beats of [4, 3, 2, 1.5, 1, 0.5, 0.25]) {
-    const noteBounds = await tools.getByTestId(`practice-duration-${beats}`).boundingBox();
-    const restBounds = await tools.getByTestId(`practice-rest-${beats}`).boundingBox();
-    assert.ok(Math.abs(noteBounds.y - restBounds.y) < 1);
-    assert.ok(restBounds.x >= noteBounds.x + noteBounds.width);
+  for (const width of [1440, 1280, 900, 620, 390]) {
+    await page.setViewportSize({ width, height: 1080 });
+    const noteGroup = tools.getByRole("group", { name: "음표 넣기", exact: true });
+    const restGroup = tools.getByRole("group", { name: "쉼표 넣기", exact: true });
+    const noteGroupBounds = await noteGroup.boundingBox();
+    const restGroupBounds = await restGroup.boundingBox();
+    assert.ok(noteGroupBounds.x + noteGroupBounds.width <= restGroupBounds.x, `왼쪽 음표·오른쪽 쉼표 묶음: ${width}px`);
+    for (const [group, prefix] of [[noteGroup, "practice-duration"], [restGroup, "practice-rest"]]) {
+      assert.deepEqual(await group.locator(".practice-duration-buttons button").evaluateAll((buttons) =>
+        buttons.map((button) => button.dataset.testid)),
+      [0.25, 0.5, 1, 1.5, 2, 3, 4].map((beats) => `${prefix}-${beats}`));
+    }
+    for (const beats of [0.25, 0.5, 1, 1.5, 2, 3, 4]) {
+      const noteBounds = await noteGroup.getByTestId(`practice-duration-${beats}`).boundingBox();
+      const restBounds = await restGroup.getByTestId(`practice-rest-${beats}`).boundingBox();
+      assert.ok(Math.abs(noteBounds.y - restBounds.y) < 1, `같은 박자 좌우 정렬: ${width}px, ${beats}박`);
+      assert.ok(noteBounds.x >= 0 && restBounds.x + restBounds.width <= width, `음표·쉼표 버튼 잘림: ${width}px`);
+    }
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width);
   }
+  await page.setViewportSize({ width: 1440, height: 1080 });
   assert.equal(await tools.getByTestId("practice-duration-0.25").locator("small").innerText(), "0.25박");
   assert.equal(await tools.getByTestId("practice-duration-0.25").getByText("16분음표", { exact: true }).innerText(), "16분음표");
   assert.equal(await tools.getByTestId("practice-rest-0.25").getByText("16분쉼표", { exact: true }).innerText(), "16분쉼표");

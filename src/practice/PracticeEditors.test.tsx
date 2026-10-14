@@ -334,6 +334,29 @@ describe("리듬과 가락 연습 입력", () => {
     expect(container?.querySelector(".practice-grid-content")).toBeNull();
   });
 
+  it.each(["rhythm", "melody"] as const)("%s의 음표는 왼쪽 묶음에, 쉼표는 오른쪽 묶음에 각각 짧은 박자부터 배치한다", (step) => {
+    const props = mount({ step }, true);
+    const groups = [...container!.querySelectorAll<HTMLElement>(".practice-duration-group")];
+    expect(groups.map((group) => group.getAttribute("aria-label"))).toEqual(["음표 넣기", "쉼표 넣기"]);
+    expect(groups.every((group) => group.getAttribute("role") === "group")).toBe(true);
+    expect(groups.map((group) => group.querySelector("strong")?.textContent)).toEqual(["음표", "쉼표"]);
+    const beats = [0.25, 0.5, 1, 1.5, 2, 3, 4];
+    for (const [index, prefix] of ["practice-duration", "practice-rest"].entries()) {
+      const buttons = [...groups[index].querySelectorAll<HTMLButtonElement>(".practice-duration-buttons button")];
+      expect(buttons.map((entry) => entry.dataset.testid)).toEqual(beats.map((duration) => `${prefix}-${duration}`));
+      expect(buttons.map((entry) => entry.querySelector("small")?.textContent)).toEqual(beats.map((duration) => `${duration}박`));
+      for (const [buttonIndex, entry] of buttons.entries()) {
+        act(() => entry.click());
+        expect(props.onAdd).toHaveBeenLastCalledWith(beats[buttonIndex], index === 0 ? 60 : null,
+          [1.5, 3].includes(beats[buttonIndex]) ? true : undefined);
+        expect(entry.getAttribute("aria-pressed")).toBe("true");
+      }
+    }
+    expect(container?.querySelectorAll(".practice-duration-options button")).toHaveLength(14);
+    expect(props.onAdd).toHaveBeenCalledTimes(14);
+    expect(props.onDuration).not.toHaveBeenCalled();
+  });
+
   it("작은 마디 칸은 도구를 중복하지 않고 공유 길이로 빈칸을 채우며 음표별 가사를 입력한다", () => {
     const props = mount({
       notes: [

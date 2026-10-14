@@ -215,8 +215,8 @@ try {
   const compactDesktop = await page.evaluate(() => ({
     viewport: window.innerWidth,
     pageWidth: document.documentElement.scrollWidth,
-    paletteButtons: [...document.querySelectorAll(".practice-duration-pair button")].length,
-    palettesFit: [...document.querySelectorAll(".practice-duration-pair button")].every((button) => {
+    paletteButtons: [...document.querySelectorAll(".practice-duration-buttons button")].length,
+    palettesFit: [...document.querySelectorAll(".practice-duration-buttons button")].every((button) => {
       const bounds = button.getBoundingClientRect();
       return bounds.width > 0 && bounds.left >= 0 && bounds.right <= window.innerWidth;
     })
@@ -336,7 +336,7 @@ try {
   const mobile = await page.evaluate(() => ({
     viewport: window.innerWidth,
     pageWidth: document.documentElement.scrollWidth,
-    palettesFit: [...document.querySelectorAll(".practice-duration-pair button")].every((button) => {
+    palettesFit: [...document.querySelectorAll(".practice-duration-buttons button")].every((button) => {
       const bounds = button.getBoundingClientRect();
       return bounds.width > 0 && bounds.left >= 0 && bounds.right <= window.innerWidth;
     }),

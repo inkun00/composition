@@ -267,10 +267,10 @@
 }
 
 .practice-shell .practice-duration-options {
-  gap: 6px;
+  gap: 14px;
 }
 
-.practice-shell .practice-duration-pair > button {
+.practice-shell .practice-duration-buttons > button {
   grid-template-columns: 24px minmax(0, 1fr);
   grid-template-rows: auto auto;
   align-content: center;
@@ -284,7 +284,7 @@
   font-size: 12px;
 }
 
-.practice-shell .practice-duration-pair > button > span:not(.practice-note-symbol) {
+.practice-shell .practice-duration-buttons > button > span:not(.practice-note-symbol) {
   overflow-wrap: normal;
   word-break: keep-all;
 }
@@ -295,7 +295,7 @@
   line-height: 1;
 }
 
-.practice-shell .practice-duration-pair > button.is-active {
+.practice-shell .practice-duration-buttons > button.is-active {
   border-color: #bd8f17;
   background: var(--practice-yellow);
   box-shadow: none;
@@ -679,7 +679,7 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .practice-shell .practice-duration-pair > button {
+  .practice-shell .practice-duration-buttons > button {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto auto auto;
     justify-items: center;
