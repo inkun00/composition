@@ -1,34 +1,18 @@
 import { useState, type CSSProperties } from "react";
 import ScoreMeasure from "../components/ScoreMeasure";
-import { measureCapacity, validateMeasure, type Meter } from "../music/meter";
+import { measureCapacity, validateMeasure } from "../music/meter";
 import { toNumber } from "../music/rational";
 import { pitchName, positionNotes, type PositionedNote } from "../music/score";
 import { accidentalSymbol, staffDegreeForPitch } from "../music/accidental";
 import type { NoteEvent } from "../music/types";
 import { PRACTICE_DURATIONS, PRACTICE_PITCHES } from "./practiceModel";
+import PracticeNoteTools from "./PracticeNoteTools";
+import type { PracticeEditorsProps } from "./practiceEditorTypes";
 import "./PracticeEditors.css";
 import "./PracticeScore.css";
 
-export type PracticeEditorsProps = {
-  notes: readonly NoteEvent[];
-  meter: Meter;
-  step: "rhythm" | "melody";
-  inputMode: "grid" | "score";
-  selectedNoteId: string | null;
-  playingNoteId?: string | null;
-  disabled?: boolean;
-  showTools?: boolean;
-  showSummary?: boolean;
-  compact?: boolean;
-  appendDuration?: number;
-  onAppendDurationChange?: (beats: number) => void;
-  onNoteLyric?: (id: string, lyric: string) => void;
-  onSelectNote: (id: string) => void;
-  onPitch: (id: string, pitch: number) => void;
-  onDuration: (id: string, beats: number, dotted?: boolean) => void;
-  onDelete: (id: string) => void;
-  onAdd: (beats: number, pitch: number | null, dotted?: boolean) => void;
-};
+export type { PracticeEditorsProps } from "./practiceEditorTypes";
+export { default as PracticeNoteTools } from "./PracticeNoteTools";
 
 type TimelineProps = {
   slots: number;
@@ -235,107 +219,14 @@ function MelodyGrid({ notes, slots, capacity, selectedNoteId, playingNoteId, dis
   );
 }
 
-type NoteToolsProps = PracticeEditorsProps & {
-  newDuration: number;
-  onNewDuration: (beats: number) => void;
-};
-
-function NoteTools({
-  notes, step, inputMode, selectedNoteId, disabled = false,
-  onPitch, onDuration, onDelete, onAdd, newDuration, onNewDuration
-}: NoteToolsProps) {
-  const selected = notes.find((note) => note.id === selectedNoteId);
-  const durationChoice = PRACTICE_DURATIONS.find((duration) => duration.beats === newDuration);
-  const selectedDuration = step === "melody" && selected ? toNumber(selected.duration) : newDuration;
-  const append = (rest = false) => onAdd(newDuration, rest ? null : 60, durationChoice?.dotted);
-
-  function moveSelectedPitch(direction: number) {
-    if (!selected || selected.pitch === null || disabled) return;
-    const next = inputMode === "score" ? Math.max(60, Math.min(72, selected.pitch + direction))
-      : [...PRACTICE_PITCHES].sort((left, right) => direction * (left.pitch - right.pitch))
-        .find((entry) => direction * (entry.pitch - selected.pitch!) > 0)?.pitch ?? selected.pitch;
-    onPitch(selected.id, next);
-  }
-
-  return (
-    <>
-      <div className="practice-rhythm-tools">
-        <div className="practice-duration-options" role="group" aria-label="음표 길이 선택">
-          {PRACTICE_DURATIONS.map((duration) => (
-            <button type="button" key={duration.beats} disabled={disabled}
-              className={selectedDuration === duration.beats ? "is-active" : ""}
-              aria-pressed={selectedDuration === duration.beats}
-              aria-label={`${duration.label.split(" · ")[0]}, ${beatText(duration.beats)}박`}
-              data-testid={`practice-duration-${duration.beats}`}
-              onClick={() => {
-                onNewDuration(duration.beats);
-                if (step === "melody" && selected) onDuration(selected.id, duration.beats, duration.dotted);
-              }}>
-              <span className="practice-note-symbol" aria-hidden="true">{duration.symbol}</span>
-              <span>{duration.label.split(" · ")[0]}</span>
-              <small>{beatText(duration.beats)}박</small>
-            </button>
-          ))}
-        </div>
-        <div className="practice-note-actions">
-          <button type="button" disabled={disabled} data-testid="practice-add-note"
-            aria-label={`${beatText(newDuration)}박 음표 추가`} onClick={() => append()}>
-            + 음표
-          </button>
-          <button type="button" disabled={disabled} data-testid="practice-add-rest"
-            aria-label={`${beatText(newDuration)}박 쉼표 추가`} onClick={() => append(true)}>
-            + 쉼표
-          </button>
-          <button type="button" disabled={disabled || !selected} data-testid="practice-delete-note"
-            className="practice-delete-note" aria-label="선택한 음표·쉼표 삭제" onClick={() => selected && onDelete(selected.id)}>
-            삭제
-          </button>
-        </div>
-      </div>
-      {step === "melody" && (
-        <div className="practice-melody-tools">
-          <div className="practice-pitch-options" role="group" aria-label="선택한 음표의 음높이">
-            {PRACTICE_PITCHES.map((entry) => (
-              <button type="button" key={entry.pitch} disabled={disabled || !selected || selected.pitch === null}
-                style={{ backgroundColor: entry.color }} aria-pressed={selected?.pitch === entry.pitch}
-                data-testid={`practice-pitch-${entry.pitch}`} aria-label={`선택한 음표를 ${entry.label}로 바꾸기`}
-                onClick={() => selected && selected.pitch !== null && onPitch(selected.id, entry.pitch)}>{entry.label}</button>
-            ))}
-          </div>
-          <div className="practice-pitch-navigation">
-            <span>{selected ? `${notes.findIndex((note) => note.id === selected.id) + 1}번째 ${noteLabel(selected)} 선택` : "먼저 음표를 선택해 주세요."}</span>
-            <button type="button" disabled={disabled || !selected || selected.pitch === null || selected.pitch <= 60}
-              onClick={() => moveSelectedPitch(-1)} aria-label={inputMode === "score" ? "선택한 음표 반음 낮추기" : "선택한 음표 한 음 낮추기"}>↓ {inputMode === "score" ? "반음" : "한 음"} 낮게</button>
-            <button type="button" disabled={disabled || !selected || selected.pitch === null || selected.pitch >= 72}
-              onClick={() => moveSelectedPitch(1)} aria-label={inputMode === "score" ? "선택한 음표 반음 높이기" : "선택한 음표 한 음 높이기"}>↑ {inputMode === "score" ? "반음" : "한 음"} 높게</button>
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
-
-export function PracticeNoteTools(props: PracticeEditorsProps) {
-  const [newDuration, setNewDuration] = useState(1);
-  const changeDuration = (beats: number) => {
-    setNewDuration(beats);
-    props.onAppendDurationChange?.(beats);
-  };
-
-  return (
-    <div className="practice-editors practice-note-tools">
-      <NoteTools {...props} newDuration={props.appendDuration ?? newDuration} onNewDuration={changeDuration} />
-    </div>
-  );
-}
-
 export default function PracticeEditors({
   notes, meter, step, inputMode, selectedNoteId, playingNoteId, disabled = false,
   showTools = true, showSummary = true, compact = false,
-  appendDuration, onAppendDurationChange, onNoteLyric,
+  appendDuration, appendRest, onAppendDurationChange, onAppendRestChange, onNoteLyric,
   onSelectNote, onPitch, onDuration, onDelete, onAdd
 }: PracticeEditorsProps) {
   const [newDuration, setNewDuration] = useState(1);
+  const [newRest, setNewRest] = useState(false);
   const positioned = positionNotes(notes);
   const total = notes.reduce((sum, note) => sum + toNumber(note.duration), 0);
   const capacity = toNumber(measureCapacity(meter));
@@ -345,11 +236,16 @@ export default function PracticeEditors({
   const gridMinWidth = slots * (compact ? 20 : 64) + pitchLabelWidth;
   const scoreMinWidth = Math.max(compact ? 200 : 580, notes.length * (compact ? 20 : 72));
   const nextDuration = appendDuration ?? newDuration;
+  const nextRest = appendRest ?? newRest;
   const durationChoice = PRACTICE_DURATIONS.find((duration) => duration.beats === nextDuration);
-  const append = () => onAdd(nextDuration, 60, durationChoice?.dotted);
+  const append = () => onAdd(nextDuration, nextRest ? null : 60, durationChoice?.dotted);
   const changeDuration = (beats: number) => {
     setNewDuration(beats);
     onAppendDurationChange?.(beats);
+  };
+  const changeRest = (rest: boolean) => {
+    setNewRest(rest);
+    onAppendRestChange?.(rest);
   };
   const lyricTimeline = (
     <LyricTimeline notes={positioned} slots={slots} capacity={capacity}
@@ -373,10 +269,11 @@ export default function PracticeEditors({
       {showTools && (
         <>
           {meter.beatUnit === 8 && <p className="practice-editor-help">6/8박자 · 1칸 = 8분음표</p>}
-          <NoteTools notes={notes} meter={meter} step={step} inputMode={inputMode}
+          <PracticeNoteTools notes={notes} meter={meter} step={step} inputMode={inputMode}
             selectedNoteId={selectedNoteId} disabled={disabled} onSelectNote={onSelectNote}
             onPitch={onPitch} onDuration={onDuration} onDelete={onDelete} onAdd={onAdd}
-            newDuration={nextDuration} onNewDuration={changeDuration} />
+            appendDuration={nextDuration} appendRest={nextRest}
+            onAppendDurationChange={changeDuration} onAppendRestChange={changeRest} />
         </>
       )}
 

@@ -3,7 +3,7 @@ import { SUPPORTED_METERS, validateMeasure } from "../music/meter";
 import {
   button, changeInput, changeValue, click, completeMeasure, completeOneMeasure,
   completeScoreMeasure, container, latestAudioInput, measureCard, mount, placeNote,
-  rerender, savedDraft, scoreCard, testButton, unmount
+  rerender, savedDraft, scoreButton, scoreCard, testButton, unmount
 } from "./PracticeMode.test.helpers";
 
 const audio = vi.hoisted(() => ({
@@ -50,7 +50,7 @@ describe("악보를 겹쳐 리듬 만들기", () => {
   it("음표를 넣기 전에 입력 영역 위에서 악기를 고르고 세 악보를 함께 펼친다", () => {
     mount();
     const instruments = container?.querySelector('[aria-label="리듬 악보와 악기 선택"]') as Element;
-    const workspace = container?.querySelector(".practice-shared-tools") as Element;
+    const workspace = container?.querySelector('[data-testid="practice-score-tools-0"]') as Element;
     expect(instruments).not.toBeNull();
     expect(instruments.compareDocumentPosition(workspace) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(savedDraft().measures.every((measure) => measure.notes.length === 0)).toBe(true);
@@ -68,8 +68,24 @@ describe("악보를 겹쳐 리듬 만들기", () => {
       expect(container?.querySelector(`[data-testid="practice-score-workspace-${scoreIndex}"]`)).not.toBeNull();
       expect(scoreCard(scoreIndex, 0)).not.toBeNull();
       expect(scoreCard(scoreIndex, 1)).not.toBeNull();
+      const tools = container?.querySelector(`[data-testid="practice-score-tools-${scoreIndex}"]`) as Element;
+      expect(tools.closest(".practice-score-workspace")?.getAttribute("data-testid"))
+        .toBe(`practice-score-workspace-${scoreIndex}`);
+      expect(tools.querySelectorAll('[data-testid^="practice-duration-"]')).toHaveLength(6);
+      expect(tools.querySelectorAll('[data-testid^="practice-rest-"]')).toHaveLength(6);
     }
-    expect(container?.querySelectorAll('[data-testid="practice-add-note"]')).toHaveLength(1);
+    expect(container?.querySelector('[data-testid="practice-add-note"]')).toBeNull();
+    expect(container?.querySelector('[data-testid="practice-add-rest"]')).toBeNull();
+    click(scoreButton(1, "practice-duration-1.5"));
+    click(scoreButton(1, "practice-rest-1.5"));
+    expect(savedDraft().rhythmLayers[0].measures[0].notes.map((note) => ({
+      pitch: note.pitch, duration: note.duration, dotted: note.dotted
+    }))).toEqual([
+      { pitch: 60, duration: { numerator: 3, denominator: 2 }, dotted: true },
+      { pitch: null, duration: { numerator: 3, denominator: 2 }, dotted: true }
+    ]);
+    expect(savedDraft().measures.every((measure) => measure.notes.length === 0)).toBe(true);
+    expect(savedDraft().rhythmLayers[1].measures.every((measure) => measure.notes.length === 0)).toBe(true);
   });
 
   it("빈칸을 채우고 다시 눌러 지운 뒤 재추가해도 다른 악보와 마디의 리듬·가사를 보존한다", () => {
@@ -80,9 +96,8 @@ describe("악보를 겹쳐 리듬 만들기", () => {
     completeScoreMeasure(1, 0, "반짝별아");
     changeInput(scoreCard(1, 1).querySelector<HTMLInputElement>(".practice-lyric-entry input") as HTMLInputElement, "봄");
     const before = savedDraft();
-    click(testButton("practice-measure-0"));
-    click(testButton("practice-duration-0.5"));
-    click(scoreCard(1, 1).querySelector<HTMLButtonElement>(".practice-empty-slot") as HTMLButtonElement);
+    click(testButton("practice-score-1-measure-1"));
+    click(scoreButton(1, "practice-duration-0.5"));
     const inserted = savedDraft().rhythmLayers[0].measures[1].notes[0];
     expect(inserted).toMatchObject({ pitch: 60, duration: { numerator: 1, denominator: 2 }, lyric: "봄" });
     expect(scoreCard(1, 1).querySelector(".practice-measure-total")?.textContent).toBe("0.5 / 4박");
@@ -106,13 +121,12 @@ describe("악보를 겹쳐 리듬 만들기", () => {
   it("선택한 악보에만 서로 다른 리듬을 넣고 해당 악보와 마디를 따로 듣는다", () => {
     mount();
     changeValue("연습할 마디 수", "1");
-    click(testButton("practice-add-note"));
+    click(testButton("practice-duration-1"));
     const primary = savedDraft().measures[0].notes;
     click(button("악보 추가하기"));
     click(testButton("practice-score-select-1"));
     click(testButton("practice-duration-0.5"));
-    click(testButton("practice-add-note"));
-    click(testButton("practice-add-rest"));
+    click(testButton("practice-rest-0.5"));
     const before = savedDraft();
     expect(before.measures[0].notes).toEqual(primary);
     expect(before.rhythmLayers[0].measures[0].notes.map((note) => note.pitch)).toEqual([60, null]);
@@ -130,8 +144,6 @@ describe("악보를 겹쳐 리듬 만들기", () => {
     const lyric = scoreCard(1, 0).querySelector<HTMLInputElement>('[aria-label="1번째 음표 가사"]');
     click(lyric as HTMLInputElement);
     click(testButton("practice-duration-2"));
-    expect(savedDraft()).toEqual(before);
-    click(testButton("practice-add-note"));
     expect(savedDraft().measures[0].notes).toEqual(primary);
     expect(savedDraft().rhythmLayers[0].measures[0].notes.slice(0, -1))
       .toEqual(before.rhythmLayers[0].measures[0].notes);
@@ -144,7 +156,7 @@ describe("악보를 겹쳐 리듬 만들기", () => {
     click(button("악보 추가하기"));
     expect(button("리듬 함께 듣기").disabled).toBe(true);
     click(testButton("practice-score-select-0"));
-    click(testButton("practice-add-note"));
+    click(testButton("practice-duration-1"));
     const before = savedDraft();
     expect(button("리듬 함께 듣기").disabled).toBe(false);
     expect(button("MP3 저장").disabled).toBe(true);
@@ -156,7 +168,8 @@ describe("악보를 겹쳐 리듬 만들기", () => {
     rerender();
     expect(button("리듬 함께 듣기 준비 취소").disabled).toBe(false);
     expect(button("악보 추가하기").disabled).toBe(true);
-    expect(testButton("practice-add-note").disabled).toBe(true);
+    expect(testButton("practice-duration-1").disabled).toBe(true);
+    expect(testButton("practice-rest-1").disabled).toBe(true);
     expect(testButton("practice-measure-preview-0").disabled).toBe(true);
     const instrument = container?.querySelector<HTMLSelectElement>('[aria-label="리듬 연주 악기"]');
     expect(instrument?.matches(":disabled")).toBe(true);
@@ -174,10 +187,10 @@ describe("악보를 겹쳐 리듬 만들기", () => {
   it("같은 번호의 다른 악보 미리듣기를 잠그고 현재 듣는 악보만 취소한다", () => {
     mount();
     changeValue("연습할 마디 수", "1");
-    click(testButton("practice-add-note"));
+    click(testButton("practice-duration-1"));
     click(button("악보 추가하기"));
     click(testButton("practice-score-select-1"));
-    click(testButton("practice-add-note"));
+    click(testButton("practice-duration-1"));
     audio.busy = true;
     audio.previewScoreIndex = 1;
     audio.previewMeasureIndex = 0;
@@ -223,9 +236,6 @@ describe("악보를 겹쳐 리듬 만들기", () => {
     click(lyric as HTMLInputElement);
     click(testButton("practice-duration-2"));
     expect(savedDraft().measures[0].notes).toEqual(primary);
-    expect(button("MP3 저장").disabled).toBe(false);
-    expect(button("MP4 저장").disabled).toBe(false);
-    click(testButton("practice-add-note"));
     expect(savedDraft().rhythmLayers[0].measures[0].notes.at(-1)?.duration)
       .toEqual({ numerator: 2, denominator: 1 });
     expect(button("MP3 저장").disabled).toBe(true);
@@ -302,7 +312,7 @@ describe("기능 연습하기 전체 흐름", () => {
     click(button("처음이라면? 연습 안내"));
     click(button("다음 안내"));
     const tutorial = container?.querySelector('[aria-label="연습 튜토리얼"]');
-    expect(tutorial?.textContent).toContain("음표를 선택한 뒤 빈칸에 배치");
+    expect(tutorial?.textContent).toContain("음표나 쉼표 버튼을 누르면 선택한 마디에 들어가요");
     expect(tutorial?.textContent).not.toContain("가사에 음표 붙이기");
   });
 
@@ -311,7 +321,7 @@ describe("기능 연습하기 전체 흐름", () => {
     changeValue("연습할 마디 수", "1");
     changeValue("1마디 가사", "봄날아");
     placeNote(0, 0, 0.5);
-    click(testButton("practice-add-rest"));
+    click(testButton("practice-rest-0.5"));
     placeNote(0, 0, 1);
     placeNote(0, 0, 2);
     const rhythmNotes = savedDraft().measures[0].notes;
@@ -334,33 +344,31 @@ describe("기능 연습하기 전체 흐름", () => {
     expect(savedDraft().measures[0].notes).toEqual(melodyNotes);
   });
 
-  it("길이를 먼저 고르고 빈칸에 배치하며 이후 길이 선택은 다음 음표에만 적용한다", () => {
+  it("길이 버튼으로 바로 넣고 빈칸은 마지막 길이와 음표·쉼표 종류로 채운다", () => {
     mount();
     changeValue("연습할 마디 수", "1");
-    changeValue("1마디 가사", "봄날");
+    changeValue("1마디 가사", "봄날아");
     click(testButton("practice-duration-0.5"));
-    expect(savedDraft().measures[0].notes).toHaveLength(0);
-    click(measureCard(0).querySelector<HTMLButtonElement>(".practice-empty-slot") as HTMLButtonElement);
     const first = savedDraft().measures[0].notes[0];
     expect(first).toMatchObject({ duration: { numerator: 1, denominator: 2 }, lyric: "봄" });
-    click(testButton("practice-duration-2"));
-    expect(savedDraft().measures[0].notes).toEqual([first]);
-    expect(testButton("practice-duration-2").getAttribute("aria-pressed")).toBe("true");
     click(measureCard(0).querySelector<HTMLButtonElement>(".practice-empty-slot") as HTMLButtonElement);
     const second = savedDraft().measures[0].notes[1];
-    expect(second).toMatchObject({ duration: { numerator: 2, denominator: 1 }, lyric: "날" });
+    expect(second).toMatchObject({ pitch: 60, duration: { numerator: 1, denominator: 2 }, lyric: "날" });
     expect(savedDraft().measures[0].notes[0]).toEqual(first);
     click(measureCard(0).querySelector<HTMLInputElement>('[aria-label="1번째 음표 가사"]') as HTMLInputElement);
-    click(testButton("practice-duration-1.5"));
-    expect(savedDraft().measures[0].notes).toEqual([first, second]);
-    expect(testButton("practice-duration-1.5").getAttribute("aria-pressed")).toBe("true");
-    click(testButton("practice-add-rest"));
-    const notes = savedDraft().measures[0].notes;
-    expect(notes.slice(0, 2)).toEqual([first, second]);
-    expect(notes[2]).toMatchObject({ pitch: null, duration: { numerator: 3, denominator: 2 }, dotted: true });
-    expect(validateMeasure(notes, savedDraft().meter).state).toBe("exact");
+    click(testButton("practice-rest-1"));
+    expect(testButton("practice-rest-1").getAttribute("aria-pressed")).toBe("true");
+    click(measureCard(0).querySelector<HTMLButtonElement>(".practice-empty-slot") as HTMLButtonElement);
+    const rests = savedDraft().measures[0].notes;
+    expect(rests.slice(0, 2)).toEqual([first, second]);
+    expect(rests.slice(2).map((note) => ({ pitch: note.pitch, duration: note.duration })))
+      .toEqual(Array.from({ length: 2 }, () => ({ pitch: null, duration: { numerator: 1, denominator: 1 } })));
     click(testButton("practice-duration-0.5"));
-    expect(savedDraft().measures[0].notes).toEqual(notes);
+    click(measureCard(0).querySelector<HTMLButtonElement>(".practice-empty-slot") as HTMLButtonElement);
+    const notes = savedDraft().measures[0].notes;
+    expect(notes.slice(0, 4)).toEqual(rests);
+    expect(notes.slice(4).map((note) => note.pitch)).toEqual([60, 60]);
+    expect(validateMeasure(notes, savedDraft().meter).state).toBe("exact");
     expect(button("MP3 저장").disabled).toBe(false);
   });
 
@@ -387,7 +395,6 @@ describe("기능 연습하기 전체 흐름", () => {
     mount();
     changeValue("연습할 마디 수", "1");
     click(testButton("practice-duration-4"));
-    click(testButton("practice-add-note"));
     const before = savedDraft();
     expect(before.measures[0].lyric).toBe("");
     expect(before.measures[0].notes.every((note) => !note.lyric)).toBe(true);
@@ -405,7 +412,7 @@ describe("기능 연습하기 전체 흐름", () => {
     changeValue("연습할 마디 수", "4");
     expect(testButton("practice-measure-preview-2").disabled).toBe(true);
     click(testButton("practice-measure-2"));
-    click(testButton("practice-add-note"));
+    click(testButton("practice-duration-1"));
     changeValue("3마디 가사", "봄");
     const before = savedDraft();
     expect(validateMeasure(before.measures[2].notes, before.meter).state).toBe("short");
@@ -427,14 +434,13 @@ describe("기능 연습하기 전체 흐름", () => {
     changeValue("연습할 마디 수", "3");
     click(testButton("practice-measure-0"));
     click(testButton("practice-duration-4"));
-    click(testButton("practice-add-note"));
-    click(testButton("practice-add-note"));
+    click(testButton("practice-duration-4"));
     expect(validateMeasure(savedDraft().measures[0].notes, savedDraft().meter).state).toBe("over");
     expect(testButton("practice-measure-preview-0").disabled).toBe(false);
     click(testButton("practice-measure-preview-0"));
     expect(audio.previewMeasure).toHaveBeenCalledWith(0, 0);
     click(testButton("practice-measure-1"));
-    click(testButton("practice-add-rest"));
+    click(testButton("practice-rest-4"));
     expect(savedDraft().measures[1].notes.every((note) => note.pitch === null)).toBe(true);
     expect(testButton("practice-measure-preview-1").disabled).toBe(true);
     expect(testButton("practice-measure-preview-2").disabled).toBe(true);
@@ -493,7 +499,7 @@ describe("기능 연습하기 전체 흐름", () => {
     mount();
     completeOneMeasure();
     click(container?.querySelector<HTMLElement>("#practice-melody-tab") as HTMLElement);
-    click(testButton("practice-duration-2"));
+    changeValue("선택한 음표 길이", "2");
     const before = savedDraft();
     expect(validateMeasure(before.measures[0].notes, before.meter).state).toBe("over");
     expect(testButton("practice-measure-preview-0").disabled).toBe(false);
@@ -606,7 +612,7 @@ describe("기능 연습하기 전체 흐름", () => {
     expect(savedDraft().measures[0].notes.slice(1)).toEqual(original.slice(1));
     click(testButton(`practice-melody-${original[0].id}-67`));
     const selected = savedDraft().measures[0].notes;
-    click(testButton("practice-duration-2"));
+    changeValue("선택한 음표 길이", "2");
     expect(validateMeasure(savedDraft().measures[0].notes, savedDraft().meter).state).toBe("over");
     expect(measureCard(0).querySelector(".practice-measure-validation")?.textContent).toContain("맞지 않아요");
     expect(button("MP3 저장").disabled).toBe(true);
@@ -614,9 +620,9 @@ describe("기능 연습하기 전체 흐름", () => {
     expect(container?.querySelector("#practice-melody-tab")?.getAttribute("aria-selected")).toBe("true");
     expect(savedDraft().measures[0].notes.map((note) => ({ id: note.id, pitch: note.pitch, lyric: note.lyric })))
       .toEqual(selected.map((note) => ({ id: note.id, pitch: note.pitch, lyric: note.lyric })));
-    click(testButton("practice-duration-1"));
+    changeValue("선택한 음표 길이", "1");
     expect(button("MP3 저장").disabled).toBe(false);
-    click(testButton("practice-add-rest"));
+    click(testButton("practice-rest-1"));
     const rest = savedDraft().measures[0].notes.at(-1);
     expect(rest?.pitch).toBeNull();
     expect(savedDraft().measures[0].notes.slice(0, -1)).toEqual(selected);
@@ -624,7 +630,7 @@ describe("기능 연습하기 전체 흐름", () => {
     click(testButton("practice-delete-note"));
     expect(savedDraft().measures[0].notes).toEqual(selected);
     expect(button("MP3 저장").disabled).toBe(false);
-    click(testButton("practice-add-note"));
+    click(testButton("practice-duration-1"));
     expect(savedDraft().measures[0].notes).toHaveLength(selected.length + 1);
     expect(savedDraft().measures[0].notes.at(-1)?.pitch).toBe(60);
     click(testButton("practice-delete-note"));

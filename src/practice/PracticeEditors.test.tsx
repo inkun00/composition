@@ -54,6 +54,15 @@ function lyricInput(label: string): HTMLInputElement {
   return result;
 }
 
+function editDuration(value: string): void {
+  const select = container?.querySelector<HTMLSelectElement>('[data-testid="practice-edit-duration"]');
+  if (!select) throw new Error("선택한 음표 길이 입력을 찾지 못했습니다.");
+  act(() => {
+    Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value")?.set?.call(select, value);
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+}
+
 afterEach(() => {
   act(() => root?.unmount());
   container?.remove();
@@ -68,10 +77,13 @@ describe("리듬과 가락 연습 입력", () => {
     act(() => emptyCell?.click());
     expect(props.onAdd).toHaveBeenLastCalledWith(1, 60, undefined);
     act(() => button("practice-duration-1.5").click());
-    act(() => button("practice-add-note").click());
     expect(props.onAdd).toHaveBeenLastCalledWith(1.5, 60, true);
-    act(() => button("practice-add-rest").click());
+    act(() => button("practice-rest-1.5").click());
     expect(props.onAdd).toHaveBeenLastCalledWith(1.5, null, true);
+    act(() => container?.querySelector<HTMLButtonElement>(".practice-empty-slot")?.click());
+    expect(props.onAdd).toHaveBeenLastCalledWith(1.5, null, true);
+    expect(container?.querySelector('[data-testid="practice-add-note"]')).toBeNull();
+    expect(container?.querySelector('[data-testid="practice-add-rest"]')).toBeNull();
     expect(props.onDuration).not.toHaveBeenCalled();
   });
 
@@ -92,7 +104,6 @@ describe("리듬과 가락 연습 입력", () => {
     expect(props.onSelectNote).toHaveBeenCalledWith("overflow");
     act(() => button("practice-duration-0.5").click());
     expect(props.onDuration).not.toHaveBeenCalled();
-    act(() => button("practice-add-note").click());
     expect(props.onAdd).toHaveBeenCalledWith(.5, 60, undefined);
     act(() => button("practice-delete-note").click());
     expect(props.onDelete).toHaveBeenCalledWith("overflow");
@@ -119,9 +130,8 @@ describe("리듬과 가락 연습 입력", () => {
     expect(props.onDuration).not.toHaveBeenCalled();
     expect(props.onDelete).not.toHaveBeenCalled();
     expect(note.duration).toEqual(rational(1, 2));
-    act(() => button("practice-add-note").click());
     expect(props.onAdd).toHaveBeenLastCalledWith(2, 60, undefined);
-    act(() => button("practice-add-rest").click());
+    act(() => button("practice-rest-2").click());
     expect(props.onAdd).toHaveBeenLastCalledWith(2, null, undefined);
   });
 
@@ -163,7 +173,7 @@ describe("리듬과 가락 연습 입력", () => {
     expect(props.onSelectNote).toHaveBeenCalledWith("first");
     expect(container?.querySelector('[data-testid="practice-melody-rest-72"]')).toBeNull();
     expect(button("practice-melody-first-72").getAttribute("style")).toContain("width: 37.5%");
-    expect(button("practice-add-note").disabled).toBe(false);
+    expect(button("practice-duration-1").disabled).toBe(false);
     expect(button("practice-delete-note").disabled).toBe(false);
     expect(props.onDuration).not.toHaveBeenCalled();
     expect(props.onDelete).not.toHaveBeenCalled();
@@ -177,11 +187,12 @@ describe("리듬과 가락 연습 입력", () => {
       step: "melody",
       selectedNoteId: "note"
     });
-    act(() => button("practice-duration-1.5").click());
+    editDuration("1.5");
     expect(props.onDuration).toHaveBeenCalledWith("note", 1.5, true);
-    act(() => button("practice-add-note").click());
+    act(() => button("practice-duration-1.5").click());
     expect(props.onAdd).toHaveBeenLastCalledWith(1.5, 60, true);
-    act(() => button("practice-add-rest").click());
+    expect(props.onDuration).toHaveBeenCalledTimes(1);
+    act(() => button("practice-rest-1.5").click());
     expect(props.onAdd).toHaveBeenLastCalledWith(1.5, null, true);
     act(() => button("practice-delete-note").click());
     expect(props.onDelete).toHaveBeenCalledWith("note");
@@ -195,7 +206,7 @@ describe("리듬과 가락 연습 입력", () => {
     });
     act(() => button("practice-melody-rest-rest").click());
     expect(props.onSelectNote).toHaveBeenCalledWith("rest");
-    act(() => button("practice-duration-0.5").click());
+    editDuration("0.5");
     expect(props.onDuration).toHaveBeenCalledWith("rest", .5, undefined);
     expect(button("practice-pitch-60").disabled).toBe(true);
     act(() => button("practice-delete-note").click());
@@ -210,7 +221,6 @@ describe("리듬과 가락 연습 입력", () => {
     expect(duration.textContent).not.toContain(" · ");
     act(() => duration.click());
     expect(props.onAppendDurationChange).toHaveBeenCalledWith(1.5);
-    act(() => button("practice-add-note").click());
     expect(props.onAdd).toHaveBeenLastCalledWith(1.5, 60, true);
     expect(container?.querySelector(".practice-editor-summary")).toBeNull();
     expect(container?.querySelector(".practice-grid-content")).toBeNull();

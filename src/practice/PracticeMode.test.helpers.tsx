@@ -39,8 +39,22 @@ export function button(text: string): HTMLButtonElement {
 }
 
 export function testButton(testId: string): HTMLButtonElement {
-  const found = container?.querySelector<HTMLButtonElement>(`[data-testid="${testId}"]`);
+  const activeScore = container?.querySelector<HTMLButtonElement>(
+    '[data-testid^="practice-score-select-"][aria-pressed="true"]'
+  );
+  const activeIndex = Number(activeScore?.dataset.testid?.replace("practice-score-select-", "") ?? 0);
+  const workspace = container?.querySelector(`[data-testid="practice-score-workspace-${activeIndex}"]`);
+  const found = workspace?.querySelector<HTMLButtonElement>(`[data-testid="${testId}"]`)
+    ?? container?.querySelector<HTMLButtonElement>(`[data-testid="${testId}"]`);
   if (!found) throw new Error(`${testId} 버튼을 찾지 못했습니다.`);
+  return found;
+}
+
+export function scoreButton(scoreIndex: number, testId: string): HTMLButtonElement {
+  const found = container?.querySelector<HTMLButtonElement>(
+    `[data-testid="practice-score-workspace-${scoreIndex}"] [data-testid="${testId}"]`
+  );
+  if (!found) throw new Error(`${scoreIndex + 1}번 악보의 ${testId} 버튼을 찾지 못했습니다.`);
   return found;
 }
 
@@ -60,10 +74,8 @@ export function scoreCard(scoreIndex: number, measureIndex: number): HTMLElement
 }
 
 export function placeNote(scoreIndex: number, measureIndex: number, beats: number): void {
-  click(testButton(`practice-duration-${beats}`));
-  const slot = scoreCard(scoreIndex, measureIndex).querySelector<HTMLButtonElement>(".practice-empty-slot");
-  if (!slot) throw new Error(`${measureIndex + 1}마디의 빈 박자 칸을 찾지 못했습니다.`);
-  click(slot);
+  click(testButton(scoreIndex === 0 ? `practice-measure-${measureIndex}` : `practice-score-${scoreIndex}-measure-${measureIndex}`));
+  click(scoreButton(scoreIndex, `practice-duration-${beats}`));
 }
 
 export function completeScoreMeasure(scoreIndex: number, measureIndex: number, lyric = "반짝별아"): void {

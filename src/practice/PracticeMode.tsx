@@ -20,8 +20,9 @@ type PracticeModeProps = { onClose: () => void };
 
 export default function PracticeMode({ onClose }: PracticeModeProps) {
   const practice = usePracticeState();
-  const { draft, active, activeIndex, activeScoreIndex, editingStep, scores, scoreValidations, step, inputMode, complete } = practice;
+  const { draft, activeIndex, activeScoreIndex, scores, scoreValidations, step, inputMode, complete } = practice;
   const [appendDuration, setAppendDuration] = useState(1);
+  const [appendRest, setAppendRest] = useState(false);
   const [saving, setSaving] = useState(false);
   const [videoMode, setVideoMode] = useState<PracticeVideoMode>("bars");
   const audio = usePracticeAudio({
@@ -106,16 +107,6 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
 
           <PracticeRhythmScores practice={practice} audio={audio} />
 
-          <div className="practice-shared-tools">
-            <p className="practice-current-measure" role="status">{scores.length > 1 ? `${activeScoreIndex + 1}번 악보 · ` : ""}{activeIndex + 1}마디 편집 중</p>
-            {draft.meter.beatUnit === 8 && <p className="practice-editor-help">6/8박자 · 1칸 = 8분음표</p>}
-            <PracticeNoteTools notes={active.notes} meter={draft.meter} step={editingStep} inputMode={inputMode}
-              selectedNoteId={practice.selectedNoteId} disabled={busy} appendDuration={appendDuration}
-              onAppendDurationChange={setAppendDuration} onSelectNote={practice.setSelectedNoteId}
-              onPitch={practice.setPitch} onDuration={practice.setDuration} onDelete={practice.deleteNote}
-              onAdd={practice.addNote} />
-          </div>
-
           {scores.map((score, scoreIndex) => (
             <section key={score.id} className="practice-score-workspace" data-testid={`practice-score-workspace-${scoreIndex}`}>
               {scores.length > 1 && (
@@ -126,6 +117,20 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
                   </button>
                 </div>
               )}
+              <div className="practice-shared-tools" data-testid={`practice-score-tools-${scoreIndex}`}>
+                <p className="practice-current-measure" role={activeScoreIndex === scoreIndex ? "status" : undefined}>
+                  {scores.length > 1 ? `${scoreIndex + 1}번 악보 · ` : ""}{activeIndex + 1}마디에 넣기
+                </p>
+                {draft.meter.beatUnit === 8 && <p className="practice-editor-help">6/8박자 · 1칸 = 8분음표</p>}
+                <PracticeNoteTools notes={score.measures[activeIndex].notes} meter={draft.meter}
+                  step={scoreIndex === 0 ? step : "rhythm"} inputMode={inputMode}
+                  selectedNoteId={practice.selectedNoteId} disabled={busy}
+                  appendDuration={appendDuration} appendRest={appendRest}
+                  onAppendDurationChange={setAppendDuration} onAppendRestChange={setAppendRest}
+                  onSelectNote={practice.setSelectedNoteId} onPitch={practice.setPitch}
+                  onDuration={practice.setDuration} onDelete={practice.deleteNote}
+                  onAdd={(beats, pitch, dotted) => practice.addNote(beats, pitch, dotted, activeIndex, scoreIndex)} />
+              </div>
               <div className="practice-input-toggle practice-measure-input-toggle" role="group"
                 aria-label={scoreIndex === 0 ? "음표 입력 방식" : `${scoreIndex + 1}번 악보 음표 입력 방식`}>
                 <button type="button" aria-pressed={inputMode === "grid"} disabled={busy}
@@ -140,7 +145,7 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
                   return (
                     <PracticeMeasureCard key={measure.id} measure={measure} index={index} scoreIndex={scoreIndex} meter={draft.meter}
                       validation={scoreValidations[scoreIndex][index]} practice={practice} disabled={busy}
-                      playingNoteId={playingNoteId} appendDuration={appendDuration}
+                      playingNoteId={playingNoteId} appendDuration={appendDuration} appendRest={appendRest}
                       previewActive={previewActive} previewPreparing={audio.busy}
                       onPreviewRhythm={() => previewActive ? audio.stop() : void audio.previewMeasure(index, scoreIndex)} />
                   );

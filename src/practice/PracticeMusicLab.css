@@ -270,19 +270,23 @@
   gap: 6px;
 }
 
-.practice-shell .practice-duration-options > button {
-  grid-template-columns: 28px minmax(0, 1fr);
+.practice-shell .practice-duration-pair > button {
+  grid-template-columns: 24px minmax(0, 1fr);
   grid-template-rows: auto auto;
   align-content: center;
   justify-items: start;
   gap: 1px 5px;
   min-height: 60px;
-  max-width: 125px;
   padding: 5px 7px;
   border-color: var(--practice-line);
   border-radius: 4px;
   color: var(--practice-ink);
   font-size: 12px;
+}
+
+.practice-shell .practice-duration-pair > button > span:not(.practice-note-symbol) {
+  overflow-wrap: normal;
+  word-break: keep-all;
 }
 
 .practice-shell .practice-duration-options .practice-note-symbol {
@@ -291,7 +295,7 @@
   line-height: 1;
 }
 
-.practice-shell .practice-duration-options > button.is-active {
+.practice-shell .practice-duration-pair > button.is-active {
   border-color: #bd8f17;
   background: var(--practice-yellow);
   box-shadow: none;
@@ -675,9 +679,18 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .practice-shell .practice-duration-options > button {
-    flex-basis: calc(33.333% - 6px);
-    max-width: none;
+  .practice-shell .practice-duration-pair > button {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    justify-items: center;
+    min-height: 86px;
+    gap: 3px;
+    padding: 7px 3px;
+    text-align: center;
+  }
+
+  .practice-shell .practice-duration-options .practice-note-symbol {
+    grid-row: auto;
   }
 
   .practice-shell .practice-listen-card {

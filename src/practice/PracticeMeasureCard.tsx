@@ -19,13 +19,14 @@ type PracticeMeasureCardProps = {
   disabled: boolean;
   playingNoteId: string | null;
   appendDuration: number;
+  appendRest: boolean;
   previewActive: boolean;
   previewPreparing: boolean;
   onPreviewRhythm: () => void;
 };
 
 export default function PracticeMeasureCard({
-  measure, index, scoreIndex, meter, validation, practice, disabled, playingNoteId, appendDuration,
+  measure, index, scoreIndex, meter, validation, practice, disabled, playingNoteId, appendDuration, appendRest,
   previewActive, previewPreparing, onPreviewRhythm
 }: PracticeMeasureCardProps) {
   const active = practice.activeIndex === index && practice.activeScoreIndex === scoreIndex;
@@ -66,7 +67,7 @@ export default function PracticeMeasureCard({
 
       <PracticeEditors notes={measure.notes} meter={meter} step={step} inputMode={practice.inputMode}
         selectedNoteId={practice.selectedNoteId} playingNoteId={playingNoteId} disabled={disabled}
-        showTools={false} showSummary={false} compact appendDuration={appendDuration}
+        showTools={false} showSummary={false} compact appendDuration={appendDuration} appendRest={appendRest}
         onSelectNote={practice.setSelectedNoteId} onPitch={practice.setPitch} onDuration={practice.setDuration}
         onDelete={practice.deleteNote} onAdd={(beats, pitch, dotted) => practice.addNote(beats, pitch, dotted, index, scoreIndex)}
         onNoteLyric={practice.setNoteLyric} />

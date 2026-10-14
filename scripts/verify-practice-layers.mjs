@@ -42,27 +42,56 @@ try {
   const preview = (scoreIndex) => page.getByTestId(scoreIndex === 0
     ? "practice-measure-preview-0"
     : `practice-score-${scoreIndex}-measure-preview-0`);
+  const workspace = (scoreIndex) => page.getByTestId(`practice-score-workspace-${scoreIndex}`);
+  const tools = (scoreIndex) => workspace(scoreIndex).getByTestId(`practice-score-tools-${scoreIndex}`);
   const instruments = page.getByRole("region", { name: "리듬 악보와 악기 선택", exact: true });
   const instrumentBounds = await instruments.boundingBox();
-  const workspaceBounds = await page.locator(".practice-shared-tools").boundingBox();
+  const workspaceBounds = await workspace(0).boundingBox();
   assert.ok(instrumentBounds.y + instrumentBounds.height <= workspaceBounds.y);
   await page.getByLabel("리듬 연주 악기", { exact: true }).selectOption("beat:woodblock");
-  await page.getByTestId("practice-add-note").click();
+  await tools(0).getByTestId("practice-duration-1").click();
   const primary = (await draft()).measures;
   await page.getByRole("button", { name: /악보 추가하기/ }).click();
   await page.getByLabel("2번 악보 리듬 연주 악기", { exact: true }).selectOption("beat:clap");
-  await page.getByTestId("practice-score-select-1").click();
-  await page.getByTestId("practice-duration-0.5").click();
-  await page.getByTestId("practice-add-note").click();
-  await page.getByTestId("practice-add-note").click();
+  await page.getByTestId("practice-score-select-0").click();
+  await tools(1).getByTestId("practice-duration-0.5").click();
+  await card(1).locator(".practice-empty-slot").first().click();
+  const secondary = (await draft()).rhythmLayers[0].measures;
+  assert.deepEqual(secondary[0].notes.map((note) => note.pitch), [60, 60]);
+  assert.ok(secondary[0].notes.every((note) => note.duration.numerator === 1 && note.duration.denominator === 2));
+  assert.deepEqual((await draft()).measures, primary);
   await page.getByRole("button", { name: /악보 추가하기/ }).click();
   await page.getByLabel("3번 악보 리듬 연주 악기", { exact: true }).selectOption("beat:kick");
-  await page.getByTestId("practice-score-select-2").click();
-  await page.getByTestId("practice-add-rest").click();
-  await page.getByTestId("practice-add-note").click();
+  await page.getByTestId("practice-score-select-0").click();
+  await tools(2).getByTestId("practice-rest-0.5").click();
+  await card(2).locator(".practice-empty-slot").first().click();
+  const repeatedRests = (await draft()).rhythmLayers[1].measures[0].notes;
+  assert.deepEqual(repeatedRests.map((note) => note.pitch), [null, null]);
+  assert.ok(repeatedRests.every((note) => note.duration.numerator === 1 && note.duration.denominator === 2));
+  await card(2).getByTestId(`practice-rhythm-note-${repeatedRests[1].id}`).click();
+  await tools(2).getByTestId("practice-duration-0.5").click();
+  await tools(2).getByTestId("practice-rest-1.5").click();
+  const dottedRest = (await draft()).rhythmLayers[1].measures[0].notes.at(-1);
+  assert.equal(dottedRest.pitch, null);
+  assert.equal(dottedRest.dotted, true);
+  assert.deepEqual(dottedRest.duration, { numerator: 3, denominator: 2 });
+  await tools(2).getByTestId("practice-delete-note").click();
   const entered = await draft();
   assert.deepEqual(entered.measures, primary);
+  assert.deepEqual(entered.rhythmLayers[0].measures, secondary);
+  assert.deepEqual(entered.rhythmLayers[1].measures[0].notes.map((note) => note.pitch), [null, 60]);
   assert.equal(entered.rhythmLayers.length, 2);
+  assert.equal(await page.getByTestId("practice-duration-0.5").count(), 3);
+  assert.equal(await page.getByTestId("practice-rest-0.5").count(), 3);
+  assert.equal(await page.getByTestId("practice-add-note").count(), 0);
+  assert.equal(await page.getByTestId("practice-add-rest").count(), 0);
+  for (let scoreIndex = 0; scoreIndex < 3; scoreIndex += 1) {
+    const paletteBounds = await tools(scoreIndex).boundingBox();
+    const cardBounds = await card(scoreIndex).boundingBox();
+    assert.ok(paletteBounds.y + paletteBounds.height <= cardBounds.y);
+    assert.equal(await tools(scoreIndex).getByTestId("practice-duration-0.5").count(), 1);
+    assert.equal(await tools(scoreIndex).getByTestId("practice-rest-0.5").count(), 1);
+  }
   assert.equal(await page.getByRole("button", { name: /악보 추가하기/ }).isEnabled(), false);
   assert.equal(await page.getByRole("tab", { name: /가락 만들기/ }).isEnabled(), false);
   assert.equal(await page.getByRole("button", { name: "MP3 저장", exact: true }).isEnabled(), false);
@@ -139,6 +168,22 @@ try {
   assert.ok(Math.abs(pcm.duration - 1) < 0.01);
   assert.deepEqual(await draft(), entered);
   await page.screenshot({ path: path.join(outputDir, "three-rhythms-desktop.png"), fullPage: true });
+  await page.setViewportSize({ width: 1280, height: 900 });
+  const compactDesktop = await page.evaluate(() => ({
+    viewport: window.innerWidth,
+    pageWidth: document.documentElement.scrollWidth,
+    paletteButtons: [...document.querySelectorAll(".practice-duration-pair button")].length,
+    palettesFit: [...document.querySelectorAll(".practice-duration-pair button")].every((button) => {
+      const bounds = button.getBoundingClientRect();
+      return bounds.width > 0 && bounds.left >= 0 && bounds.right <= window.innerWidth;
+    })
+  }));
+  assert.equal(compactDesktop.pageWidth, compactDesktop.viewport);
+  assert.equal(compactDesktop.paletteButtons, 36);
+  assert.equal(compactDesktop.palettesFit, true);
+  await page.screenshot({ path: path.join(outputDir, "three-rhythms-1280.png"), fullPage: true });
+  await tools(1).screenshot({ path: path.join(outputDir, "score-tools-1280.png") });
+  await page.setViewportSize({ width: 1440, height: 1080 });
 
   // All four bars of all three scores remain visible, with shared bar starts.
   await page.getByLabel("연습할 마디 수", { exact: true }).selectOption("4");
@@ -153,8 +198,16 @@ try {
   await page.screenshot({ path: path.join(outputDir, "three-scores-four-bars.png"), fullPage: true });
   await page.getByLabel("연습할 마디 수", { exact: true }).selectOption("1");
   for (let scoreIndex = 0; scoreIndex < 3; scoreIndex += 1) {
+    const current = await draft();
+    const notes = scoreIndex === 0 ? current.measures[0].notes : current.rhythmLayers[scoreIndex - 1].measures[0].notes;
+    for (const note of notes) {
+      await card(scoreIndex).getByTestId(`practice-rhythm-note-${note.id}`).click();
+    }
     await card(scoreIndex).locator(".practice-lyric-entry input").fill("반짝별아");
-    await card(scoreIndex).getByRole("button", { name: "가사에 음표 붙이기", exact: true }).click();
+    await card(scoreIndex).getByTestId(scoreIndex === 0 ? "practice-measure-0" : `practice-score-${scoreIndex}-measure-0`).click();
+    for (let beat = 0; beat < 4; beat += 1) {
+      await tools(scoreIndex).getByTestId("practice-duration-1").click();
+    }
     assert.equal(await page.getByRole("tab", { name: /가락 만들기/ }).isEnabled(), scoreIndex === 2);
   }
 
@@ -203,16 +256,22 @@ try {
   const mobile = await page.evaluate(() => ({
     viewport: window.innerWidth,
     pageWidth: document.documentElement.scrollWidth,
+    palettesFit: [...document.querySelectorAll(".practice-duration-pair button")].every((button) => {
+      const bounds = button.getBoundingClientRect();
+      return bounds.width > 0 && bounds.left >= 0 && bounds.right <= window.innerWidth;
+    }),
     cards: [...document.querySelectorAll(".practice-measure-card")].map((item) => {
       const bounds = item.getBoundingClientRect();
       return { left: bounds.left, right: bounds.right };
     })
   }));
   assert.equal(mobile.pageWidth, mobile.viewport);
+  assert.equal(mobile.palettesFit, true);
   assert.ok(mobile.cards.every((item) => item.left >= 0 && item.right <= mobile.viewport));
   await page.screenshot({ path: path.join(outputDir, "three-rhythms-mobile.png"), fullPage: true });
+  await tools(1).screenshot({ path: path.join(outputDir, "mobile-score-tools.png") });
   assert.deepEqual(errors, []);
-  console.log(JSON.stringify({ result: "passed", pcm, media, layouts, mobile, outputs: outputDir }, null, 2));
+  console.log(JSON.stringify({ result: "passed", pcm, media, layouts, compactDesktop, mobile, outputs: outputDir }, null, 2));
 } finally {
   await browser.close();
 }

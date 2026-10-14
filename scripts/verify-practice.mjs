@@ -19,10 +19,24 @@ try {
   await page.getByRole("button", { name: "기능 연습하기", exact: false }).first().click();
   await page.getByLabel("연습할 마디 수", { exact: true }).selectOption("4");
   const card = (index) => page.getByTestId(`practice-measure-card-${index}`);
+  const workspace = page.getByTestId("practice-score-workspace-0");
+  const tools = workspace.getByTestId("practice-score-tools-0");
   const draft = () => page.evaluate(() => JSON.parse(localStorage.getItem("maeum-melody-practice-v1")));
   const melodyTab = page.getByRole("tab", { name: /가락 만들기/ });
   assert.equal(await page.locator(".practice-measure-card").count(), 4);
-  assert.equal(await page.getByTestId("practice-duration-0.5").count(), 1);
+  assert.equal(await tools.getByTestId("practice-duration-0.5").count(), 1);
+  assert.equal(await tools.getByTestId("practice-rest-0.5").count(), 1);
+  assert.equal(await page.getByTestId("practice-add-note").count(), 0);
+  assert.equal(await page.getByTestId("practice-add-rest").count(), 0);
+  const toolsBounds = await tools.boundingBox();
+  const firstCardBounds = await card(0).boundingBox();
+  assert.ok(toolsBounds.y + toolsBounds.height <= firstCardBounds.y);
+  for (const beats of [4, 3, 2, 1.5, 1, 0.5]) {
+    const noteBounds = await tools.getByTestId(`practice-duration-${beats}`).boundingBox();
+    const restBounds = await tools.getByTestId(`practice-rest-${beats}`).boundingBox();
+    assert.ok(Math.abs(noteBounds.y - restBounds.y) < 1);
+    assert.ok(restBounds.x >= noteBounds.x + noteBounds.width);
+  }
   const fourMeasureLayout = await Promise.all(
     [0, 1, 2, 3].map((index) => card(index).boundingBox())
   );
@@ -34,7 +48,7 @@ try {
   }
   await page.getByLabel("연습 빠르기", { exact: true }).selectOption("60");
   await page.getByTestId("practice-measure-2").click();
-  await page.getByTestId("practice-add-note").click();
+  await tools.getByTestId("practice-duration-1").click();
   await card(2).getByLabel("3마디 가사", { exact: true }).fill("봄");
   const incomplete = await draft();
   assert.equal(incomplete.measures[2].notes.length, 1);
@@ -71,8 +85,7 @@ try {
   await page.getByRole("button", { name: "3마디 리듬 미리듣기", exact: true }).waitFor();
   assert.equal(await page.getByTestId("practice-measure-preview-2").isEnabled(), true);
   assert.deepEqual(await draft(), incomplete);
-  await page.getByTestId(`practice-rhythm-note-${incomplete.measures[2].notes[0].id}`).click();
-  await page.getByTestId("practice-delete-note").click();
+  await tools.getByTestId("practice-delete-note").click();
   await card(2).getByLabel("3마디 가사", { exact: true }).fill("");
   await page.getByLabel("연습 빠르기", { exact: true }).selectOption("96");
 
@@ -85,16 +98,19 @@ try {
     assert.ok(lyricBounds.y >= rhythmBounds.y + rhythmBounds.height);
     assert.equal(await melodyTab.isEnabled(), false);
     await card(index).getByLabel(`${index + 1}마디 가사`, { exact: true }).fill("반짝별아");
-    await card(index).getByRole("button", { name: "가사에 음표 붙이기", exact: true }).click();
+    await page.getByTestId(`practice-measure-${index}`).click();
+    for (let beat = 0; beat < 4; beat += 1) {
+      await tools.getByTestId("practice-duration-1").click();
+    }
     assert.equal(await melodyTab.isEnabled(), index === 3);
   }
   const workspaceBounds = await page.locator(".practice-workspace").boundingBox();
   const listenBounds = await page.locator(".practice-listen-card").boundingBox();
   assert.ok(listenBounds.y >= workspaceBounds.y + workspaceBounds.height);
   assert.equal(await page.locator("aside .practice-listen-card").count(), 0);
-  assert.equal(await page.getByTestId("practice-duration-0.5").locator("small").innerText(), "0.5박");
-  assert.equal(await page.getByTestId("practice-duration-0.5").locator("span").nth(1).innerText(), "8분음표");
-  assert.doesNotMatch(await page.getByTestId("practice-duration-0.5").innerText(), /반 박|·/);
+  assert.equal(await tools.getByTestId("practice-duration-0.5").locator("small").innerText(), "0.5박");
+  assert.equal(await tools.getByTestId("practice-duration-0.5").getByText("8분음표", { exact: true }).innerText(), "8분음표");
+  assert.doesNotMatch(await tools.getByTestId("practice-duration-0.5").innerText(), /반 박|·/);
   await page.getByRole("button", { name: "리듬 미리듣기", exact: true }).waitFor();
   assert.equal(await page.getByRole("button", { name: "리듬 미리듣기", exact: true }).isEnabled(), true);
   await page.screenshot({ path: path.join(outputDir, "rhythm-desktop.png"), fullPage: true });
@@ -103,14 +119,14 @@ try {
   const initialDurations = initial.measures[0].notes.map((note) => note.duration);
 
   // Overflow must remain visible and block completion, rather than being clipped.
-  await page.getByTestId(`practice-rhythm-note-${noteIds[0]}`).click();
-  await page.getByTestId("practice-duration-2").click();
+  await page.getByTestId("practice-measure-0").click();
+  await tools.getByTestId("practice-duration-2").click();
   assert.match(await card(0).locator(".practice-measure-validation").innerText(), /맞지 않아요/);
   assert.equal(await page.getByRole("button", { name: "MP3 저장", exact: true }).isEnabled(), false);
   assert.equal(await melodyTab.isEnabled(), false);
   assert.equal(await page.getByRole("tab", { name: /리듬 만들기/ }).getAttribute("aria-selected"), "true");
-  await page.getByTestId(`practice-rhythm-note-${noteIds[0]}`).click();
-  await page.getByTestId("practice-duration-1").click();
+  await tools.getByTestId("practice-delete-note").click();
+  assert.deepEqual((await draft()).measures[0].notes, initial.measures[0].notes);
 
   // Preview local percussion and exercise the stop button.
   await page.getByRole("button", { name: "리듬 미리듣기", exact: true }).click();
@@ -119,7 +135,7 @@ try {
   await melodyTab.click();
   assert.equal(await page.locator(".practice-pitch-row-label").count(), 32);
   await page.getByTestId(`practice-melody-${noteIds[0]}-62`).click();
-  assert.match(await page.locator(".practice-harmony-warning").innerText(), /불안정/);
+  assert.match(await card(0).locator(".practice-harmony-warning").innerText(), /C 화음의 구성음이 아니에요/);
   const melody = [60, 64, 67, 72];
   for (const [index, pitch] of melody.entries()) {
     await page.getByTestId(`practice-melody-${noteIds[index]}-${pitch}`).click();
@@ -138,21 +154,27 @@ try {
   await page.getByTestId(`practice-melody-${noteIds[0]}-62`).click();
   assert.deepEqual((await draft()).measures[0].notes.map((note) => note.lyric), lyricsEdited.map((note) => note.lyric));
   await page.getByTestId(`practice-melody-${noteIds[0]}-60`).click();
-  await page.getByTestId("practice-duration-2").click();
+  await tools.getByTestId("practice-edit-duration").selectOption("2");
   assert.match(await card(0).locator(".practice-measure-validation").innerText(), /맞지 않아요/);
   assert.equal(await page.getByRole("button", { name: "MP3 저장", exact: true }).isEnabled(), false);
   assert.equal(await melodyTab.getAttribute("aria-selected"), "true");
   assert.deepEqual((await draft()).measures[0].notes.map((note) => ({ pitch: note.pitch, lyric: note.lyric })),
     lyricsEdited.map((note) => ({ pitch: note.pitch, lyric: note.lyric })));
-  await page.getByTestId("practice-duration-1").click();
-  await page.getByTestId("practice-add-rest").click();
-  assert.equal((await draft()).measures[0].notes.at(-1).pitch, null);
+  await tools.getByTestId("practice-edit-duration").selectOption("1");
+  await tools.getByTestId("practice-rest-1.5").click();
+  const addedRest = (await draft()).measures[0].notes.at(-1);
+  assert.equal(addedRest.pitch, null);
+  assert.deepEqual(addedRest.duration, { numerator: 3, denominator: 2 });
+  assert.equal(addedRest.dotted, true);
   assert.equal(await page.getByRole("button", { name: "MP3 저장", exact: true }).isEnabled(), false);
-  await page.getByTestId("practice-delete-note").click();
+  await tools.getByTestId("practice-delete-note").click();
   assert.deepEqual((await draft()).measures[0].notes, lyricsEdited);
-  await page.getByTestId("practice-add-note").click();
+  await tools.getByTestId("practice-duration-0.5").click();
   assert.equal((await draft()).measures[0].notes.length, lyricsEdited.length + 1);
-  await page.getByTestId("practice-delete-note").click();
+  const addedNote = (await draft()).measures[0].notes.at(-1);
+  assert.equal(addedNote.pitch, 60);
+  assert.deepEqual(addedNote.duration, { numerator: 1, denominator: 2 });
+  await tools.getByTestId("practice-delete-note").click();
   assert.deepEqual((await draft()).measures[0].notes, lyricsEdited);
   await card(0).getByLabel("1번째 음표 가사", { exact: true }).fill("반");
   assert.deepEqual((await draft()).measures[0].notes, made.measures[0].notes);
@@ -227,28 +249,39 @@ try {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     const drawing = canvas.getContext("2d");
-    const yellowPositions = [];
-    let visualBackground = false;
+    const playheadPositions = [];
+    let blackBackground = true;
     for (const seconds of [0.2, 2.1]) {
       await new Promise((resolve) => { video.onseeked = resolve; video.currentTime = seconds; });
       drawing.drawImage(video, 0, 0);
       const corner = drawing.getImageData(10, 10, 1, 1).data;
-      visualBackground = corner[0] > 220 && corner[1] > 230 && corner[2] > 220;
-      const pixels = drawing.getImageData(0, 280, canvas.width, 160).data;
-      let count = 0;
-      let totalX = 0;
-      for (let index = 0; index < pixels.length; index += 16) {
-        if (pixels[index] > 190 && pixels[index + 1] > 140 && pixels[index + 2] < 120) {
-          totalX += (index / 4) % canvas.width;
-          count += 1;
+      blackBackground &&= corner[0] < 15 && corner[1] < 15 && corner[2] < 15;
+      const pixels = drawing.getImageData(0, 64, canvas.width, 560).data;
+      let bestColumn = null;
+      let longestLine = 0;
+      // The current black-and-white video has a tall moving playback line.
+      for (let x = 0; x < canvas.width; x += 1) {
+        let whitePixels = 0;
+        for (let y = 0; y < 560; y += 2) {
+          const index = (y * canvas.width + x) * 4;
+          const red = pixels[index];
+          const green = pixels[index + 1];
+          const blue = pixels[index + 2];
+          if (Math.min(red, green, blue) > 90 && Math.max(red, green, blue) - Math.min(red, green, blue) < 20) {
+            whitePixels += 1;
+          }
+        }
+        if (whitePixels > longestLine) {
+          longestLine = whitePixels;
+          bestColumn = x;
         }
       }
-      yellowPositions.push(count ? totalX / count : null);
+      playheadPositions.push(longestLine > 150 ? bestColumn : null);
     }
     const result = {
       audioDuration: buffer.duration, energy, frequencies, videoDuration: video.duration,
       videoAudioDuration: videoAudio.duration, videoAudioEnergy,
-      videoWidth: video.videoWidth, videoHeight: video.videoHeight, visualBackground, yellowPositions
+      videoWidth: video.videoWidth, videoHeight: video.videoHeight, blackBackground, playheadPositions
     };
     URL.revokeObjectURL(url);
     return result;
@@ -263,8 +296,8 @@ try {
   assert.ok(media.videoAudioEnergy > 0.000001);
   assert.equal(media.videoWidth, 1280);
   assert.equal(media.videoHeight, 720);
-  assert.equal(media.visualBackground, true);
-  assert.ok(media.yellowPositions[0] > 0 && media.yellowPositions[1] > media.yellowPositions[0]);
+  assert.equal(media.blackBackground, true);
+  assert.ok(media.playheadPositions[0] > 0 && media.playheadPositions[1] > media.playheadPositions[0], JSON.stringify(media));
 
   // Reloading and returning to practice preserves all entered data.
   await page.reload();
