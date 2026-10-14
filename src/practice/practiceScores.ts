@@ -1,6 +1,7 @@
 import { isBeatInstrumentId } from "../music/beatInstruments";
 import { findInstrument, isValidInstrumentId } from "../music/instruments";
 import type { PracticeMeasure } from "./practiceModel";
+import type { PracticeCreationMode } from "./practiceCreationMode";
 
 export const MAX_PRACTICE_SCORES = 3;
 
@@ -13,6 +14,7 @@ export type PracticeRhythmLayer = {
 export type PracticeScore = PracticeRhythmLayer;
 
 type ScoreSource = {
+  mode?: PracticeCreationMode | null;
   rhythmInstrumentId: string;
   measures: PracticeMeasure[];
   rhythmLayers?: PracticeRhythmLayer[];
@@ -21,7 +23,7 @@ type ScoreSource = {
 export function getPracticeScores(draft: ScoreSource): PracticeScore[] {
   return [
     { id: "primary", instrumentId: draft.rhythmInstrumentId, measures: draft.measures },
-    ...(draft.rhythmLayers ?? [])
+    ...(draft.mode === "melody" ? [] : draft.rhythmLayers ?? [])
   ];
 }
 

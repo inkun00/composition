@@ -7,6 +7,7 @@ import { assignPracticeLyrics, createPracticeMeasures, lyricSyllables, PRACTICE_
 import { MAX_PRACTICE_SCORES, normalizePracticeRhythmInstrument, type PracticeRhythmLayer } from "./practiceScores";
 import { isPracticePitch } from "./practicePitch";
 import { normalizePracticeHarmony } from "./practiceHarmony";
+import { isPracticeCreationMode, type PracticeCreationMode } from "./practiceCreationMode";
 
 export type { PracticeRhythmLayer } from "./practiceScores";
 
@@ -14,6 +15,7 @@ export const PRACTICE_STORAGE_KEY = "maeum-melody-practice-v1";
 
 export type PracticeDraft = {
   version: 1;
+  mode: PracticeCreationMode | null;
   title: string;
   meter: Meter;
   measures: PracticeMeasure[];
@@ -26,6 +28,7 @@ export type PracticeDraft = {
 export function emptyPracticeDraft(): PracticeDraft {
   return {
     version: 1,
+    mode: null,
     title: "나의 연습 가락",
     meter: { beats: 4, beatUnit: 4 },
     measures: createPracticeMeasures(2),
@@ -113,6 +116,7 @@ export function readPracticeDraft(): PracticeDraft {
     const measures = restoreMeasures(saved.measures, ids, "practice-measure");
     return {
       ...fallback,
+      mode: isPracticeCreationMode(saved.mode) ? saved.mode : null,
       title: typeof saved.title === "string" ? saved.title.slice(0, 80) : fallback.title,
       meter,
       measures,

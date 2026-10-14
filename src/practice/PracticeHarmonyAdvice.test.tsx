@@ -24,8 +24,7 @@ function note(id: string, pitch: number | null, beats: number): NoteEvent {
 function openMelody(measures: PracticeMeasure[]): void {
   const draft = { ...emptyPracticeDraft(), measures };
   localStorage.setItem(PRACTICE_STORAGE_KEY, JSON.stringify(draft));
-  mount();
-  click(container?.querySelector<HTMLElement>("#practice-melody-tab") as HTMLElement);
+  mount(undefined, "melody");
 }
 
 function measure(id: string, notes: NoteEvent[], chord = "C"): PracticeMeasure {

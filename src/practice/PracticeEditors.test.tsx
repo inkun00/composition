@@ -71,6 +71,59 @@ afterEach(() => {
 });
 
 describe("리듬과 가락 연습 입력", () => {
+  it("가락만들기의 빈 악보에서도 원하는 음높이의 칸을 눌러 첫 음을 넣는다", () => {
+    const props = mount({ step: "melody", allowMelodyAppend: true, showTools: false });
+    expect(container?.querySelectorAll(".practice-melody-empty-slot")).toHaveLength(64);
+    act(() => button("practice-melody-empty-67-0").click());
+    expect(props.onAdd).toHaveBeenCalledExactlyOnceWith(1, 67, undefined);
+    expect(props.onPitch).not.toHaveBeenCalled();
+    expect(container?.textContent).toContain("원하는 음높이의 빈칸");
+  });
+
+  it("가락 빈칸은 현재 고른 길이와 쉼표 종류를 사용하고 이미 채운 칸에는 추가하지 않는다", () => {
+    const props = mount({
+      step: "melody", allowMelodyAppend: true, showTools: false,
+      appendDuration: 0.25, appendRest: true,
+      notes: [{ id: "first", pitch: 60, duration: rational(1) }]
+    });
+    expect(container?.querySelector('[data-testid="practice-melody-empty-72-0"]')).toBeNull();
+    act(() => button("practice-melody-empty-72-4").click());
+    expect(props.onAdd).toHaveBeenCalledWith(0.25, null, undefined);
+  });
+
+  it("가락만들기에서는 음표를 선택하지 않아도 음높이 버튼으로 첫 음을 넣는다", () => {
+    const props = mount({ step: "melody", allowMelodyAppend: true, appendDuration: 1.5 }, true);
+    expect(button("practice-pitch-72").disabled).toBe(false);
+    act(() => button("practice-pitch-72").click());
+    expect(props.onAdd).toHaveBeenCalledWith(1.5, 72, true);
+    expect(props.onPitch).not.toHaveBeenCalled();
+  });
+
+  it("리듬에 가락을 붙일 때는 길이·추가·삭제를 숨기고 음높이만 편집한다", () => {
+    const props = mount({
+      step: "melody", rhythmLocked: true, allowMelodyAppend: false,
+      notes: [{ id: "first", pitch: 60, duration: rational(1) }], selectedNoteId: "first"
+    });
+    expect(container?.querySelector(".practice-duration-options")).toBeNull();
+    expect(container?.querySelector('[data-testid="practice-delete-note"]')).toBeNull();
+    expect(container?.querySelector('[data-testid="practice-edit-duration"]')).toBeNull();
+    expect(container?.querySelector(".practice-melody-empty-slot")).toBeNull();
+    act(() => button("practice-pitch-67").click());
+    expect(props.onPitch).toHaveBeenCalledWith("first", 67);
+    expect(props.onAdd).not.toHaveBeenCalled();
+    expect(props.onDelete).not.toHaveBeenCalled();
+    expect(props.onDuration).not.toHaveBeenCalled();
+  });
+
+  it("가락만들기에서도 연주 중에는 빈칸과 첫 음높이 입력을 잠근다", () => {
+    const props = mount({ step: "melody", allowMelodyAppend: true, disabled: true });
+    act(() => {
+      button("practice-melody-empty-67-0").click();
+      button("practice-pitch-72").click();
+    });
+    expect(props.onAdd).not.toHaveBeenCalled();
+  });
+
   it("빈칸에서 음표를 더하고 점음표·쉼표 길이를 같은 단위로 전달한다", () => {
     const props = mount();
     const emptyCell = container?.querySelector<HTMLButtonElement>(".practice-empty-slot");

@@ -32,6 +32,7 @@ export default function PracticeMeasureCard({
 }: PracticeMeasureCardProps) {
   const active = practice.activeIndex === index && practice.activeScoreIndex === scoreIndex;
   const step = scoreIndex === 0 ? practice.step : "rhythm";
+  const rhythmLocked = practice.draft.mode === "rhythm-melody" && step === "melody";
   const idPrefix = scoreIndex === 0 ? "practice" : `practice-score-${scoreIndex}`;
   const labelPrefix = scoreIndex === 0 ? "" : `${scoreIndex + 1}번 악보 `;
   const lyricInputId = `practice-lyric-input-${scoreIndex}-${index}`;
@@ -70,6 +71,7 @@ export default function PracticeMeasureCard({
       <PracticeEditors notes={measure.notes} meter={meter} step={step} inputMode={practice.inputMode}
         selectedNoteId={practice.selectedNoteId} playingNoteId={playingNoteId} disabled={disabled}
         showTools={false} showSummary={false} compact appendDuration={appendDuration} appendRest={appendRest}
+        rhythmLocked={rhythmLocked} allowMelodyAppend={practice.draft.mode === "melody"}
         onSelectNote={practice.setSelectedNoteId} onPitch={practice.setPitch} onDuration={practice.setDuration}
         onDelete={practice.deleteNote} onAdd={(beats, pitch, dotted) => practice.addNote(beats, pitch, dotted, index, scoreIndex)}
         onNoteLyric={practice.setNoteLyric} />
@@ -93,7 +95,7 @@ export default function PracticeMeasureCard({
         role={validation.state === "exact" ? "status" : "alert"}>
         {validation.state === "exact" ? "박자가 딱 맞아요!" : `박자가 맞지 않아요. ${validationMessage}`}
       </p>
-      {validation.state === "short" && measure.notes.length > 0 && (
+      {!rhythmLocked && validation.state === "short" && measure.notes.length > 0 && (
         <button type="button" className="practice-fill-rest" disabled={disabled} onClick={() => practice.fillRests(index, scoreIndex)}>
           남은 박자는 쉼표로 채우기
         </button>

@@ -1,5 +1,4 @@
 import { ArrowLeft, Download, Headphones, Music2, SlidersHorizontal, Square, Video } from "lucide-react";
-import { INSTRUMENTS } from "../music/instruments";
 import { lyricSyllables } from "./practiceModel";
 import type { PracticeDraft } from "./practiceStorage";
 import type { usePracticeAudio } from "./usePracticeAudio";
@@ -11,7 +10,6 @@ type PracticePlaybackProps = {
   step: "rhythm" | "melody";
   complete: boolean;
   audio: ReturnType<typeof usePracticeAudio>;
-  onConfigure: (change: Partial<Omit<PracticeDraft, "measures" | "rhythmLayers" | "version">>) => void;
   saving: boolean;
   videoMode: PracticeVideoMode;
   onVideoMode: (mode: PracticeVideoMode) => void;
@@ -19,12 +17,14 @@ type PracticePlaybackProps = {
   onReturnToEditing: () => void;
 };
 
-export default function PracticePlayback({ draft, step, complete, audio, onConfigure, saving, videoMode,
+export default function PracticePlayback({ draft, step, complete, audio, saving, videoMode,
   onVideoMode, onSaveSettings, onReturnToEditing }: PracticePlaybackProps) {
   const busy = audio.busy || audio.playing;
   const separatePreviewActive = audio.previewScoreIndex !== null || audio.previewMeasureIndex !== null || audio.previewRhythmMixing;
   const wholePlaying = audio.playing && !separatePreviewActive;
-  const allMeasures = [draft.measures, ...draft.rhythmLayers.map((layer) => layer.measures)].flat();
+  const together = draft.mode === "rhythm-melody" && step === "melody";
+  const musicLabel = together ? "리듬과 가락" : step === "rhythm" ? "리듬" : "가락";
+  const allMeasures = [draft.measures, ...(draft.mode === "melody" ? [] : draft.rhythmLayers.map((layer) => layer.measures))].flat();
   const hasLyrics = allMeasures.some((measure) => lyricSyllables(measure.lyric).length > 0);
   const allLyricsPlaced = allMeasures.every((measure) => {
     const entered = lyricSyllables(measure.lyric).length;
@@ -36,11 +36,11 @@ export default function PracticePlayback({ draft, step, complete, audio, onConfi
     <section className={`practice-listen-card${saving ? " practice-save-panel" : ""}`}
       id={saving ? "practice-save-panel" : undefined} role={saving ? "tabpanel" : undefined}
       aria-labelledby={saving ? "practice-save-tab" : undefined}
-      aria-label={saving ? undefined : "리듬 입력 후 악기와 저장 설정"}>
+      aria-label={saving ? undefined : "음악 듣기와 저장 설정"}>
       <div className="practice-listen-intro">
         <span className="practice-card-icon"><Headphones size={25} /></span>
         <div>
-          <h2>{saving ? "음악 저장하기" : step === "rhythm" ? "리듬 듣고 저장하기" : "가락 듣고 저장하기"}</h2>
+          <h2>{saving ? "음악 저장하기" : `${musicLabel} 듣고 저장하기`}</h2>
         </div>
         {saving && <button type="button" className="practice-return-to-editor" disabled={busy} onClick={onReturnToEditing}>
           <ArrowLeft size={16} /> {step === "rhythm" ? "리듬" : "가락"} 편집으로
@@ -62,23 +62,12 @@ export default function PracticePlayback({ draft, step, complete, audio, onConfi
         </fieldset>
         <PracticeVideoPreview draft={draft} step={step} mode={videoMode} disabled={busy} />
       </>}
-      <div className={`practice-listen-controls${step === "rhythm" ? " is-rhythm" : ""}`}>
-        {step === "melody" ? <fieldset disabled={busy} className="practice-instrument-fields">
-          <legend className="practice-sr-only">연습 악기 선택</legend>
-          <label>가락 악기
-            <select aria-label="가락 연주 악기" value={draft.melodyInstrumentId}
-              onChange={(event) => onConfigure({ melodyInstrumentId: event.target.value })}>
-              {INSTRUMENTS.map((instrument) => (
-                <option key={instrument.id} value={instrument.id}>{instrument.name}</option>
-              ))}
-            </select>
-          </label>
-        </fieldset> : null}
+      <div className="practice-listen-controls is-rhythm">
         <div className="practice-listen-buttons">
           <button type="button" className="practice-preview" disabled={!complete || audio.busy || separatePreviewActive}
             onClick={() => wholePlaying ? audio.stop() : void audio.preview()}>
             {wholePlaying ? <Square size={18} /> : <Music2 size={20} />}
-            {wholePlaying ? "연주 멈추기" : `${step === "rhythm" ? "리듬" : "가락"} 미리듣기`}
+            {wholePlaying ? "연주 멈추기" : `${musicLabel} 미리듣기`}
           </button>
           <div className="practice-export-actions">
             <button type="button" disabled={!complete || busy} onClick={() => void audio.save("mp3")}>

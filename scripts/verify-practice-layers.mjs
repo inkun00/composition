@@ -33,6 +33,7 @@ try {
   });
   await page.goto(baseUrl);
   await page.getByRole("button", { name: "기능 연습하기", exact: false }).first().click();
+  await page.getByRole("button", { name: "리듬만들고 가락넣기", exact: true }).click();
   await page.getByLabel("연습할 마디 수", { exact: true }).selectOption("1");
   await page.getByLabel("연습 빠르기", { exact: true }).selectOption("60");
   const draft = () => page.evaluate(() => JSON.parse(localStorage.getItem("maeum-melody-practice-v1")));
@@ -99,7 +100,7 @@ try {
     assert.equal(await fullPreview(scoreIndex).isEnabled(), true);
   }
   assert.equal(await page.getByRole("button", { name: /악보 추가하기/ }).isEnabled(), false);
-  assert.equal(await page.getByRole("tab", { name: /가락 만들기/ }).isEnabled(), true);
+  assert.equal(await page.getByRole("tab", { name: /가락 만들기/ }).isEnabled(), false);
   assert.equal(await page.getByRole("button", { name: "MP3 저장", exact: true }).isEnabled(), false);
   assert.equal(await page.getByRole("button", { name: "리듬 함께 듣기", exact: true }).isEnabled(), true);
 
@@ -285,15 +286,17 @@ try {
     for (let beat = 0; beat < 4; beat += 1) {
       await tools(scoreIndex).getByTestId("practice-duration-1").click();
     }
-    assert.equal(await page.getByRole("tab", { name: /가락 만들기/ }).isEnabled(), true);
+    assert.equal(await page.getByRole("tab", { name: /가락 만들기/ }).isEnabled(), scoreIndex === 2);
   }
 
-  // A downloaded melody file contains both C4 melody and C5 rhythm voices.
+  // A linked melody download contains C4 melody, its original rhythm, and additional C5 rhythm voices.
   await page.getByLabel("2번 악보 리듬 연주 악기", { exact: true }).selectOption("flute");
   await page.getByRole("tab", { name: /가락 만들기/ }).click();
   assert.equal(await card(0).locator(".practice-melody-row").count(), 8);
   assert.equal(await card(1).locator(".practice-melody-row").count(), 0);
   assert.equal(await card(2).locator(".practice-melody-row").count(), 0);
+  assert.equal(await tools(0).getByTestId("practice-duration-1").count(), 0);
+  assert.equal(await page.getByRole("button", { name: "리듬과 가락 미리듣기", exact: true }).isEnabled(), true);
   const downloadEvent = page.waitForEvent("download", { timeout: 60000 });
   await page.getByRole("button", { name: "MP3 저장", exact: true }).click();
   const download = await downloadEvent;

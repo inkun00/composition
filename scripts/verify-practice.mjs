@@ -17,6 +17,10 @@ try {
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto(baseUrl);
   await page.getByRole("button", { name: "기능 연습하기", exact: false }).first().click();
+  for (const label of ["리듬만들기", "리듬만들고 가락넣기", "가락만들기"]) {
+    assert.equal(await page.getByRole("button", { name: label, exact: true }).isVisible(), true);
+  }
+  await page.getByRole("button", { name: "리듬만들고 가락넣기", exact: true }).click();
   await page.getByLabel("연습할 마디 수", { exact: true }).selectOption("4");
   const card = (index) => page.getByTestId(`practice-measure-card-${index}`);
   const workspace = page.getByTestId("practice-score-workspace-0");
@@ -64,7 +68,7 @@ try {
   assert.equal(await page.getByRole("button", { name: "리듬 미리듣기", exact: true }).isEnabled(), false);
   assert.equal(await page.getByRole("button", { name: "MP3 저장", exact: true }).isEnabled(), false);
   assert.equal(await page.getByRole("button", { name: "MP4 저장", exact: true }).isEnabled(), false);
-  assert.equal(await melodyTab.isEnabled(), true);
+  assert.equal(await melodyTab.isEnabled(), false);
   await page.getByTestId("practice-measure-preview-2").click();
   await page.getByRole("button", { name: "3마디 연주 멈추기", exact: true }).waitFor();
   const partialPlayback = await page.evaluate(() => {
@@ -102,13 +106,13 @@ try {
     const rhythmBounds = await card(index).locator(".practice-rhythm-timeline").boundingBox();
     const lyricBounds = await card(index).getByLabel(`${index + 1}마디 가사`, { exact: true }).boundingBox();
     assert.ok(lyricBounds.y >= rhythmBounds.y + rhythmBounds.height);
-    assert.equal(await melodyTab.isEnabled(), true);
+    assert.equal(await melodyTab.isEnabled(), false);
     await card(index).getByLabel(`${index + 1}마디 가사`, { exact: true }).fill("반짝별아");
     await page.getByTestId(`practice-measure-${index}`).click();
     for (let beat = 0; beat < 4; beat += 1) {
       await tools.getByTestId("practice-duration-1").click();
     }
-    assert.equal(await melodyTab.isEnabled(), true);
+    assert.equal(await melodyTab.isEnabled(), index === 3);
   }
   const workspaceBounds = await page.locator(".practice-workspace").boundingBox();
   const listenBounds = await page.locator(".practice-listen-card").boundingBox();
@@ -129,7 +133,7 @@ try {
   await tools.getByTestId("practice-duration-2").click();
   assert.match(await card(0).locator(".practice-measure-validation").innerText(), /맞지 않아요/);
   assert.equal(await page.getByRole("button", { name: "MP3 저장", exact: true }).isEnabled(), false);
-  assert.equal(await melodyTab.isEnabled(), true);
+  assert.equal(await melodyTab.isEnabled(), false);
   assert.equal(await page.getByRole("tab", { name: /리듬 만들기/ }).getAttribute("aria-selected"), "true");
   await tools.getByTestId("practice-delete-note").click();
   assert.deepEqual((await draft()).measures[0].notes, initial.measures[0].notes);
@@ -152,7 +156,18 @@ try {
   assert.equal(made.measures[0].notes.map((note) => note.lyric).join(""), "반짝별아");
   await page.screenshot({ path: path.join(outputDir, "melody-desktop.png"), fullPage: true });
 
-  // Melody editing can change rhythm without losing pitches or per-note lyrics.
+  // The linked melody preserves the authored rhythm; standalone melody allows editing its lengths.
+  assert.equal(await tools.getByTestId("practice-edit-duration").count(), 0);
+  assert.equal(await tools.getByTestId("practice-duration-1").count(), 0);
+  assert.equal(await tools.getByTestId("practice-delete-note").count(), 0);
+  await page.getByRole("button", { name: "모드 바꾸기", exact: true }).click();
+  await page.getByRole("button", { name: "가락만들기", exact: true }).click();
+  assert.equal((await draft()).mode, "melody");
+  assert.deepEqual((await draft()).measures, made.measures);
+  assert.equal(await page.getByRole("tab", { name: /리듬 만들기/ }).count(), 0);
+  assert.equal(await page.getByRole("button", { name: /악보 추가하기/ }).count(), 0);
+
+  // Standalone melody editing keeps pitches and per-note lyrics while changing rhythm.
   await card(0).getByLabel("1번째 음표 가사", { exact: true }).fill("");
   const lyricsEdited = (await draft()).measures[0].notes;
   assert.equal(lyricsEdited[0].lyric, "");

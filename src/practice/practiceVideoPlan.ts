@@ -3,6 +3,7 @@ import { findInstrument } from "../music/instruments";
 import { measureCapacity } from "../music/meter";
 import { toNumber } from "../music/rational";
 import { buildPracticeAudioPlan } from "./practiceAudioTimeline";
+import { practiceAudioScores } from "./practiceAudioScores";
 import type { PracticeAudioInput, PracticeRenderedAudio, PracticeTimeline } from "./practiceAudioTypes";
 import { PRACTICE_VIDEO_FPS } from "./practiceVideoLayout";
 import type {
@@ -82,18 +83,10 @@ export function buildPracticeVideoPlan(input: PracticeAudioInput, rendered: Rend
   if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) {
     throw new Error("연주 길이를 확인한 뒤 다시 저장해 주세요.");
   }
-  const scores = [
-    {
-      id: "main",
-      measures: input.measures,
-      instrumentId: input.step === "rhythm" ? input.rhythmInstrumentId : input.melodyInstrumentId,
-      rhythm: input.step === "rhythm",
-      timeline: rendered.timeline
-    },
-    ...(input.rhythmLayers ?? []).map((layer, index) => ({
-      ...layer, rhythm: true, timeline: rendered.layerTimelines?.[index]
-    }))
-  ];
+  const scores = practiceAudioScores(input).map((score, index) => ({
+    ...score,
+    timeline: index === 0 ? rendered.timeline : rendered.layerTimelines?.[index - 1]
+  }));
   const tracks: PracticeVideoTrack[] = scores.map((score) => ({
     id: score.id,
     instrumentId: score.instrumentId,

@@ -4,17 +4,22 @@ import { vi } from "vitest";
 import { PRACTICE_STORAGE_KEY, type PracticeDraft } from "./practiceStorage";
 import PracticeMode from "./PracticeMode";
 import { usePracticeAudio } from "./usePracticeAudio";
+import { practiceCreationModeLabel, type PracticeCreationMode } from "./practiceCreationMode";
 
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 let root: Root | null = null;
 export let container: HTMLDivElement | null = null;
 
-export function mount(onClose = vi.fn()): ReturnType<typeof vi.fn> {
+export function mount(onClose = vi.fn(), mode: PracticeCreationMode | null = "rhythm-melody"): ReturnType<typeof vi.fn> {
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
   act(() => root?.render(<PracticeMode onClose={onClose} />));
+  if (mode) {
+    const choice = container.querySelector<HTMLButtonElement>(`button[aria-label="${practiceCreationModeLabel(mode)}"]`);
+    if (choice) click(choice);
+  }
   return onClose;
 }
 

@@ -240,6 +240,10 @@
   color: #7954b3;
 }
 
+.practice-melody-empty-slot {
+  font-size: 18px;
+}
+
 .practice-rhythm-block {
   z-index: 1;
   font-size: 13px;

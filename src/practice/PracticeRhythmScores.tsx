@@ -1,17 +1,21 @@
 import { Music2, Plus, Square, Trash2 } from "lucide-react";
 import PracticeRhythmInstrument from "./PracticeRhythmInstrument";
+import { INSTRUMENTS } from "../music/instruments";
 import type { usePracticeState } from "./usePracticeState";
 import type { usePracticeAudio } from "./usePracticeAudio";
 
 type PracticeRhythmScoresProps = {
   practice: Pick<ReturnType<typeof usePracticeState>,
-    "scores" | "activeScoreIndex" | "selectScore" | "addRhythmScore" | "removeRhythmScore" | "setRhythmInstrument">;
+    "draft" | "step" | "configure" | "scores" | "activeScoreIndex" | "selectScore" | "addRhythmScore" | "removeRhythmScore" | "setRhythmInstrument">;
   audio: Pick<ReturnType<typeof usePracticeAudio>,
     "busy" | "playing" | "previewRhythmMixing" | "stop" | "previewRhythmMix">;
 };
 
 export default function PracticeRhythmScores({ practice, audio }: PracticeRhythmScoresProps) {
   const busy = audio.busy || audio.playing;
+  const melodyOnly = practice.draft.mode === "melody";
+  const melodyStep = practice.step === "melody";
+  const rhythmLocked = practice.draft.mode === "rhythm-melody" && melodyStep;
   const hasSound = practice.scores.some((score) => score.measures.some((measure) => (
     measure.notes.some((note) => note.pitch !== null)
   )));
@@ -20,16 +24,23 @@ export default function PracticeRhythmScores({ practice, audio }: PracticeRhythm
     : "리듬 함께 듣기";
 
   return (
-    <section className="practice-rhythm-scores" aria-label="리듬 악보와 악기 선택">
+    <section className="practice-rhythm-scores" aria-label={melodyOnly ? "가락 악기 선택" : "리듬 악보와 악기 선택"}>
       <div className="practice-rhythm-scores-heading">
         <div>
           <h3>악기</h3>
         </div>
-        <button type="button" className="practice-add-score" disabled={busy || practice.scores.length >= 3}
+        {!melodyOnly && <button type="button" className="practice-add-score" disabled={busy || rhythmLocked || practice.scores.length >= 3}
           onClick={practice.addRhythmScore}>
           <Plus size={17} /> 악보 추가하기 <small>{practice.scores.length} / 3</small>
-        </button>
+        </button>}
       </div>
+      {melodyStep && <label className="practice-melody-instrument">가락 악기
+        <select aria-label="가락 연주 악기" value={practice.draft.melodyInstrumentId} disabled={busy}
+          onChange={(event) => practice.configure({ melodyInstrumentId: event.target.value })}>
+          {INSTRUMENTS.map((instrument) => <option key={instrument.id} value={instrument.id}>{instrument.name}</option>)}
+        </select>
+      </label>}
+      {!melodyOnly && <>
       <div className="practice-score-options">
         {practice.scores.map((score, index) => (
           <div key={score.id} className={`practice-score-option${practice.activeScoreIndex === index ? " is-active" : ""}`}>
@@ -41,7 +52,7 @@ export default function PracticeRhythmScores({ practice, audio }: PracticeRhythm
               </button>
               {index > 0 && (
                 <button type="button" className="practice-remove-score" aria-label={`${index + 1}번 악보 삭제`}
-                  disabled={busy} onClick={() => practice.removeRhythmScore(index)}>
+                  disabled={busy || rhythmLocked} onClick={() => practice.removeRhythmScore(index)}>
                   <Trash2 size={16} />
                 </button>
               )}
@@ -61,6 +72,7 @@ export default function PracticeRhythmScores({ practice, audio }: PracticeRhythm
           </button>
         </div>
       )}
+      </>}
     </section>
   );
 }

@@ -1,0 +1,125 @@
+.practice-mode-chooser {
+  margin-top: 28px;
+  padding: 28px;
+  border: 1px solid #dce5de;
+  border-radius: 20px;
+  background: #fff;
+}
+
+.practice-mode-chooser > p {
+  margin-top: 8px;
+  color: #66776e;
+  font-size: 14px;
+}
+
+.practice-mode-choices {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.practice-mode-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  min-height: 230px;
+  padding: 24px;
+  border: 1px solid #cbded2;
+  border-radius: 18px;
+  background: #f4faf5;
+  color: #2c6650;
+  text-align: left;
+  transition: border-color .15s, box-shadow .15s;
+}
+
+.practice-mode-choice.is-rhythm-melody {
+  border-color: #d5c9eb;
+  color: #665091;
+  background: #f8f5fe;
+}
+
+.practice-mode-choice.is-melody {
+  border-color: #bcdde8;
+  color: #2c728b;
+  background: #f1faff;
+}
+
+.practice-mode-choice:hover,
+.practice-mode-choice:focus-visible {
+  border-color: currentColor;
+  box-shadow: 0 5px 18px #294b3314;
+}
+
+.practice-mode-choice:focus-visible {
+  outline: 3px solid #79a88f;
+  outline-offset: 3px;
+}
+
+.practice-mode-choice-icon {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 17px;
+  background: #ffffffc9;
+}
+
+.practice-mode-choice strong {
+  font-size: 20px;
+}
+
+.practice-mode-choice > span:not(.practice-mode-choice-icon) {
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.practice-mode-choice .practice-mode-choice-start {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+  font-weight: 800;
+}
+
+.practice-mode-current {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 20px;
+  color: #356953;
+  font-size: 14px;
+}
+
+.practice-mode-current button {
+  min-height: 38px;
+  padding: 7px 12px;
+  border: 1px solid #d5e2d9;
+  border-radius: 10px;
+  color: #53675e;
+  background: #fff;
+  font-size: 12px;
+}
+
+@media (max-width: 800px) {
+  .practice-mode-choices {
+    grid-template-columns: 1fr;
+  }
+
+  .practice-mode-choice {
+    min-height: 0;
+    padding: 20px;
+    gap: 10px;
+  }
+
+  .practice-mode-chooser {
+    padding: 20px;
+  }
+
+  .practice-mode-choice strong {
+    font-size: 18px;
+  }
+}

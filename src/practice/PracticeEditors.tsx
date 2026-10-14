@@ -161,17 +161,21 @@ function RhythmGrid({ notes, slots, capacity, slotsPerBeat, total, selectedNoteI
   );
 }
 
-function MelodyGrid({ notes, slots, capacity, slotsPerBeat, selectedNoteId, playingNoteId, disabled, onSelectNote, onPitch }: {
+function MelodyGrid({ notes, slots, capacity, slotsPerBeat, total, selectedNoteId, playingNoteId, disabled, onSelectNote, onPitch, onAppendPitch }: {
   notes: readonly PositionedNote[];
   slots: number;
   capacity: number;
   slotsPerBeat: number;
+  total: number;
   selectedNoteId: string | null;
   playingNoteId?: string | null;
   disabled: boolean;
   onSelectNote: (id: string) => void;
   onPitch: (id: string, pitch: number) => void;
+  onAppendPitch?: (pitch: number) => void;
 }) {
+  const emptySlots = onAppendPitch ? Array.from({ length: slots }, (_, index) => index)
+    .filter((index) => index / slotsPerBeat >= total && index / slotsPerBeat < capacity) : [];
   return (
     <div className="practice-melody-rows" aria-label="낮은 도부터 높은 도까지 가락 칸 채우기">
       {[...PRACTICE_PITCHES].reverse().map((entry) => (
@@ -179,6 +183,16 @@ function MelodyGrid({ notes, slots, capacity, slotsPerBeat, selectedNoteId, play
           <span className="practice-pitch-row-label" style={{ backgroundColor: entry.color }}>{entry.label}</span>
           <div className="practice-melody-timeline">
             <TimelineBase slots={slots} capacity={capacity} slotsPerBeat={slotsPerBeat} />
+            {emptySlots.map((slot) => (
+              <button key={`empty-${slot}`} type="button" disabled={disabled}
+                className="practice-empty-slot practice-melody-empty-slot"
+                style={{ left: `${slot / slots * 100}%`, width: `${1 / slots * 100}%` }}
+                data-testid={`practice-melody-empty-${entry.pitch}-${slot}`}
+                aria-label={`${entry.label} ${beatText(slot / slotsPerBeat + 1)}박 빈칸, 다음 음표 추가`}
+                onClick={() => onAppendPitch?.(entry.pitch)}>
+                <span aria-hidden="true">+</span>
+              </button>
+            ))}
             {notes.map((note, index) => {
               if (note.pitch === null) {
                 if (entry.pitch === 65) {
@@ -227,6 +241,7 @@ function MelodyGrid({ notes, slots, capacity, slotsPerBeat, selectedNoteId, play
 export default function PracticeEditors({
   notes, meter, step, inputMode, selectedNoteId, playingNoteId, disabled = false,
   showTools = true, showSummary = true, compact = false,
+  rhythmLocked = false, allowMelodyAppend = false,
   appendDuration, appendRest, onAppendDurationChange, onAppendRestChange, onNoteLyric,
   onSelectNote, onPitch, onDuration, onDelete, onAdd
 }: PracticeEditorsProps) {
@@ -246,6 +261,7 @@ export default function PracticeEditors({
   const scoreMinWidth = Math.max(compact ? 200 : 580, notes.length * (compact ? 20 : 72));
   const durationChoice = PRACTICE_DURATIONS.find((duration) => duration.beats === nextDuration);
   const append = () => onAdd(nextDuration, nextRest ? null : 60, durationChoice?.dotted);
+  const appendPitch = (pitch: number) => onAdd(nextDuration, nextRest ? null : pitch, durationChoice?.dotted);
   const changeDuration = (beats: number) => {
     setNewDuration(beats);
     onAppendDurationChange?.(beats);
@@ -280,6 +296,7 @@ export default function PracticeEditors({
             selectedNoteId={selectedNoteId} disabled={disabled} onSelectNote={onSelectNote}
             onPitch={onPitch} onDuration={onDuration} onDelete={onDelete} onAdd={onAdd}
             appendDuration={nextDuration} appendRest={nextRest}
+            rhythmLocked={rhythmLocked} allowMelodyAppend={allowMelodyAppend}
             onAppendDurationChange={changeDuration} onAppendRestChange={changeRest} />
         </>
       )}
@@ -292,13 +309,16 @@ export default function PracticeEditors({
                 selectedNoteId={selectedNoteId} playingNoteId={playingNoteId} disabled={disabled}
                 onDelete={onDelete} onAppend={append} />
             ) : (
-              <MelodyGrid notes={positioned} slots={slots} capacity={capacity} slotsPerBeat={slotsPerBeat}
+              <MelodyGrid notes={positioned} slots={slots} capacity={capacity} slotsPerBeat={slotsPerBeat} total={total}
                 selectedNoteId={selectedNoteId} playingNoteId={playingNoteId} disabled={disabled}
-                onSelectNote={onSelectNote} onPitch={onPitch} />
+                onSelectNote={onSelectNote} onPitch={onPitch}
+                onAppendPitch={allowMelodyAppend && !rhythmLocked ? appendPitch : undefined} />
             )}
             <div className={step === "melody" ? "practice-timeline-offset" : ""}>{lyricTimeline}</div>
           </div>
-          {notes.length === 0 && step === "melody" && <p className="practice-editor-empty">음표를 추가한 뒤 칸을 눌러 가락을 만들어요.</p>}
+          {notes.length === 0 && step === "melody" && <p className="practice-editor-empty">
+            {allowMelodyAppend ? "원하는 음높이의 빈칸을 눌러 가락을 넣어요." : "리듬을 만든 뒤 음높이를 골라요."}
+          </p>}
         </div>
       ) : (
         <div className="practice-score-scroll" tabIndex={0} aria-label="연습 악보와 가사">

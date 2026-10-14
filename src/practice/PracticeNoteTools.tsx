@@ -20,6 +20,7 @@ function beatText(beats: number): string {
 
 export default function PracticeNoteTools({
   notes, step, inputMode, selectedNoteId, disabled = false,
+  rhythmLocked = false, allowMelodyAppend = false,
   appendDuration, appendRest, onAppendDurationChange, onAppendRestChange,
   onPitch, onDuration, onDelete, onAdd
 }: PracticeEditorsProps) {
@@ -33,7 +34,7 @@ export default function PracticeNoteTools({
     : "";
 
   function append(beats: number, rest: boolean, dotted?: boolean) {
-    if (disabled) return;
+    if (disabled || rhythmLocked) return;
     setNewDuration(beats);
     setNewRest(rest);
     onAppendDurationChange?.(beats);
@@ -51,7 +52,7 @@ export default function PracticeNoteTools({
 
   return (
     <div className="practice-editors practice-note-tools">
-      <div className="practice-rhythm-tools">
+      {!rhythmLocked && <div className="practice-rhythm-tools">
         <div className="practice-duration-options" role="group" aria-label="음표와 쉼표 넣기">
           {PRACTICE_DURATIONS.map((duration) => {
             const noteName = duration.label.split(" · ")[0];
@@ -83,20 +84,34 @@ export default function PracticeNoteTools({
             삭제
           </button>
         </div>
-      </div>
+      </div>}
+      {rhythmLocked && <p className="practice-editor-help">
+        만든 리듬에 높낮이를 붙여요. 길이를 고치려면 리듬만들기로 돌아가요.
+      </p>}
       {step === "melody" && (
         <div className="practice-melody-tools">
           <div className="practice-pitch-options" role="group" aria-label="선택한 음표의 음높이">
             {PRACTICE_PITCHES.map((entry) => (
-              <button type="button" key={entry.pitch} disabled={disabled || !selected || selected.pitch === null}
+              <button type="button" key={entry.pitch}
+                disabled={disabled || (selected ? selected.pitch === null : !allowMelodyAppend)}
                 style={{ backgroundColor: entry.color }} aria-pressed={selected?.pitch === entry.pitch}
-                data-testid={`practice-pitch-${entry.pitch}`} aria-label={`선택한 음표를 ${entry.label}로 바꾸기`}
-                onClick={() => selected && selected.pitch !== null && onPitch(selected.id, entry.pitch)}>{entry.label}</button>
+                data-testid={`practice-pitch-${entry.pitch}`}
+                aria-label={selected ? `선택한 음표를 ${entry.label}로 바꾸기` : `${entry.label} 음표 넣기`}
+                onClick={() => {
+                  if (selected && selected.pitch !== null) onPitch(selected.id, entry.pitch);
+                  else if (!selected && allowMelodyAppend && !rhythmLocked) {
+                    const duration = PRACTICE_DURATIONS.find((item) => item.beats === nextDuration);
+                    setNewRest(false);
+                    onAppendRestChange?.(false);
+                    onAdd(nextDuration, entry.pitch, duration?.dotted);
+                  }
+                }}>{entry.label}</button>
             ))}
           </div>
           <div className="practice-pitch-navigation">
-            <span>{selected ? `${notes.findIndex((note) => note.id === selected.id) + 1}번째 ${selectedLabel} 선택` : "먼저 음표를 선택해 주세요."}</span>
-            <label className="practice-selected-duration">길이
+            <span>{selected ? `${notes.findIndex((note) => note.id === selected.id) + 1}번째 ${selectedLabel} 선택`
+              : allowMelodyAppend ? "음높이를 누르면 새 음표가 생겨요." : "먼저 음표를 선택해 주세요."}</span>
+            {!rhythmLocked && <label className="practice-selected-duration">길이
               <select aria-label="선택한 음표 길이" data-testid="practice-edit-duration"
                 disabled={disabled || !selected} value={selected ? toNumber(selected.duration) : ""}
                 onChange={(event) => {
@@ -108,7 +123,7 @@ export default function PracticeNoteTools({
                   <option key={duration.beats} value={duration.beats}>{beatText(duration.beats)}박</option>
                 ))}
               </select>
-            </label>
+            </label>}
             <button type="button" disabled={disabled || !selected || selected.pitch === null || selected.pitch <= 60}
               onClick={() => moveSelectedPitch(-1)} aria-label={inputMode === "score" ? "선택한 음표 반음 낮추기" : "선택한 음표 한 음 낮추기"}>↓ {inputMode === "score" ? "반음" : "한 음"} 낮게</button>
             <button type="button" disabled={disabled || !selected || selected.pitch === null || selected.pitch >= 72}

@@ -102,6 +102,32 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("세 악보의 독립 리듬과 동시 연주", () => {
+  it("함께 만들기는 가락의 음높이와 동일한 주리듬을 별도 악기로 같은 시간에 렌더한다", async () => {
+    const settings: PracticeAudioInput = {
+      ...layered, mode: "rhythm-melody", rhythmInstrumentId: "beat:shaker"
+    };
+    const result = await renderPracticeAudio(settings);
+    expect(mocks.load.mock.calls.map((args) => args[2])).toEqual(["flute", "clarinet"]);
+    expect(mocks.preloadBeat.mock.calls.map((args) => args[1])).toEqual([["shaker"], ["woodblock"]]);
+    expect(mocks.queue.mock.calls.filter((args) => args[0].instrumentId === "flute")
+      .map((args) => args.slice(3, 6))).toEqual([[60, 0, 0.5], [64, 2, 0.5]]);
+    expect(mocks.scheduleBeat.mock.calls.filter((args) => args[4] === "shaker")
+      .map((args) => args[2])).toEqual([0, 2]);
+    expect(result.layerTimelines).toHaveLength(3);
+    expect(result.layerTimelines![0].events.map((event) => event.pitch)).toEqual([72, 72]);
+    expect(result.buffer.duration).toBe(2.5);
+  });
+
+  it("가락만들기는 저장된 다른 리듬 악기를 준비하거나 함께 렌더하지 않는다", async () => {
+    const result = await renderPracticeAudio({ ...layered, mode: "melody" });
+    expect(mocks.load.mock.calls.map((args) => args[2])).toEqual(["flute"]);
+    expect(mocks.queue.mock.calls.map((args) => args.slice(3, 6))).toEqual([[60, 0, 0.5], [64, 0.5, 0.5]]);
+    expect(mocks.preloadBeat).not.toHaveBeenCalled();
+    expect(mocks.scheduleBeat).not.toHaveBeenCalled();
+    expect(result.layerTimelines).toBeUndefined();
+    expect(result.buffer.duration).toBe(1);
+  });
+
   it("서로 다른 악기를 하나의 오프라인 버퍼에 같은 시작 시간으로 예약한다", async () => {
     const result = await renderPracticeAudio(layered);
     const context = OfflineContext.instances[0];

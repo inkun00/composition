@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { practiceAudioScores } from "./practiceAudioScores";
 import {
   encodePracticeMp3,
   exportPracticeMp4,
@@ -116,7 +117,9 @@ export function usePracticeAudio(input: PracticeAudioInput) {
       rhythmLayers: renderInput.rhythmLayers,
       meter: renderInput.meter,
       bpm: renderInput.bpm,
-      instrument: renderInput.step === "rhythm" ? renderInput.rhythmInstrumentId : renderInput.melodyInstrumentId,
+      melodyInstrument: renderInput.melodyInstrumentId,
+      rhythmInstrument: renderInput.rhythmInstrumentId,
+      mode: renderInput.mode,
       step: renderInput.step
     });
     if (cached.current?.key === key) {
@@ -156,10 +159,11 @@ export function usePracticeAudio(input: PracticeAudioInput) {
     setStatus("연주할 악기를 준비하고 있어요.");
     try {
       const renderInput = measureIndex === null
-        ? rhythmMix ? { ...input, step: "rhythm" as const }
+        ? rhythmMix ? { ...input, mode: "rhythm" as const, step: "rhythm" as const }
           : scoreIndex !== null ? practiceScoreAudioInput(input, scoreIndex) : input
         : practiceMeasureAudioInput(input, measureIndex, scoreIndex ?? 0);
-      const soundLabel = renderInput.step === "melody" ? "가락" : "리듬";
+      const soundLabel = renderInput.mode === "rhythm-melody" && renderInput.step === "melody"
+        ? "리듬과 가락" : practiceAudioScores(renderInput)[0].rhythm ? "리듬" : "가락";
       // Create and resume synchronously inside the click, before awaiting rendering.
       session.context = new AudioContext();
       const resuming = session.context.resume();

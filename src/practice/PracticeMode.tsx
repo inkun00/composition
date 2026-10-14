@@ -4,11 +4,13 @@ import { meterKey, SUPPORTED_METERS } from "../music/meter";
 import { useUnsavedWorkWarning } from "../hooks/useUnsavedWorkWarning";
 import { PracticeNoteTools } from "./PracticeEditors";
 import PracticeMeasureCard from "./PracticeMeasureCard";
+import PracticeModeChooser from "./PracticeModeChooser";
 import PracticePlayback from "./PracticePlayback";
 import PracticeRhythmScores from "./PracticeRhythmScores";
 import PracticeStages from "./PracticeStages";
 import PracticeTutorial from "./PracticeTutorial";
 import type { PracticeVideoMode } from "./practiceVideoTypes";
+import { practiceCreationModeLabel, type PracticeCreationMode } from "./practiceCreationMode";
 import { usePracticeAudio } from "./usePracticeAudio";
 import { usePracticeState } from "./usePracticeState";
 import "./PracticeMode.css";
@@ -25,6 +27,8 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
   const [appendRest, setAppendRest] = useState(false);
   const [saving, setSaving] = useState(false);
   const [videoMode, setVideoMode] = useState<PracticeVideoMode>("bars");
+  const [changingMode, setChangingMode] = useState(false);
+  const choosingMode = draft.mode === null || changingMode;
   const audio = usePracticeAudio({
     measures: draft.measures,
     bpm: draft.bpm,
@@ -34,12 +38,21 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
     meter: draft.meter,
     step,
     videoMode,
-    title: draft.title
+    title: draft.title,
+    mode: draft.mode ?? undefined
   });
   useUnsavedWorkWarning(!practice.saved);
   const busy = audio.busy || audio.playing;
   const finishedCount = scoreValidations.flat().filter((item) => item.state === "exact").length;
   const totalMeasures = draft.measures.length * scores.length;
+  const hasMelodySound = draft.measures.some((measure) => measure.notes.some((note) => note.pitch !== null));
+
+  function selectMode(mode: PracticeCreationMode) {
+    practice.selectCreationMode(mode);
+    setChangingMode(false);
+    setSaving(false);
+    setAppendRest(false);
+  }
 
   function close() {
     if (!practice.saved && !window.confirm("연습을 이 기기에 저장하지 못했어요. 화면을 나갈까요?")) return;
@@ -59,7 +72,13 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
       <main className="practice-main">
         <div className="practice-intro">
           <h1>음악 만들기</h1>
-          <PracticeTutorial />
+          {!choosingMode && <PracticeTutorial />}
+        </div>
+
+        {choosingMode ? <PracticeModeChooser currentMode={draft.mode} onSelect={selectMode} /> : <>
+        <div className="practice-mode-current">
+          <strong>{practiceCreationModeLabel(draft.mode!)}</strong>
+          <button type="button" disabled={busy} onClick={() => setChangingMode(true)}>모드 바꾸기</button>
         </div>
 
         <fieldset className="practice-settings" disabled={busy} hidden={saving}>
@@ -70,6 +89,7 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
           </label>
           <label>마디 수
             <select aria-label="연습할 마디 수" value={draft.measures.length}
+              disabled={draft.mode === "rhythm-melody" && step === "melody"}
               onChange={(event) => practice.resize(Number(event.target.value))}>
               {Array.from({ length: 8 }, (_, index) => index + 1).map((count) => (
                 <option key={count} value={count}>{count}마디</option>
@@ -77,7 +97,8 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
             </select>
           </label>
           <label>박자
-            <select aria-label="연습 박자" value={meterKey(draft.meter)} onChange={(event) => {
+            <select aria-label="연습 박자" value={meterKey(draft.meter)}
+              disabled={draft.mode === "rhythm-melody" && step === "melody"} onChange={(event) => {
               const meter = SUPPORTED_METERS.find((item) => meterKey(item) === event.target.value);
               if (meter) practice.setMeter(meter);
             }}>
@@ -97,7 +118,7 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
           </label>
         </fieldset>
 
-        <PracticeStages step={step} saving={saving} busy={busy}
+        <PracticeStages mode={draft.mode!} step={step} saving={saving} busy={busy} canGoToMelody={practice.canGoToMelody}
           onRhythm={() => { setSaving(false); practice.setStep("rhythm"); }}
           onMelody={() => { setSaving(false); practice.goToMelody(); }} onSave={() => setSaving(true)} />
 
@@ -139,6 +160,8 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
                 <PracticeNoteTools notes={score.measures[activeIndex].notes} meter={draft.meter}
                   step={scoreIndex === 0 ? step : "rhythm"} inputMode={inputMode}
                   selectedNoteId={practice.selectedNoteId} disabled={busy}
+                  rhythmLocked={draft.mode === "rhythm-melody" && step === "melody" && scoreIndex === 0}
+                  allowMelodyAppend={draft.mode === "melody"}
                   appendDuration={appendDuration} appendRest={appendRest}
                   onAppendDurationChange={setAppendDuration} onAppendRestChange={setAppendRest}
                   onSelectNote={practice.setSelectedNoteId} onPitch={practice.setPitch}
@@ -173,23 +196,27 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
           {practice.notice && <p className="practice-notice" role="status">{practice.notice}</p>}
           <div className="practice-workspace-footer">
             <span>{finishedCount} / {totalMeasures}마디 박자 완성</span>
-            {step === "rhythm" ? (
+            {draft.mode === "rhythm-melody" && (step === "rhythm" ? (
               <div className="practice-stage-next">
-                <button type="button" className="practice-primary" disabled={busy} onClick={practice.goToMelody}>
+                <button type="button" className="practice-primary" disabled={busy || !practice.canGoToMelody} onClick={practice.goToMelody}>
                   가락 만들기로 <ArrowRight size={17} />
                 </button>
+                {!practice.canGoToMelody && <small>{hasMelodySound
+                  ? "모든 악보의 리듬을 먼저 완성해 주세요."
+                  : "가락을 붙일 악보 1에 소리 나는 음표를 넣어 주세요."}</small>}
               </div>
             ) : (
               <button type="button" disabled={busy} onClick={() => practice.setStep("rhythm")}>
                 <ArrowLeft size={17} /> 리듬 만들기로
               </button>
-            )}
+            ))}
           </div>
         </section>
 
-        <PracticePlayback draft={draft} step={step} complete={complete} audio={audio} onConfigure={practice.configure}
+        <PracticePlayback draft={draft} step={step} complete={complete} audio={audio}
           saving={saving} videoMode={videoMode} onVideoMode={setVideoMode} onSaveSettings={() => setSaving(true)}
           onReturnToEditing={() => setSaving(false)} />
+        </>}
       </main>
     </div>
   );

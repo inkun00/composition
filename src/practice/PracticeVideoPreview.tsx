@@ -26,6 +26,7 @@ export default function PracticeVideoPreview({ draft, step, mode, disabled = fal
         melodyInstrumentId: draft.melodyInstrumentId,
         rhythmInstrumentId: draft.rhythmInstrumentId,
         title: draft.title,
+        mode: draft.mode ?? undefined,
         step
       });
     } catch {

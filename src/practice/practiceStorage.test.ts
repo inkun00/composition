@@ -50,6 +50,22 @@ afterEach(() => {
 });
 
 describe("연습 초안 저장과 복원", () => {
+  it.each(["rhythm", "rhythm-melody", "melody"] as const)("선택한 %s 모드를 다시 열 때 복원한다", (mode) => {
+    const draft = storedExample();
+    draft.mode = mode;
+    writePracticeDraft(draft);
+    expect(readPracticeDraft().mode).toBe(mode);
+    expect(readPracticeDraft().measures[0].notes[0].id).toBe("first");
+  });
+
+  it.each([undefined, "invalid", 42])("이전 초안이나 잘못된 모드 %s는 내용은 유지하고 모드를 다시 고르게 한다", (mode) => {
+    saveRaw({ ...storedExample(), mode });
+    const restored = readPracticeDraft();
+    expect(restored.mode).toBeNull();
+    expect(restored.title).toBe("친구에게 부르는 노래");
+    expect(restored.measures[0].notes[0].id).toBe("first");
+  });
+
   it("다양한 7화음과 연결 가능한 화음 선택을 새로고침 후에도 복원한다", () => {
     const draft = storedExample();
     draft.measures = ["Cmaj7", "Fmaj7", "Dm7", "G7"].map((chord, index) => ({
@@ -81,6 +97,7 @@ describe("연습 초안 저장과 복원", () => {
 
   it("처음 방문하면 두 마디와 사용할 수 있는 기본 악기를 준비한다", () => {
     const draft = readPracticeDraft();
+    expect(draft.mode).toBeNull();
     expect(draft.measures).toHaveLength(2);
     expect(draft.measures.every((measure) => measure.notes.length === 0)).toBe(true);
     expect(draft.meter).toEqual({ beats: 4, beatUnit: 4 });

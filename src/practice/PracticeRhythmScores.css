@@ -57,6 +57,11 @@
   gap: 12px;
 }
 
+.practice-melody-instrument {
+  max-width: 360px;
+  margin-bottom: 14px;
+}
+
 .practice-score-option {
   min-width: 0;
   padding: 12px;

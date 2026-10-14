@@ -1,5 +1,6 @@
 import type { Meter } from "../music/meter";
 import type { NoteEvent } from "../music/types";
+import type { PracticeCreationMode } from "./practiceCreationMode";
 import type { PracticeVideoMode } from "./practiceVideoTypes";
 
 export type PracticeAudioMeasure = Readonly<{ notes: readonly NoteEvent[] }>;
@@ -16,6 +17,7 @@ export type PracticeAudioInput = Readonly<{
   melodyInstrumentId: string;
   rhythmInstrumentId: string;
   step: "rhythm" | "melody";
+  mode?: PracticeCreationMode;
   videoMode?: PracticeVideoMode;
   title: string;
 }>;

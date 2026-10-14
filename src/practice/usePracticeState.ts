@@ -8,6 +8,19 @@ import { readPracticeDraft, writePracticeDraft, type PracticeDraft } from "./pra
 import { getPracticeScores, hasPracticeScoreData, MAX_PRACTICE_SCORES, normalizePracticeRhythmInstrument } from "./practiceScores";
 import { normalizePracticePitch } from "./practicePitch";
 import { isAvailablePracticeChord, normalizePracticeHarmony } from "./practiceHarmony";
+import type { PracticeCreationMode } from "./practiceCreationMode";
+
+function isDraftComplete(draft: PracticeDraft) {
+  const scores = getPracticeScores(draft);
+  return scores.every((score) => score.measures.every((measure) => validateMeasure(measure.notes, draft.meter).state === "exact")) &&
+    scores.some((score) => score.measures.some((measure) => measure.notes.some((note) => note.pitch !== null)));
+}
+
+function canDraftGoToMelody(draft: PracticeDraft) {
+  if (draft.mode === "melody") return true;
+  return draft.mode === "rhythm-melody" && isDraftComplete(draft) &&
+    draft.measures.some((measure) => measure.notes.some((note) => note.pitch !== null));
+}
 
 function unassignedLyricSyllables(measure: PracticeMeasure) {
   // Deleted notes release their syllables without moving lyrics on other notes.
@@ -30,13 +43,14 @@ export function usePracticeState() {
   const [draft, setDraft] = useState<PracticeDraft>(readPracticeDraft);
   const [activeIndex, setActiveIndex] = useState(0);
   const [activeScoreIndex, setActiveScoreIndex] = useState(0);
-  const [step, setStep] = useState<"rhythm" | "melody">("rhythm");
+  const [step, setPracticeStep] = useState<"rhythm" | "melody">(() => draft.mode === "melody" ? "melody" : "rhythm");
   const [inputMode, setInputMode] = useState<"grid" | "score">("grid");
   const [selectedNoteId, setSelectedNote] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
   const [saved, setSaved] = useState(true);
   const sequence = useRef(0);
   const latestDraft = useRef(draft);
+  const latestStep = useRef(step);
   const selectedMeasure = useRef(activeIndex);
   const selectedScore = useRef(activeScoreIndex);
   const scores = getPracticeScores(draft);
@@ -44,8 +58,8 @@ export function usePracticeState() {
   const editingStep = activeScoreIndex === 0 ? step : "rhythm";
   const scoreValidations = scores.map((score) => score.measures.map((measure) => validateMeasure(measure.notes, draft.meter)));
   const validations = scoreValidations[0];
-  const complete = scoreValidations.every((items) => items.every((validation) => validation.state === "exact")) &&
-    scores.some((score) => score.measures.some((measure) => measure.notes.some((note) => note.pitch !== null)));
+  const complete = isDraftComplete(draft);
+  const canGoToMelody = canDraftGoToMelody(draft);
 
   useEffect(() => {
     setSaved(writePracticeDraft(draft));
@@ -56,6 +70,21 @@ export function usePracticeState() {
     const next = change(latestDraft.current);
     latestDraft.current = next;
     setDraft(next);
+  }
+
+  function changeStep(next: "rhythm" | "melody") {
+    latestStep.current = next;
+    setPracticeStep(next);
+  }
+
+  function rhythmLocked(scoreIndex = selectedScore.current) {
+    return latestDraft.current.mode === "rhythm-melody" && latestStep.current === "melody" && scoreIndex === 0;
+  }
+
+  function rejectLockedRhythm(scoreIndex = selectedScore.current) {
+    if (!rhythmLocked(scoreIndex)) return false;
+    setNotice("리듬을 바꾸려면 리듬 만들기로 돌아가 주세요. 여기서는 음높이와 가사를 바꿀 수 있어요.");
+    return true;
   }
 
   function updateMeasure(
@@ -115,7 +144,7 @@ export function usePracticeState() {
     setSelectedNote(id);
   }
 
-  function configure(change: Partial<Omit<PracticeDraft, "measures" | "rhythmLayers" | "version">>) {
+  function configure(change: Partial<Omit<PracticeDraft, "measures" | "rhythmLayers" | "version" | "mode">>) {
     updateDraft((previous) => ({ ...previous, ...change }));
     setNotice("");
   }
@@ -134,6 +163,8 @@ export function usePracticeState() {
 
   function addRhythmScore() {
     const previous = latestDraft.current;
+    if (previous.mode === "melody") return;
+    if (rejectLockedRhythm(0)) return;
     const scoreIndex = previous.rhythmLayers.length + 1;
     if (scoreIndex >= MAX_PRACTICE_SCORES) {
       setNotice("악보는 최대 3개까지 함께 연주할 수 있어요.");
@@ -148,6 +179,8 @@ export function usePracticeState() {
 
   function removeRhythmScore(scoreIndex: number) {
     const previous = latestDraft.current;
+    if (previous.mode === "melody") return;
+    if (rejectLockedRhythm(0)) return;
     if (!Number.isInteger(scoreIndex) || scoreIndex < 1 || scoreIndex > previous.rhythmLayers.length) return;
     const target = previous.rhythmLayers[scoreIndex - 1];
     if (hasPracticeScoreData(target) && !window.confirm(`악보 ${scoreIndex + 1}의 가사와 음표가 지워져요. 삭제할까요?`)) return;
@@ -158,6 +191,7 @@ export function usePracticeState() {
   }
 
   function setRhythmInstrument(scoreIndex: number, id: string) {
+    if (latestDraft.current.mode === "melody") return;
     const instrumentId = normalizePracticeRhythmInstrument(id);
     if (!instrumentId || !Number.isInteger(scoreIndex) || scoreIndex < 0 || scoreIndex >= getPracticeScores(latestDraft.current).length) return;
     if (scoreIndex === 0) configure({ rhythmInstrumentId: instrumentId });
@@ -168,9 +202,11 @@ export function usePracticeState() {
   }
 
   function resize(count: number) {
+    if (rejectLockedRhythm(0)) return;
     if (!Number.isInteger(count) || count < 1 || count > 8) return;
     const previous = latestDraft.current;
-    if (count < previous.measures.length && getPracticeScores(previous).some((score) => hasPracticeScoreData({ measures: score.measures.slice(count) }))) {
+    const storedScores = [{ measures: previous.measures }, ...previous.rhythmLayers];
+    if (count < previous.measures.length && storedScores.some((score) => hasPracticeScoreData({ measures: score.measures.slice(count) }))) {
       if (!window.confirm("마디 수를 줄이면 뒤쪽 마디의 가사와 음표가 지워져요. 줄일까요?")) return;
     }
     function resizeMeasures(measures: PracticeMeasure[], idPrefix: string) {
@@ -189,11 +225,13 @@ export function usePracticeState() {
   }
 
   function setMeter(meter: Meter) {
+    if (rejectLockedRhythm(0)) return;
     configure({ meter });
     setNotice("음표는 그대로 두었어요. 새 박자에 맞는지 마디마다 확인해 주세요.");
   }
 
   function addNote(beats: number, pitch: number | null, dotted?: boolean, index = selectedMeasure.current, scoreIndex = selectedScore.current) {
+    if (rejectLockedRhythm(scoreIndex)) return;
     if (!PRACTICE_DURATIONS.some((item) => item.beats === beats)) return;
     const target = getPracticeScores(latestDraft.current)[scoreIndex]?.measures[index];
     if (!target) return;
@@ -221,6 +259,7 @@ export function usePracticeState() {
     if (!PRACTICE_DURATIONS.some((item) => item.beats === beats)) return;
     const owner = noteOwner(id);
     if (!owner) return;
+    if (rejectLockedRhythm(owner.scoreIndex)) return;
     updateMeasure((measure) => ({
       ...measure,
       notes: measure.notes.map((note) => note.id === id ? { ...note, duration: rational(beats * 4, 4), dotted } : note)
@@ -231,6 +270,7 @@ export function usePracticeState() {
   function deleteNote(id: string) {
     const owner = noteOwner(id);
     if (!owner) return;
+    if (rejectLockedRhythm(owner.scoreIndex)) return;
     updateNotes((notes) => notes.filter((note) => note.id !== id), owner.index, owner.scoreIndex);
     activateMeasure(owner.index, owner.scoreIndex);
     setSelectedNote(null);
@@ -258,7 +298,7 @@ export function usePracticeState() {
   }
 
   function generateRhythm(index = selectedMeasure.current, scoreIndex = selectedScore.current) {
-    if (scoreIndex === 0 && step !== "rhythm") return;
+    if (scoreIndex === 0 && latestStep.current !== "rhythm") return;
     const target = getPracticeScores(latestDraft.current)[scoreIndex]?.measures[index];
     if (!target) return;
     if (target.notes.length && !window.confirm("이 마디의 음표를 가사에 맞춘 새 리듬으로 바꿀까요?")) return;
@@ -274,6 +314,7 @@ export function usePracticeState() {
   }
 
   function fillRests(index = selectedMeasure.current, scoreIndex = selectedScore.current) {
+    if (rejectLockedRhythm(scoreIndex)) return;
     const previous = latestDraft.current;
     const target = getPracticeScores(previous)[scoreIndex]?.measures[index];
     if (!target) return;
@@ -291,11 +332,39 @@ export function usePracticeState() {
 
   function goToMelody() {
     const previous = latestDraft.current;
+    if (!canDraftGoToMelody(previous)) {
+      setNotice(previous.mode === "rhythm-melody"
+        ? "먼저 모든 마디의 리듬을 채워 주세요. 첫 악보에 소리 나는 음표도 필요해요."
+        : "가락을 만들려면 처음에 가락이 있는 모드를 골라 주세요.");
+      return;
+    }
     const index = Math.max(0, Math.min(selectedMeasure.current, previous.measures.length - 1));
-    setStep("melody");
+    changeStep("melody");
     activateMeasure(index, 0);
     setSelectedNote(previous.measures[index].notes.find((note) => note.pitch !== null)?.id ?? null);
-    setNotice("음표를 넣고 음높이를 바꾸며 나만의 가락을 만들어 보세요.");
+    setNotice(previous.mode === "melody"
+      ? "빈칸을 눌러 음표를 넣고 나만의 가락을 만들어 보세요."
+      : "만든 리듬은 그대로예요. 음높이를 골라 나만의 가락을 만들어 보세요.");
+  }
+
+  function setStep(next: "rhythm" | "melody") {
+    if (next === "melody") {
+      goToMelody();
+      return;
+    }
+    if (latestDraft.current.mode === "melody") return;
+    changeStep("rhythm");
+    setNotice("");
+  }
+
+  function selectCreationMode(mode: PracticeCreationMode) {
+    const previous = latestDraft.current;
+    const index = Math.max(0, Math.min(selectedMeasure.current, previous.measures.length - 1));
+    updateDraft((draft) => ({ ...draft, mode }));
+    activateMeasure(index, 0);
+    changeStep(mode === "melody" ? "melody" : "rhythm");
+    setSelectedNote(previous.measures[index].notes.find((note) => note.pitch !== null)?.id ?? null);
+    setNotice("");
   }
 
   function setChord(chord: string, index = selectedMeasure.current, scoreIndex = selectedScore.current) {
@@ -317,9 +386,10 @@ export function usePracticeState() {
   }
 
   return {
-    draft, active, activeIndex, activeScoreIndex, scores, step, editingStep, inputMode, selectedNoteId, notice, saved, validations, scoreValidations, complete,
+    draft, active, activeIndex, activeScoreIndex, scores, step, editingStep, inputMode, selectedNoteId, notice, saved, validations, scoreValidations, complete, canGoToMelody,
     setStep, setInputMode, setSelectedNoteId: selectNote, selectMeasure, configure, resize, setMeter,
     selectScore, addRhythmScore, removeRhythmScore, setRhythmInstrument,
+    selectCreationMode,
     addNote, setPitch, setDuration, deleteNote, setLyric, setNoteLyric, generateRhythm, fillRests, goToMelody,
     setChord
   };

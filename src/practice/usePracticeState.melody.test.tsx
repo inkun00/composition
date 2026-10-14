@@ -10,7 +10,7 @@ setupPracticeStateTests();
 
 describe("리듬 만들기 없이 시작하는 가락 연습", () => {
   it("빈 악보에서 선택한 마디를 유지하며 가락 단계로 들어가고 음표를 자동으로 만들지 않는다", () => {
-    mount();
+    mount(undefined, "melody");
     act(() => { current.selectMeasure(1); });
     const before = current.draft;
     act(() => { current.goToMelody(); });
@@ -37,7 +37,7 @@ describe("리듬 만들기 없이 시작하는 가락 연습", () => {
       { id: "overflow-flat", pitch: 63, accidental: "flat", duration: rational(3), dotted: true, lyric: "친" },
       { id: "overflow-sound", pitch: 67, duration: rational(2), lyric: "구" }
     ];
-    mount(draft);
+    mount(draft, "melody");
     const before = current.draft;
     act(() => { current.goToMelody(); });
     expect(current.step).toBe("melody");
@@ -48,7 +48,7 @@ describe("리듬 만들기 없이 시작하는 가락 연습", () => {
     expect(readPracticeDraft()).toEqual(before);
   });
 
-  it("빈 추가 악보가 있어도 첫 악보의 같은 마디로 들어가며 모든 악보의 작업을 보존한다", () => {
+  it("가락만들기로 모드를 바꾸면 추가 악보를 저장에 보존하고 첫 악보의 같은 마디를 선택한다", () => {
     mount(fullDraft());
     act(() => {
       current.addRhythmScore();
@@ -58,6 +58,7 @@ describe("리듬 만들기 없이 시작하는 가락 연습", () => {
       current.addRhythmScore();
       current.selectMeasure(1, 2);
     });
+    act(() => { current.selectCreationMode("melody"); });
     const before = current.draft;
     act(() => { current.goToMelody(); });
     expect(current.step).toBe("melody");
@@ -67,7 +68,7 @@ describe("리듬 만들기 없이 시작하는 가락 연습", () => {
     expect(current.draft).toBe(before);
     expect(current.draft.rhythmLayers[0].measures[1].notes.map((note) => note.lyric)).toEqual(["쿵", undefined]);
     expect(current.draft.rhythmLayers[1].measures.every((measure) => measure.notes.length === 0)).toBe(true);
-    expect(current.complete).toBe(false);
+    expect(current.complete).toBe(true);
   });
 
   it("모든 악보가 빈 상태에서도 추가 악보의 같은 마디를 첫 악보에 맞춰 가락을 시작한다", () => {
@@ -76,6 +77,7 @@ describe("리듬 만들기 없이 시작하는 가락 연습", () => {
       current.addRhythmScore();
       current.addRhythmScore();
       current.selectMeasure(1, 2);
+      current.selectCreationMode("melody");
     });
     const before = current.draft;
     act(() => { current.goToMelody(); });
@@ -87,8 +89,8 @@ describe("리듬 만들기 없이 시작하는 가락 연습", () => {
     expect(current.complete).toBe(false);
   });
 
-  it("가락과 리듬 단계를 왕복해도 직접 만든 음표와 가사를 유지한다", () => {
-    mount();
+  it("가락만들기에서 리듬 단계 요청을 무시하고 직접 만든 음표와 가사를 유지한다", () => {
+    mount(undefined, "melody");
     act(() => { current.goToMelody(); });
     act(() => {
       current.setLyric("반짝");
@@ -101,6 +103,7 @@ describe("리듬 만들기 없이 시작하는 가락 연습", () => {
     const before = current.draft;
     for (let iteration = 0; iteration < 3; iteration += 1) {
       act(() => { current.setStep("rhythm"); });
+      expect(current.step).toBe("melody");
       expect(current.draft).toBe(before);
       act(() => { current.goToMelody(); });
       expect(current.step).toBe("melody");
@@ -114,7 +117,7 @@ describe("리듬 만들기 없이 시작하는 가락 연습", () => {
   });
 
   it("빈 악보에서 가락만 직접 만들어 모든 마디가 정확해지면 저장 가능한 상태가 된다", () => {
-    mount();
+    mount(undefined, "melody");
     act(() => { current.goToMelody(); });
     act(() => {
       current.configure({ title: "처음부터 가락", melodyInstrumentId: "flute" });
@@ -140,7 +143,7 @@ describe("리듬 만들기 없이 시작하는 가락 연습", () => {
   });
 
   it("가락 단계 진입과 별개로 모든 마디의 정확한 박자와 실제 소리가 있어야 완성으로 인정한다", () => {
-    mount(emptyPracticeDraft());
+    mount(emptyPracticeDraft(), "melody");
     act(() => {
       current.fillRests(0);
       current.fillRests(1);
@@ -156,12 +159,8 @@ describe("리듬 만들기 없이 시작하는 가락 연습", () => {
     });
     expect(current.complete).toBe(true);
     act(() => { current.addRhythmScore(); });
-    expect(current.complete).toBe(false);
-    act(() => {
-      current.fillRests(0, 1);
-      current.fillRests(1, 1);
-      current.goToMelody();
-    });
+    expect(current.scores).toHaveLength(1);
+    expect(current.draft.rhythmLayers).toHaveLength(0);
     expect(current.complete).toBe(true);
     act(() => { current.addNote(0.25, 60, undefined, 1); });
     expect(current.step).toBe("melody");

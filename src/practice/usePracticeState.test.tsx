@@ -131,17 +131,17 @@ describe("리듬을 만들고 가락으로 이어 가는 연습 상태", () => {
     expect(readPracticeDraft().measures).toHaveLength(1);
   });
 
-  it("박자가 부족한 마디가 있어도 가락 만들기로 넘어가고 완성 여부는 계속 검증한다", () => {
+  it("연결 모드에서는 부족한 리듬을 먼저 채운 후에만 가락 만들기로 넘어간다", () => {
     const draft = fullDraft();
     draft.measures[1].notes = [{ id: "short", pitch: 67, duration: rational(1) }];
     mount(draft);
     act(() => { current.selectMeasure(1); });
     const previous = current.draft;
     act(() => { current.goToMelody(); });
-    expect(current.step).toBe("melody");
+    expect(current.step).toBe("rhythm");
     expect(current.activeIndex).toBe(1);
     expect(current.draft).toBe(previous);
-    expect(current.selectedNoteId).toBe("short");
+    expect(current.selectedNoteId).toBeNull();
     expect(current.complete).toBe(false);
     act(() => { current.addNote(3, 72, true); });
     expect(current.complete).toBe(true);
@@ -150,7 +150,7 @@ describe("리듬을 만들고 가락으로 이어 가는 연습 상태", () => {
     expect(current.active.notes.some((note) => note.id === current.selectedNoteId && note.pitch !== null)).toBe(true);
   });
 
-  it("쉼표만으로 채운 마디도 그대로 가락 단계로 넘어가고 완성 상태는 유지한다", () => {
+  it("연결 모드에서는 쉼표만으로 채운 리듬을 가락 단계로 넘기지 않는다", () => {
     const draft = emptyPracticeDraft();
     draft.measures = [{ id: "rest-only", notes: [{ id: "rest", pitch: null, duration: rational(4) }], lyric: "", chord: "C" }];
     mount(draft);
@@ -158,7 +158,7 @@ describe("리듬을 만들고 가락으로 이어 가는 연습 상태", () => {
     expect(current.complete).toBe(false);
     const previous = current.draft;
     act(() => { current.goToMelody(); });
-    expect(current.step).toBe("melody");
+    expect(current.step).toBe("rhythm");
     expect(current.selectedNoteId).toBeNull();
     expect(current.draft).toBe(previous);
     expect(current.complete).toBe(false);
@@ -198,7 +198,7 @@ describe("리듬을 만들고 가락으로 이어 가는 연습 상태", () => {
       { pitch: 61, accidental: "sharp" },
       { pitch: 63, accidental: "flat" }
     ]);
-    const timeline = buildPracticeTimeline({ ...restored, step: "melody" });
+    const timeline = buildPracticeTimeline({ ...restored, mode: restored.mode ?? undefined, step: "melody" });
     expect(timeline.events.map((event) => event.pitch)).toEqual([61, 63, 67, 72]);
     expect(timeline.events.map((event) => event.startSeconds)).toEqual([0, 1.25, 2.5, 4.375]);
     expect(current.complete).toBe(true);
@@ -237,7 +237,7 @@ describe("리듬을 만들고 가락으로 이어 가는 연습 상태", () => {
   });
 
   it("가락 단계에서도 리듬을 고치며 부족한 박자를 채우면 저장 가능 상태가 복구된다", () => {
-    mount(fullDraft());
+    mount(fullDraft(), "melody");
     act(() => { current.goToMelody(); });
     const second = current.draft.measures[1];
     act(() => { current.setDuration("first-a", 1); });
@@ -266,7 +266,7 @@ describe("리듬을 만들고 가락으로 이어 가는 연습 상태", () => {
   });
 
   it("가락의 박자가 초과되어도 가락 단계에 머물고 음표 삭제로 복구할 수 있다", () => {
-    mount(fullDraft());
+    mount(fullDraft(), "melody");
     act(() => { current.goToMelody(); });
     act(() => { current.addNote(1, 65, undefined, 1); });
     expect(current.activeIndex).toBe(1);
@@ -282,7 +282,7 @@ describe("리듬을 만들고 가락으로 이어 가는 연습 상태", () => {
   });
 
   it("네 마디 중 빈 마디가 있어도 가락 단계로 넘어가고 직접 채워 완성한다", () => {
-    mount(fullDraft());
+    mount(fullDraft(), "melody");
     act(() => { current.resize(4); });
     act(() => { current.addNote(4, 60, undefined, 2); });
     act(() => { current.goToMelody(); });
@@ -396,7 +396,7 @@ describe("리듬을 만들고 가락으로 이어 가는 연습 상태", () => {
     draft.measures[0].notes = ["반", "짝", "별", "아"].map((lyric, index) => ({
       id: `lyric-${index}`, pitch: [60, 62, 64, 65][index], duration: rational(1), lyric
     }));
-    mount(draft);
+    mount(draft, "melody");
     act(() => { current.setNoteLyric("lyric-0", ""); });
     act(() => { current.goToMelody(); });
     const existing = current.active.notes;
@@ -638,17 +638,17 @@ describe("악보를 최대 세 개 겹쳐 만드는 리듬 상태", () => {
     expect(current.scores.every((score) => score.measures.every((measure) => measure.notes.length === 0))).toBe(true);
   });
 
-  it("추가 악보의 박자가 부족해도 첫 악보의 가락을 만들고 전체 완성은 따로 검증한다", () => {
+  it("연결 모드에서는 추가 악보의 리듬까지 채워야 첫 악보의 가락을 만든다", () => {
     mount(fullDraft());
     act(() => {
       current.addRhythmScore();
       current.fillRests(0, 1);
       current.goToMelody();
     });
-    expect(current.step).toBe("melody");
-    expect(current.activeScoreIndex).toBe(0);
+    expect(current.step).toBe("rhythm");
+    expect(current.activeScoreIndex).toBe(1);
     expect(current.activeIndex).toBe(0);
-    expect(current.selectedNoteId).toBe("first-a");
+    expect(current.selectedNoteId).toBeNull();
     expect(current.draft.rhythmLayers[0].measures[1].notes).toEqual([]);
     expect(current.complete).toBe(false);
     act(() => {
@@ -672,7 +672,7 @@ describe("악보를 최대 세 개 겹쳐 만드는 리듬 상태", () => {
     expect(current.complete).toBe(true);
   });
 
-  it("첫 악보가 쉼표뿐이어도 추가 악보를 보존하며 가락 단계로 넘어간다", () => {
+  it("첫 악보가 쉼표뿐이면 추가 악보에서 소리가 나도 연결 모드의 가락으로 넘어가지 않는다", () => {
     mount();
     act(() => {
       current.fillRests(0, 0);
@@ -683,9 +683,9 @@ describe("악보를 최대 세 개 겹쳐 만드는 리듬 상태", () => {
       current.goToMelody();
     });
     expect(current.complete).toBe(true);
-    expect(current.step).toBe("melody");
-    expect(current.activeScoreIndex).toBe(0);
-    expect(current.selectedNoteId).toBeNull();
+    expect(current.step).toBe("rhythm");
+    expect(current.activeScoreIndex).toBe(1);
+    expect(current.selectedNoteId).toBe(current.draft.rhythmLayers[0].measures[0].notes[0].id);
     expect(current.draft.measures.every((measure) => measure.notes.every((note) => note.pitch === null))).toBe(true);
     expect(current.draft.rhythmLayers[0].measures[0].notes[0].pitch).toBe(60);
   });

@@ -12,6 +12,8 @@ export type PracticeEditorsProps = {
   showTools?: boolean;
   showSummary?: boolean;
   compact?: boolean;
+  rhythmLocked?: boolean;
+  allowMelodyAppend?: boolean;
   appendDuration?: number;
   appendRest?: boolean;
   onAppendDurationChange?: (beats: number) => void;

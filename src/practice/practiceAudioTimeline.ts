@@ -1,6 +1,7 @@
 import { measureCapacity } from "../music/meter";
 import { compare, subtract, sum, toNumber } from "../music/rational";
 import type { NoteEvent } from "../music/types";
+import { practiceAudioScores } from "./practiceAudioScores";
 import type {
   PracticeAudioEvent,
   PracticeAudioInput,
@@ -13,14 +14,15 @@ function selectedScore(
   input: PracticeAudioInput,
   scoreIndex: number
 ) {
-  if (!Number.isInteger(scoreIndex) || scoreIndex < 0 || scoreIndex > (input.rhythmLayers?.length ?? 0)) {
+  const lastScoreIndex = input.mode === "melody" ? 0 : input.rhythmLayers?.length ?? 0;
+  if (!Number.isInteger(scoreIndex) || scoreIndex < 0 || scoreIndex > lastScoreIndex) {
     throw new Error("미리 들을 악보를 다시 골라 주세요.");
   }
   const layer = scoreIndex === 0 ? null : input.rhythmLayers![scoreIndex - 1];
   return layer;
 }
 
-/** A score preview keeps empty bars silent and excludes every other instrument. */
+/** Preview the selected score, including its paired rhythm in the combined mode. */
 export function practiceScoreAudioInput(input: PracticeAudioInput, scoreIndex = 0): PracticeAudioInput {
   const layer = selectedScore(input, scoreIndex);
   const measures = layer?.measures ?? input.measures;
@@ -42,11 +44,12 @@ export function practiceScoreAudioInput(input: PracticeAudioInput, scoreIndex = 
     }),
     rhythmLayers: undefined,
     rhythmInstrumentId: layer?.instrumentId ?? input.rhythmInstrumentId,
+    mode: layer ? "rhythm" : input.mode,
     step: layer ? "rhythm" : input.step
   };
 }
 
-/** A bar preview uses only the chosen score, without changing or padding it. */
+/** Preview one bar of the selected score, including a paired rhythm if selected. */
 export function practiceMeasureAudioInput(
   input: PracticeAudioInput,
   index: number,
@@ -66,6 +69,7 @@ export function practiceMeasureAudioInput(
     measures: [measure],
     rhythmLayers: undefined,
     rhythmInstrumentId: layer?.instrumentId ?? input.rhythmInstrumentId,
+    mode: layer ? "rhythm" : input.mode,
     step: layer ? "rhythm" : input.step
   };
 }
@@ -111,17 +115,10 @@ export function buildPracticeAudioPlan(input: PracticeAudioInput): PracticeAudio
   if (!Number.isFinite(input.bpm) || input.bpm <= 0) {
     throw new Error("빠르기를 올바르게 정한 뒤 다시 시도해 주세요.");
   }
-  if ((input.rhythmLayers?.length ?? 0) > 2) {
+  if (input.mode !== "melody" && (input.rhythmLayers?.length ?? 0) > 2) {
     throw new Error("리듬 악보는 세 개까지 함께 연주할 수 있어요.");
   }
-  const scores = [
-    {
-      measures: input.measures,
-      instrumentId: input.step === "rhythm" ? input.rhythmInstrumentId : input.melodyInstrumentId,
-      rhythm: input.step === "rhythm"
-    },
-    ...(input.rhythmLayers ?? []).map((layer) => ({ ...layer, rhythm: true }))
-  ];
+  const scores = practiceAudioScores(input);
   const events = scores.map(() => [] as PracticeAudioEvent[]);
   let durationSeconds = 0;
   if (scores.length === 1) {
@@ -170,7 +167,8 @@ export function practiceNoteAtTime(timeline: PracticeTimeline, seconds: number):
 }
 
 export function practiceNotesAtTime(rendered: PracticeRenderedAudio, seconds: number): string[] {
-  return [rendered.timeline, ...(rendered.layerTimelines ?? [])]
+  const ids = [rendered.timeline, ...(rendered.layerTimelines ?? [])]
     .map((timeline) => practiceNoteAtTime(timeline, seconds))
     .filter((id): id is string => id !== null);
+  return [...new Set(ids)];
 }

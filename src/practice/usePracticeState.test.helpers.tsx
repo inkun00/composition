@@ -4,6 +4,7 @@ import { afterEach, beforeEach, vi } from "vitest";
 import { rational } from "../music/rational";
 import { emptyPracticeDraft, writePracticeDraft, type PracticeDraft } from "./practiceStorage";
 import { usePracticeState } from "./usePracticeState";
+import type { PracticeCreationMode } from "./practiceCreationMode";
 
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -16,13 +17,14 @@ function Harness() {
   return null;
 }
 
-export function mount(draft?: PracticeDraft) {
-  if (draft) writePracticeDraft(draft);
+export function mount(draft = emptyPracticeDraft(), mode: PracticeCreationMode | null = draft.mode ?? "rhythm-melody") {
+  writePracticeDraft({ ...draft, mode });
   act(() => { root.render(<Harness />); });
 }
 
 export function fullDraft(): PracticeDraft {
   const draft = emptyPracticeDraft();
+  draft.mode = "rhythm-melody";
   draft.measures[0].lyric = "안녕";
   draft.measures[0].notes = [
     { id: "first-a", pitch: 60, duration: rational(2), lyric: "안" },
