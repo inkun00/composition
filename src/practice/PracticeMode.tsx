@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from "react";
+import { useRef, useState, type CSSProperties } from "react";
 import { ArrowLeft, ArrowRight, GraduationCap, Square, Volume2 } from "lucide-react";
 import { meterKey, SUPPORTED_METERS } from "../music/meter";
 import { useUnsavedWorkWarning } from "../hooks/useUnsavedWorkWarning";
@@ -29,6 +29,8 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
   const [videoMode, setVideoMode] = useState<PracticeVideoMode>("bars");
   const [changingMode, setChangingMode] = useState(false);
   const choosingMode = draft.mode === null || changingMode;
+  const modeButtonRef = useRef<HTMLButtonElement>(null);
+  const displayMode = draft.mode ?? "rhythm-melody";
   const audio = usePracticeAudio({
     measures: draft.measures,
     bpm: draft.bpm,
@@ -62,6 +64,7 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
 
   return (
     <div className="practice-shell">
+      <div className="practice-screen" inert={choosingMode} aria-hidden={choosingMode ? true : undefined}>
       <header className="practice-topbar">
         <button type="button" className="practice-back" onClick={close}><ArrowLeft size={19} /> 돌아가기</button>
         <span className="practice-brand"><GraduationCap size={23} /> 기능 연습하기</span>
@@ -72,13 +75,13 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
       <main className="practice-main">
         <div className="practice-intro">
           <h1>음악 만들기</h1>
-          {!choosingMode && <PracticeTutorial />}
+          <PracticeTutorial />
         </div>
 
-        {choosingMode ? <PracticeModeChooser currentMode={draft.mode} onSelect={selectMode} /> : <>
         <div className="practice-mode-current">
-          <strong>{practiceCreationModeLabel(draft.mode!)}</strong>
-          <button type="button" disabled={busy} onClick={() => setChangingMode(true)}>모드 바꾸기</button>
+          <strong>{draft.mode ? practiceCreationModeLabel(draft.mode) : "만들 방법을 골라 주세요"}</strong>
+          <button ref={modeButtonRef} type="button" disabled={busy || !draft.mode}
+            onClick={() => setChangingMode(true)}>모드 바꾸기</button>
         </div>
 
         <fieldset className="practice-settings" disabled={busy} hidden={saving}>
@@ -118,7 +121,7 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
           </label>
         </fieldset>
 
-        <PracticeStages mode={draft.mode!} step={step} saving={saving} busy={busy} canGoToMelody={practice.canGoToMelody}
+        <PracticeStages mode={displayMode} step={step} saving={saving} busy={busy} canGoToMelody={practice.canGoToMelody}
           onRhythm={() => { setSaving(false); practice.setStep("rhythm"); }}
           onMelody={() => { setSaving(false); practice.goToMelody(); }} onSave={() => setSaving(true)} />
 
@@ -216,8 +219,10 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
         <PracticePlayback draft={draft} step={step} complete={complete} audio={audio}
           saving={saving} videoMode={videoMode} onVideoMode={setVideoMode} onSaveSettings={() => setSaving(true)}
           onReturnToEditing={() => setSaving(false)} />
-        </>}
       </main>
+      </div>
+      {choosingMode && <PracticeModeChooser currentMode={draft.mode} onSelect={selectMode}
+        returnFocusRef={modeButtonRef} onClose={() => draft.mode ? setChangingMode(false) : close()} />}
     </div>
   );
 }

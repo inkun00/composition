@@ -52,13 +52,64 @@ afterEach(() => {
 });
 
 describe("음악 만들기 시작 모드", () => {
-  it("처음에는 세 모드만 보여 주고 선택 전에는 빈 입력 화면을 열지 않는다", () => {
+  it("처음에는 편집 화면 위 팝업으로 세 모드를 고르고 뒤의 화면은 잠근다", () => {
     mount(undefined, null);
     expect(savedDraft().mode).toBeNull();
     expect(container?.textContent).toContain("어떻게 만들까요?");
     for (const mode of PRACTICE_CREATION_MODES) expect(button(mode.label)).toBeTruthy();
-    expect(container?.querySelector(".practice-measure-card")).toBeNull();
-    expect(container?.querySelector("#practice-workspace")).toBeNull();
+    const screen = container?.querySelector(".practice-screen");
+    expect(screen?.hasAttribute("inert")).toBe(true);
+    expect(screen?.getAttribute("aria-hidden")).toBe("true");
+    expect(screen?.querySelector("#practice-workspace")).not.toBeNull();
+    expect(container?.querySelector('[role="dialog"]')?.getAttribute("aria-modal")).toBe("true");
+    click(button("가락만들기"));
+    expect(container?.querySelector('[role="dialog"]')).toBeNull();
+    expect(screen?.hasAttribute("inert")).toBe(false);
+    expect(screen?.getAttribute("aria-hidden")).not.toBe("true");
+    click(testButton("practice-melody-empty-67-0"));
+    expect(savedDraft().measures[0].notes[0].pitch).toBe(67);
+  });
+
+  it.each(["close", "escape", "backdrop"] as const)("처음 모드를 정하지 않고 %s로 닫으면 시작 화면으로 돌아간다", (method) => {
+    const onClose = mount(vi.fn(), null);
+    if (method === "close") click(button("모드 선택 창 닫기"));
+    if (method === "escape") {
+      act(() => document.activeElement?.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+    }
+    if (method === "backdrop") {
+      const backdrop = container?.querySelector<HTMLElement>(".practice-mode-overlay");
+      if (!backdrop) throw new Error("모드 선택 팝업 배경을 찾지 못했습니다.");
+      click(backdrop);
+    }
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(savedDraft().mode).toBeNull();
+    expect(savedDraft().measures.every((measure) => measure.notes.length === 0)).toBe(true);
+  });
+
+  it.each(["close", "escape", "backdrop"] as const)("모드 변경 팝업을 %s로 취소해도 같은 악보와 가사를 유지한다", (method) => {
+    mount(undefined, "melody");
+    click(testButton("practice-melody-empty-67-0"));
+    changeValue("연습 가락 이름", "그대로 남는 노래");
+    const original = savedDraft();
+    const workspace = container?.querySelector("#practice-workspace");
+    const opener = button("모드 바꾸기");
+    opener.focus();
+    click(opener);
+    expect(container?.querySelector('[role="dialog"]')).not.toBeNull();
+    expect(workspace).toBe(container?.querySelector("#practice-workspace"));
+    if (method === "close") click(button("모드 선택 창 닫기"));
+    if (method === "escape") {
+      act(() => document.activeElement?.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+    }
+    if (method === "backdrop") {
+      const backdrop = container?.querySelector<HTMLElement>(".practice-mode-overlay");
+      if (!backdrop) throw new Error("모드 선택 팝업 배경을 찾지 못했습니다.");
+      click(backdrop);
+    }
+    expect(container?.querySelector('[role="dialog"]')).toBeNull();
+    expect(container?.querySelector("#practice-workspace")).toBe(workspace);
+    expect(savedDraft()).toEqual(original);
+    expect(document.activeElement).toBe(opener);
   });
 
   it("리듬만들기는 가락 전환 없이 리듬만 듣고 저장한다", () => {
