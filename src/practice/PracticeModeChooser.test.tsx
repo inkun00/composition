@@ -71,6 +71,44 @@ describe("만들기 모드 선택 팝업", () => {
     expect(dialog().textContent).toContain("모드를 바꿔도 만든 음표와 가사는 그대로 남아요.");
   });
 
+  it("활동별 그림은 장식으로 보여 주고 선택 버튼의 이름과 동작은 간결하게 유지한다", () => {
+    mount();
+    const illustrations: Record<PracticeCreationMode, string> = {
+      rhythm: "character-rhythm-shaker-girl-v1.webp",
+      "rhythm-melody": "backing-export-mixing-girl-v2.webp",
+      melody: "character-instrument-keyboard-boy-v1.webp"
+    };
+    for (const mode of PRACTICE_CREATION_MODES) {
+      const button = choice(mode.label);
+      const art = button.querySelector<HTMLElement>(".practice-mode-choice-art");
+      const image = art?.querySelector<HTMLImageElement>("img");
+      expect(art?.getAttribute("aria-hidden")).toBe("true");
+      expect(image?.getAttribute("alt")).toBe("");
+      expect(image?.getAttribute("src")).toBe(`/illustrations/${illustrations[mode.id]}`);
+      expect(button.querySelector(".practice-mode-choice-copy strong")?.textContent).toBe(mode.label);
+      expect(button.textContent).toContain(mode.description);
+      expect(button.textContent).toContain("시작하기");
+      expect(button.querySelectorAll("button, a, input, select, textarea").length).toBe(0);
+      act(() => image?.click());
+      expect(onSelect).toHaveBeenLastCalledWith(mode.id);
+    }
+    expect(dialog().querySelectorAll("button").length).toBe(4);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("선택 중 표시는 현재 활동에만 보이고 고르는 이름에 설명이 덧붙지 않는다", () => {
+    mount("melody");
+    for (const mode of PRACTICE_CREATION_MODES) {
+      const button = choice(mode.label);
+      expect(button.getAttribute("aria-label")).toBe(mode.label);
+      expect(button.textContent?.includes("선택 중")).toBe(mode.id === "melody");
+    }
+    mount("rhythm");
+    expect(choice("리듬만들기").textContent).toContain("선택 중");
+    expect(choice("가락만들기").textContent).not.toContain("선택 중");
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
   it("첫 활동으로 초점을 옮기고 마지막과 처음에서 Tab 초점이 팝업 안을 순환한다", () => {
     mount();
     expect(document.activeElement).toBe(choice("리듬만들기"));

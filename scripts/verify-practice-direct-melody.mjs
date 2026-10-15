@@ -5,7 +5,9 @@ import { chromium } from "playwright-core";
 
 const baseUrl = process.env.PRACTICE_URL || "http://127.0.0.1:4174/";
 const outputDir = path.resolve("artifacts/practice-creation-modes");
+const popupOutputDir = path.resolve("artifacts/practice-popup-polish");
 await mkdir(outputDir, { recursive: true });
+await mkdir(popupOutputDir, { recursive: true });
 const browser = await chromium.launch({
   executablePath: process.env.CHROME_PATH || "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
   headless: true
@@ -60,6 +62,102 @@ try {
     assert.equal(await page.evaluate(() => window.scrollY), 0);
   }
 
+  async function assertPolishedPopupAtViewports() {
+    const reports = [];
+    const modes = ["리듬만들기", "리듬만들고 가락넣기", "가락만들기"];
+    for (const viewport of [
+      { width: 1440, height: 1080 },
+      { width: 1024, height: 768 },
+      { width: 768, height: 1024 },
+      { width: 390, height: 844 },
+      { width: 320, height: 740 },
+      { width: 390, height: 500 }
+    ]) {
+      await page.setViewportSize(viewport);
+      await chooser.evaluate((dialog) => { dialog.scrollTop = 0; });
+      await assertPopup();
+      await chooser.locator("img").evaluateAll(async (images) => {
+        await Promise.all(images.map((image) => image.decode()));
+      });
+      const layout = await chooser.evaluate((dialog) => {
+        const cards = [...dialog.querySelectorAll(".practice-mode-choice")];
+        return {
+          viewport: window.innerWidth,
+          documentWidth: document.documentElement.scrollWidth,
+          dialogWidth: dialog.clientWidth,
+          dialogContentWidth: dialog.scrollWidth,
+          scrollHeight: dialog.scrollHeight,
+          height: dialog.clientHeight,
+          images: [...dialog.querySelectorAll("img")].map((image) => ({
+            src: image.getAttribute("src"),
+            loaded: image.complete && image.naturalWidth > 0,
+            decorative: image.alt === "",
+            width: image.getBoundingClientRect().width,
+            height: image.getBoundingClientRect().height
+          })),
+          cards: cards.map((card) => {
+            const bounds = card.getBoundingClientRect();
+            const walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT);
+            const clippedText = [];
+            while (walker.nextNode()) {
+              const node = walker.currentNode;
+              if (!node.textContent.trim() || node.parentElement.closest('[aria-hidden="true"]')) continue;
+              const range = document.createRange();
+              range.selectNodeContents(node);
+              const outside = [...range.getClientRects()].some((rect) => rect.width > 0
+                && (rect.left < bounds.left - 1 || rect.right > bounds.right + 1
+                  || rect.top < bounds.top - 1 || rect.bottom > bounds.bottom + 1));
+              if (outside) clippedText.push(node.textContent);
+            }
+            return {
+              label: card.getAttribute("aria-label"),
+              width: bounds.width,
+              height: bounds.height,
+              contentWidth: card.scrollWidth,
+              innerWidth: card.clientWidth,
+              clippedText
+            };
+          })
+        };
+      });
+      assert.equal(layout.documentWidth, viewport.width, JSON.stringify(layout));
+      assert.ok(layout.dialogContentWidth <= layout.dialogWidth + 1, JSON.stringify(layout));
+      assert.ok(layout.images.length >= 3, "Each mode needs its own illustrated choice.");
+      assert.ok(layout.images.every((image) => image.loaded && image.decorative && image.width > 0 && image.height > 0), JSON.stringify(layout));
+      assert.equal(layout.cards.length, 3, JSON.stringify(layout));
+      for (const card of layout.cards) {
+        assert.ok(card.width >= 44 && card.height >= 44 && card.contentWidth <= card.innerWidth + 1, JSON.stringify(card));
+        assert.deepEqual(card.clippedText, [], JSON.stringify(card));
+      }
+      const close = page.getByRole("button", { name: "모드 선택 창 닫기", exact: true });
+      assert.equal(await close.isVisible(), true);
+      await close.click({ trial: true });
+      await page.screenshot({ path: path.join(popupOutputDir, `chooser-${viewport.width}x${viewport.height}.png`) });
+      if (viewport.width === 1440) {
+        await chooser.screenshot({ path: path.join(popupOutputDir, "dialog-desktop.png") });
+      }
+      for (const name of modes) {
+        const button = page.getByRole("button", { name, exact: true });
+        await button.scrollIntoViewIfNeeded();
+        await button.click({ trial: true });
+        const bounds = await button.boundingBox();
+        assert.ok(bounds && bounds.x >= 0 && bounds.x + bounds.width <= viewport.width + 1, JSON.stringify({ name, bounds, viewport }));
+      }
+      if (viewport.height === 500) {
+        assert.ok(layout.scrollHeight > layout.height, JSON.stringify(layout));
+        assert.ok(await chooser.evaluate((dialog) => dialog.scrollTop > 0), JSON.stringify(layout));
+        await page.screenshot({ path: path.join(popupOutputDir, "chooser-390x500-scrolled.png") });
+      }
+      assert.equal(await page.evaluate(() => window.scrollY), 0);
+      assert.equal(await page.evaluate(() => document.body.style.overflow), "hidden");
+      reports.push({ viewport, ...layout });
+    }
+    await page.setViewportSize({ width: 1440, height: 1080 });
+    await chooser.evaluate((dialog) => { dialog.scrollTop = 0; });
+    await assertPopup();
+    return reports;
+  }
+
   await page.getByRole("button", { name: "기능 연습하기", exact: false }).first().click();
   await assertPopup();
   for (const name of ["리듬만들기", "리듬만들고 가락넣기", "가락만들기"]) {
@@ -75,6 +173,7 @@ try {
   await page.getByRole("button", { name: "기능 연습하기", exact: false }).first().click();
   await assertPopup();
   await page.screenshot({ path: path.join(outputDir, "mode-chooser.png"), fullPage: true });
+  const polishedPopup = await assertPolishedPopupAtViewports();
   await page.getByRole("button", { name: "가락만들기", exact: true }).click();
   assert.equal(await chooser.count(), 0);
   assert.equal(await screen.evaluate((element) => element.inert), false);
@@ -309,7 +408,7 @@ try {
   await page.getByRole("button", { name: "가락 편집으로", exact: true }).click();
   assert.deepEqual(await draft(), completed);
   assert.deepEqual(errors, []);
-  console.log(JSON.stringify({ result: "passed", popup: { samePage: true, keyboardTrapped: true, cancellationPreservesEditor: true, smallScreenScroll: scrollingPopup }, media, mobile, screenshots: outputDir }, null, 2));
+  console.log(JSON.stringify({ result: "passed", popup: { samePage: true, keyboardTrapped: true, cancellationPreservesEditor: true, smallScreenScroll: scrollingPopup }, polishedPopup, media, mobile, screenshots: outputDir, popupScreenshots: popupOutputDir }, null, 2));
 } finally {
   await browser.close();
 }

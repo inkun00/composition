@@ -4,123 +4,305 @@
   inset: 0;
   display: grid;
   place-items: center;
-  padding: 16px;
-  background: #182c3b8f;
-  backdrop-filter: blur(4px);
+  padding: 20px;
+  background: rgb(24 32 50 / 60%);
+  backdrop-filter: blur(6px);
 }
 
 .practice-mode-chooser {
   position: relative;
-  width: min(960px, 100%);
-  max-height: calc(100dvh - 32px);
+  width: min(1080px, 100%);
+  max-height: calc(100dvh - 40px);
   box-sizing: border-box;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 28px;
-  border: 1px solid #dce5de;
-  border-radius: 20px;
-  background: #fff;
-  box-shadow: 0 24px 80px #11233240;
+  border: 1px solid rgb(255 255 255 / 80%);
+  border-radius: 26px;
+  background: #fcfcff;
+  box-shadow: 0 28px 100px rgb(17 25 48 / 30%);
 }
 
-.practice-mode-chooser h2 {
+.practice-mode-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: 34px 36px 28px;
+  border-top: 6px solid #ffcf4b;
+  border-bottom: 1px solid #ede8dc;
+  background: #fffaf0;
+}
+
+.practice-mode-hero-art {
+  position: absolute;
+  z-index: -1;
+  inset: 0 0 0 auto;
+  width: 54%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 80% 43%;
+  opacity: .62;
+  mask-image: linear-gradient(to right, transparent, #000 45%);
+}
+
+.practice-mode-hero-copy {
+  position: relative;
+  max-width: 650px;
   padding-right: 44px;
 }
 
-.practice-mode-close {
+.practice-mode-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 12px;
+  color: #755f39;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .01em;
+}
+
+.practice-mode-chooser .practice-mode-hero h2 {
+  margin: 0;
+  color: #29334a;
+  font-size: clamp(26px, 3vw, 34px);
+  font-weight: 850;
+  line-height: 1.3;
+  letter-spacing: -.045em;
+}
+
+.practice-mode-hero-copy > p {
+  margin-top: 10px;
+  color: #697184;
+  font-size: 14px;
+  line-height: 1.7;
+  word-break: keep-all;
+}
+
+.practice-mode-chooser .practice-mode-close {
   position: absolute;
-  top: 17px;
-  right: 17px;
+  z-index: 2;
+  top: 24px;
+  right: 24px;
   display: grid;
   place-items: center;
   width: 40px;
   height: 40px;
-  border: 1px solid #d5e2d9;
-  border-radius: 10px;
-  background: #f6f9f7;
-  color: #53675e;
-}
-
-.practice-mode-close:focus-visible {
-  outline: 3px solid #79a88f;
-  outline-offset: 3px;
-}
-
-.practice-mode-chooser > p {
-  margin-top: 8px;
-  color: #66776e;
-  font-size: 14px;
+  border: 1px solid #e3dccd;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 92%);
+  color: #555c6d;
+  box-shadow: 0 3px 10px rgb(65 51 31 / 5%);
 }
 
 .practice-mode-choices {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-  margin-top: 24px;
+  gap: 18px;
+  padding: 26px 30px 22px;
 }
 
-.practice-mode-choice {
+.practice-mode-chooser .practice-mode-choice {
+  --mode-accent: #167e80;
+  --mode-tint: #e9f8f4;
+  --mode-border: #a6d9cc;
+  position: relative;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 14px;
-  min-height: 230px;
-  padding: 24px;
-  border: 1px solid #cbded2;
-  border-radius: 18px;
-  background: #f4faf5;
-  color: #2c6650;
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--mode-border);
+  border-radius: 20px;
+  background: #fff;
+  color: #29334a;
   text-align: left;
-  transition: border-color .15s, box-shadow .15s;
+  box-shadow: 0 6px 18px rgb(42 52 80 / 5%);
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
 }
 
-.practice-mode-choice.is-rhythm-melody {
-  border-color: #d5c9eb;
-  color: #665091;
-  background: #f8f5fe;
+.practice-mode-chooser .practice-mode-choice.is-rhythm-melody {
+  --mode-accent: #bd3f74;
+  --mode-tint: #fff0f5;
+  --mode-border: #edbdd0;
 }
 
-.practice-mode-choice.is-melody {
-  border-color: #bcdde8;
-  color: #2c728b;
-  background: #f1faff;
+.practice-mode-chooser .practice-mode-choice.is-melody {
+  --mode-accent: #5864be;
+  --mode-tint: #f0f1ff;
+  --mode-border: #c9cef0;
 }
 
-.practice-mode-choice:hover,
-.practice-mode-choice:focus-visible {
-  border-color: currentColor;
-  box-shadow: 0 5px 18px #294b3314;
+.practice-mode-choice-art {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 184px;
+  overflow: hidden;
+  border-bottom: 1px solid var(--mode-border);
+  background: var(--mode-tint);
 }
 
-.practice-mode-choice:focus-visible {
-  outline: 3px solid #79a88f;
-  outline-offset: 3px;
+.practice-mode-art-orbit {
+  position: absolute;
+  left: 50%;
+  bottom: -88px;
+  width: 250px;
+  height: 250px;
+  border: 22px solid rgb(255 255 255 / 55%);
+  border-radius: 50%;
+  transform: translateX(-50%);
 }
 
-.practice-mode-choice-icon {
+.practice-mode-character {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  width: 210px;
+  height: 315px;
+  max-width: 86%;
+  object-fit: contain;
+  object-position: center top;
+  transform: translateX(-50%);
+  filter: drop-shadow(0 9px 6px rgb(41 51 74 / 8%));
+}
+
+.is-rhythm-melody .practice-mode-character {
+  top: -6px;
+  width: 240px;
+  height: 265px;
+}
+
+.practice-mode-art-note,
+.practice-mode-art-spark {
+  position: absolute;
   display: grid;
   place-items: center;
-  width: 58px;
-  height: 58px;
-  border-radius: 17px;
-  background: #ffffffc9;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 84%);
+  color: var(--mode-accent);
 }
 
-.practice-mode-choice strong {
-  font-size: 20px;
+.practice-mode-art-note {
+  top: 30px;
+  left: 22px;
+  transform: rotate(-12deg);
 }
 
-.practice-mode-choice > span:not(.practice-mode-choice-icon) {
-  font-size: 13px;
-  line-height: 1.6;
+.practice-mode-art-spark {
+  right: 22px;
+  bottom: 24px;
+  transform: rotate(10deg);
 }
 
-.practice-mode-choice .practice-mode-choice-start {
+.practice-mode-choice-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 22px;
+}
+
+.practice-mode-choice-heading {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: auto;
+  gap: 9px;
+}
+
+.practice-mode-choice-mark {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: var(--mode-tint);
+  color: var(--mode-accent);
+}
+
+.practice-mode-choice-copy strong {
+  font-size: 19px;
   font-weight: 800;
+  line-height: 1.4;
+  letter-spacing: -.045em;
+  word-break: keep-all;
+}
+
+.practice-mode-choice-description {
+  display: block;
+  color: #697184;
+  font-size: 13px;
+  line-height: 1.7;
+  word-break: keep-all;
+}
+
+.practice-mode-choice-start {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 40px;
+  margin-top: auto;
+  padding: 0 13px;
+  border-radius: 11px;
+  background: var(--mode-tint);
+  color: var(--mode-accent);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.practice-mode-selected {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 8px;
+  border-radius: 20px;
+  background: var(--mode-accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.practice-mode-chooser .practice-mode-choice[aria-pressed="true"] {
+  border-color: var(--mode-accent);
+  box-shadow: 0 0 0 2px var(--mode-accent);
+}
+
+.practice-mode-chooser .practice-mode-choice:hover {
+  border-color: var(--mode-accent);
+  box-shadow: 0 12px 26px rgb(42 52 80 / 13%);
+  transform: translateY(-4px);
+}
+
+.practice-mode-chooser :is(.practice-mode-choice, .practice-mode-close):focus-visible {
+  outline: 3px solid #5969d7;
+  outline-offset: 4px;
+}
+
+.practice-mode-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 30px 24px;
+  color: #788093;
+}
+
+.practice-mode-footer > svg {
+  flex-shrink: 0;
+  color: #cb688a;
+}
+
+.practice-mode-footer .practice-mode-preserve {
+  font-size: 12px;
+  line-height: 1.65;
+  word-break: keep-all;
 }
 
 .practice-mode-current {
@@ -145,41 +327,215 @@
 }
 
 @media (max-width: 800px) {
-  .practice-mode-choices {
-    grid-template-columns: 1fr;
-    gap: 12px;
-    margin-top: 18px;
-  }
-
-  .practice-mode-choice {
-    display: grid;
-    grid-template-columns: 48px minmax(0, 1fr);
-    align-items: center;
-    min-height: 0;
+  .practice-mode-overlay {
     padding: 14px;
-    gap: 4px 12px;
-  }
-
-  .practice-mode-choice-icon {
-    grid-row: 1 / span 3;
-    width: 48px;
-    height: 48px;
-    border-radius: 14px;
-  }
-
-  .practice-mode-choice > :not(.practice-mode-choice-icon) {
-    grid-column: 2;
-  }
-
-  .practice-mode-choice .practice-mode-choice-start {
-    margin-top: 3px;
   }
 
   .practice-mode-chooser {
-    padding: 20px;
+    max-height: calc(100dvh - 28px);
+    border-radius: 22px;
   }
 
-  .practice-mode-choice strong {
-    font-size: 17px;
+  .practice-mode-hero {
+    padding: 26px 24px 24px;
+  }
+
+  .practice-mode-hero-art {
+    width: 50%;
+    opacity: .34;
+  }
+
+  .practice-mode-choices {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    padding: 20px 24px;
+  }
+
+  .practice-mode-chooser .practice-mode-choice {
+    flex-direction: row;
+    min-height: 144px;
+    border-radius: 17px;
+  }
+
+  .practice-mode-choice-art {
+    flex: 0 0 132px;
+    width: 132px;
+    height: auto;
+    min-height: 144px;
+    align-self: stretch;
+    border-right: 1px solid var(--mode-border);
+    border-bottom: 0;
+  }
+
+  .practice-mode-character {
+    top: 7px;
+    width: 144px;
+    height: 216px;
+    max-width: none;
+  }
+
+  .is-rhythm-melody .practice-mode-character {
+    top: 8px;
+    width: 155px;
+    height: 183px;
+  }
+
+  .practice-mode-art-orbit {
+    width: 170px;
+    height: 170px;
+    border-width: 15px;
+    bottom: -60px;
+  }
+
+  .practice-mode-art-note,
+  .practice-mode-art-spark {
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+  }
+
+  .practice-mode-art-note {
+    top: 12px;
+    left: 6px;
+  }
+
+  .practice-mode-art-spark {
+    right: 7px;
+    bottom: 12px;
+  }
+
+  .practice-mode-art-note > svg,
+  .practice-mode-art-spark > svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .practice-mode-choice-copy {
+    justify-content: center;
+    gap: 8px;
+    padding: 16px;
+  }
+
+  .practice-mode-choice-mark {
+    display: none;
+  }
+
+  .practice-mode-choice-copy strong {
+    font-size: 18px;
+  }
+
+  .practice-mode-choice-start {
+    min-height: 32px;
+    margin-top: 0;
+    padding: 0 10px;
+  }
+
+  .practice-mode-selected {
+    top: 7px;
+    right: 7px;
+    padding: 3px 7px;
+    font-size: 10px;
+  }
+
+  .practice-mode-choice[aria-pressed="true"] .practice-mode-choice-copy {
+    padding-top: 29px;
+  }
+
+  .practice-mode-footer {
+    justify-content: flex-start;
+    padding: 0 24px 22px;
+  }
+}
+
+@media (max-width: 480px) {
+  .practice-mode-hero {
+    padding: 22px 20px;
+  }
+
+  .practice-mode-hero-copy {
+    padding-right: 25px;
+  }
+
+  .practice-mode-eyebrow {
+    margin-bottom: 9px;
+    font-size: 10px;
+  }
+
+  .practice-mode-chooser .practice-mode-hero h2 {
+    font-size: 25px;
+  }
+
+  .practice-mode-hero-copy > p {
+    margin-top: 8px;
+    font-size: 12px;
+  }
+
+  .practice-mode-chooser .practice-mode-close {
+    top: 18px;
+    right: 16px;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+  }
+
+  .practice-mode-choices {
+    gap: 12px;
+    padding: 18px 16px;
+  }
+
+  .practice-mode-choice-art {
+    flex-basis: 100px;
+    width: 100px;
+  }
+
+  .practice-mode-character {
+    width: 128px;
+    height: 200px;
+  }
+
+  .is-rhythm-melody .practice-mode-character {
+    width: 130px;
+    height: 170px;
+  }
+
+  .practice-mode-art-note {
+    display: none;
+  }
+
+  .practice-mode-choice-copy {
+    gap: 7px;
+    padding: 13px;
+  }
+
+  .practice-mode-choice-copy strong {
+    font-size: 16px;
+  }
+
+  .practice-mode-choice-description {
+    font-size: 11px;
+    line-height: 1.6;
+  }
+
+  .practice-mode-choice-start {
+    min-height: 30px;
+    font-size: 11px;
+  }
+
+  .practice-mode-footer {
+    padding: 0 20px 20px;
+  }
+
+  .practice-mode-footer .practice-mode-preserve {
+    font-size: 11px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .practice-mode-chooser .practice-mode-choice {
+    transition: none;
+  }
+
+  .practice-mode-chooser .practice-mode-choice:hover {
+    transform: none;
   }
 }
