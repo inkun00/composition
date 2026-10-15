@@ -4,7 +4,7 @@ import { rational, toNumber } from "../music/rational";
 import { withEditedPitch } from "../music/score";
 import type { NoteEvent } from "../music/types";
 import { assignPracticeLyrics, createPracticeMeasures, lyricSyllables, makeLyricRhythm, PRACTICE_DURATIONS, type PracticeMeasure } from "./practiceModel";
-import { readPracticeDraft, writePracticeDraft, type PracticeDraft } from "./practiceStorage";
+import { emptyPracticeDraft, readPracticeDraft, writePracticeDraft, type PracticeDraft } from "./practiceStorage";
 import { getPracticeScores, hasPracticeScoreData, MAX_PRACTICE_SCORES, normalizePracticeRhythmInstrument } from "./practiceScores";
 import { normalizePracticePitch } from "./practicePitch";
 import { isAvailablePracticeChord, normalizePracticeHarmony } from "./practiceHarmony";
@@ -367,6 +367,17 @@ export function usePracticeState() {
     setNotice("");
   }
 
+  function startNew(): boolean {
+    if (!window.confirm("지금 연습한 리듬, 가락, 가사가 모두 지워져요. 새로 시작할까요?")) return false;
+    updateDraft(() => emptyPracticeDraft());
+    activateMeasure(0, 0);
+    changeStep("rhythm");
+    setInputMode("grid");
+    setSelectedNote(null);
+    setNotice("");
+    return true;
+  }
+
   function setChord(chord: string, index = selectedMeasure.current, scoreIndex = selectedScore.current) {
     const previous = latestDraft.current;
     const measures = getPracticeScores(previous)[scoreIndex]?.measures;
@@ -389,7 +400,7 @@ export function usePracticeState() {
     draft, active, activeIndex, activeScoreIndex, scores, step, editingStep, inputMode, selectedNoteId, notice, saved, validations, scoreValidations, complete, canGoToMelody,
     setStep, setInputMode, setSelectedNoteId: selectNote, selectMeasure, configure, resize, setMeter,
     selectScore, addRhythmScore, removeRhythmScore, setRhythmInstrument,
-    selectCreationMode,
+    selectCreationMode, startNew,
     addNote, setPitch, setDuration, deleteNote, setLyric, setNoteLyric, generateRhythm, fillRests, goToMelody,
     setChord
   };

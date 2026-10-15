@@ -25,8 +25,10 @@ function filledDraft(): PracticeDraft {
   return draft;
 }
 
-async function render(draft: PracticeDraft, mode: PracticeVideoMode = "bars", disabled = false) {
-  await act(async () => root.render(<PracticeVideoPreview draft={draft} step="melody" mode={mode} disabled={disabled} />));
+async function render(
+  draft: PracticeDraft, mode: PracticeVideoMode = "bars", disabled = false, step: "rhythm" | "melody" = "melody"
+) {
+  await act(async () => root.render(<PracticeVideoPreview draft={draft} step={step} mode={mode} disabled={disabled} />));
 }
 
 beforeEach(() => {
@@ -78,6 +80,36 @@ describe("저장 영상 미리보기", () => {
     expect(host.querySelector("output")?.textContent).toBe("5.0 / 8.0초");
     await render(draft, "bars", true);
     expect(slider.disabled).toBe(true);
+  });
+
+  it.each(["bars", "score"] as const)("%s 미리보기는 가락으로 넘어갈 때 하단 리듬 화면을 남기지 않는다", async (mode) => {
+    const draft = filledDraft();
+    draft.mode = "rhythm-melody";
+    draft.rhythmLayers = ["beat:shaker", "beat:woodblock"].map((instrumentId, index) => ({
+      id: `rhythm-${index}`, instrumentId,
+      measures: draft.measures.map((measure) => ({
+        ...measure, id: `${measure.id}-rhythm-${index}`,
+        notes: measure.notes.map((note) => ({ ...note, id: `${note.id}-rhythm-${index}`, lyric: "둥" }))
+      }))
+    }));
+    const savedLayers = structuredClone(draft.rhythmLayers);
+
+    await render(draft, mode, false, "rhythm");
+    expect(vi.mocked(preparePracticeVideoRenderer).mock.lastCall?.[0].tracks).toHaveLength(3);
+    const rhythmCanvas = host.querySelector("canvas");
+    await render(draft, mode);
+
+    const [plan] = vi.mocked(preparePracticeVideoRenderer).mock.lastCall!;
+    expect(plan.tracks.map(({ id, rhythm }) => ({ id, rhythm }))).toEqual([{ id: "main", rhythm: false }]);
+    expect(plan.measures.every((measure) => measure.tracks.length === 1)).toBe(true);
+    expect(plan.measures.flatMap((measure) => measure.tracks.flat()).map((note) => note.note.lyric)).toEqual(["봄", "날"]);
+    expect(host.querySelectorAll("canvas")).toHaveLength(1);
+    expect(rhythmCanvas?.isConnected).toBe(false);
+    expect(draft.rhythmLayers).toEqual(savedLayers);
+
+    await render(draft, mode, false, "rhythm");
+    expect(vi.mocked(preparePracticeVideoRenderer).mock.lastCall?.[0].tracks).toHaveLength(3);
+    expect(draft.rhythmLayers).toEqual(savedLayers);
   });
 
   it("화면을 떠난 뒤 준비가 끝나도 캔버스를 붙이거나 프레임을 그리지 않는다", async () => {

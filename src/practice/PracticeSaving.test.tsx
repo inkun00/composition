@@ -74,6 +74,31 @@ describe("음악 저장과 공유 단계", () => {
     click(stage("save"));
     expect(button("MP4 저장").disabled).toBe(false);
   });
+
+  it("가락 저장에서는 숨긴 리듬 악보의 남은 가사가 영상 저장을 막지 않고 리듬으로 복귀하면 다시 검사한다", () => {
+    mount(undefined, "rhythm-melody");
+    completeOneMeasure("우리노래");
+    click(button("악보 추가하기"));
+    completeScoreMeasure(1, 0, "반짝이는우리별");
+    const before = savedDraft();
+    expect(button("MP4 저장").disabled).toBe(true);
+
+    click(stage("melody"));
+    expect(button("MP3 저장").disabled).toBe(false);
+    expect(button("MP4 저장").disabled).toBe(false);
+    click(stage("save"));
+    click(modeButton("score"));
+    expect(container?.querySelector('[data-testid="save-preview"]')?.getAttribute("data-step")).toBe("melody");
+    click(button("MP4 저장"));
+    expect(audio.save).toHaveBeenCalledWith("mp4");
+    expect(latestAudioInput().rhythmLayers).toEqual(before.rhythmLayers);
+    expect(savedDraft()).toEqual(before);
+
+    click(stage("rhythm"));
+    expect(button("MP4 저장").disabled).toBe(true);
+    expect(container?.textContent).toContain("모든 가사 글자에 음표");
+    expect(savedDraft()).toEqual(before);
+  });
   it("세 편집·저장 단계와 지정한 샘보드 새 창 링크를 보여 준다", () => {
     mount();
     expect(stage("rhythm").textContent).toContain("리듬 만들기");

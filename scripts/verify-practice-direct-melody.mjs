@@ -242,11 +242,11 @@ try {
       await page.evaluate(() => document.activeElement?.outerHTML.slice(0, 300)));
   }
 
-  async function capture() {
+  async function capture(button = preview, stopText = "1마디 연주 멈추기") {
     const count = await page.evaluate(() => window.practicePlaybackBuffers.length);
-    await preview.click();
+    await button.click();
     await page.waitForFunction((before) => window.practicePlaybackBuffers.length > before, count);
-    await page.getByRole("button", { name: "1마디 연주 멈추기", exact: true }).click();
+    await page.getByRole("button", { name: stopText, exact: true }).click();
     return count;
   }
 
@@ -286,18 +286,33 @@ try {
   assert.equal((await draft()).mode, "rhythm-melody");
   assert.equal(await rhythmTab.getAttribute("aria-selected"), "true");
   assert.equal(await melodyTab.isEnabled(), false);
-  await page.getByTestId("practice-score-tools-1").getByTestId("practice-rest-4").click();
+  await page.getByLabel("2번 악보 리듬 연주 악기", { exact: true }).selectOption("flute");
+  await page.getByTestId("practice-score-tools-1").getByTestId("practice-duration-4").click();
+  const audibleLayer = (await draft()).rhythmLayers;
+  assert.deepEqual(audibleLayer[0].measures[0].notes.map((note) => note.pitch), [60]);
+  const extraRhythmBuffer = await capture(
+    page.getByTestId("practice-score-1-measure-preview-0"), "2번 악보 1마디 연주 멈추기"
+  );
   assert.equal(await melodyTab.isEnabled(), true);
   await melodyTab.click();
   assert.equal(await melodyTab.getAttribute("aria-selected"), "true");
+  assert.equal(await page.getByTestId("practice-score-workspace-1").count(), 0);
+  assert.equal(await page.getByLabel("리듬 연주 악기", { exact: true }).count(), 0);
+  assert.equal(await page.getByRole("button", { name: "리듬 함께 듣기", exact: true }).count(), 0);
   assert.equal(await tools.getByTestId("practice-duration-1").count(), 0);
   assert.equal(await tools.getByTestId("practice-edit-duration").count(), 0);
-  assert.equal(await page.getByRole("button", { name: "리듬과 가락 미리듣기", exact: true }).isEnabled(), true);
+  assert.equal(await page.getByRole("button", { name: "가락 미리듣기", exact: true }).isEnabled(), true);
   assert.deepEqual((await draft()).measures, completedMeasures);
+  assert.deepEqual((await draft()).rhythmLayers, audibleLayer);
   const combinedBuffer = await capture();
+  const combinedScoreBuffer = await capture(page.getByTestId("practice-score-preview-0"), "악보1 멈추기");
+  const combinedWholeBuffer = await capture(
+    page.getByRole("button", { name: "가락 미리듣기", exact: true }), "연주 멈추기"
+  );
   await page.screenshot({ path: path.join(outputDir, "combined-desktop.png"), fullPage: true });
 
-  const media = await page.evaluate(({ melodyBuffer, rhythmBuffer, isolatedMelodyBuffer, combinedBuffer }) => {
+  const media = await page.evaluate(({ melodyBuffer, rhythmBuffer, isolatedMelodyBuffer,
+    extraRhythmBuffer, combinedBuffer, combinedScoreBuffer, combinedWholeBuffer }) => {
     const buffers = window.practicePlaybackBuffers;
     const powerAt = (buffer, seconds, frequency) => {
       const start = Math.floor(buffer.sampleRate * seconds);
@@ -324,19 +339,24 @@ try {
     const melody = buffers[melodyBuffer];
     const rhythm = buffers[rhythmBuffer];
     const isolated = buffers[isolatedMelodyBuffer];
+    const extraRhythm = buffers[extraRhythmBuffer];
     const combined = buffers[combinedBuffer];
-    let isolationError = 0;
-    let mixedDifference = 0;
-    for (let index = 0; index < melody.samples.length; index += 1) {
-      isolationError = Math.max(isolationError, Math.abs(melody.samples[index] - isolated.samples[index]));
-      mixedDifference = Math.max(mixedDifference, Math.abs(melody.samples[index] - combined.samples[index]));
-    }
+    const compare = (candidate) => {
+      let error = 0;
+      for (let index = 0; index < Math.max(melody.samples.length, candidate.samples.length); index += 1) {
+        error = Math.max(error, Math.abs((melody.samples[index] || 0) - (candidate.samples[index] || 0)));
+      }
+      return error;
+    };
     return {
       melodyFrequencies: [0.1, 1.1].map((seconds) => frequencyAt(melody, seconds)),
       rhythmFrequencies: [0.1, 1.1].map((seconds) => frequencyAt(rhythm, seconds)),
-      durations: [melody, rhythm, isolated, combined].map((buffer) => buffer.duration),
-      isolationError,
-      mixedDifference,
+      extraRhythmFrequency: frequencyAt(extraRhythm, 0.1),
+      extraRhythmEnergy: extraRhythm.samples.reduce((sum, sample) => sum + sample ** 2, 0) / extraRhythm.samples.length,
+      durations: [melody, rhythm, isolated, combined, buffers[combinedScoreBuffer], buffers[combinedWholeBuffer]]
+        .map((buffer) => buffer.duration),
+      isolationError: compare(isolated),
+      melodyStageErrors: [combined, buffers[combinedScoreBuffer], buffers[combinedWholeBuffer]].map(compare),
       components: [392, 330].map((frequency, index) => {
         const seconds = index + 0.1;
         return {
@@ -344,23 +364,30 @@ try {
           rhythmAtMelody: powerAt(rhythm, seconds, frequency),
           rhythm: powerAt(rhythm, seconds, 523),
           melodyAtRhythm: powerAt(melody, seconds, 523),
-          mixedMelody: powerAt(combined, seconds, frequency),
-          mixedRhythm: powerAt(combined, seconds, 523)
+          linkedMelody: powerAt(combined, seconds, frequency),
+          linkedAtRhythm: powerAt(combined, seconds, 523)
         };
       })
     };
-  }, { melodyBuffer, rhythmBuffer, isolatedMelodyBuffer, combinedBuffer });
+  }, { melodyBuffer, rhythmBuffer, isolatedMelodyBuffer, extraRhythmBuffer,
+    combinedBuffer, combinedScoreBuffer, combinedWholeBuffer });
   for (const [index, expected] of [392, 330].entries()) {
     assert.ok(Math.abs(media.melodyFrequencies[index] - expected) < 12, JSON.stringify(media));
   }
   assert.ok(media.rhythmFrequencies.every((frequency) => Math.abs(frequency - 523) < 12), JSON.stringify(media));
+  assert.ok(Math.abs(media.extraRhythmFrequency - 523) < 12 && media.extraRhythmEnergy > 0.000001, JSON.stringify(media));
   assert.ok(media.durations.every((duration) => Math.abs(duration - 4) < 0.01), JSON.stringify(media));
   assert.ok(media.isolationError < 0.000001, JSON.stringify(media));
-  assert.ok(media.mixedDifference > 0.001, JSON.stringify(media));
+  assert.ok(media.melodyStageErrors.every((error) => error < 0.000001), JSON.stringify(media));
   for (const component of media.components) {
-    assert.ok(component.mixedMelody > component.melody * 0.1 && component.mixedMelody > component.rhythmAtMelody * 20, JSON.stringify(media));
-    assert.ok(component.mixedRhythm > component.rhythm * 0.1 && component.mixedRhythm > component.melodyAtRhythm * 20, JSON.stringify(media));
+    assert.equal(component.linkedMelody, component.melody, JSON.stringify(media));
+    assert.equal(component.linkedAtRhythm, component.melodyAtRhythm, JSON.stringify(media));
   }
+
+  await rhythmTab.click();
+  assert.equal(await page.getByTestId("practice-score-workspace-1").count(), 1);
+  assert.equal(await page.getByLabel("2번 악보 리듬 연주 악기", { exact: true }).inputValue(), "flute");
+  assert.deepEqual((await draft()).rhythmLayers, audibleLayer);
 
   await changeMode("가락만들기");
   const completed = await draft();

@@ -289,44 +289,86 @@ try {
     assert.equal(await page.getByRole("tab", { name: /가락 만들기/ }).isEnabled(), scoreIndex === 2);
   }
 
-  // A linked melody download contains C4 melody, its original rhythm, and additional C5 rhythm voices.
+  // The rhythm remains authored, but the linked melody stage plays and exports only its melody voice.
   await page.getByLabel("2번 악보 리듬 연주 악기", { exact: true }).selectOption("flute");
+  const allRhythms = (await draft()).rhythmLayers;
   await page.getByRole("tab", { name: /가락 만들기/ }).click();
+  await page.getByLabel("가락 연주 악기", { exact: true }).selectOption("flute");
   assert.equal(await card(0).locator(".practice-melody-row").count(), 8);
-  assert.equal(await card(1).locator(".practice-melody-row").count(), 0);
-  assert.equal(await card(2).locator(".practice-melody-row").count(), 0);
+  assert.equal(await workspace(1).count(), 0);
+  assert.equal(await workspace(2).count(), 0);
+  assert.equal(await page.getByLabel("리듬 연주 악기", { exact: true }).count(), 0);
+  assert.equal(await page.getByRole("button", { name: "리듬 함께 듣기", exact: true }).count(), 0);
   assert.equal(await tools(0).getByTestId("practice-duration-1").count(), 0);
-  assert.equal(await page.getByRole("button", { name: "리듬과 가락 미리듣기", exact: true }).isEnabled(), true);
-  const downloadEvent = page.waitForEvent("download", { timeout: 60000 });
-  await page.getByRole("button", { name: "MP3 저장", exact: true }).click();
-  const download = await downloadEvent;
-  const mp3Path = path.join(outputDir, "three-scores.mp3");
-  await download.saveAs(mp3Path);
-  const bytes = await readFile(mp3Path);
-  const media = await page.evaluate(async (bytes) => {
+  assert.equal(await page.getByRole("button", { name: "가락 미리듣기", exact: true }).isEnabled(), true);
+  assert.deepEqual((await draft()).rhythmLayers, allRhythms);
+
+  async function downloadMusic(kind, name) {
+    const downloadEvent = page.waitForEvent("download", { timeout: 60000 });
+    await page.getByRole("button", { name: `${kind.toUpperCase()} 저장`, exact: true }).click();
+    const download = await downloadEvent;
+    const filePath = path.join(outputDir, `${name}.${kind}`);
+    await download.saveAs(filePath);
+    const bytes = await readFile(filePath);
+    assert.ok(bytes.length > 1000);
+    if (kind === "mp4") assert.equal(bytes.subarray(4, 8).toString(), "ftyp");
+    return [...bytes];
+  }
+
+  const linkedMp3 = await downloadMusic("mp3", "linked-melody-only");
+  const linkedMp4 = await downloadMusic("mp4", "linked-melody-only");
+  await page.getByRole("button", { name: "모드 바꾸기", exact: true }).click();
+  await page.getByRole("button", { name: "가락만들기", exact: true }).click();
+  const pureMp3 = await downloadMusic("mp3", "pure-melody-baseline");
+  const pureMp4 = await downloadMusic("mp4", "pure-melody-baseline");
+  assert.deepEqual((await draft()).rhythmLayers, allRhythms);
+
+  const media = await page.evaluate(async ({ linkedMp3, linkedMp4, pureMp3, pureMp4 }) => {
     const context = new AudioContext();
-    const buffer = await context.decodeAudioData(Uint8Array.from(bytes).buffer);
-    const samples = buffer.getChannelData(0);
-    const start = Math.floor(buffer.sampleRate * 0.2);
-    const length = 8192;
-    const powers = [261.63, 523.25].map((frequency) => {
-      let real = 0;
-      let imaginary = 0;
-      for (let index = 0; index < length; index += 1) {
-        const value = (samples[start + index] || 0) * (0.5 - 0.5 * Math.cos(2 * Math.PI * index / (length - 1)));
-        const angle = 2 * Math.PI * frequency * index / buffer.sampleRate;
-        real += value * Math.cos(angle);
-        imaginary += value * Math.sin(angle);
-      }
-      return (real ** 2 + imaginary ** 2) / length ** 2;
+    const buffers = await Promise.all([linkedMp3, linkedMp4, pureMp3, pureMp4].map((bytes) =>
+      context.decodeAudioData(Uint8Array.from(bytes).buffer)));
+    const summaries = buffers.map((buffer) => {
+      const samples = buffer.getChannelData(0);
+      const start = Math.floor(buffer.sampleRate * 0.2);
+      const length = 8192;
+      const powers = [261.63, 523.25].map((frequency) => {
+        let real = 0;
+        let imaginary = 0;
+        for (let index = 0; index < length; index += 1) {
+          const value = (samples[start + index] || 0) * (0.5 - 0.5 * Math.cos(2 * Math.PI * index / (length - 1)));
+          const angle = 2 * Math.PI * frequency * index / buffer.sampleRate;
+          real += value * Math.cos(angle);
+          imaginary += value * Math.sin(angle);
+        }
+        return (real ** 2 + imaginary ** 2) / length ** 2;
+      });
+      const energy = samples.reduce((sum, value) => sum + value ** 2, 0) / samples.length;
+      return { duration: buffer.duration, powers, energy };
     });
-    const energy = samples.reduce((sum, value) => sum + value ** 2, 0) / samples.length;
+    const baselineErrors = [0, 1].map((linkedIndex) => {
+      const linked = buffers[linkedIndex].getChannelData(0);
+      const pure = buffers[linkedIndex + 2].getChannelData(0);
+      let maximum = 0;
+      for (let index = 0; index < Math.max(linked.length, pure.length); index += 1) {
+        maximum = Math.max(maximum, Math.abs((linked[index] || 0) - (pure[index] || 0)));
+      }
+      return maximum;
+    });
     await context.close();
-    return { duration: buffer.duration, powers, energy };
-  }, [...bytes]);
-  assert.ok(Math.abs(media.duration - 4) < 0.2);
-  assert.ok(media.powers.every((value) => value > 0.000001), JSON.stringify(media));
-  assert.ok(media.energy > 0.000001);
+    return { summaries, baselineErrors };
+  }, { linkedMp3, linkedMp4, pureMp3, pureMp4 });
+  for (const summary of media.summaries) {
+    assert.ok(Math.abs(summary.duration - 4) < 0.2, JSON.stringify(media));
+    assert.ok(summary.powers[0] > 0.000001 && summary.energy > 0.000001, JSON.stringify(media));
+  }
+  assert.ok(media.baselineErrors.every((error) => error < 0.000001), JSON.stringify(media));
+
+  await page.getByRole("button", { name: "모드 바꾸기", exact: true }).click();
+  await page.getByRole("button", { name: "리듬만들고 가락넣기", exact: true }).click();
+  assert.equal(await workspace(1).count(), 1);
+  assert.equal(await workspace(2).count(), 1);
+  assert.equal(await page.getByLabel("2번 악보 리듬 연주 악기", { exact: true }).inputValue(), "flute");
+  assert.deepEqual((await draft()).rhythmLayers, allRhythms);
 
   const saved = await draft();
   await page.reload();

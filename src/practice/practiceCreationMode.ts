@@ -6,7 +6,7 @@ export const PRACTICE_CREATION_MODES: readonly {
   description: string;
 }[] = [
   { id: "rhythm", label: "리듬만들기", description: "리듬만 만들고 악기로 연주해요." },
-  { id: "rhythm-melody", label: "리듬만들고 가락넣기", description: "만든 리듬에 가락을 붙여 함께 연주해요." },
+  { id: "rhythm-melody", label: "리듬만들고 가락넣기", description: "만든 리듬에 높낮이를 붙여 가락을 연주해요." },
   { id: "melody", label: "가락만들기", description: "빈 악보에 가락을 바로 만들고 연주해요." }
 ];
 

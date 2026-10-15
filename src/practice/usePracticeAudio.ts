@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { practiceAudioScores } from "./practiceAudioScores";
+import { practiceAudioScores, practicePlaysMelodyOnly } from "./practiceAudioScores";
 import {
   encodePracticeMp3,
   exportPracticeMp4,
@@ -114,11 +114,9 @@ export function usePracticeAudio(input: PracticeAudioInput) {
       scope: rhythmMix ? "rhythm-mix" : measureIndex !== null ? { measureIndex, scoreIndex }
         : scoreIndex !== null ? { scoreIndex } : "all",
       measures: renderInput.measures,
-      rhythmLayers: renderInput.rhythmLayers,
+      scores: practiceAudioScores(renderInput),
       meter: renderInput.meter,
       bpm: renderInput.bpm,
-      melodyInstrument: renderInput.melodyInstrumentId,
-      rhythmInstrument: renderInput.rhythmInstrumentId,
       mode: renderInput.mode,
       step: renderInput.step
     });
@@ -138,7 +136,15 @@ export function usePracticeAudio(input: PracticeAudioInput) {
 
   function stop(): void {
     const session = activeSession.current;
-    if (!session) return;
+    if (!session) {
+      // Starting fresh also clears the previous export result and rendered sound.
+      cached.current = null;
+      if (mounted.current) {
+        setProgress(0);
+        setStatus("");
+      }
+      return;
+    }
     activeSession.current = null;
     disposeSession(session);
     if (!mounted.current) return;
@@ -158,12 +164,14 @@ export function usePracticeAudio(input: PracticeAudioInput) {
     if (!session) return;
     setStatus("연주할 악기를 준비하고 있어요.");
     try {
+      if (rhythmMix && practicePlaysMelodyOnly(input)) {
+        throw new Error("리듬 악기는 리듬만들기로 돌아가서 들어 보세요.");
+      }
       const renderInput = measureIndex === null
         ? rhythmMix ? { ...input, mode: "rhythm" as const, step: "rhythm" as const }
           : scoreIndex !== null ? practiceScoreAudioInput(input, scoreIndex) : input
         : practiceMeasureAudioInput(input, measureIndex, scoreIndex ?? 0);
-      const soundLabel = renderInput.mode === "rhythm-melody" && renderInput.step === "melody"
-        ? "리듬과 가락" : practiceAudioScores(renderInput)[0].rhythm ? "리듬" : "가락";
+      const soundLabel = practiceAudioScores(renderInput)[0].rhythm ? "리듬" : "가락";
       // Create and resume synchronously inside the click, before awaiting rendering.
       session.context = new AudioContext();
       const resuming = session.context.resume();

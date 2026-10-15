@@ -230,9 +230,10 @@ describe("악보를 겹쳐 리듬 만들기", () => {
     expect(latestAudioInput().rhythmLayers).toHaveLength(2);
     click(melodyTab);
     expect(measureCard(0).querySelectorAll(".practice-melody-row")).toHaveLength(8);
-    expect(scoreCard(1, 0).querySelector(".practice-rhythm-timeline")).not.toBeNull();
-    expect(scoreCard(1, 0).querySelectorAll(".practice-melody-row")).toHaveLength(0);
+    expect(container?.querySelector('[data-testid="practice-score-workspace-1"]')).toBeNull();
     const primary = savedDraft().measures[0].notes;
+    click(button("리듬 만들기로"));
+    expect(scoreCard(1, 0).querySelector(".practice-rhythm-timeline")).not.toBeNull();
     click(testButton("practice-score-1-measure-0"));
     const lyric = scoreCard(1, 0).querySelector<HTMLInputElement>('[aria-label="1번째 음표 가사"]');
     click(lyric as HTMLInputElement);
@@ -242,7 +243,8 @@ describe("악보를 겹쳐 리듬 만들기", () => {
       .toEqual({ numerator: 2, denominator: 1 });
     expect(button("MP3 저장").disabled).toBe(true);
     expect(button("MP4 저장").disabled).toBe(true);
-    expect(melodyTab.getAttribute("aria-selected")).toBe("true");
+    expect(melodyTab.getAttribute("aria-selected")).toBe("false");
+    expect(melodyTab.disabled).toBe(true);
   });
 
   it("세 악보의 악기와 별도 음표를 복원하고 마디 수를 함께 늘리고 줄인다", () => {
@@ -544,7 +546,7 @@ describe("기능 연습하기 전체 흐름", () => {
     expect(latestAudioInput().step).toBe("melody");
     expect(latestAudioInput().measures[0].notes).toEqual(melodyNotes);
 
-    click(button("리듬과 가락 미리듣기"));
+    click(button("가락 미리듣기"));
     click(button("MP3 저장"));
     click(button("MP4 저장"));
     expect(audio.preview).toHaveBeenCalledTimes(1);

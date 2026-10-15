@@ -56,55 +56,63 @@ describe("처음 고른 만들기 모드의 연주와 영상", () => {
     ]);
   });
 
-  it("함께 만들기의 가락 단계는 동일한 음표 원본으로 리듬과 가락을 동시에 연주한다", () => {
+  it("함께 만들기의 가락 단계는 입력한 박자를 유지하며 가락 악기만 연주한다", () => {
     const scores = practiceAudioScores(input);
-    expect(scores[1].measures).toBe(input.measures);
+    expect(scores).toHaveLength(1);
+    expect(scores[0].measures).toBe(input.measures);
     const plan = buildPracticeAudioPlan(input);
     expect(plan.tracks.map((track) => [track.instrumentId, track.rhythm])).toEqual([
-      ["flute", false], ["beat:woodblock", true], ["clarinet", true]
+      ["flute", false]
     ]);
-    expect(plan.tracks[1].timeline.events.map((event) => event.pitch)).toEqual([72, null, 72, 72]);
-    expect(plan.tracks[1].timeline.events.map(({ noteId, startSeconds, endSeconds }) =>
-      [noteId, startSeconds, endSeconds]))
-      .toEqual(plan.timeline.events.map(({ noteId, startSeconds, endSeconds }) =>
-        [noteId, startSeconds, endSeconds]));
+    expect(plan.timeline.events.map((event) => event.pitch)).toEqual([60, null, 67, 64]);
+    expect(plan.timeline.events.map(({ startSeconds, endSeconds }) => [startSeconds, endSeconds]))
+      .toEqual([[0, 0.125], [0.125, 0.25], [0.25, 2], [2, 4]]);
     const highlighted = practiceNotesAtTime({
       buffer: {} as AudioBuffer, timeline: plan.timeline,
       layerTimelines: plan.tracks.slice(1).map((track) => track.timeline), usedFallback: false
     }, 0.2);
-    expect(highlighted).toEqual(["rest", "layer-first"]);
+    expect(highlighted).toEqual(["rest"]);
+    expect(input.rhythmLayers).toHaveLength(1);
   });
 
-  it("함께 만들기의 한 마디·악보 듣기는 주리듬과 가락을 유지하고 다른 악보를 제외한다", () => {
+  it("함께 만들기의 한 마디·악보 듣기도 가락만 연주하고 리듬 악보 선택을 막는다", () => {
     for (const preview of [practiceMeasureAudioInput(input, 0), practiceScoreAudioInput(input, 0)]) {
       const plan = buildPracticeAudioPlan(preview);
       expect(preview.mode).toBe("rhythm-melody");
-      expect(plan.tracks.map((track) => track.instrumentId)).toEqual(["flute", "beat:woodblock"]);
+      expect(plan.tracks.map((track) => track.instrumentId)).toEqual(["flute"]);
       expect(plan.tracks[0].timeline.events.map((event) => event.pitch)).toContain(60);
     }
-    for (const preview of [practiceMeasureAudioInput(input, 0, 1), practiceScoreAudioInput(input, 1)]) {
-      const plan = buildPracticeAudioPlan(preview);
-      expect(preview.mode).toBe("rhythm");
-      expect(plan.tracks.map((track) => [track.instrumentId, track.rhythm])).toEqual([["clarinet", true]]);
-    }
+    expect(() => practiceMeasureAudioInput(input, 0, 1)).toThrow("악보를 다시");
+    expect(() => practiceScoreAudioInput(input, 1)).toThrow("악보를 다시");
+    const rhythm = practiceScoreAudioInput({ ...input, step: "rhythm" }, 1);
+    expect(buildPracticeAudioPlan(rhythm).tracks.map((track) => [track.instrumentId, track.rhythm]))
+      .toEqual([["clarinet", true]]);
   });
 
-  it("파생 주리듬이 추가되어도 저장 영상의 악보와 연주 시간이 일치한다", () => {
+  it("저장 영상에서도 리듬 악보를 제외하고 가락의 악보와 연주 시간을 일치시킨다", () => {
     const video = buildPracticeVideoPreviewPlan(input);
-    expect(video.tracks.map((track) => track.id)).toEqual(["main", "main-rhythm", "layer"]);
+    expect(video.tracks.map((track) => track.id)).toEqual(["main"]);
     expect(video.measures.map((measure) => [measure.startSeconds, measure.endSeconds])).toEqual([[0, 2], [2, 4]]);
     expect(video.measures[0].tracks[0].map((note) => note.visualPitch)).toEqual([60, null, 67]);
-    expect(video.measures[0].tracks[1].map((note) => note.visualPitch)).toEqual([null, null, null]);
-    expect(video.measures[0].tracks[2][0].note.id).toBe("layer-first");
-    expect(video.measures[1].tracks[2][0].startSeconds).toBe(2);
+    expect(video.measures.every((measure) => measure.tracks.length === 1)).toBe(true);
+    expect(video.measures[1].tracks[0][0].startSeconds).toBe(2);
     expect(video.frames.at(-1)?.endSeconds).toBe(4);
   });
 
-  it("저장된 두 리듬 악보에 주리듬을 더해도 사용자 악보 제한에 걸리지 않는다", () => {
+  it("가락 단계에서는 저장된 리듬 수·길이·음표가 연주 길이와 제한에 영향을 주지 않는다", () => {
     const settings = { ...input, rhythmLayers: [input.rhythmLayers![0], {
-      ...input.rhythmLayers![0], id: "another", instrumentId: "beat:shaker"
+      ...input.rhythmLayers![0], id: "long", instrumentId: "beat:shaker",
+      measures: [{ notes: [{ id: "long", pitch: 60, duration: rational(2000) }] }]
+    }, {
+      ...input.rhythmLayers![0], id: "invalid",
+      measures: [{ notes: [{ id: "invalid", pitch: 60, duration: rational(0) }] }]
     }] };
-    expect(buildPracticeAudioPlan(settings).tracks).toHaveLength(4);
-    expect(buildPracticeVideoPreviewPlan(settings).tracks).toHaveLength(4);
+    const audio = buildPracticeAudioPlan(settings);
+    const video = buildPracticeVideoPreviewPlan(settings);
+    expect(audio.tracks).toHaveLength(1);
+    expect(audio.timeline.durationSeconds).toBe(4);
+    expect(video.tracks).toHaveLength(1);
+    expect(video.durationSeconds).toBe(4);
+    expect(settings.rhythmLayers).toHaveLength(3);
   });
 });

@@ -194,7 +194,7 @@ describe("악보별 전체 미리듣기와 간단한 마디 버튼", () => {
     expect(container?.querySelectorAll(".practice-playback-indicator")).toHaveLength(1);
   });
 
-  it("가락 단계에서도 악보마다 자신의 전체 미리듣기를 요청한다", () => {
+  it("가락 단계에서는 가락 악보만 미리 듣고 리듬 단계로 돌아가면 각 리듬 악보를 듣는다", () => {
     mount();
     changeValue("연습할 마디 수", "1");
     addThreeScores();
@@ -202,14 +202,18 @@ describe("악보별 전체 미리듣기와 간단한 마디 버튼", () => {
       completeScoreMeasure(scoreIndex, 0, "우리노래");
     }
     click(container?.querySelector<HTMLElement>("#practice-melody-tab") as HTMLElement);
-    for (let scoreIndex = 0; scoreIndex < 3; scoreIndex += 1) {
-      const measurePreview = measurePreviewButton(scoreIndex, 0);
-      expect(measurePreview.textContent?.trim()).toBe(scoreIndex === 0 ? "미리 듣기" : "미리듣기");
-      expect(measurePreview.getAttribute("aria-label")).toContain(scoreIndex === 0 ? "가락 미리 듣기" : "리듬 미리듣기");
-      click(wholeScoreButton(scoreIndex));
-    }
-    expect(audio.previewScore.mock.calls).toEqual([[0], [1], [2]]);
+    expect(container?.querySelectorAll(".practice-score-workspace")).toHaveLength(1);
+    const measurePreview = measurePreviewButton(0, 0);
+    expect(measurePreview.textContent?.trim()).toBe("미리 듣기");
+    expect(measurePreview.getAttribute("aria-label")).toContain("가락 미리 듣기");
+    expect(container?.querySelector('[data-testid="practice-score-preview-1"]')).toBeNull();
+    click(wholeScoreButton(0));
+    expect(audio.previewScore.mock.calls).toEqual([[0]]);
     expect(latestAudioInput().step).toBe("melody");
+    click(button("리듬 만들기로"));
+    for (let scoreIndex = 0; scoreIndex < 3; scoreIndex += 1) click(wholeScoreButton(scoreIndex));
+    expect(audio.previewScore.mock.calls).toEqual([[0], [0], [1], [2]]);
+    expect(latestAudioInput().step).toBe("rhythm");
   });
 });
 

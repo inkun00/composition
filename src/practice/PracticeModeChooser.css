@@ -326,6 +326,34 @@
   font-size: 12px;
 }
 
+.practice-mode-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.practice-mode-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.practice-mode-current .practice-start-new {
+  border-color: #bad4c5;
+  color: #356953;
+  background: #eff7f1;
+  font-weight: 700;
+}
+
+.practice-mode-actions button:focus-visible {
+  outline: 3px solid #5969d7;
+  outline-offset: 3px;
+}
+
 @media (max-width: 800px) {
   .practice-mode-overlay {
     padding: 14px;

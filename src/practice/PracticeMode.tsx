@@ -1,5 +1,5 @@
 import { useRef, useState, type CSSProperties } from "react";
-import { ArrowLeft, ArrowRight, GraduationCap, Square, Volume2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, GraduationCap, RotateCcw, Square, Volume2 } from "lucide-react";
 import { meterKey, SUPPORTED_METERS } from "../music/meter";
 import { useUnsavedWorkWarning } from "../hooks/useUnsavedWorkWarning";
 import { PracticeNoteTools } from "./PracticeEditors";
@@ -45,8 +45,10 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
   });
   useUnsavedWorkWarning(!practice.saved);
   const busy = audio.busy || audio.playing;
-  const finishedCount = scoreValidations.flat().filter((item) => item.state === "exact").length;
-  const totalMeasures = draft.measures.length * scores.length;
+  const visibleScores = step === "melody" ? scores.slice(0, 1) : scores;
+  const visibleValidations = step === "melody" ? scoreValidations.slice(0, 1) : scoreValidations;
+  const finishedCount = visibleValidations.flat().filter((item) => item.state === "exact").length;
+  const totalMeasures = draft.measures.length * visibleScores.length;
   const hasMelodySound = draft.measures.some((measure) => measure.notes.some((note) => note.pitch !== null));
 
   function selectMode(mode: PracticeCreationMode) {
@@ -54,6 +56,16 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
     setChangingMode(false);
     setSaving(false);
     setAppendRest(false);
+  }
+
+  function startNew() {
+    if (busy || choosingMode || !practice.startNew()) return;
+    audio.stop();
+    setChangingMode(false);
+    setSaving(false);
+    setAppendDuration(1);
+    setAppendRest(false);
+    setVideoMode("bars");
   }
 
   function close() {
@@ -80,8 +92,13 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
 
         <div className="practice-mode-current">
           <strong>{draft.mode ? practiceCreationModeLabel(draft.mode) : "만들 방법을 골라 주세요"}</strong>
-          <button ref={modeButtonRef} type="button" disabled={busy || !draft.mode}
-            onClick={() => setChangingMode(true)}>모드 바꾸기</button>
+          <div className="practice-mode-actions">
+            <button type="button" className="practice-start-new" disabled={busy || choosingMode} onClick={startNew}>
+              <RotateCcw size={15} aria-hidden="true" /> 새로 시작하기
+            </button>
+            <button ref={modeButtonRef} type="button" disabled={busy || !draft.mode}
+              onClick={() => setChangingMode(true)}>모드 바꾸기</button>
+          </div>
         </div>
 
         <fieldset className="practice-settings" disabled={busy} hidden={saving}>
@@ -131,7 +148,7 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
 
           <PracticeRhythmScores practice={practice} audio={audio} />
 
-          {scores.map((score, scoreIndex) => {
+          {visibleScores.map((score, scoreIndex) => {
             const scorePreviewActive = audio.previewScoreIndex === scoreIndex && audio.previewMeasureIndex === null;
             const hasSound = score.measures.some((measure) => measure.notes.some((note) => note.pitch !== null));
             const scorePreviewLabel = `악보${scoreIndex + 1} ${scorePreviewActive
@@ -148,7 +165,7 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
                     {scorePreviewActive ? <Square size={16} /> : <Volume2 size={17} />}
                     {scorePreviewLabel}
                   </button>
-                  {scores.length > 1 && (
+                  {visibleScores.length > 1 && (
                     <button type="button" disabled={busy} onClick={() => practice.selectScore(scoreIndex)}>
                       {activeScoreIndex === scoreIndex ? "편집 중" : "이 악보 편집"}
                     </button>
@@ -157,7 +174,7 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
               </div>
               <div className="practice-shared-tools" data-testid={`practice-score-tools-${scoreIndex}`}>
                 <p className="practice-current-measure" role={activeScoreIndex === scoreIndex ? "status" : undefined}>
-                  {scores.length > 1 ? `${scoreIndex + 1}번 악보 · ` : ""}{activeIndex + 1}마디에 넣기
+                  {visibleScores.length > 1 ? `${scoreIndex + 1}번 악보 · ` : ""}{activeIndex + 1}마디에 넣기
                 </p>
                 {draft.meter.beatUnit === 8 && <p className="practice-editor-help">6/8박자 · 8분음표 6개가 한 마디예요.</p>}
                 <PracticeNoteTools notes={score.measures[activeIndex].notes} meter={draft.meter}

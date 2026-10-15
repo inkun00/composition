@@ -22,9 +22,8 @@ export default function PracticePlayback({ draft, step, complete, audio, saving,
   const busy = audio.busy || audio.playing;
   const separatePreviewActive = audio.previewScoreIndex !== null || audio.previewMeasureIndex !== null || audio.previewRhythmMixing;
   const wholePlaying = audio.playing && !separatePreviewActive;
-  const together = draft.mode === "rhythm-melody" && step === "melody";
-  const musicLabel = together ? "리듬과 가락" : step === "rhythm" ? "리듬" : "가락";
-  const allMeasures = [draft.measures, ...(draft.mode === "melody" ? [] : draft.rhythmLayers.map((layer) => layer.measures))].flat();
+  const musicLabel = step === "rhythm" ? "리듬" : "가락";
+  const allMeasures = [draft.measures, ...(step === "melody" ? [] : draft.rhythmLayers.map((layer) => layer.measures))].flat();
   const hasLyrics = allMeasures.some((measure) => lyricSyllables(measure.lyric).length > 0);
   const allLyricsPlaced = allMeasures.every((measure) => {
     const entered = lyricSyllables(measure.lyric).length;

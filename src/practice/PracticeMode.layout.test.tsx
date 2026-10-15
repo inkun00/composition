@@ -92,15 +92,18 @@ describe("마디 바로 위의 입력 방식과 재생 표시", () => {
     click(testButton(`practice-melody-${firstId}-67`));
     const melodyDraft = savedDraft();
     click(groupButton(inputGroups().at(-1) as HTMLElement, "악보에 넣기"));
-    expectModeGroups(scoreCount, "score");
+    expectModeGroups(1, "score");
     expect(savedDraft()).toEqual(melodyDraft);
     expect(scoreCard(0, 0).querySelector('[data-testid="layout-mock-score"]')?.getAttribute("data-notes"))
       .toBe(JSON.stringify(melodyDraft.measures[0].notes));
     click(groupButton(inputGroups()[0], "칸 채우기"));
-    expectModeGroups(scoreCount, "grid");
+    expectModeGroups(1, "grid");
     expect(testButton(`practice-melody-${firstId}-67`).classList.contains("is-filled")).toBe(true);
     expect(savedDraft()).toEqual(melodyDraft);
     expect(container?.querySelector(".practice-beat-header")).toBeNull();
+    click(button("리듬 만들기로"));
+    expectModeGroups(scoreCount, "grid");
+    expect(savedDraft()).toEqual(melodyDraft);
   });
 
   it.each(["busy", "playing"] as const)("%s 중에는 각 악보의 입력 방식 버튼이 편집을 막는다", (state) => {

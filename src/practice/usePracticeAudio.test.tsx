@@ -90,7 +90,21 @@ afterEach(() => {
 });
 
 describe("연습 미리듣기와 파일 저장", () => {
-  it("가락만들기와 함께 만들기를 바꾸면 서로 다른 버퍼를 만들고 주리듬 악기 변경도 갱신한다", async () => {
+  it("새로 시작할 때는 연주가 끝난 뒤의 저장 안내·진행률·이전 소리 캐시도 비운다", async () => {
+    await act(async () => current.save("mp3"));
+    expect(current.status).toContain("MP3 파일을 저장했어요");
+    expect(current.progress).toBe(100);
+    expect(mocks.render).toHaveBeenCalledOnce();
+
+    act(() => current.stop());
+
+    expect(current.status).toBe("");
+    expect(current.progress).toBe(0);
+    await act(async () => current.preview());
+    expect(mocks.render).toHaveBeenCalledTimes(2);
+  });
+
+  it("가락 단계에서는 쓰지 않는 리듬 악기를 바꿔도 가락 렌더 버퍼를 재사용한다", async () => {
     const settings: PracticeAudioInput = { ...input, mode: "melody" };
     await act(async () => root.render(<Harness settings={settings} />));
     await act(async () => current.preview());
@@ -101,13 +115,16 @@ describe("연습 미리듣기와 파일 저장", () => {
     act(() => current.stop());
     await act(async () => root.render(<Harness settings={{ ...combined, rhythmInstrumentId: "beat:woodblock" }} />));
     await act(async () => current.preview());
-    expect(mocks.render).toHaveBeenCalledTimes(3);
-    expect(mocks.render.mock.calls.map((args) => args[0].mode)).toEqual(["melody", "rhythm-melody", "rhythm-melody"]);
-    expect(mocks.render.mock.calls[2][0].rhythmInstrumentId).toBe("beat:woodblock");
+    expect(mocks.render).toHaveBeenCalledTimes(2);
+    expect(mocks.render.mock.calls.map((args) => args[0].mode)).toEqual(["melody", "rhythm-melody"]);
+    expect(current.status).toContain("가락을 듣고 있어요");
   });
 
-  it("함께 만들기에서는 가락과 리듬의 같은 버퍼를 듣고 MP3·MP4에 저장한다", async () => {
-    const settings: PracticeAudioInput = { ...input, mode: "rhythm-melody", rhythmInstrumentId: "beat:woodblock" };
+  it("리듬을 만든 뒤 가락 단계에서는 가락만 들어 있는 같은 버퍼를 듣고 MP3·MP4에 저장한다", async () => {
+    const settings: PracticeAudioInput = {
+      ...input, mode: "rhythm-melody", rhythmInstrumentId: "beat:woodblock",
+      rhythmLayers: [{ id: "other", instrumentId: "clarinet", measures: input.measures }]
+    };
     await act(async () => root.render(<Harness settings={settings} />));
     mocks.render.mockImplementation(async (renderInput: PracticeAudioInput) => {
       const plan = buildPracticeAudioPlan(renderInput);
@@ -115,18 +132,20 @@ describe("연습 미리듣기와 파일 저장", () => {
     });
     await act(async () => current.preview());
     expect(current.playingNoteIds).toEqual(["a"]);
-    expect(current.status).toContain("리듬과 가락을 듣고 있어요");
+    expect(current.status).toContain("가락을 듣고 있어요");
+    expect(current.status).not.toContain("리듬과 가락");
     act(() => current.stop());
     await act(async () => current.save("mp3"));
     await act(async () => current.save("mp4"));
     expect(mocks.render).toHaveBeenCalledOnce();
     expect(mocks.encode.mock.calls[0][0]).toBe(rendered.buffer);
-    expect(mocks.mp4.mock.calls[0][0].layerTimelines).toHaveLength(1);
+    expect(mocks.mp4.mock.calls[0][0].layerTimelines).toHaveLength(0);
     expect(mocks.mp4.mock.calls[0][1]).toBe(settings);
+    expect(settings.rhythmLayers).toHaveLength(1);
   });
 
-  it("함께 만들기의 리듬 함께 듣기는 가락을 제외하고 모든 리듬 악보만 연주한다", async () => {
-    const settings: PracticeAudioInput = { ...input, mode: "rhythm-melody", rhythmLayers: [{
+  it("함께 만들기의 리듬 단계는 모든 리듬 악보만 함께 연주한다", async () => {
+    const settings: PracticeAudioInput = { ...input, mode: "rhythm-melody", step: "rhythm", rhythmLayers: [{
       id: "other", instrumentId: "clarinet", measures: input.measures
     }] };
     await act(async () => root.render(<Harness settings={settings} />));
@@ -135,6 +154,28 @@ describe("연습 미리듣기와 파일 저장", () => {
     expect(renderInput).toMatchObject({ mode: "rhythm", step: "rhythm", rhythmLayers: settings.rhythmLayers });
     expect(buildPracticeAudioPlan(renderInput).tracks.map((track) => track.rhythm)).toEqual([true, true]);
   });
+
+  it.each(["melody", "rhythm-melody"] as const)(
+    "%s 가락 단계에서는 리듬 함께 듣기나 숨긴 악보 선택으로 리듬 연주를 우회하지 않는다", async (mode) => {
+      const settings: PracticeAudioInput = { ...input, mode, rhythmLayers: [{
+        id: "other", instrumentId: "clarinet", measures: input.measures
+      }] };
+      await act(async () => root.render(<Harness settings={settings} />));
+      await act(async () => current.previewRhythmMix());
+      expect(current.status).toContain("리듬만들기로 돌아가서");
+      expect(current.previewRhythmMixing).toBe(false);
+      await act(async () => current.previewScore(1));
+      expect(current.status).toContain("악보를 다시");
+      expect(current.previewScoreIndex).toBeNull();
+      await act(async () => current.previewMeasure(0, 1));
+      expect(current.status).toContain("악보를 다시");
+      expect(current.previewMeasureIndex).toBeNull();
+      expect(mocks.render).not.toHaveBeenCalled();
+      expect(AudioContextMock.instances).toHaveLength(0);
+      expect(current.busy).toBe(false);
+      expect(current.playing).toBe(false);
+    }
+  );
 
   it("미완성 마디 하나만 리듬으로 연주하고 원래 음표를 강조한다", async () => {
     const selected = { notes: [{ id: "selected", pitch: 67, duration: rational(1, 2) }] };

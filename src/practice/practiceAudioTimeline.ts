@@ -1,7 +1,7 @@
 import { measureCapacity } from "../music/meter";
 import { compare, subtract, sum, toNumber } from "../music/rational";
 import type { NoteEvent } from "../music/types";
-import { practiceAudioScores } from "./practiceAudioScores";
+import { practiceAudioScores, practicePlaysMelodyOnly } from "./practiceAudioScores";
 import type {
   PracticeAudioEvent,
   PracticeAudioInput,
@@ -14,7 +14,7 @@ function selectedScore(
   input: PracticeAudioInput,
   scoreIndex: number
 ) {
-  const lastScoreIndex = input.mode === "melody" ? 0 : input.rhythmLayers?.length ?? 0;
+  const lastScoreIndex = practicePlaysMelodyOnly(input) ? 0 : input.rhythmLayers?.length ?? 0;
   if (!Number.isInteger(scoreIndex) || scoreIndex < 0 || scoreIndex > lastScoreIndex) {
     throw new Error("미리 들을 악보를 다시 골라 주세요.");
   }
@@ -22,7 +22,7 @@ function selectedScore(
   return layer;
 }
 
-/** Preview the selected score, including its paired rhythm in the combined mode. */
+/** Preview only the selected score with the current stage's instrument. */
 export function practiceScoreAudioInput(input: PracticeAudioInput, scoreIndex = 0): PracticeAudioInput {
   const layer = selectedScore(input, scoreIndex);
   const measures = layer?.measures ?? input.measures;
@@ -49,7 +49,7 @@ export function practiceScoreAudioInput(input: PracticeAudioInput, scoreIndex = 
   };
 }
 
-/** Preview one bar of the selected score, including a paired rhythm if selected. */
+/** Preview one bar of the selected score with the current stage's instrument. */
 export function practiceMeasureAudioInput(
   input: PracticeAudioInput,
   index: number,
@@ -115,7 +115,7 @@ export function buildPracticeAudioPlan(input: PracticeAudioInput): PracticeAudio
   if (!Number.isFinite(input.bpm) || input.bpm <= 0) {
     throw new Error("빠르기를 올바르게 정한 뒤 다시 시도해 주세요.");
   }
-  if (input.mode !== "melody" && (input.rhythmLayers?.length ?? 0) > 2) {
+  if (!practicePlaysMelodyOnly(input) && (input.rhythmLayers?.length ?? 0) > 2) {
     throw new Error("리듬 악보는 세 개까지 함께 연주할 수 있어요.");
   }
   const scores = practiceAudioScores(input);

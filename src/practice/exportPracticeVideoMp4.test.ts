@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { rational } from "../music/rational";
+import { buildPracticeAudioPlan } from "./practiceAudioTimeline";
 import type { PracticeAudioInput, PracticeRenderedAudio } from "./practiceAudioTypes";
 import { exportPracticeVideoMp4 } from "./exportPracticeVideoMp4";
 
@@ -90,6 +91,29 @@ describe("리듬·가락 MP4 인코딩", () => {
     await exportPracticeVideoMp4(rendered, { ...input, videoMode: "score" });
     expect(mocks.prepare.mock.calls[0][1]).toBe("score");
     expect(mocks.prepare.mock.calls[0][0].measures[0].tracks[0][0].note.pitch).toBe(60);
+  });
+
+  it.each(["bars", "score"] as const)("%s MP4에는 저장된 하단 리듬 악보를 넣지 않고 가락만 인코딩한다", async (videoMode) => {
+    const settings: PracticeAudioInput = {
+      ...input, mode: "rhythm-melody", step: "melody", videoMode,
+      rhythmLayers: ["beat:shaker", "beat:kick"].map((instrumentId, index) => ({
+        id: `rhythm-${index}`, instrumentId,
+        measures: [{ notes: [{ id: `drum-${index}`, pitch: 60, duration: rational(4), lyric: "둥" }] }]
+      }))
+    };
+    const audio = buildPracticeAudioPlan(settings);
+    const melodyAudio: PracticeRenderedAudio = { ...rendered, timeline: audio.timeline, layerTimelines: [] };
+    await exportPracticeVideoMp4(melodyAudio, settings);
+
+    const [video, selectedMode] = mocks.prepare.mock.calls[0];
+    expect(selectedMode).toBe(videoMode);
+    expect(video.tracks.map(({ id, rhythm }: { id: string; rhythm: boolean }) => ({ id, rhythm })))
+      .toEqual([{ id: "main", rhythm: false }]);
+    expect(video.measures.every((measure: { tracks: unknown[] }) => measure.tracks.length === 1)).toBe(true);
+    expect(video.durationSeconds).toBe(0.5);
+    expect(mocks.audioAdd).toHaveBeenCalledExactlyOnceWith(melodyAudio.buffer);
+    expect(settings.rhythmLayers).toHaveLength(2);
+    expect(settings.rhythmLayers?.[0].measures[0].notes[0].lyric).toBe("둥");
   });
 
   it("지원되지 않는 코덱은 화면이나 출력 작업을 시작하지 않는다", async () => {

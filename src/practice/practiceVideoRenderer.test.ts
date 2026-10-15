@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { rational } from "../music/rational";
 import type { NoteEvent } from "../music/types";
+import type { PracticeAudioInput } from "./practiceAudioTypes";
 import { buildPracticeVideoPreviewPlan } from "./practiceVideoPlan";
 import { preparePracticeVideoRenderer } from "./practiceVideoRenderer";
 import { recordVideoCanvases, type VideoCanvasCommand } from "./practiceVideoRendererTestCanvas";
@@ -30,6 +31,40 @@ function videoPlan() {
   });
 }
 
+function layeredVideoInput(): PracticeAudioInput {
+  return {
+    title: "리듬을 담은 가락",
+    mode: "rhythm-melody",
+    bpm: 120,
+    meter: { beats: 4, beatUnit: 4 },
+    step: "melody",
+    melodyInstrumentId: "piano",
+    rhythmInstrumentId: "beat:woodblock",
+    measures: [
+      { notes: [note("main-c", 60, 2, "가"), note("main-e", 64, 2, "나")] },
+      { notes: [note("main-g", 67, 4, "다")] }
+    ],
+    rhythmLayers: [
+      { id: "clap", instrumentId: "beat:clap", measures: [
+        { notes: [note("clap-one", 60, 4, "짝")] },
+        { notes: [note("clap-two", 60, 4, "짝")] }
+      ] },
+      { id: "kick", instrumentId: "beat:kick", measures: [
+        { notes: [note("kick-one", 60, 4, "쿵")] },
+        { notes: [note("kick-two", 60, 4, "쿵")] }
+      ] }
+    ]
+  };
+}
+
+function comparableCommands(commands: readonly VideoCanvasCommand[]) {
+  return commands.map((command) => ({
+    ...command,
+    args: command.args.map((argument) => argument instanceof HTMLCanvasElement
+      ? { canvasWidth: argument.width, canvasHeight: argument.height } : argument)
+  }));
+}
+
 function white(color: string): boolean {
   return /^(white|#fff(?:fff)?|rgba?\(255[, ]+255[, ]+255(?:[, /][\d. ]+)?\))$/i.test(color);
 }
@@ -42,6 +77,51 @@ beforeEach(clearScoreDrawing);
 afterEach(() => { vi.restoreAllMocks(); });
 
 describe("연습 저장 영상의 실제 그리기", () => {
+  it.each(["bars", "score"] as const)("%s 저장 영상은 가락 단계에서 아래 리듬을 그리지 않고 리듬 모드에서는 세 악보를 유지한다", async (mode) => {
+    const input = layeredVideoInput();
+    const combined = buildPracticeVideoPreviewPlan(input);
+    const melodyOnly = buildPracticeVideoPreviewPlan({ ...input, mode: "melody", rhythmLayers: [] });
+    const rhythmOnly = buildPracticeVideoPreviewPlan({ ...input, mode: "rhythm", step: "rhythm" });
+    expect(combined).toEqual(melodyOnly);
+    expect(combined.tracks).toHaveLength(1);
+    expect(combined.tracks[0].rhythm).toBe(false);
+    expect(combined.measures.every((measure) => measure.tracks.length === 1)).toBe(true);
+    expect(rhythmOnly.tracks).toHaveLength(3);
+    expect(rhythmOnly.tracks.every((track) => track.rhythm)).toBe(true);
+    const canvases = recordVideoCanvases();
+
+    const capture = async (plan: typeof combined) => {
+      clearScoreDrawing();
+      const firstCanvas = canvases.length;
+      const renderer = await preparePracticeVideoRenderer(plan, mode);
+      for (const seconds of [0.1, 1.2, 2.1, 3.4]) renderer.draw(seconds);
+      return {
+        commands: canvases.slice(firstCanvas).map((canvas) => comparableCommands(canvas.commands)),
+        staves: scoreDrawing.staves.map((stave) => ({ ...stave }))
+      };
+    };
+
+    const combinedDrawing = await capture(combined);
+    const melodyDrawing = await capture(melodyOnly);
+    const rhythmDrawing = await capture(rhythmOnly);
+    expect(combinedDrawing).toEqual(melodyDrawing);
+    const combinedText = combinedDrawing.commands.flatMap(textCommands).map((command) => command.args[0]);
+    expect(combinedText).not.toContain("짝");
+    expect(combinedText).not.toContain("쿵");
+    expect(rhythmDrawing).not.toEqual(combinedDrawing);
+    if (mode === "score") {
+      expect(combinedDrawing.staves).toHaveLength(2);
+      expect(new Set(combinedDrawing.staves.map((stave) => stave.y)).size).toBe(1);
+      expect(rhythmDrawing.staves).toHaveLength(6);
+      expect(new Set(rhythmDrawing.staves.map((stave) => stave.y)).size).toBe(3);
+    } else {
+      expect(combinedDrawing.commands.flatMap(textCommands).some((command) => command.args[0] === "리듬"))
+        .toBe(false);
+      expect(rhythmDrawing.commands.flatMap(textCommands).some((command) => command.args[0] === "리듬"))
+        .toBe(true);
+    }
+  });
+
   it.each(["bars", "score"] as const)("%s 화면은 검정 배경과 흰 도형·글자를 사용하며 별도 제목·정보를 그리지 않는다", async (mode) => {
     const canvases = recordVideoCanvases();
     const renderer = await preparePracticeVideoRenderer(videoPlan(), mode);
