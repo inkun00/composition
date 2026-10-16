@@ -22,7 +22,7 @@ export default function PracticeNoteTools({
   notes, step, inputMode, selectedNoteId, disabled = false,
   rhythmLocked = false, allowMelodyAppend = false,
   appendDuration, appendRest, onAppendDurationChange, onAppendRestChange,
-  onPitch, onDuration, onDelete, onAdd
+  onPitch, onDuration, onDelete
 }: PracticeEditorsProps) {
   const [newDuration, setNewDuration] = useState(1);
   const [newRest, setNewRest] = useState(false);
@@ -33,13 +33,30 @@ export default function PracticeNoteTools({
     ? PRACTICE_PITCHES.find((entry) => entry.pitch === selected.pitch)?.label ?? pitchName(selected.pitch!, selected.accidental)
     : "";
 
-  function append(beats: number, rest: boolean, dotted?: boolean) {
+  function choose(beats: number, rest: boolean) {
     if (disabled || rhythmLocked) return;
     setNewDuration(beats);
     setNewRest(rest);
     onAppendDurationChange?.(beats);
     onAppendRestChange?.(rest);
-    onAdd(beats, rest ? null : 60, dotted);
+  }
+
+  function durationButtons(common: boolean) {
+    return PRACTICE_DURATIONS.filter((duration) => [0.5, 1, 2].includes(duration.beats) === common).map((duration) => {
+      const name = duration.label.split(" · ")[0].replace("음표", nextRest ? "쉼표" : "음표");
+      const active = nextDuration === duration.beats;
+      return (
+        <button type="button" key={duration.beats} disabled={disabled}
+          className={[nextRest ? "practice-rest-option" : "", active ? "is-active" : ""].filter(Boolean).join(" ")}
+          aria-pressed={active} aria-label={`${name}, ${beatText(duration.beats)}박 선택`}
+          data-testid={`practice-${nextRest ? "rest" : "duration"}-${duration.beats}`}
+          onClick={() => choose(duration.beats, nextRest)}>
+          <span className="practice-note-symbol" aria-hidden="true">{nextRest ? REST_SYMBOLS[duration.beats] : duration.symbol}</span>
+          <span>{name}</span>
+          <small>{beatText(duration.beats)}박</small>
+        </button>
+      );
+    });
   }
 
   function moveSelectedPitch(direction: number) {
@@ -53,39 +70,28 @@ export default function PracticeNoteTools({
   return (
     <div className="practice-editors practice-note-tools">
       {!rhythmLocked && <div className="practice-rhythm-tools">
-        <div className="practice-duration-options" role="group" aria-label="음표와 쉼표 넣기">
-          {[false, true].map((rest) => (
-            <div className="practice-duration-group" key={String(rest)} role="group"
-              aria-label={rest ? "쉼표 넣기" : "음표 넣기"}>
-              <strong className="practice-duration-heading">{rest ? "쉼표" : "음표"}</strong>
-              <div className="practice-duration-buttons">
-                {PRACTICE_DURATIONS.map((duration) => {
-                  const noteName = duration.label.split(" · ")[0];
-                  const restName = noteName.replace("음표", "쉼표");
-                  const active = nextDuration === duration.beats && nextRest === rest;
-                  return (
-                    <button type="button" key={duration.beats} disabled={disabled}
-                      className={[rest ? "practice-rest-option" : "", active ? "is-active" : ""].filter(Boolean).join(" ")}
-                      aria-pressed={active}
-                      aria-label={`${rest ? restName : noteName}, ${beatText(duration.beats)}박 넣기`}
-                      data-testid={`practice-${rest ? "rest" : "duration"}-${duration.beats}`}
-                      onClick={() => append(duration.beats, rest, duration.dotted)}>
-                      <span className="practice-note-symbol" aria-hidden="true">{rest ? REST_SYMBOLS[duration.beats] : duration.symbol}</span>
-                      <span>{noteName.replace("음표", "")}<wbr />{rest ? "쉼표" : "음표"}</span>
-                      <small>{beatText(duration.beats)}박</small>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+        <div className="practice-duration-options practice-duration-palette" role="group" aria-label="넣을 음표 선택">
+          <div className="practice-note-kind" role="group" aria-label="음표 또는 쉼표">
+            {[false, true].map((rest) => (
+              <button type="button" key={String(rest)} disabled={disabled} aria-pressed={nextRest === rest}
+                data-testid={`practice-choose-${rest ? "rest" : "note"}`} onClick={() => choose(nextDuration, rest)}>
+                {rest ? "쉼표" : "음표"}
+              </button>
+            ))}
+          </div>
+          <div className="practice-duration-buttons practice-common-durations">{durationButtons(true)}</div>
+          <details className="practice-more-durations">
+            <summary>더 보기{![0.5, 1, 2].includes(nextDuration) ? ` · ${beatText(nextDuration)}박 선택됨` : ""}</summary>
+            <div className="practice-duration-buttons">{durationButtons(false)}</div>
+          </details>
+          <p className="practice-placement-hint">{nextRest ? "쉼표" : "음표"}를 고른 뒤 빈칸을 눌러요.</p>
         </div>
-        <div className="practice-note-actions">
+        {step === "melody" && <div className="practice-note-actions">
           <button type="button" disabled={disabled || !selected} data-testid="practice-delete-note"
             className="practice-delete-note" aria-label="선택한 음표·쉼표 삭제" onClick={() => selected && onDelete(selected.id)}>
             삭제
           </button>
-        </div>
+        </div>}
       </div>}
       {rhythmLocked && <p className="practice-editor-help">
         만든 리듬에 높낮이를 붙여요. 길이를 고치려면 리듬만들기로 돌아가요.
@@ -95,24 +101,18 @@ export default function PracticeNoteTools({
           <div className="practice-pitch-options" role="group" aria-label="선택한 음표의 음높이">
             {PRACTICE_PITCHES.map((entry) => (
               <button type="button" key={entry.pitch}
-                disabled={disabled || (selected ? selected.pitch === null : !allowMelodyAppend)}
+                disabled={disabled || !selected || selected.pitch === null}
                 style={{ backgroundColor: entry.color }} aria-pressed={selected?.pitch === entry.pitch}
                 data-testid={`practice-pitch-${entry.pitch}`}
-                aria-label={selected ? `선택한 음표를 ${entry.label}로 바꾸기` : `${entry.label} 음표 넣기`}
+                aria-label={`선택한 음표를 ${entry.label}로 바꾸기`}
                 onClick={() => {
                   if (selected && selected.pitch !== null) onPitch(selected.id, entry.pitch);
-                  else if (!selected && allowMelodyAppend && !rhythmLocked) {
-                    const duration = PRACTICE_DURATIONS.find((item) => item.beats === nextDuration);
-                    setNewRest(false);
-                    onAppendRestChange?.(false);
-                    onAdd(nextDuration, entry.pitch, duration?.dotted);
-                  }
                 }}>{entry.label}</button>
             ))}
           </div>
           <div className="practice-pitch-navigation">
             <span>{selected ? `${notes.findIndex((note) => note.id === selected.id) + 1}번째 ${selectedLabel} 선택`
-              : allowMelodyAppend ? "음높이를 누르면 새 음표가 생겨요." : "먼저 음표를 선택해 주세요."}</span>
+              : allowMelodyAppend ? "빈칸에 음표를 넣고 높낮이를 바꿔요." : "먼저 음표를 선택해 주세요."}</span>
             {!rhythmLocked && <label className="practice-selected-duration">길이
               <select aria-label="선택한 음표 길이" data-testid="practice-edit-duration"
                 disabled={disabled || !selected} value={selected ? toNumber(selected.duration) : ""}

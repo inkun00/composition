@@ -1,0 +1,35 @@
+.practice-shell .practice-output-summary {
+  margin: 0 0 12px;
+  color: #50636d;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.practice-shell .practice-save-share-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  margin-top: 8px;
+  color: #285a99;
+  font-size: 14px;
+  text-underline-offset: 3px;
+}
+
+.practice-shell .practice-lyric-fix {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.practice-shell .practice-lyric-fix button {
+  min-height: 44px;
+  padding: 8px 12px;
+}
+
+@media (max-width: 400px) {
+  .practice-shell .practice-export-actions {
+    flex-direction: column;
+  }
+}

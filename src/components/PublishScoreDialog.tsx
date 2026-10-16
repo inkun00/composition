@@ -4,6 +4,7 @@ import type { User } from "../firebase/client";
 import type { CommunityAlbum, PublicationAccess } from "../firebase/communityAlbums";
 import type { CloudScore } from "../firebase/scores";
 import "./PublishScoreDialog.css";
+import { useDialogFocus } from "../hooks/useDialogFocus";
 
 type PublishScoreDialogProps = Readonly<{
   user: User;
@@ -27,6 +28,7 @@ function ownerName(user: User): string {
 }
 
 export default function PublishScoreDialog({ user, score, onClose, onPublished }: PublishScoreDialogProps) {
+  const dialogRef = useDialogFocus();
   const [albums, setAlbums] = useState<CommunityAlbum[]>([]);
   const [selectedAlbum, setSelectedAlbum] = useState<CommunityAlbum | null>(null);
   const [access, setAccess] = useState<PublicationAccess>("audio");
@@ -78,7 +80,7 @@ export default function PublishScoreDialog({ user, score, onClose, onPublished }
   }
 
   return (
-    <div className="album-subdialog-overlay publish-score-overlay" role="dialog" aria-modal="true" aria-label="앨범에 공개"
+    <div ref={dialogRef} tabIndex={-1} className="album-subdialog-overlay publish-score-overlay" role="dialog" aria-modal="true" aria-label="앨범에 공개"
       onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <section className="album-subdialog publish-score-dialog">
         <header className="album-subdialog-header">

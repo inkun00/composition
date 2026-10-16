@@ -18,6 +18,7 @@ import "./styles/music-lab-production.css";
 import "./styles/music-lab-dialogs.css";
 import "./styles/opening-screen.css";
 import "./practice/PracticeMusicLab.css";
+import "./practice/PracticeUsability.css";
 
 preloadVexFlow();
 

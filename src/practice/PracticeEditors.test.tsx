@@ -75,7 +75,7 @@ describe("리듬과 가락 연습 입력", () => {
     const props = mount({ step: "melody", allowMelodyAppend: true, showTools: false });
     expect(container?.querySelectorAll(".practice-melody-empty-slot")).toHaveLength(64);
     act(() => button("practice-melody-empty-67-0").click());
-    expect(props.onAdd).toHaveBeenCalledExactlyOnceWith(1, 67, undefined);
+    expect(props.onAdd).toHaveBeenCalledExactlyOnceWith(1, 67, undefined, 0);
     expect(props.onPitch).not.toHaveBeenCalled();
     expect(container?.textContent).toContain("원하는 음높이의 빈칸");
   });
@@ -88,14 +88,14 @@ describe("리듬과 가락 연습 입력", () => {
     });
     expect(container?.querySelector('[data-testid="practice-melody-empty-72-0"]')).toBeNull();
     act(() => button("practice-melody-empty-72-4").click());
-    expect(props.onAdd).toHaveBeenCalledWith(0.25, null, undefined);
+    expect(props.onAdd).toHaveBeenCalledWith(0.25, null, undefined, 1);
   });
 
-  it("가락만들기에서는 음표를 선택하지 않아도 음높이 버튼으로 첫 음을 넣는다", () => {
+  it("가락만들기의 음높이 도구는 이미 놓인 음표만 바꾼다", () => {
     const props = mount({ step: "melody", allowMelodyAppend: true, appendDuration: 1.5 }, true);
-    expect(button("practice-pitch-72").disabled).toBe(false);
+    expect(button("practice-pitch-72").disabled).toBe(true);
     act(() => button("practice-pitch-72").click());
-    expect(props.onAdd).toHaveBeenCalledWith(1.5, 72, true);
+    expect(props.onAdd).not.toHaveBeenCalled();
     expect(props.onPitch).not.toHaveBeenCalled();
   });
 
@@ -124,36 +124,36 @@ describe("리듬과 가락 연습 입력", () => {
     expect(props.onAdd).not.toHaveBeenCalled();
   });
 
-  it("빈칸에서 음표를 더하고 점음표·쉼표 길이를 같은 단위로 전달한다", () => {
+  it("음표와 쉼표 선택은 배치와 분리하고 클릭한 박자를 전달한다", () => {
     const props = mount();
-    const emptyCell = container?.querySelector<HTMLButtonElement>(".practice-empty-slot");
-    act(() => emptyCell?.click());
-    expect(props.onAdd).toHaveBeenLastCalledWith(1, 60, undefined);
     act(() => button("practice-duration-1.5").click());
-    expect(props.onAdd).toHaveBeenLastCalledWith(1.5, 60, true);
+    expect(props.onAdd).not.toHaveBeenCalled();
+    act(() => container?.querySelectorAll<HTMLButtonElement>(".practice-empty-slot")[4].click());
+    expect(props.onAdd).toHaveBeenLastCalledWith(1.5, 60, true, 2);
+    act(() => button("practice-choose-rest").click());
+    expect(props.onAdd).toHaveBeenCalledTimes(1);
     act(() => button("practice-rest-1.5").click());
-    expect(props.onAdd).toHaveBeenLastCalledWith(1.5, null, true);
+    expect(props.onAdd).toHaveBeenCalledTimes(1);
     act(() => container?.querySelector<HTMLButtonElement>(".practice-empty-slot")?.click());
-    expect(props.onAdd).toHaveBeenLastCalledWith(1.5, null, true);
-    expect(container?.querySelector('[data-testid="practice-add-note"]')).toBeNull();
-    expect(container?.querySelector('[data-testid="practice-add-rest"]')).toBeNull();
+    expect(props.onAdd).toHaveBeenLastCalledWith(1.5, null, true, 0);
     expect(props.onDuration).not.toHaveBeenCalled();
   });
 
-  it("16분음표나 쉼표를 선택하면 1/4박 빈칸을 보여 주고 선택한 길이로 추가한다", () => {
+  it("16분음표 선택은 칸만 1/4박으로 바꾸고 쉼표를 누른 위치에 넣는다", () => {
     const props = mount();
     expect(container?.querySelectorAll(".practice-empty-slot")).toHaveLength(8);
     act(() => button("practice-duration-0.25").click());
-    expect(props.onAdd).toHaveBeenLastCalledWith(0.25, 60, undefined);
+    expect(props.onAdd).not.toHaveBeenCalled();
     expect(container?.querySelectorAll(".practice-empty-slot")).toHaveLength(16);
     const secondSlot = container?.querySelectorAll<HTMLButtonElement>(".practice-empty-slot")[1];
-    expect(secondSlot?.getAttribute("aria-label")).toBe("1.25박 빈칸, 다음 음표 추가");
+    expect(secondSlot?.getAttribute("aria-label")).toBe("1.25박 빈칸에 선택한 음표 넣기");
     expect(secondSlot?.style.left).toBe("6.25%");
     expect(secondSlot?.style.width).toBe("6.25%");
+    act(() => button("practice-choose-rest").click());
     act(() => button("practice-rest-0.25").click());
-    expect(props.onAdd).toHaveBeenLastCalledWith(0.25, null, undefined);
+    expect(props.onAdd).not.toHaveBeenCalled();
     act(() => secondSlot?.click());
-    expect(props.onAdd).toHaveBeenLastCalledWith(0.25, null, undefined);
+    expect(props.onAdd).toHaveBeenLastCalledWith(0.25, null, undefined, 0.25);
   });
 
   it("16분음표와 쉼표의 가사·시작점·박자 구분선을 정확히 보여 준다", () => {
@@ -212,8 +212,8 @@ describe("리듬과 가락 연습 입력", () => {
     expect(props.onSelectNote).toHaveBeenCalledWith("overflow");
     act(() => button("practice-duration-0.5").click());
     expect(props.onDuration).not.toHaveBeenCalled();
-    expect(props.onAdd).toHaveBeenCalledWith(.5, 60, undefined);
-    act(() => button("practice-delete-note").click());
+    expect(props.onAdd).not.toHaveBeenCalled();
+    act(() => button("practice-rhythm-note-overflow").click());
     expect(props.onDelete).toHaveBeenCalledWith("overflow");
   });
 
@@ -238,9 +238,12 @@ describe("리듬과 가락 연습 입력", () => {
     expect(props.onDuration).not.toHaveBeenCalled();
     expect(props.onDelete).not.toHaveBeenCalled();
     expect(note.duration).toEqual(rational(1, 2));
-    expect(props.onAdd).toHaveBeenLastCalledWith(2, 60, undefined);
+    expect(props.onAdd).not.toHaveBeenCalled();
+    act(() => button("practice-choose-rest").click());
     act(() => button("practice-rest-2").click());
-    expect(props.onAdd).toHaveBeenLastCalledWith(2, null, undefined);
+    expect(props.onAdd).not.toHaveBeenCalled();
+    act(() => container?.querySelector<HTMLButtonElement>(".practice-empty-slot")?.click());
+    expect(props.onAdd).toHaveBeenLastCalledWith(2, null, undefined, 0.5);
   });
 
   it.each([
@@ -298,10 +301,11 @@ describe("리듬과 가락 연습 입력", () => {
     editDuration("1.5");
     expect(props.onDuration).toHaveBeenCalledWith("note", 1.5, true);
     act(() => button("practice-duration-1.5").click());
-    expect(props.onAdd).toHaveBeenLastCalledWith(1.5, 60, true);
+    expect(props.onAdd).not.toHaveBeenCalled();
     expect(props.onDuration).toHaveBeenCalledTimes(1);
+    act(() => button("practice-choose-rest").click());
     act(() => button("practice-rest-1.5").click());
-    expect(props.onAdd).toHaveBeenLastCalledWith(1.5, null, true);
+    expect(props.onAdd).not.toHaveBeenCalled();
     act(() => button("practice-delete-note").click());
     expect(props.onDelete).toHaveBeenCalledWith("note");
   });
@@ -321,7 +325,7 @@ describe("리듬과 가락 연습 입력", () => {
     expect(props.onDelete).toHaveBeenCalledWith("rest");
   });
 
-  it("공유 도구는 길이 선택과 추가를 연결하고 음표 이름 옆의 중복 박자 표기를 지운다", () => {
+  it("공유 도구는 선택만 바꾸고 음표 이름 옆의 중복 박자 표기를 지운다", () => {
     const props = mount({ onAppendDurationChange: vi.fn() }, true);
     const duration = button("practice-duration-1.5");
     expect(duration.querySelector("span:not(.practice-note-symbol)")?.textContent).toBe("점4분음표");
@@ -329,31 +333,26 @@ describe("리듬과 가락 연습 입력", () => {
     expect(duration.textContent).not.toContain(" · ");
     act(() => duration.click());
     expect(props.onAppendDurationChange).toHaveBeenCalledWith(1.5);
-    expect(props.onAdd).toHaveBeenLastCalledWith(1.5, 60, true);
+    expect(props.onAdd).not.toHaveBeenCalled();
     expect(container?.querySelector(".practice-editor-summary")).toBeNull();
     expect(container?.querySelector(".practice-grid-content")).toBeNull();
   });
 
-  it.each(["rhythm", "melody"] as const)("%s의 음표는 왼쪽 묶음에, 쉼표는 오른쪽 묶음에 각각 짧은 박자부터 배치한다", (step) => {
+  it.each(["rhythm", "melody"] as const)("%s 도구는 기본 세 길이와 접힌 추가 길이를 제공한다", (step) => {
     const props = mount({ step }, true);
-    const groups = [...container!.querySelectorAll<HTMLElement>(".practice-duration-group")];
-    expect(groups.map((group) => group.getAttribute("aria-label"))).toEqual(["음표 넣기", "쉼표 넣기"]);
-    expect(groups.every((group) => group.getAttribute("role") === "group")).toBe(true);
-    expect(groups.map((group) => group.querySelector("strong")?.textContent)).toEqual(["음표", "쉼표"]);
-    const beats = [0.25, 0.5, 1, 1.5, 2, 3, 4];
-    for (const [index, prefix] of ["practice-duration", "practice-rest"].entries()) {
-      const buttons = [...groups[index].querySelectorAll<HTMLButtonElement>(".practice-duration-buttons button")];
-      expect(buttons.map((entry) => entry.dataset.testid)).toEqual(beats.map((duration) => `${prefix}-${duration}`));
-      expect(buttons.map((entry) => entry.querySelector("small")?.textContent)).toEqual(beats.map((duration) => `${duration}박`));
-      for (const [buttonIndex, entry] of buttons.entries()) {
-        act(() => entry.click());
-        expect(props.onAdd).toHaveBeenLastCalledWith(beats[buttonIndex], index === 0 ? 60 : null,
-          [1.5, 3].includes(beats[buttonIndex]) ? true : undefined);
-        expect(entry.getAttribute("aria-pressed")).toBe("true");
-      }
-    }
-    expect(container?.querySelectorAll(".practice-duration-options button")).toHaveLength(14);
-    expect(props.onAdd).toHaveBeenCalledTimes(14);
+    expect([...container!.querySelectorAll<HTMLButtonElement>(".practice-common-durations button")].map((item) => item.dataset.testid))
+      .toEqual(["practice-duration-0.5", "practice-duration-1", "practice-duration-2"]);
+    const more = container!.querySelector<HTMLDetailsElement>(".practice-more-durations")!;
+    expect(more.open).toBe(false);
+    act(() => more.querySelector("summary")!.click());
+    expect(more.open).toBe(true);
+    act(() => button("practice-duration-3").click());
+    expect(button("practice-duration-3").getAttribute("aria-pressed")).toBe("true");
+    expect(more.querySelector("summary")?.textContent).toContain("3박 선택됨");
+    act(() => button("practice-choose-rest").click());
+    expect(button("practice-rest-3").getAttribute("aria-pressed")).toBe("true");
+    expect(container?.querySelector('[data-testid="practice-duration-3"]')).toBeNull();
+    expect(props.onAdd).not.toHaveBeenCalled();
     expect(props.onDuration).not.toHaveBeenCalled();
   });
 
@@ -376,7 +375,7 @@ describe("리듬과 가락 연습 입력", () => {
     expect(container?.querySelector(".practice-duration-options")).toBeNull();
     const emptyCell = container?.querySelector<HTMLButtonElement>(".practice-empty-slot");
     act(() => emptyCell?.click());
-    expect(props.onAdd).toHaveBeenCalledWith(1.5, 60, true);
+    expect(props.onAdd).toHaveBeenCalledWith(1.5, 60, true, 1.5);
     const input = lyricInput("1번째 음표 가사");
     expect(input.value).toBe("봄");
     expect(input.maxLength).toBe(1);
@@ -468,5 +467,43 @@ describe("리듬과 가락 연습 입력", () => {
     act(() => button("score-note-note").dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true })));
     expect(props.onPitch).not.toHaveBeenCalled();
     expect(props.onSelectNote).not.toHaveBeenCalled();
+  });
+
+  it("가락 격자는 Tab 한 번으로 들어가 방향키로 이동하고 이동만으로 음표를 바꾸지 않는다", () => {
+    const props = mount({
+      notes: [
+        { id: "first", pitch: 60, duration: rational(1) },
+        { id: "second", pitch: 64, duration: rational(1) }
+      ], step: "melody", selectedNoteId: "first", showTools: false
+    });
+    expect(container?.querySelectorAll('.practice-melody-rows button[tabindex="0"]')).toHaveLength(1);
+    const first = button("practice-melody-first-60");
+    act(() => first.focus());
+    act(() => first.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true })));
+    expect(document.activeElement).toBe(button("practice-melody-first-62"));
+    act(() => document.activeElement?.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })));
+    expect(document.activeElement).toBe(button("practice-melody-second-62"));
+    expect(props.onPitch).not.toHaveBeenCalled();
+    act(() => button("practice-melody-second-62").click());
+    expect(props.onPitch).toHaveBeenCalledWith("second", 62);
+  });
+
+  it("악보 모드도 길이 선택 뒤 악보 아래 빈칸에 배치한다", () => {
+    const props = mount({ inputMode: "score", appendDuration: 2 });
+    const empty = container?.querySelector<HTMLButtonElement>(".practice-score-placement .practice-empty-slot");
+    expect(empty).not.toBeNull();
+    act(() => empty?.click());
+    expect(props.onAdd).toHaveBeenCalledExactlyOnceWith(2, 60, undefined, 0);
+  });
+
+  it("키보드로 빈칸에 배치한 뒤에도 새 음표에 포커스를 유지한다", () => {
+    const props = mount({ showTools: false });
+    const empty = container?.querySelector<HTMLButtonElement>(".practice-empty-slot");
+    act(() => empty?.focus());
+    act(() => root?.render(<PracticeEditors {...props}
+      notes={[{ id: "placed", pitch: 60, duration: rational(1) }]} selectedNoteId="placed" />));
+    expect(document.activeElement).toBe(button("practice-rhythm-note-placed"));
+    act(() => button("practice-rhythm-note-placed").dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })));
+    expect((document.activeElement as HTMLElement).classList.contains("practice-empty-slot")).toBe(true);
   });
 });

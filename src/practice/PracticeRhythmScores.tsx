@@ -40,7 +40,7 @@ export default function PracticeRhythmScores({ practice, audio }: PracticeRhythm
         </select>
       </label>}
       {melodyStep && practice.draft.mode === "rhythm-melody" && <p>
-        만든 리듬이 가락에 담겼어요. 가락 악기로만 연주해요.
+        {practice.scores.length > 1 ? "악보 1의 리듬을" : "만든 리듬을"} 가락 악기로 연주해요.
       </p>}
       {showRhythm && <>
       <div className="practice-score-options">

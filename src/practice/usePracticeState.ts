@@ -3,12 +3,15 @@ import { measureCapacity, validateMeasure, type Meter } from "../music/meter";
 import { rational, toNumber } from "../music/rational";
 import { withEditedPitch } from "../music/score";
 import type { NoteEvent } from "../music/types";
-import { assignPracticeLyrics, createPracticeMeasures, lyricSyllables, makeLyricRhythm, PRACTICE_DURATIONS, type PracticeMeasure } from "./practiceModel";
+import { assignPracticeLyrics, createPracticeMeasures, makeLyricRhythm, PRACTICE_DURATIONS, type PracticeMeasure } from "./practiceModel";
 import { emptyPracticeDraft, readPracticeDraft, writePracticeDraft, type PracticeDraft } from "./practiceStorage";
 import { getPracticeScores, hasPracticeScoreData, MAX_PRACTICE_SCORES, normalizePracticeRhythmInstrument } from "./practiceScores";
 import { normalizePracticePitch } from "./practicePitch";
 import { isAvailablePracticeChord, normalizePracticeHarmony } from "./practiceHarmony";
 import type { PracticeCreationMode } from "./practiceCreationMode";
+import { usePracticeHistory } from "./usePracticeHistory";
+import { practicePlacementRests } from "./practicePlacement";
+import { unassignedLyricSyllables } from "./practiceLyricPlacement";
 
 function isDraftComplete(draft: PracticeDraft) {
   const scores = getPracticeScores(draft);
@@ -22,25 +25,9 @@ function canDraftGoToMelody(draft: PracticeDraft) {
     draft.measures.some((measure) => measure.notes.some((note) => note.pitch !== null));
 }
 
-function unassignedLyricSyllables(measure: PracticeMeasure) {
-  // Deleted notes release their syllables without moving lyrics on other notes.
-  const assigned = new Map<string, number>();
-  for (const note of measure.notes) {
-    if (note.pitch === null) continue;
-    for (const syllable of lyricSyllables(note.lyric ?? "")) {
-      assigned.set(syllable, (assigned.get(syllable) ?? 0) + 1);
-    }
-  }
-  return lyricSyllables(measure.lyric).filter((syllable) => {
-    const count = assigned.get(syllable) ?? 0;
-    if (count === 0) return true;
-    assigned.set(syllable, count - 1);
-    return false;
-  });
-}
-
 export function usePracticeState() {
-  const [draft, setDraft] = useState<PracticeDraft>(readPracticeDraft);
+  const history = usePracticeHistory(readPracticeDraft);
+  const { draft, latestDraft } = history;
   const [activeIndex, setActiveIndex] = useState(0);
   const [activeScoreIndex, setActiveScoreIndex] = useState(0);
   const [step, setPracticeStep] = useState<"rhythm" | "melody">(() => draft.mode === "melody" ? "melody" : "rhythm");
@@ -49,7 +36,6 @@ export function usePracticeState() {
   const [notice, setNotice] = useState("");
   const [saved, setSaved] = useState(true);
   const sequence = useRef(0);
-  const latestDraft = useRef(draft);
   const latestStep = useRef(step);
   const selectedMeasure = useRef(activeIndex);
   const selectedScore = useRef(activeScoreIndex);
@@ -66,10 +52,7 @@ export function usePracticeState() {
   }, [draft]);
 
   function updateDraft(change: (previous: PracticeDraft) => PracticeDraft) {
-    // Several edits can share one UI event before React renders the new draft.
-    const next = change(latestDraft.current);
-    latestDraft.current = next;
-    setDraft(next);
+    history.update(change);
   }
 
   function changeStep(next: "rhythm" | "melody") {
@@ -161,6 +144,20 @@ export function usePracticeState() {
     selectMeasure(selectedMeasure.current, scoreIndex);
   }
 
+  function restoreHistory(next: PracticeDraft | null) {
+    if (!next) return;
+    const scoreIndex = Math.min(selectedScore.current, getPracticeScores(next).length - 1);
+    const index = Math.min(selectedMeasure.current, next.measures.length - 1);
+    activateMeasure(index, scoreIndex);
+    setSelectedNote(null);
+    changeStep(next.mode === "melody" ? "melody"
+      : latestStep.current === "melody" && canDraftGoToMelody(next) ? "melody" : "rhythm");
+    setNotice("");
+  }
+
+  function undo() { restoreHistory(history.undo()); }
+  function redo() { restoreHistory(history.redo()); }
+
   function addRhythmScore() {
     const previous = latestDraft.current;
     if (previous.mode === "melody") return;
@@ -230,18 +227,22 @@ export function usePracticeState() {
     setNotice("음표는 그대로 두었어요. 새 박자에 맞는지 마디마다 확인해 주세요.");
   }
 
-  function addNote(beats: number, pitch: number | null, dotted?: boolean, index = selectedMeasure.current, scoreIndex = selectedScore.current) {
+  function addNote(beats: number, pitch: number | null, dotted?: boolean, index = selectedMeasure.current, scoreIndex = selectedScore.current, onset?: number) {
     if (rejectLockedRhythm(scoreIndex)) return;
     if (!PRACTICE_DURATIONS.some((item) => item.beats === beats)) return;
     const target = getPracticeScores(latestDraft.current)[scoreIndex]?.measures[index];
     if (!target) return;
-    if (target.notes.length >= 64) {
+    if (onset !== undefined && onset >= toNumber(measureCapacity(latestDraft.current.meter))) return;
+    const rests = practicePlacementRests(target.notes, onset, () => `practice-rest-${Date.now()}-${sequence.current++}`);
+    if (!rests) return;
+    if (target.notes.length + rests.length >= 64) {
       setNotice("한 마디에 음표가 너무 많아요. 필요 없는 음표를 지우거나 다음 마디를 사용해 주세요.");
       return;
     }
     const id = `practice-note-${Date.now()}-${sequence.current++}`;
-    updateNotes((notes) => [...notes, { id, pitch, duration: rational(beats * 4, 4), dotted }], index, scoreIndex);
+    updateNotes((notes) => [...notes, ...rests, { id, pitch, duration: rational(beats * 4, 4), dotted }], index, scoreIndex);
     selectNote(id);
+    if (rests.length > 0) setNotice("누른 칸에 음표를 넣었어요. 앞의 빈 박자는 쉼표로 채웠어요.");
   }
 
   function setPitch(id: string, pitch: number) {
@@ -360,7 +361,7 @@ export function usePracticeState() {
   function selectCreationMode(mode: PracticeCreationMode) {
     const previous = latestDraft.current;
     const index = Math.max(0, Math.min(selectedMeasure.current, previous.measures.length - 1));
-    updateDraft((draft) => ({ ...draft, mode }));
+    history.update((draft) => ({ ...draft, mode }), previous.mode !== null);
     activateMeasure(index, 0);
     changeStep(mode === "melody" ? "melody" : "rhythm");
     setSelectedNote(previous.measures[index].notes.find((note) => note.pitch !== null)?.id ?? null);
@@ -402,6 +403,6 @@ export function usePracticeState() {
     selectScore, addRhythmScore, removeRhythmScore, setRhythmInstrument,
     selectCreationMode, startNew,
     addNote, setPitch, setDuration, deleteNote, setLyric, setNoteLyric, generateRhythm, fillRests, goToMelody,
-    setChord
+    setChord, undo, redo, canUndo: history.canUndo, canRedo: history.canRedo
   };
 }

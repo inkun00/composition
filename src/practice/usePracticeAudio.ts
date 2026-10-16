@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { practiceAudioScores, practicePlaysMelodyOnly } from "./practiceAudioScores";
+import { renderPracticeHarmonyAudio } from "./practiceHarmonyAudio";
 import {
   encodePracticeMp3,
   exportPracticeMp4,
@@ -47,6 +48,7 @@ export function usePracticeAudio(input: PracticeAudioInput) {
   const [previewMeasureIndex, setPreviewMeasureIndex] = useState<number | null>(null);
   const [previewScoreIndex, setPreviewScoreIndex] = useState<number | null>(null);
   const [previewRhythmMixing, setPreviewRhythmMixing] = useState(false);
+  const [previewHarmonyIndex, setPreviewHarmonyIndex] = useState<number | null>(null);
   const mounted = useRef(false);
   const activeSession = useRef<Session | null>(null);
   const cached = useRef<{ key: string; rendered: PracticeRenderedAudio } | null>(null);
@@ -71,7 +73,7 @@ export function usePracticeAudio(input: PracticeAudioInput) {
     return mounted.current && activeSession.current === session && !session.controller.signal.aborted;
   }
 
-  function begin(measureIndex: number | null = null, scoreIndex: number | null = null, rhythmMix = false): Session | null {
+  function begin(measureIndex: number | null = null, scoreIndex: number | null = null, rhythmMix = false, harmony = false): Session | null {
     // A ref closes the gap between two clicks before React renders busy=true.
     if (!mounted.current || activeSession.current) return null;
     const session: Session = {
@@ -82,9 +84,10 @@ export function usePracticeAudio(input: PracticeAudioInput) {
     setProgress(0);
     setPlayingNoteId(null);
     setPlayingNoteIds([]);
-    setPreviewMeasureIndex(measureIndex);
-    setPreviewScoreIndex(scoreIndex);
+    setPreviewMeasureIndex(harmony ? null : measureIndex);
+    setPreviewScoreIndex(harmony ? null : scoreIndex);
     setPreviewRhythmMixing(rhythmMix);
+    setPreviewHarmonyIndex(harmony ? measureIndex : null);
     return session;
   }
 
@@ -99,6 +102,7 @@ export function usePracticeAudio(input: PracticeAudioInput) {
     setPreviewMeasureIndex(null);
     setPreviewScoreIndex(null);
     setPreviewRhythmMixing(false);
+    setPreviewHarmonyIndex(null);
     if (message) setStatus(message);
   }
 
@@ -108,7 +112,8 @@ export function usePracticeAudio(input: PracticeAudioInput) {
     renderInput: PracticeAudioInput = input,
     measureIndex: number | null = null,
     scoreIndex: number | null = null,
-    rhythmMix = false
+    rhythmMix = false,
+    harmonyChord: string | null = null
   ): Promise<PracticeRenderedAudio> {
     const key = JSON.stringify({
       scope: rhythmMix ? "rhythm-mix" : measureIndex !== null ? { measureIndex, scoreIndex }
@@ -118,18 +123,23 @@ export function usePracticeAudio(input: PracticeAudioInput) {
       meter: renderInput.meter,
       bpm: renderInput.bpm,
       mode: renderInput.mode,
-      step: renderInput.step
+      step: renderInput.step,
+      harmonyChord,
+      harmonyInstrument: harmonyChord ? renderInput.melodyInstrumentId : undefined
     });
     if (cached.current?.key === key) {
       if (isCurrent(session)) setProgress(preparationShare);
       return cached.current.rendered;
     }
-    const rendered = await renderPracticeAudio(renderInput, {
+    const options = {
       signal: session.controller.signal,
-      onProgress: (percent) => {
+      onProgress: (percent: number) => {
         if (isCurrent(session)) setProgress(Math.round(percent * preparationShare / 100));
       }
-    });
+    };
+    const rendered = harmonyChord
+      ? await renderPracticeHarmonyAudio(harmonyChord, renderInput.melodyInstrumentId, options)
+      : await renderPracticeAudio(renderInput, options);
     if (isCurrent(session)) cached.current = { key, rendered };
     return rendered;
   }
@@ -156,18 +166,24 @@ export function usePracticeAudio(input: PracticeAudioInput) {
     setPreviewMeasureIndex(null);
     setPreviewScoreIndex(null);
     setPreviewRhythmMixing(false);
+    setPreviewHarmonyIndex(null);
     setStatus("연주와 파일 만들기를 멈췄어요.");
   }
 
-  async function playPreview(measureIndex: number | null, scoreIndex: number | null = null, rhythmMix = false): Promise<void> {
-    const session = begin(measureIndex, scoreIndex, rhythmMix);
+  async function playPreview(measureIndex: number | null, scoreIndex: number | null = null, rhythmMix = false,
+    harmonyChord: string | null = null): Promise<void> {
+    const session = begin(measureIndex, scoreIndex, rhythmMix, harmonyChord !== null);
     if (!session) return;
     setStatus("연주할 악기를 준비하고 있어요.");
     try {
       if (rhythmMix && practicePlaysMelodyOnly(input)) {
         throw new Error("리듬 악기는 리듬만들기로 돌아가서 들어 보세요.");
       }
-      const renderInput = measureIndex === null
+      if (harmonyChord !== null && (measureIndex === null || !Number.isInteger(measureIndex) ||
+        measureIndex < 0 || measureIndex >= input.measures.length)) {
+        throw new Error("들을 화음의 마디를 다시 골라 주세요.");
+      }
+      const renderInput = harmonyChord !== null ? input : measureIndex === null
         ? rhythmMix ? { ...input, mode: "rhythm" as const, step: "rhythm" as const }
           : scoreIndex !== null ? practiceScoreAudioInput(input, scoreIndex) : input
         : practiceMeasureAudioInput(input, measureIndex, scoreIndex ?? 0);
@@ -177,7 +193,7 @@ export function usePracticeAudio(input: PracticeAudioInput) {
       const resuming = session.context.resume();
       await resuming;
       if (!isCurrent(session)) return;
-      const rendered = await prepare(session, 100, renderInput, measureIndex, scoreIndex, rhythmMix);
+      const rendered = await prepare(session, 100, renderInput, measureIndex, scoreIndex, rhythmMix, harmonyChord);
       if (!isCurrent(session)) return;
       const context = session.context;
       const source = context.createBufferSource();
@@ -188,7 +204,7 @@ export function usePracticeAudio(input: PracticeAudioInput) {
       source.onended = () => {
         if (!isCurrent(session)) return;
         setProgress(100);
-        const label = rhythmMix ? "리듬 함께 듣기 " : measureIndex === null
+        const label = harmonyChord !== null ? `${measureIndex! + 1}마디 ${harmonyChord} 화음 ` : rhythmMix ? "리듬 함께 듣기 " : measureIndex === null
           ? scoreIndex !== null ? `악보${scoreIndex + 1} ` : "" :
           `${scoreIndex ? `${scoreIndex + 1}번 악보 ` : ""}${measureIndex + 1}마디 ${soundLabel} `;
         finish(session, `${label}미리듣기를 마쳤어요.${fallbackMessage(rendered)}`);
@@ -204,7 +220,7 @@ export function usePracticeAudio(input: PracticeAudioInput) {
       source.start(start);
       setBusy(false);
       setPlaying(true);
-      const label = rhythmMix ? "여러 악보의 리듬을 함께" : measureIndex === null
+      const label = harmonyChord !== null ? `${measureIndex! + 1}마디의 ${harmonyChord} 화음` : rhythmMix ? "여러 악보의 리듬을 함께" : measureIndex === null
         ? `${scoreIndex !== null ? `악보${scoreIndex + 1}의` : "내가 만든"} ${soundLabel}`
         : `${scoreIndex ? `${scoreIndex + 1}번 악보 ` : ""}${measureIndex + 1}마디에 입력한 ${soundLabel}`;
       setStatus(`${label}${rhythmMix ? " " : "을 "}듣고 있어요.${fallbackMessage(rendered)}`);
@@ -230,6 +246,10 @@ export function usePracticeAudio(input: PracticeAudioInput) {
 
   function previewRhythmMix(): Promise<void> {
     return playPreview(null, null, true);
+  }
+
+  function previewHarmony(index: number, chord: string): Promise<void> {
+    return playPreview(index, null, false, chord);
   }
 
   function download(blob: Blob, fileName: string): void {
@@ -289,10 +309,12 @@ export function usePracticeAudio(input: PracticeAudioInput) {
     previewMeasureIndex,
     previewScoreIndex,
     previewRhythmMixing,
+    previewHarmonyIndex,
     preview,
     previewMeasure,
     previewScore,
     previewRhythmMix,
+    previewHarmony,
     stop,
     save
   };

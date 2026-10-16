@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { NoteEvent } from "../music/types";
 import {
-  button, changeValue, click, completeScoreMeasure, container, mount, placeNote,
+  placeCurrentNote, button, changeValue, click, completeScoreMeasure, container, mount, placeNote,
   rerender, savedDraft, scoreCard, testButton, unmount
 } from "./PracticeMode.test.helpers";
 
@@ -128,7 +128,7 @@ describe("마디 바로 위의 입력 방식과 재생 표시", () => {
     changeValue("연습할 마디 수", "1");
     changeValue("1마디 가사", "봄빛");
     placeNote(0, 0, .5);
-    click(testButton("practice-rest-1"));
+    placeCurrentNote(1, true);
     placeNote(0, 0, .5);
     const rest = savedDraft().measures[0].notes[1];
     click(testButton("practice-measure-preview-0"));

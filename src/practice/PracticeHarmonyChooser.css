@@ -1,6 +1,27 @@
 .practice-harmony-chooser {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
   gap: 7px;
+}
+
+.practice-harmony-chooser label {
+  min-width: 0;
+}
+
+.practice-harmony-chooser .practice-harmony-preview {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 44px;
+  padding: 8px;
+  white-space: nowrap;
+}
+
+.practice-harmony-chooser .practice-harmony-preview[aria-pressed="true"] {
+  background: #e8f3ef;
+  border-color: #298064;
 }
 
 .practice-harmony-chooser select {

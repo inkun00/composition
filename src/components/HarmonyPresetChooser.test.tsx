@@ -33,6 +33,22 @@ afterEach(() => {
 });
 
 describe("화음 이야기 미리듣기", () => {
+  it("처음에는 쉬운 화음만 보여주고 전체 화음은 펼쳐서 고를 수 있다", () => {
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    act(() => root?.render(
+      <HarmonyPresetChooser preset={findHarmonyPreset("H001")} meter={{ beats: 4, beatUnit: 4 }}
+        bpm={96} accompanimentStyleId="arpeggio" disabled={false} playing={false}
+        onPlayingChange={() => undefined} onSelect={() => undefined} />
+    ));
+    expect(container.querySelectorAll("option").length).toBeLessThanOrEqual(7);
+    const more = container.querySelector<HTMLButtonElement>(".preset-more-button")!;
+    act(() => more.click());
+    expect(container.querySelectorAll("option")).toHaveLength(100);
+    expect(more.getAttribute("aria-expanded")).toBe("true");
+  });
+
   it("화음 이름은 선택 목록에, 분류와 난이도는 요약에 표시한다", () => {
     const preset = findHarmonyPreset("H095");
     container = document.createElement("div");

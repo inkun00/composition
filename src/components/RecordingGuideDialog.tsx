@@ -3,6 +3,7 @@ import type { KaraokeGuideMode } from "../audio/karaokeGuide";
 import type { RecordingCaptureMode } from "../audio/vocalCapture";
 import RecordingGuideSelector from "./RecordingGuideSelector";
 import "./RecordingGuideDialog.css";
+import { useDialogFocus } from "../hooks/useDialogFocus";
 
 type Props = Readonly<{
   value: KaraokeGuideMode;
@@ -12,6 +13,7 @@ type Props = Readonly<{
 }>;
 
 export default function RecordingGuideDialog({ value, onChange, onCancel, onStart }: Props) {
+  const dialogRef = useDialogFocus<HTMLElement>();
   const [step, setStep] = useState<"mode" | RecordingCaptureMode>("mode");
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -24,7 +26,7 @@ export default function RecordingGuideDialog({ value, onChange, onCancel, onStar
   return (
     <div className="recording-guide-overlay" role="presentation"
       onMouseDown={(event) => { if (event.target === event.currentTarget) onCancel(); }}>
-      <section className="recording-guide-dialog" role="dialog" aria-modal="true"
+      <section ref={dialogRef} tabIndex={-1} className="recording-guide-dialog" role="dialog" aria-modal="true"
         aria-labelledby="recording-guide-title">
         <header>
           <span>🎤 노래 녹음 준비</span>

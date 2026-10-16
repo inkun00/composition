@@ -7,7 +7,8 @@ import { buildPracticeTimeline, type PracticeAudioInput, type PracticeRenderedAu
 import { buildPracticeAudioPlan } from "./practiceAudioTimeline";
 import { usePracticeAudio } from "./usePracticeAudio";
 
-const mocks = vi.hoisted(() => ({ render: vi.fn(), encode: vi.fn(), mp4: vi.fn() }));
+const mocks = vi.hoisted(() => ({ render: vi.fn(), harmony: vi.fn(), encode: vi.fn(), mp4: vi.fn() }));
+vi.mock("./practiceHarmonyAudio", () => ({ renderPracticeHarmonyAudio: mocks.harmony }));
 vi.mock("./practiceAudio", async (importActual) => ({
   ...await importActual<typeof import("./practiceAudio")>(),
   renderPracticeAudio: mocks.render,
@@ -71,6 +72,7 @@ beforeEach(async () => {
   Object.defineProperty(URL, "revokeObjectURL", { value: revokedUrl, configurable: true });
   click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
   mocks.render.mockResolvedValue(rendered);
+  mocks.harmony.mockResolvedValue({ ...rendered, timeline: { durationSeconds: 1.5, events: [] } });
   mocks.encode.mockResolvedValue(new Blob(["mp3"], { type: "audio/mpeg" }));
   mocks.mp4.mockResolvedValue(new Blob(["mp4"], { type: "video/mp4" }));
   container = document.createElement("div");
@@ -90,6 +92,57 @@ afterEach(() => {
 });
 
 describe("연습 미리듣기와 파일 저장", () => {
+  it("화음은 별도로 듣고 멈추며 저장에는 원래 가락 버퍼만 사용한다", async () => {
+    const before = structuredClone(input);
+    await act(async () => current.previewHarmony(0, "G7"));
+    expect(mocks.harmony).toHaveBeenCalledWith("G7", "flute", expect.objectContaining({ signal: expect.any(AbortSignal) }));
+    expect(current.previewHarmonyIndex).toBe(0);
+    expect(current.previewMeasureIndex).toBeNull();
+    expect(current.playingNoteIds).toEqual([]);
+    expect(current.playing).toBe(true);
+    expect(mocks.render).not.toHaveBeenCalled();
+    await act(async () => current.preview());
+    expect(mocks.render).not.toHaveBeenCalled();
+    act(() => current.stop());
+    expect(current.previewHarmonyIndex).toBeNull();
+    expect(AudioContextMock.instances[0].source.stop).toHaveBeenCalledOnce();
+    expect(AudioContextMock.instances[0].close).toHaveBeenCalledOnce();
+    await act(async () => current.save("mp3"));
+    expect(mocks.render).toHaveBeenCalledWith(input, expect.any(Object));
+    expect(mocks.encode).toHaveBeenCalledWith(rendered.buffer, expect.any(Object));
+    expect(input).toEqual(before);
+  });
+
+  it("화음 준비를 취소한 후 도착한 음원은 재생하지 않는다", async () => {
+    let resolve!: (value: PracticeRenderedAudio) => void;
+    mocks.harmony.mockReturnValueOnce(new Promise((done) => { resolve = done; }));
+    let pending!: Promise<void>;
+    await act(async () => { pending = current.previewHarmony(0, "C"); await Promise.resolve(); });
+    const signal = mocks.harmony.mock.calls[0][2].signal as AbortSignal;
+    expect(current.busy).toBe(true);
+    expect(current.previewHarmonyIndex).toBe(0);
+    act(() => current.stop());
+    expect(signal.aborted).toBe(true);
+    expect(current.previewHarmonyIndex).toBeNull();
+    await act(async () => { resolve(rendered); await pending; });
+    expect(AudioContextMock.instances[0].createBufferSource).not.toHaveBeenCalled();
+    expect(current.playing).toBe(false);
+  });
+
+  it("화음 미리듣기는 화음과 악기가 달라지면 새 소리를 준비한다", async () => {
+    await act(async () => current.previewHarmony(0, "C"));
+    act(() => AudioContextMock.instances[0].source.onended?.());
+    expect(current.previewHarmonyIndex).toBeNull();
+    await act(async () => current.previewHarmony(0, "C"));
+    expect(mocks.harmony).toHaveBeenCalledOnce();
+    act(() => current.stop());
+    await act(async () => current.previewHarmony(0, "G7"));
+    act(() => current.stop());
+    await act(async () => root.render(<Harness settings={{ ...input, melodyInstrumentId: "piano" }} />));
+    await act(async () => current.previewHarmony(0, "G7"));
+    expect(mocks.harmony).toHaveBeenCalledTimes(3);
+  });
+
   it("새로 시작할 때는 연주가 끝난 뒤의 저장 안내·진행률·이전 소리 캐시도 비운다", async () => {
     await act(async () => current.save("mp3"));
     expect(current.status).toContain("MP3 파일을 저장했어요");

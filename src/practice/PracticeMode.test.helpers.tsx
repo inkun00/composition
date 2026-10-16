@@ -78,9 +78,28 @@ export function scoreCard(scoreIndex: number, measureIndex: number): HTMLElement
   return found;
 }
 
-export function placeNote(scoreIndex: number, measureIndex: number, beats: number): void {
+export function placeNote(scoreIndex: number, measureIndex: number, beats: number, rest = false): void {
   click(testButton(scoreIndex === 0 ? `practice-measure-${measureIndex}` : `practice-score-${scoreIndex}-measure-${measureIndex}`));
-  click(scoreButton(scoreIndex, `practice-duration-${beats}`));
+  click(scoreButton(scoreIndex, rest ? "practice-choose-rest" : "practice-choose-note"));
+  const durationId = `practice-${rest ? "rest" : "duration"}-${beats}`;
+  if (![0.5, 1, 2].includes(beats)) {
+    const more = scoreButton(scoreIndex, durationId).closest("details");
+    if (more && !more.open) click(more.querySelector("summary")!);
+  }
+  click(scoreButton(scoreIndex, durationId));
+  const card = scoreCard(scoreIndex, measureIndex);
+  const empty = card.querySelector<HTMLButtonElement>('[data-testid^="practice-melody-empty-60-"]')
+    ?? card.querySelector<HTMLButtonElement>(".practice-empty-slot");
+  if (!empty) throw new Error("음표를 놓을 빈칸을 찾지 못했습니다.");
+  click(empty);
+}
+
+export function placeCurrentNote(beats: number, rest = false, targetScore?: number): void {
+  const active = container?.querySelector<HTMLElement>(".practice-measure-card.is-active");
+  const index = Number(active?.dataset.testid?.split("-").at(-1) ?? 0);
+  const workspace = active?.closest<HTMLElement>(".practice-score-workspace");
+  const scoreIndex = targetScore ?? Number(workspace?.dataset.testid?.split("-").at(-1) ?? 0);
+  placeNote(scoreIndex, index, beats, rest);
 }
 
 export function completeScoreMeasure(scoreIndex: number, measureIndex: number, lyric = "반짝별아"): void {

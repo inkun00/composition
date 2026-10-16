@@ -44,34 +44,29 @@ import { getCandidates } from "./music/candidates";
 import { makeEndingCandidates } from "./music/endingCandidates";
 import { MELODY_FEELING_GROUPS, type MelodyFeelingId } from "./music/melodyFeelings";
 import { candidatePatternIndex, rankRecommendedCandidates } from "./music/recommendation";
-import { chordMidiPitches, chordPitchClasses } from "./music/chord";
+import { chordMidiPitches } from "./music/chord";
 import { DRAFT_STORAGE_KEY, draftFingerprint, isSavedDraft, readDraft, writeDraft, type SavedDraft } from "./music/draft";
 import { cloudSaveIssue, findDraftSaveIssues, type SaveIssue } from "./music/draftValidation";
-import { findHarmonyPreset, HARMONY_PRESETS, type HarmonyPreset } from "./music/harmonyPresets";
+import { findHarmonyPreset, HARMONY_PRESETS } from "./music/harmonyPresets";
+import { normalizeBeatPattern, type BeatPatternEvent } from "./music/beatPattern";
 import { findInstrument, INSTRUMENTS, type InstrumentId } from "./music/instruments";
 import { measureCapacity, meterKey, SUPPORTED_METERS, validateMeasure, type Meter } from "./music/meter";
 import { rational, toNumber } from "./music/rational";
 import { prioritizeCandidatesForRhythm } from "./music/rhythmPreference";
 import { fillStructuredRepeats, songStructurePlan, type SongStructureId } from "./music/songStructure";
 import type { SongLength } from "./music/songLength";
+import { changeCompositionHarmony, compositionFromDraft, compositionFromShare, emptyComposition, lyricText,
+  resizeComposition, shortenedMeasuresContainWork, type MeasureDraft } from "./music/composerDraft";
+import { noteHarmonyFit } from "./music/noteHarmonyFit";
+import ComposerSettings from "./components/ComposerSettings";
+import ComposerLyrics from "./components/ComposerLyrics";
 import { pitchName, positionNotes, withEditedPitch } from "./music/score";
 import { findSoundEffect, type SoundEffectId } from "./music/soundEffects";
 import { buildEmbeddedQrPlaybackUrl, buildQrPlaybackUrl, buildShareUrl, readCompositionFromHash, type SharedComposition } from "./music/share";
-import type { HarmonyStory, MelodyCandidate, NoteEvent, SoundEffectEvent } from "./music/types";
+import type { HarmonyStory, MelodyCandidate, NoteEvent } from "./music/types";
 import { useKaraokeAutoFocus } from "./hooks/useKaraokeAutoFocus";
 import { useLyricVideoExport } from "./hooks/useLyricVideoExport";
 import { buildLyricVideoPlan, type LyricVideoPlan } from "./video/lyricVideoPlan";
-
-type MeasureDraft = {
-  story: HarmonyStory;
-  storyHint: string;
-  chords: readonly string[];
-  candidateId: string | null;
-  candidateName: string | null;
-  notes: readonly NoteEvent[] | null;
-  effects: readonly SoundEffectEvent[];
-  keyFifths?: number;
-};
 
 function uniqueAccompanimentInstrumentIds(ids: readonly InstrumentId[]): InstrumentId[] {
   const unique: InstrumentId[] = [];
@@ -159,36 +154,8 @@ type CompositionSnapshot = Readonly<{
   songLength: SongLength;
   structureTemplateId: SongStructureId | null;
   measures: readonly MeasureDraft[];
+  beatPattern: readonly BeatPatternEvent[];
 }>;
-
-type HarmonyFit = "chord" | "passing" | "color";
-
-function noteHarmonyFit(note: NoteEvent, notes: readonly NoteEvent[], chords: readonly string[], meter: Meter): HarmonyFit | null {
-  if (note.pitch === null) return null;
-  const positioned = positionNotes(notes).find((item) => item.id === note.id);
-  const capacity = toNumber(measureCapacity(meter));
-  const chordIndex = Math.min(Math.max(0, Math.floor((positioned?.onset ?? 0) / (capacity / Math.max(1, chords.length)))), Math.max(0, chords.length - 1));
-  const tones = chordPitchClasses(chords[chordIndex] ?? "C");
-  const pitchClass = ((note.pitch % 12) + 12) % 12;
-  if (tones.includes(pitchClass)) return "chord";
-  const nearTone = tones.some((tone) => Math.min((pitchClass - tone + 12) % 12, (tone - pitchClass + 12) % 12) <= 2);
-  return nearTone ? "passing" : "color";
-}
-
-const roleHints: Record<HarmonyStory, readonly string[]> = {
-  home: ["편안하게 시작", "잠깐 쉬어 가기", "우리 집에 도착"],
-  journey: ["한 걸음 출발", "조금 더 멀리", "힘차게 나아가기"],
-  wonder: ["다음이 궁금하게", "비밀 문 앞에서", "마지막을 기다려"],
-  bounce: ["통통 뛰어가기", "리듬을 타기", "즐겁게 도착"],
-  tender: ["살며시 시작", "따뜻하게 이어가기", "포근히 마무리"],
-  brave: ["가슴 펴고 시작", "더 높이 나아가기", "당당하게 도착"],
-  shadow: ["조심조심 시작", "비밀 길 지나기", "살짝 풀어주기"],
-  sparkle: ["반짝이며 시작", "별빛 따라가기", "빛나게 도착"],
-  swing: ["몸을 흔들며", "리듬에 맞추기", "들썩이며 끝내기"],
-  floating: ["구름에 올라", "둥실둥실 걷기", "살며시 내려오기"],
-  march: ["발맞춰 출발", "씩씩하게 걷기", "힘차게 도착"],
-  folk: ["이야기 시작", "노래를 이어가기", "함께 마무리"]
-};
 
 const meterDetails: Record<string, { name: string; clap: string }> = {
   "2/4": { name: "두 박자", clap: "강 · 약" },
@@ -196,57 +163,6 @@ const meterDetails: Record<string, { name: string; clap: string }> = {
   "4/4": { name: "네 박자", clap: "강 · 약 · 중강 · 약" },
   "6/8": { name: "두 덩어리 박자", clap: "하나둘셋 · 넷다섯여섯" }
 };
-
-function emptyComposition(preset: HarmonyPreset, length: SongLength): MeasureDraft[] {
-  return Array.from({ length }, (_, index) => {
-    const story = preset.roles[index % preset.roles.length];
-    return {
-      story,
-      storyHint: roleHints[story][Math.floor(index / 4) % roleHints[story].length],
-      chords: preset.bars[index % preset.bars.length],
-      candidateId: null,
-      candidateName: null,
-      notes: null,
-      effects: []
-    };
-  });
-}
-
-function lyricText(notes: readonly NoteEvent[] | null): string {
-  return (notes ?? []).filter((note) => note.pitch !== null).map((note) => note.lyric ?? "").join("");
-}
-
-function applyLegacyLyric(notes: readonly NoteEvent[], lyric: string | undefined): readonly NoteEvent[] {
-  if (!lyric || notes.some((note) => note.lyric)) return notes;
-  const syllables = Array.from(lyric.replace(/\s+/g, ""));
-  let lyricIndex = 0;
-  return notes.map((note) => note.pitch === null ? note : { ...note, lyric: syllables[lyricIndex++] ?? "" });
-}
-
-function compositionFromShare(shared: SharedComposition, preset: HarmonyPreset): MeasureDraft[] {
-  return emptyComposition(preset, shared.songLength).map((measure, index) => ({
-    ...measure,
-    chords: shared.measures[index].chords ?? measure.chords,
-    keyFifths: shared.measures[index].keyFifths,
-    candidateId: "shared",
-    candidateName: shared.measures[index].candidateName,
-    notes: applyLegacyLyric(shared.measures[index].notes, shared.lyrics[index]),
-    effects: shared.measures[index].effects ?? []
-  }));
-}
-
-function compositionFromDraft(draft: SavedDraft, preset: HarmonyPreset): MeasureDraft[] {
-  return emptyComposition(preset, draft.songLength).map((measure, index) => ({
-    ...measure,
-    chords: draft.measures[index].chords ?? measure.chords,
-    keyFifths: draft.measures[index].keyFifths,
-    candidateId: draft.measures[index].candidateId,
-    candidateName: draft.measures[index].candidateName,
-    notes: draft.measures[index].notes
-      ? applyLegacyLyric(draft.measures[index].notes, draft.lyrics[index]) : null,
-    effects: draft.measures[index].effects ?? []
-  }));
-}
 
 function isRecordingLink(search: string, hash: string): boolean {
   return new URLSearchParams(search).get("record") === "1" || /(?:^#|&)record=1(?:&|$)/.test(hash);
@@ -331,6 +247,7 @@ export default function App() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [selectedNoteId, setSelectedNoteId] = useState("");
   const [selectedNoteIds, setSelectedNoteIds] = useState<string[]>([]);
+  const [selectMultipleNotes, setSelectMultipleNotes] = useState(false);
   const [activeMelodyFeeling, setActiveMelodyFeeling] = useState<MelodyFeelingId>("flowing");
   const [soundEffectDialogOpen, setSoundEffectDialogOpen] = useState(false);
   const [editStatus, setEditStatus] = useState("");
@@ -377,7 +294,7 @@ export default function App() {
   );
   const {
     beatPattern, setBeatPattern, beatVolume, setBeatVolume,
-    beatPreviewing, setBeatPreviewing, resetBeatPattern, loadBeatPattern
+    beatPreviewing, setBeatPreviewing, loadBeatPattern
   } = useBeatPatternState({
     initialPattern: resumableDraft?.beatPattern ?? incomingShare?.beatPattern,
     initialVolume: resumableDraft?.beatVolume ?? incomingShare?.beatVolume,
@@ -393,7 +310,7 @@ export default function App() {
   const [songDescription, setSongDescription] = useState(
     resumableDraft?.description ?? incomingShare?.description ?? ""
   );
-  const [saveStatus, setSaveStatus] = useState(resumableDraft ? "이 기기에서 이어 불러옴 ✓" : "이 기기에 임시 저장됨 ✓");
+  const [saveStatus, setSaveStatus] = useState(resumableDraft ? "이 기기에서 이어 불러옴 ✓" : "이 기기에 자동 저장됨 ✓");
   const [shareStatus, setShareStatus] = useState("");
   const [generatedShareUrl, setGeneratedShareUrl] = useState("");
   const [mobileRecordingUrl, setMobileRecordingUrl] = useState("");
@@ -688,7 +605,7 @@ export default function App() {
   }, [accompanimentInstrumentIds]);
 
   useEffect(() => {
-    const next: CompositionSnapshot = { presetId: selectedPresetId, meter, songLength, structureTemplateId, measures };
+    const next: CompositionSnapshot = { presetId: selectedPresetId, meter, songLength, structureTemplateId, measures, beatPattern };
     const previous = historyCurrent.current;
     if (!previous) {
       historyCurrent.current = next;
@@ -701,17 +618,17 @@ export default function App() {
     }
     if (previous.presetId === next.presetId && previous.meter === next.meter &&
       previous.songLength === next.songLength && previous.structureTemplateId === next.structureTemplateId &&
-      previous.measures === next.measures) return;
+      previous.measures === next.measures && previous.beatPattern === next.beatPattern) return;
     setUndoStack((stack) => [...stack, previous].slice(-40));
     setRedoStack([]);
     historyCurrent.current = next;
-  }, [measures, meter, selectedPresetId, songLength, structureTemplateId]);
+  }, [measures, meter, selectedPresetId, songLength, structureTemplateId, beatPattern]);
 
   useEffect(() => {
     setCloudSaveNotice("");
     try {
       setSaveStatus(writeDraft(window.localStorage, currentDraft)
-        ? "이 기기에 임시 저장됨 ✓" : "이 기기에 저장하지 못했어요");
+        ? "이 기기에 자동 저장됨 ✓" : "이 기기에 저장하지 못했어요");
     } catch { setSaveStatus("이 기기에 저장하지 못했어요"); }
   }, [currentDraft]);
 
@@ -722,10 +639,12 @@ export default function App() {
     setSongLength(snapshot.songLength);
     setStructureTemplateId(snapshot.structureTemplateId);
     setMeasures(snapshot.measures as MeasureDraft[]);
+    setBeatPattern([...snapshot.beatPattern]);
     setRhythmChecks({});
     setActiveIndex((index) => Math.min(index, snapshot.measures.length - 1));
     setSelectedNoteId("");
     setSelectedNoteIds([]);
+    setSelectMultipleNotes(false);
     setShowArrangement(false);
   }
 
@@ -747,57 +666,45 @@ export default function App() {
     restoreComposition(next);
   }
 
-  function confirmNewStructure(message: string): boolean {
-    return completedCount === 0 || window.confirm(`${message}\n\n지금 만든 마디는 지워지지만, 바로 되돌리기 버튼으로 되돌릴 수 있어요.`);
-  }
-
   function chooseMeter(next: Meter) {
     if (meterKey(next) === meterKey(meter)) return;
-    if (!confirmNewStructure("박자를 바꾸면 새 노래를 만들어요.")) return;
+    const nextBeatPattern = normalizeBeatPattern(beatPattern, next);
+    if (nextBeatPattern.length < beatPattern.length &&
+      !window.confirm("새 박자를 벗어나는 리듬 악기 소리만 줄어들어요. 박자를 바꿀까요? 되돌리기로 복구할 수 있어요.")) return;
     setMeter(next);
-    resetBeatPattern();
-    setMeasures(emptyComposition(selectedPreset, songLength));
-    setRhythmChecks({});
-    setActiveIndex(0);
-    setSelectedNoteId("");
-    setSelectedNoteIds([]);
+    setBeatPattern(nextBeatPattern);
+    setRhythmChecks(Object.fromEntries(measures.flatMap((measure, index) => measure.notes
+      ? [[index, validateMeasure(measure.notes, next).state === "exact" ? "valid" : "invalid"]] : [])));
+    setEditStatus("음표와 가사는 그대로예요. 새 박자에 맞게 마디 길이를 확인해 주세요.");
     setShowArrangement(false);
   }
 
   function choosePreset(id: string) {
     const preset = findHarmonyPreset(id);
-    if (preset.id !== selectedPresetId && !confirmNewStructure("화음 이야기를 바꾸면 새 노래를 만들어요.")) return;
+    if (preset.id === selectedPresetId) return;
     setSelectedPresetId(preset.id);
-    setMeasures(emptyComposition(preset, songLength));
-    setRhythmChecks({});
-    setActiveIndex(0);
-    setSelectedNoteId("");
-    setSelectedNoteIds([]);
+    setMeasures((current) => changeCompositionHarmony(current, preset));
+    setEditStatus("가락과 가사는 그대로 두고 화음만 바꿨어요. 함께 들어 보세요.");
     setShowArrangement(false);
   }
 
   function chooseLength(length: SongLength) {
     if (length === songLength) return;
-    if (!confirmNewStructure("마디 수를 바꾸면 새 노래를 만들어요.")) return;
+    if (shortenedMeasuresContainWork(measures, length) &&
+      !window.confirm(`${length + 1}~${songLength}마디를 지울까요? 앞의 ${length}마디는 그대로예요.\n되돌리기로 복구할 수 있어요.`)) return;
     setSongLength(length);
     setStructureTemplateId(null);
-    setMeasures(emptyComposition(selectedPreset, length));
-    setRhythmChecks({});
-    setActiveIndex(0);
-    setSelectedNoteId("");
-    setSelectedNoteIds([]);
+    setMeasures((current) => resizeComposition(current, selectedPreset, length));
+    setRhythmChecks((current) => Object.fromEntries(Object.entries(current).filter(([index]) => Number(index) < length)));
+    if (activeIndex >= length) selectMeasure(length - 1);
+    setEditStatus(length > songLength ? "만든 마디 뒤에 빈 마디를 더했어요." : "마디 수를 줄였어요. 되돌리기로 복구할 수 있어요.");
     setShowArrangement(false);
   }
 
   function chooseStructure(id: SongStructureId | null) {
     if (id === structureTemplateId) return;
-    if (!confirmNewStructure("노래 모양을 바꾸면 새 노래를 만들어요.")) return;
     setStructureTemplateId(id);
-    setMeasures(emptyComposition(selectedPreset, songLength));
-    setRhythmChecks({});
-    setActiveIndex(0);
-    setSelectedNoteId("");
-    setSelectedNoteIds([]);
+    setEditStatus("만든 마디는 그대로예요. 다음에 넣는 가락부터 노래 구조를 적용해요.");
     setShowArrangement(false);
   }
 
@@ -814,6 +721,7 @@ export default function App() {
   }
 
   function selectMeasure(index: number) {
+    setSelectMultipleNotes(false);
     setActiveIndex(index);
     setSelectedNoteId(measures[index].notes?.[0]?.id ?? "");
     setSelectedNoteIds(measures[index].notes?.[0] ? [measures[index].notes[0].id] : []);
@@ -1041,6 +949,14 @@ export default function App() {
   }
 
   function selectNote(id: string, extendRange = false) {
+    if (selectMultipleNotes && !extendRange) {
+      const next = selectedNoteIds.includes(id)
+        ? selectedNoteIds.filter((selected) => selected !== id) : [...selectedNoteIds, id];
+      setSelectedNoteIds(next);
+      setSelectedNoteId(next.includes(id) ? id : next.at(-1) ?? "");
+      setEditStatus(`${next.length}개의 음표를 선택했어요.`);
+      return;
+    }
     if (extendRange && selectedNoteId) {
       const anchor = activeNotes.findIndex((note) => note.id === selectedNoteId);
       const target = activeNotes.findIndex((note) => note.id === id);
@@ -1099,7 +1015,7 @@ export default function App() {
 
   function beamSelectedNotes() {
     if (!activeMeasure.notes || selectedNoteIds.length < 2) {
-      setEditStatus("첫 음표를 누른 뒤 Shift를 누르고 마지막 음표를 골라 주세요.");
+      setEditStatus("여러 음 선택을 켜고 묶을 음표를 골라 주세요.");
       return;
     }
     const indexes = selectedNoteIds.map((id) => activeNotes.findIndex((note) => note.id === id)).sort((a, b) => a - b);
@@ -1295,10 +1211,7 @@ export default function App() {
     setRhythmChecks((current) => ({ ...current, [activeIndex]: rhythmCheck }));
     if (rhythmCheck === "invalid") return;
     if (activeIndex < measures.length - 1) {
-      setActiveIndex(activeIndex + 1);
-      const next = measures[activeIndex + 1];
-      setSelectedNoteId(next.notes?.[0]?.id ?? "");
-      setSelectedNoteIds(next.notes?.[0] ? [next.notes[0].id] : []);
+      selectMeasure(activeIndex + 1);
     }
   }
 
@@ -2395,6 +2308,7 @@ export default function App() {
       )}
 
       {!mobileRecordMode && <main inert={showOpening} aria-hidden={showOpening}>
+        <ComposerSettings summary={`${songLength}마디 · ${meterKey(meter)}박자 · ${bpm} BPM`}>
         <SongMoodSetup bpm={bpm} rhythmStyleId={accompanimentStyleId} disabled={isAnyPlaying}
           onTempoChange={setBpm} onRhythmChange={setAccompanimentStyleId} />
 
@@ -2404,10 +2318,10 @@ export default function App() {
           onPlayingChange={setPresetPreviewing} onSelect={choosePreset}
           baseDraft={currentDraft} onImportScore={applyProjectDraft} />
 
-        <section className="meter-chooser meter-with-guide" aria-labelledby="meter-heading" data-save-target="settings">
+        <section className="meter-chooser meter-with-guide" aria-labelledby="meter-heading">
           <div className="compact-heading">
             <span className="number-badge">3</span>
-            <div><h2 id="meter-heading">박자</h2><p>변경하면 작곡이 초기화돼요.</p></div>
+            <div><h2 id="meter-heading">박자</h2></div>
           </div>
           <div className="meter-options">
             {SUPPORTED_METERS.map((item) => {
@@ -2428,12 +2342,12 @@ export default function App() {
         <SongLengthChooser length={songLength} onSelect={chooseLength} />
 
         <SongStructureChooser length={songLength} selectedId={structureTemplateId} onSelect={chooseStructure} />
+        </ComposerSettings>
 
         <div className="composition-workspace">
           <div className="score-workspace-column score-timeline-column">
         <section className="composition-section" aria-labelledby="composition-heading">
           <div className="compact-heading timeline-heading">
-            <span className="number-badge">6</span>
             <div><h2 id="composition-heading">{songLength}마디</h2></div>
             <div className="timeline-actions">
               <label className="tempo-control">
@@ -2569,7 +2483,7 @@ export default function App() {
               <span className="section-kicker">선택 사항 · 직접 다듬기</span>
               <h2>{activeIndex + 1}마디 편집</h2>
               <details className="editor-help"><summary>편집 도움말</summary>
-                <p>위아래로 끌어 음높이를 바꿔요. Shift와 마지막 음표를 누르면 여러 음표를 선택해요.</p>
+                <p>위아래로 끌어 음높이를 바꿔요. 여러 음 선택을 켜면 음표를 하나씩 골라 함께 고칠 수 있어요.</p>
               </details>
             </div>
             <div className="editor-copy-actions">
@@ -2597,15 +2511,14 @@ export default function App() {
                 <ScoreMeasure notes={activeNotes} meter={meter} keyFifths={activeMeasure.keyFifths}
                   playingNoteId={playingMeasure || playingMeasureIndex === activeIndex ? playingNoteId : null}
                   selectedNoteId={selectedNoteId} selectedNoteIds={selectedNoteIds}
-                  onSelectNote={selectNote} onMoveNote={moveNotePitch} onMovePosition={moveNotePosition}
+                  onSelectNote={selectNote} onMoveNote={selectMultipleNotes ? undefined : moveNotePitch}
+                  onMovePosition={selectMultipleNotes ? undefined : moveNotePosition}
                   onNoteLayout={(positions) => updateEditorLyricNotePositions(activeIndex, positions)} />
-                <div className="editor-note-lyrics">
-                  <div><strong>이 마디 가사</strong></div>
-                  <NoteLyrics notes={activeNotes} meter={meter} measureIndex={activeIndex}
-                    selectedNoteId={selectedNoteId} notePositions={editorLyricNotePositions[activeIndex]}
-                    onFocusNote={(noteId) => selectNote(noteId)}
-                    onChange={(noteId, value) => updateNoteLyric(activeIndex, noteId, value)} />
-                </div>
+                <ComposerLyrics key={activeIndex} notes={activeNotes} meter={meter} measureIndex={activeIndex}
+                  selectedNoteId={selectedNoteId} notePositions={editorLyricNotePositions[activeIndex]}
+                  onFocusNote={(noteId) => selectNote(noteId)}
+                  onChange={(notes) => setMeasures((current) => current.map((measure, index) =>
+                    index === activeIndex ? { ...measure, notes } : measure))} />
                 <div className="beat-meter">
                   <div className="beat-meter-label">
                     <span>이 마디에 채운 길이</span>
@@ -2618,17 +2531,18 @@ export default function App() {
                 </div>
                 <div className="harmony-guide" aria-live="polite">
                   <span className="harmony-guide-title">화음 어울림</span>
-                  <span className="fit-chord">● 딱 어울리는 음</span>
-                  <span className="fit-passing">● 지나가는 음</span>
-                  <span className="fit-color">● 색다른 음</span>
+                  <span className="fit-chord">● 화음에 있는 음</span>
+                  <span className="fit-color">○ 화음 밖의 음</span>
                   {selectedNote && selectedHarmonyFit && <strong className={`fit-${selectedHarmonyFit}`}>
-                    {selectedHarmonyFit === "chord" ? "지금 고른 음은 이 화음에 딱 어울려요!" :
-                      selectedHarmonyFit === "passing" ? "지금 고른 음은 다음 음으로 이어 주는 지나가는 음이에요." :
-                        "지금 고른 음은 색다른 느낌을 주는 음이에요. 들어 보고 골라요."}
+                    {selectedHarmonyFit === "chord" ? "화음을 이루는 음이에요." :
+                      "화음 밖의 음이에요. 앞뒤 음과 함께 듣고 마음에 드는지 골라요."}
                   </strong>}
                 </div>
                 <div className="note-tools" onMouseDown={keepEditorFocus} onClickCapture={preserveViewportAfterButtonClick}>
                   <div><span>고른 음표</span><strong>{selectedNoteIds.length > 1 ? `${selectedNoteIds.length}개 선택` : selectedNote ? pitchName(selectedNote.pitch, selectedNote.accidental) : "음표를 골라 주세요"}</strong></div>
+                  <button type="button" aria-pressed={selectMultipleNotes}
+                    onClick={() => setSelectMultipleNotes((current) => !current)}>
+                    ☑<span>여러 음 선택</span></button>
                   <button type="button" onClick={() => changePitch(1)}
                     disabled={selectedNoteIds.length === 0 || selectedNotes.every((note) => note.pitch === null)}>↑<span>높게</span></button>
                   <button type="button" onClick={() => changePitch(-1)}
@@ -2930,23 +2844,23 @@ export default function App() {
                   </button>
                 </div>}
                 <div className="publish-action-group publish-action-group-files">
-                  <h3>파일로 받기</h3>
+                  <h3>악보·음악 저장</h3>
                   <div className="publish-action-group-buttons">
                     <button type="button" className="pdf-button action-button" data-testid="export-pdf"
                       disabled={exportingPdf} onClick={() => void exportPdf(false)}>
-                      <FileDown size={18} /> {exportingPdf ? "악보 만드는 중..." : "악보 저장"}
+                      <FileDown size={18} /> {exportingPdf ? "악보 만드는 중..." : "악보 PDF"}
                     </button>
                     <button type="button" className="pdf-button action-button" data-testid="export-pdf-with-accompaniment"
                       disabled={exportingPdf} onClick={() => void exportPdf(true)}>
-                      <FileMusic size={18} /> {exportingPdf ? "악보 만드는 중..." : "악보 저장(반주 포함)"}
+                      <FileMusic size={18} /> {exportingPdf ? "악보 만드는 중..." : "반주 포함 악보 PDF"}
                     </button>
                     <button type="button" className="backing-mp3-button action-button" data-testid="export-backing-mp3"
                       disabled={exportingBacking || !allValid} onClick={() => void exportBackingMp3()}>
-                      <Music2 size={18} /> {exportingBacking ? "반주 만드는 중..." : "반주 저장"}
+                      <Music2 size={18} /> {exportingBacking ? "반주 만드는 중..." : "반주 음악 MP3"}
                     </button>
                   </div>
                   <details className="publish-advanced-files">
-                    <summary>작품 파일 저장·불러오기</summary>
+                    <summary>나중에 고칠 작품 파일</summary>
                     <div className="publish-action-group-buttons">
                       <button type="button" className="project-save-button action-button" data-testid="save-project-file"
                         onClick={saveProjectFile}><FileDown size={18} /> 작품 파일 저장</button>
@@ -2974,9 +2888,10 @@ export default function App() {
                       <a className="samboard-share-button action-button" data-testid="open-samboard-share"
                         href="https://samboard.vivasam.com/studentEntry/?brdId=brd-0QZ60VWZ56TNW"
                         target="_blank" rel="noopener noreferrer">
-                        <ExternalLink size={18} /> 노래 공유
+                        <ExternalLink size={18} /> 공유 게시판 열기
                       </a>
                     </div>
+                    <p className="publish-board-help">파일을 먼저 저장하고, 게시판에서 첨부해 주세요.</p>
                   </div>
                 </div>
               </div>
@@ -3035,14 +2950,15 @@ export default function App() {
         </div>
         <div>
           <span className="mini-label">{activeIndex + 1}번째 마디 · {meterKey(meter)}</span>
-          <strong>{activeMeasure.candidateName ?? "아직 가락을 고르지 않았어요"}</strong>
+          <strong>{validation && validation.state !== "exact" ? validation.message :
+            activeMeasure.candidateName ?? "아직 가락을 고르지 않았어요"}</strong>
           <span className={`status-dot ${validation?.state ?? "empty"}`} />
         </div>
         <button type="button" className="secondary action-button" disabled={activeIndex === 0}
-          onClick={() => setActiveIndex(Math.max(0, activeIndex - 1))}><ArrowLeft size={18} /> 이전 마디</button>
+          onClick={() => selectMeasure(Math.max(0, activeIndex - 1))}><ArrowLeft size={18} /> 이전 마디</button>
         {activeIndex < measures.length - 1 ? (
           <button type="button" className="primary action-button" data-testid="next-measure"
-            disabled={!activeMeasure.notes} onClick={goNext}>
+            disabled={!activeMeasure.notes || validation?.state !== "exact"} onClick={goNext}>
             다음 마디로 <ArrowRight size={18} />
           </button>
         ) : (

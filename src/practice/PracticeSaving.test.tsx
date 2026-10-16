@@ -10,6 +10,7 @@ const audio = vi.hoisted(() => ({
   previewMeasureIndex: null as number | null,
   previewScoreIndex: null as number | null,
   previewRhythmMixing: false,
+  previewHarmonyIndex: null as number | null,
   playingNoteId: null,
   playingNoteIds: [] as readonly string[],
   status: "",
@@ -18,6 +19,7 @@ const audio = vi.hoisted(() => ({
   previewMeasure: vi.fn(),
   previewScore: vi.fn(),
   previewRhythmMix: vi.fn(),
+  previewHarmony: vi.fn(),
   save: vi.fn(),
   stop: vi.fn()
 }));
@@ -51,6 +53,7 @@ beforeEach(() => {
   audio.playing = false;
   audio.previewMeasureIndex = null;
   audio.previewScoreIndex = null;
+  audio.previewHarmonyIndex = null;
   audio.status = "";
 });
 
@@ -61,18 +64,64 @@ afterEach(() => {
 });
 
 describe("음악 저장과 공유 단계", () => {
+  it("중간 음표를 지우면 실제로 남은 글자를 안내하고 쉼표로 채워도 영상 저장은 잠근다", () => {
+    mount();
+    completeOneMeasure("반짝별아");
+    const secondId = savedDraft().measures[0].notes[1].id;
+    click(testButton(`practice-rhythm-note-${secondId}`));
+    expect(savedDraft().measures[0].lyric).toBe("반짝별아");
+    expect(savedDraft().measures[0].notes.map((note) => note.lyric)).toEqual(["반", "별", "아"]);
+    expect(container?.querySelector(".practice-lyric-warning strong")?.textContent).toBe("짝");
+    click(button("남은 박자는 쉼표로 채우기"));
+    expect(container?.textContent).toContain("영상에 넣을 가사 1글자가 남았어요.");
+    expect(button("음악 영상(MP4)").disabled).toBe(true);
+    expect(button("소리 파일(MP3)").disabled).toBe(false);
+  });
+
+  it("화음만 미리 들으며 준비 중에도 같은 버튼으로 취소할 수 있다", () => {
+    mount();
+    completeOneMeasure("");
+    click(stage("melody"));
+    click(button("1마디 C 화음 듣기"));
+    expect(audio.previewHarmony).toHaveBeenCalledWith(0, "C");
+    expect(audio.previewMeasure).not.toHaveBeenCalled();
+    audio.previewHarmonyIndex = 0;
+    audio.busy = true;
+    rerender();
+    expect(button("1마디 C 화음 준비 취소").disabled).toBe(false);
+    click(button("1마디 C 화음 준비 취소"));
+    expect(audio.stop).toHaveBeenCalledOnce();
+  });
+
+  it("남은 가사를 고칠 마디로 돌아가고 실제 저장할 악기를 보여 준다", () => {
+    mount();
+    completeOneMeasure("가사가남아요");
+    click(stage("save"));
+    expect(container?.querySelector(".practice-output-summary")?.textContent).toContain("리듬 · 나무블록");
+    const share = container?.querySelector<HTMLAnchorElement>(".practice-save-share-link");
+    expect(share?.textContent).toContain("저장한 파일을 게시판에 첨부");
+    expect(share?.target).toBe("_blank");
+    click(button("1마디 가사 고치기"));
+    expect(stage("rhythm").getAttribute("aria-selected")).toBe("true");
+    expect(container?.querySelector("#practice-workspace")?.hasAttribute("hidden")).toBe(false);
+    changeValue("1마디 가사", "우리노래");
+    click(stage("save"));
+    expect(button("음악 영상(MP4)").disabled).toBe(false);
+    expect(container?.querySelector(".practice-lyric-fix")).toBeNull();
+  });
+
   it("추가 악보의 가사도 모두 배치한 뒤 영상에 저장한다", () => {
     mount();
     completeOneMeasure("");
     click(button("악보 추가하기"));
     completeScoreMeasure(1, 0, "다섯글자야");
     click(stage("save"));
-    expect(button("MP3 저장").disabled).toBe(false);
-    expect(button("MP4 저장").disabled).toBe(true);
+    expect(button("소리 파일(MP3)").disabled).toBe(false);
+    expect(button("음악 영상(MP4)").disabled).toBe(true);
     click(button("리듬 편집으로"));
     changeValue("2번 악보 1마디 가사", "같이해요");
     click(stage("save"));
-    expect(button("MP4 저장").disabled).toBe(false);
+    expect(button("음악 영상(MP4)").disabled).toBe(false);
   });
 
   it("가락 저장에서는 숨긴 리듬 악보의 남은 가사가 영상 저장을 막지 않고 리듬으로 복귀하면 다시 검사한다", () => {
@@ -81,22 +130,22 @@ describe("음악 저장과 공유 단계", () => {
     click(button("악보 추가하기"));
     completeScoreMeasure(1, 0, "반짝이는우리별");
     const before = savedDraft();
-    expect(button("MP4 저장").disabled).toBe(true);
+    expect(button("음악 영상(MP4)").disabled).toBe(true);
 
     click(stage("melody"));
-    expect(button("MP3 저장").disabled).toBe(false);
-    expect(button("MP4 저장").disabled).toBe(false);
+    expect(button("소리 파일(MP3)").disabled).toBe(false);
+    expect(button("음악 영상(MP4)").disabled).toBe(false);
     click(stage("save"));
     click(modeButton("score"));
     expect(container?.querySelector('[data-testid="save-preview"]')?.getAttribute("data-step")).toBe("melody");
-    click(button("MP4 저장"));
+    click(button("음악 영상(MP4)"));
     expect(audio.save).toHaveBeenCalledWith("mp4");
     expect(latestAudioInput().rhythmLayers).toEqual(before.rhythmLayers);
     expect(savedDraft()).toEqual(before);
 
     click(stage("rhythm"));
-    expect(button("MP4 저장").disabled).toBe(true);
-    expect(container?.textContent).toContain("모든 가사 글자에 음표");
+    expect(button("음악 영상(MP4)").disabled).toBe(true);
+    expect(container?.textContent).toContain("영상에 넣을 가사");
     expect(savedDraft()).toEqual(before);
   });
   it("세 편집·저장 단계와 지정한 샘보드 새 창 링크를 보여 준다", () => {
@@ -105,7 +154,7 @@ describe("음악 저장과 공유 단계", () => {
     expect(stage("melody").textContent).toContain("가락 만들기");
     expect(stage("save").textContent).toContain("음악 저장하기");
     const share = container?.querySelector<HTMLAnchorElement>(".practice-share-stage");
-    expect(share?.textContent).toContain("음악 공유하기");
+    expect(share?.textContent).toContain("게시판 열기");
     expect(share?.href).toBe("https://samboard.vivasam.com/studentEntry/?brdId=brd-0RXAMP8AGEZ2B");
     expect(share?.target).toBe("_blank");
     expect(share?.rel).toBe("noopener noreferrer");
@@ -120,17 +169,17 @@ describe("음악 저장과 공유 단계", () => {
     expect(savePanel?.getAttribute("role")).toBe("tabpanel");
     expect(savePanel?.getAttribute("aria-labelledby")).toBe("practice-save-tab");
     expect(container?.querySelector<HTMLElement>("#practice-workspace")?.hidden).toBe(true);
-    expect(button("MP3 저장").disabled).toBe(true);
-    expect(button("MP4 저장").disabled).toBe(true);
-    click(button("MP4 저장"));
+    expect(button("소리 파일(MP3)").disabled).toBe(true);
+    expect(button("음악 영상(MP4)").disabled).toBe(true);
+    click(button("음악 영상(MP4)"));
     expect(audio.save).not.toHaveBeenCalled();
     click(button("리듬 편집으로"));
     completeOneMeasure("");
     click(stage("save"));
-    expect(button("MP3 저장").disabled).toBe(false);
-    expect(button("MP4 저장").disabled).toBe(false);
+    expect(button("소리 파일(MP3)").disabled).toBe(false);
+    expect(button("음악 영상(MP4)").disabled).toBe(false);
     expect(latestAudioInput().step).toBe("rhythm");
-    click(button("MP4 저장"));
+    click(button("음악 영상(MP4)"));
     expect(audio.save).toHaveBeenCalledWith("mp4");
   });
 
@@ -145,7 +194,7 @@ describe("음악 저장과 공유 단계", () => {
     click(modeButton("score"));
     expect(latestAudioInput()).toMatchObject({ step: "rhythm", videoMode: "score", rhythmInstrumentId: "beat:shaker" });
     expect(container?.querySelector('[data-testid="save-preview"]')?.getAttribute("data-mode")).toBe("score");
-    click(button("MP4 저장"));
+    click(button("음악 영상(MP4)"));
     click(modeButton("bars"));
     expect(latestAudioInput().videoMode).toBe("bars");
     expect(savedDraft()).toEqual(before);
@@ -185,8 +234,8 @@ describe("음악 저장과 공유 단계", () => {
     expect(stage("rhythm").disabled).toBe(true);
     expect(button("리듬 편집으로").disabled).toBe(true);
     expect(modeButton("score").matches(":disabled")).toBe(true);
-    expect(button("MP3 저장").disabled).toBe(true);
-    expect(button("MP4 저장").disabled).toBe(true);
+    expect(button("소리 파일(MP3)").disabled).toBe(true);
+    expect(button("음악 영상(MP4)").disabled).toBe(true);
     expect(button("취소").disabled).toBe(false);
     click(button("취소"));
     expect(audio.stop).toHaveBeenCalledTimes(1);
@@ -196,10 +245,10 @@ describe("음악 저장과 공유 단계", () => {
     mount();
     completeOneMeasure("반짝이는우리별");
     click(stage("save"));
-    expect(button("MP3 저장").disabled).toBe(false);
-    expect(button("MP4 저장").disabled).toBe(true);
+    expect(button("소리 파일(MP3)").disabled).toBe(false);
+    expect(button("음악 영상(MP4)").disabled).toBe(true);
     click(modeButton("score"));
-    expect(button("MP4 저장").disabled).toBe(true);
-    expect(container?.textContent).toContain("모든 가사 글자에 음표");
+    expect(button("음악 영상(MP4)").disabled).toBe(true);
+    expect(container?.textContent).toContain("영상에 넣을 가사");
   });
 });

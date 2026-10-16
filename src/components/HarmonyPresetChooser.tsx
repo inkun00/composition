@@ -85,6 +85,11 @@ export default function HarmonyPresetChooser({
 }: HarmonyPresetChooserProps) {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState("");
+  const [showAllPresets, setShowAllPresets] = useState(false);
+  const easyPresets = HARMONY_PRESETS.filter((item) => item.difficulty === "쉬움").slice(0, 6);
+  const simplePresets = easyPresets.some((item) => item.id === preset.id)
+    ? easyPresets : [...easyPresets, preset];
+  const visiblePresets = showAllPresets ? HARMONY_PRESETS : simplePresets;
   const timerRef = useRef<number | null>(null);
   const requestRef = useRef(0);
   const ownsPlaybackRef = useRef(false);
@@ -166,14 +171,20 @@ export default function HarmonyPresetChooser({
         </div>
       </div>
       <div className="preset-picker">
+        <div className="preset-selection">
         <label>
           <select data-testid="harmony-preset-select" aria-label="화음 이야기 선택" value={preset.id}
             onChange={(event) => void selectPreset(event.target.value)}>
-            {HARMONY_PRESETS.map((item) => (
+            {visiblePresets.map((item) => (
               <option key={item.id} value={item.id}>{item.id.slice(1)} · {item.childName}</option>
             ))}
           </select>
         </label>
+        <button type="button" className="preset-more-button" aria-expanded={showAllPresets}
+          onClick={() => setShowAllPresets((current) => !current)}>
+          {showAllPresets ? "쉬운 화음만 보기" : "화음 모두 보기"}
+        </button>
+        </div>
         <div className="preset-summary">
           <div className="preset-summary-copy">
             <span>{preset.category} · {preset.difficulty}</span>

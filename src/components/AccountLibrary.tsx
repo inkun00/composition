@@ -4,6 +4,7 @@ import type { User } from "../firebase/client";
 import type { CloudScore, CloudScoreListItem } from "../firebase/scores";
 import type { CloudListStatus } from "../hooks/useCloudScoreList";
 import "./AccountLibrarySync.css";
+import { useDialogFocus } from "../hooks/useDialogFocus";
 
 type AccountLibraryProps = Readonly<{
   configured: boolean;
@@ -46,6 +47,7 @@ function isPublishableScore(score: CloudScoreListItem): score is CloudScore {
 export default function AccountLibrary({ configured, user, authReady, scores, listStatus, onRetryList, busy, error, saveNotice,
   currentScoreId, onClose, onGoogleSignIn, onEmailAuth, onPasswordReset, onClearError,
   onSignOut, onSave, onLoad, onPublish, onDelete }: AccountLibraryProps) {
+  const dialogRef = useDialogFocus();
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -108,7 +110,7 @@ export default function AccountLibrary({ configured, user, authReady, scores, li
   }
 
   return (
-    <div className="account-overlay" role="dialog" aria-modal="true" aria-label="내 악보함"
+    <div ref={dialogRef} tabIndex={-1} className="account-overlay" role="dialog" aria-modal="true" aria-label="내 악보함"
       onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <section className="account-library">
         <header className="account-library-header">
@@ -199,7 +201,7 @@ export default function AccountLibrary({ configured, user, authReady, scores, li
               <div><strong>{user.displayName || "마음멜로디 사용자"}</strong><span>{user.email}</span></div>
               <button type="button" title="로그아웃" aria-label="로그아웃" onClick={onSignOut} disabled={busy}><LogOut size={18} /></button>
             </div>
-            <p className="account-sync-explain">계정 번호: <code>{user.uid}</code></p>
+            <details className="account-sync-explain"><summary>계정 도움 정보</summary>계정 번호: <code>{user.uid}</code></details>
             <div className="cloud-save-actions">
               <button type="button" className="account-primary" onClick={() => onSave(false)} disabled={busy}>
                 <Save size={18} aria-hidden="true" /> {currentScoreId ? "내 악보함에 다시 저장" : "내 악보함에 저장"}

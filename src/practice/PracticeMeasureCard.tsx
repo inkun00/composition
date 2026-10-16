@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { CheckCircle2, Lightbulb, Square, Volume2 } from "lucide-react";
 import { measureCapacity, type Meter } from "../music/meter";
 import { toNumber } from "../music/rational";
@@ -5,7 +6,8 @@ import type { MeasureValidation } from "../music/types";
 import PracticeEditors from "./PracticeEditors";
 import PracticeHarmonyChooser from "./PracticeHarmonyChooser";
 import PracticePlaybackIndicator from "./PracticePlaybackIndicator";
-import { getPracticeHarmonyHints, lyricSyllables, type PracticeMeasure } from "./practiceModel";
+import { getPracticeHarmonyHints, type PracticeMeasure } from "./practiceModel";
+import { unassignedLyricSyllables } from "./practiceLyricPlacement";
 import { getPracticeHarmonySummary } from "./practiceHarmonyHints";
 import type { usePracticeState } from "./usePracticeState";
 
@@ -24,12 +26,15 @@ type PracticeMeasureCardProps = {
   playbackActive?: boolean;
   previewPreparing: boolean;
   onPreviewRhythm: () => void;
+  onPreviewHarmony: () => void;
+  harmonyPreviewActive: boolean;
 };
 
 export default function PracticeMeasureCard({
   measure, index, scoreIndex, meter, validation, practice, disabled, playingNoteId, appendDuration, appendRest,
-  previewActive, playbackActive = false, previewPreparing, onPreviewRhythm
+  previewActive, playbackActive = false, previewPreparing, onPreviewRhythm, onPreviewHarmony, harmonyPreviewActive
 }: PracticeMeasureCardProps) {
+  const [editSyllables, setEditSyllables] = useState(false);
   const active = practice.activeIndex === index && practice.activeScoreIndex === scoreIndex;
   const step = scoreIndex === 0 ? practice.step : "rhythm";
   const rhythmLocked = practice.draft.mode === "rhythm-melody" && step === "melody";
@@ -38,9 +43,8 @@ export default function PracticeMeasureCard({
   const lyricInputId = `practice-lyric-input-${scoreIndex}-${index}`;
   const used = measure.notes.reduce((sum, note) => sum + toNumber(note.duration), 0);
   const capacity = toNumber(measureCapacity(meter));
-  const validationMessage = validation.message.replace(/^\d+(?:\/\d+)?박/, `${Math.abs(capacity - used)}박`);
-  const assignedLyrics = measure.notes.reduce((sum, note) => sum + (note.pitch === null ? 0 : lyricSyllables(note.lyric ?? "").length), 0);
-  const missingLyrics = Math.max(0, lyricSyllables(measure.lyric).length - assignedLyrics);
+  const remainingBeats = Math.abs(capacity - used);
+  const missingLyrics = unassignedLyricSyllables(measure);
   const scoreMeasures = practice.scores[scoreIndex].measures;
   const harmonyContext = {
     previousMeasure: scoreMeasures[index - 1],
@@ -73,27 +77,36 @@ export default function PracticeMeasureCard({
         showTools={false} showSummary={false} compact appendDuration={appendDuration} appendRest={appendRest}
         rhythmLocked={rhythmLocked} allowMelodyAppend={practice.draft.mode === "melody"}
         onSelectNote={practice.setSelectedNoteId} onPitch={practice.setPitch} onDuration={practice.setDuration}
-        onDelete={practice.deleteNote} onAdd={(beats, pitch, dotted) => practice.addNote(beats, pitch, dotted, index, scoreIndex)}
-        onNoteLyric={practice.setNoteLyric} />
+        onDelete={practice.deleteNote} onAdd={(beats, pitch, dotted, onset) => practice.addNote(beats, pitch, dotted, index, scoreIndex, onset)}
+        onNoteLyric={editSyllables ? practice.setNoteLyric : undefined} />
 
       <fieldset className="practice-lyric-area" disabled={disabled}>
         <legend className="practice-sr-only">{labelPrefix}{index + 1}마디 가사</legend>
-        <label htmlFor={lyricInputId}>가사</label>
+        <div className="practice-lyric-heading">
+          <label htmlFor={lyricInputId}>가사</label>
+          {measure.notes.some((note) => note.pitch !== null) && (
+            <button type="button" aria-expanded={editSyllables} onClick={() => setEditSyllables((value) => !value)}>
+              {editSyllables ? "글자 위치 닫기" : "글자 위치 고치기"}
+            </button>
+          )}
+        </div>
         <div className="practice-lyric-entry">
           <input id={lyricInputId} aria-label={`${labelPrefix}${index + 1}마디 가사`}
             placeholder="가사 입력" maxLength={200} value={measure.lyric}
             onChange={(event) => practice.setLyric(event.target.value, index, scoreIndex)} />
         </div>
-        {missingLyrics > 0 && (
-          <p className="practice-lyric-warning" role="alert">
-            가사 {missingLyrics}글자에 아직 음표가 없어요. 음표를 더 넣거나 다음 마디로 나눠 보세요.
+        {missingLyrics.length > 0 && (
+          <p className="practice-lyric-warning" role="status">
+            남은 가사: <strong>{missingLyrics.join("")}</strong> · 음표를 더 넣거나 다음 마디로 나눠 주세요.
           </p>
         )}
       </fieldset>
 
       <p className={`practice-measure-validation ${validation.state}`}
-        role={validation.state === "exact" ? "status" : "alert"}>
-        {validation.state === "exact" ? "박자가 딱 맞아요!" : `박자가 맞지 않아요. ${validationMessage}`}
+        role={validation.state === "over" ? "alert" : "status"}>
+        {validation.state === "exact" ? "박자가 딱 맞아요!"
+          : validation.state === "over" ? `${remainingBeats}박 넘쳤어요. 음표를 줄이거나 지워 주세요.`
+          : measure.notes.length ? `${remainingBeats}박 남았어요.` : `${capacity}박을 채워 보세요.`}
       </p>
       {!rhythmLocked && validation.state === "short" && measure.notes.length > 0 && (
         <button type="button" className="practice-fill-rest" disabled={disabled} onClick={() => practice.fillRests(index, scoreIndex)}>
@@ -112,9 +125,10 @@ export default function PracticeMeasureCard({
         <div className="practice-measure-harmony">
           <PracticeHarmonyChooser chord={measure.chord} index={index} disabled={disabled}
             previousChord={practice.scores[scoreIndex].measures[index - 1]?.chord}
+            onPreview={onPreviewHarmony} previewActive={harmonyPreviewActive} previewPreparing={previewPreparing}
             onChange={(chord) => practice.setChord(chord, index, scoreIndex)} />
           {hints.length > 0 ? (
-            <div className="practice-harmony-warning" role="alert">
+            <div className="practice-harmony-warning" role="status">
               <strong>가락과 화음을 함께 살펴봐요</strong>
               {hints.map((hint) => (
                 <button type="button" key={`${hint.noteId}-${hint.kind}`} disabled={disabled}

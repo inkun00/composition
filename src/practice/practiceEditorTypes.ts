@@ -23,5 +23,5 @@ export type PracticeEditorsProps = {
   onPitch: (id: string, pitch: number) => void;
   onDuration: (id: string, beats: number, dotted?: boolean) => void;
   onDelete: (id: string) => void;
-  onAdd: (beats: number, pitch: number | null, dotted?: boolean) => void;
+  onAdd: (beats: number, pitch: number | null, dotted?: boolean, onset?: number) => void;
 };

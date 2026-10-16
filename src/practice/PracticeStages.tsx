@@ -50,8 +50,9 @@ export default function PracticeStages({ mode, step, saving, busy, canGoToMelody
         </button>
       </div>
       <a className="practice-share-stage" href={PRACTICE_SHARE_URL} target="_blank" rel="noopener noreferrer"
-        aria-label={`${saveNumber + 1} 음악 공유하기: 샘보드 새 창 열기`}>
-        <span>{saveNumber + 1}</span><strong>음악 공유하기 <ExternalLink size={14} aria-hidden="true" /></strong>
+        aria-label={`${saveNumber + 1} 음악 공유하기: 저장한 파일을 첨부할 게시판 열기`}
+        title="음악을 파일로 저장한 뒤 게시판에 첨부해 주세요">
+        <span>{saveNumber + 1}</span><strong>게시판 열기 <ExternalLink size={14} aria-hidden="true" /></strong>
       </a>
     </nav>
   );

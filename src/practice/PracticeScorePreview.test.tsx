@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { validateMeasure } from "../music/meter";
 import {
-  button, changeValue, click, completeScoreMeasure, container, latestAudioInput,
+  placeCurrentNote, button, changeValue, click, completeScoreMeasure, container, latestAudioInput,
   mount, rerender, savedDraft, scoreButton, scoreCard, unmount
 } from "./PracticeMode.test.helpers";
 
@@ -89,9 +89,9 @@ describe("악보별 전체 미리듣기와 간단한 마디 버튼", () => {
     const settings = ["beat:woodblock", "beat:clap", "beat:kick"];
     for (let scoreIndex = 0; scoreIndex < 3; scoreIndex += 1) {
       changeValue(scoreIndex === 0 ? "리듬 연주 악기" : `${scoreIndex + 1}번 악보 리듬 연주 악기`, settings[scoreIndex]);
-      click(scoreButton(scoreIndex, "practice-rest-0.25"));
+      placeCurrentNote(0.25, true, scoreIndex);
       expect(wholeScoreButton(scoreIndex).disabled).toBe(true);
-      click(scoreButton(scoreIndex, "practice-duration-0.25"));
+      placeCurrentNote(0.25, false, scoreIndex);
       const before = savedDraft();
       const measures = scoreIndex === 0 ? before.measures : before.rhythmLayers[scoreIndex - 1].measures;
       expect(validateMeasure(measures[0].notes, before.meter).state).toBe("short");
@@ -103,7 +103,7 @@ describe("악보별 전체 미리듣기와 간단한 마디 버튼", () => {
       expect(audio.previewRhythmMix).not.toHaveBeenCalled();
       expect(audio.preview).not.toHaveBeenCalled();
       expect(savedDraft()).toEqual(before);
-      expect(button("MP3 저장").disabled).toBe(true);
+      expect(button("소리 파일(MP3)").disabled).toBe(true);
     }
     expect(audio.previewScore.mock.calls).toEqual([[0], [1], [2]]);
     expect(latestAudioInput()).toMatchObject({
@@ -116,7 +116,7 @@ describe("악보별 전체 미리듣기와 간단한 마디 버튼", () => {
     mount();
     addThreeScores();
     for (let scoreIndex = 0; scoreIndex < 3; scoreIndex += 1) {
-      click(scoreButton(scoreIndex, "practice-duration-1"));
+      placeCurrentNote(1, false, scoreIndex);
     }
     const before = savedDraft();
     audio[state] = true;
@@ -129,10 +129,10 @@ describe("악보별 전체 미리듣기와 간단한 마디 버튼", () => {
       if (scoreIndex !== 1) expect(wholeScoreButton(scoreIndex).disabled).toBe(true);
       expect(measurePreviewButton(scoreIndex, 0).disabled).toBe(true);
       expect(scoreButton(scoreIndex, "practice-duration-0.25").disabled).toBe(true);
-      expect(scoreButton(scoreIndex, "practice-rest-0.25").disabled).toBe(true);
+      expect(scoreButton(scoreIndex, "practice-choose-rest").disabled).toBe(true);
     }
     expect(button("리듬 함께 듣기").disabled).toBe(true);
-    expect(button("MP3 저장").disabled).toBe(true);
+    expect(button("소리 파일(MP3)").disabled).toBe(true);
     click(active);
     expect(audio.stop).toHaveBeenCalledTimes(1);
     expect(audio.previewScore).not.toHaveBeenCalled();
@@ -148,7 +148,7 @@ describe("악보별 전체 미리듣기와 간단한 마디 버튼", () => {
     mount();
     addThreeScores();
     for (let scoreIndex = 0; scoreIndex < 3; scoreIndex += 1) {
-      click(scoreButton(scoreIndex, "practice-duration-1"));
+      placeCurrentNote(1, false, scoreIndex);
     }
     audio.playing = true;
     audio.previewScoreIndex = 1;
@@ -222,18 +222,19 @@ describe("16분음표와 쉼표 입력", () => {
     mount();
     addThreeScores();
     for (let scoreIndex = 0; scoreIndex < 3; scoreIndex += 1) {
+      click(scoreButton(scoreIndex, "practice-choose-note"));
       const noteButton = scoreButton(scoreIndex, "practice-duration-0.25");
-      const restButton = scoreButton(scoreIndex, "practice-rest-0.25");
       expect(noteButton.textContent).toContain("16분음표");
       expect(noteButton.querySelector("small")?.textContent).toBe("0.25박");
+      placeCurrentNote(0.25, false, scoreIndex);
+      click(scoreButton(scoreIndex, "practice-choose-rest"));
+      const restButton = scoreButton(scoreIndex, "practice-rest-0.25");
       expect(restButton.textContent).toContain("16분쉼표");
       expect(restButton.querySelector("small")?.textContent).toBe("0.25박");
-      expect(noteButton.closest('[role="group"]')?.getAttribute("aria-label")).toBe("음표 넣기");
-      expect(restButton.closest('[role="group"]')?.getAttribute("aria-label")).toBe("쉼표 넣기");
-      click(noteButton);
-      click(restButton);
+      expect(restButton.closest('[role="group"]')?.getAttribute("aria-label")).toBe("넣을 음표 선택");
+      placeCurrentNote(0.25, true, scoreIndex);
       const message = scoreCard(scoreIndex, 0).querySelector(".practice-measure-validation")?.textContent;
-      expect(message).toContain("3.5박이 비었어요");
+      expect(message).toContain("3.5박 남았어요");
       expect(message).not.toContain("7/2박");
     }
     const before = savedDraft();
@@ -250,7 +251,9 @@ describe("16분음표와 쉼표 입력", () => {
     expect(savedDraft()).toEqual(before);
     for (let scoreIndex = 0; scoreIndex < 3; scoreIndex += 1) {
       expect(scoreButton(scoreIndex, "practice-duration-0.25")).toBeTruthy();
+      click(scoreButton(scoreIndex, "practice-choose-rest"));
       expect(scoreButton(scoreIndex, "practice-rest-0.25")).toBeTruthy();
+      click(scoreButton(scoreIndex, "practice-choose-note"));
     }
   });
 });

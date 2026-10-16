@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  button, click, container, latestAudioInput, mount, rerender, savedDraft,
+  placeCurrentNote, button, click, container, latestAudioInput, mount, rerender, savedDraft,
   testButton, unmount
 } from "./PracticeMode.test.helpers";
 import { practiceCreationModeLabel, type PracticeCreationMode } from "./practiceCreationMode";
@@ -138,8 +138,8 @@ describe("기능 연습하기 새로 시작", () => {
     click(button("가락만들기"));
     expect(savedDraft()).toEqual({ ...emptyPracticeDraft(), mode: "melody" });
     expect(stage("melody").getAttribute("aria-selected")).toBe("true");
-    expect(button("MP3 저장").disabled).toBe(true);
-    expect(button("MP4 저장").disabled).toBe(true);
+    expect(button("소리 파일(MP3)").disabled).toBe(true);
+    expect(button("음악 영상(MP4)").disabled).toBe(true);
     expect(container?.querySelectorAll(".practice-score-workspace")).toHaveLength(1);
     expect(container?.querySelectorAll(".practice-measure-card")).toHaveLength(2);
     expect(container?.querySelectorAll(".practice-lyric-entry input")).toHaveLength(2);
@@ -173,8 +173,8 @@ describe("기능 연습하기 새로 시작", () => {
     expect(testButton("practice-measure-1").getAttribute("aria-pressed")).toBe("false");
     expect(button("칸 채우기").getAttribute("aria-pressed")).toBe("true");
     expect(button("악보에 넣기").getAttribute("aria-pressed")).toBe("false");
-    expect(testButton("practice-delete-note").disabled).toBe(true);
-    click(testButton("practice-duration-1"));
+    expect(container?.querySelector('[data-testid="practice-delete-note"]')).toBeNull();
+    placeCurrentNote(1, false);
     expect(savedDraft().measures[0].notes).toHaveLength(1);
     expect(savedDraft().measures[1].notes).toHaveLength(0);
     expect(savedDraft().rhythmLayers).toEqual([]);
@@ -198,6 +198,7 @@ describe("기능 연습하기 새로 시작", () => {
 
   it("새로 시작하면 마지막에 고른 짧은 쉼표 대신 기본 1박 음표로 다시 입력한다", () => {
     restore("melody");
+    click(testButton("practice-choose-rest"));
     click(testButton("practice-rest-0.25"));
     expect(testButton("practice-rest-0.25").getAttribute("aria-pressed")).toBe("true");
 
@@ -205,7 +206,7 @@ describe("기능 연습하기 새로 시작", () => {
     click(button("가락만들기"));
 
     expect(testButton("practice-duration-1").getAttribute("aria-pressed")).toBe("true");
-    expect(testButton("practice-rest-0.25").getAttribute("aria-pressed")).toBe("false");
+    expect(testButton("practice-choose-rest").getAttribute("aria-pressed")).toBe("false");
     click(testButton("practice-melody-empty-67-0"));
     expect(savedDraft().measures[0].notes).toHaveLength(1);
     expect(savedDraft().measures[0].notes[0]).toMatchObject({

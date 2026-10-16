@@ -1,7 +1,7 @@
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  button, changeValue, click, completeOneMeasure, completeScoreMeasure, container, latestAudioInput, mount, rerender,
+  placeCurrentNote, button, changeValue, click, completeOneMeasure, completeScoreMeasure, container, latestAudioInput, mount, rerender,
   savedDraft, scoreButton, testButton, unmount
 } from "./PracticeMode.test.helpers";
 import { PRACTICE_CREATION_MODES } from "./practiceCreationMode";
@@ -119,7 +119,7 @@ describe("음악 만들기 시작 모드", () => {
     expect(container?.querySelector('[aria-label="가락 연주 악기"]')).toBeNull();
     completeOneMeasure();
     click(button("리듬 미리듣기"));
-    click(button("MP3 저장"));
+    click(button("소리 파일(MP3)"));
     expect(audio.preview).toHaveBeenCalledTimes(1);
     expect(audio.save).toHaveBeenCalledWith("mp3");
     expect(latestAudioInput()).toMatchObject({ mode: "rhythm", step: "rhythm" });
@@ -160,7 +160,7 @@ describe("음악 만들기 시작 모드", () => {
     expect(container?.querySelectorAll(".practice-score-workspace")).toHaveLength(3);
     expect(button("리듬 함께 듣기")).toBeTruthy();
 
-    click(button("가락 만들기로"));
+    click(button("악보 1에 가락 붙이기"));
     expect(container?.querySelectorAll(".practice-score-workspace")).toHaveLength(1);
     expect(container?.querySelector('[aria-label="리듬 연주 악기"]')).toBeNull();
     expect(container?.querySelector('[aria-label="2번 악보 리듬 연주 악기"]')).toBeNull();
@@ -169,7 +169,7 @@ describe("음악 만들기 시작 모드", () => {
     expect(container?.textContent).not.toContain("리듬과 가락");
     expect(container?.textContent).toContain("1 / 1마디 박자 완성");
     expect(container?.textContent).toContain("가락 듣고 저장하기");
-    expect(container?.textContent).toContain("만든 리듬이 가락에 담겼어요. 가락 악기로만 연주해요.");
+    expect(container?.textContent).toContain("악보 1의 리듬을 가락 악기로 연주해요.");
     changeValue("가락 연주 악기", "flute");
     const firstNote = savedDraft().measures[0].notes[0];
     click(testButton(`practice-melody-${firstNote.id}-67`));
@@ -197,10 +197,10 @@ describe("음악 만들기 시작 모드", () => {
   it("주악보가 쉼표뿐이면 박자를 완성해도 가락을 붙일 음표가 필요하다고 안내한다", () => {
     mount(undefined, "rhythm-melody");
     changeValue("연습할 마디 수", "1");
-    click(testButton("practice-rest-4"));
+    placeCurrentNote(4, true);
     click(button("악보 추가하기"));
-    click(scoreButton(1, "practice-duration-4"));
-    expect(button("MP3 저장").disabled).toBe(false);
+    placeCurrentNote(4, false, 1);
+    expect(button("소리 파일(MP3)").disabled).toBe(false);
     expect(stage("melody").disabled).toBe(true);
     expect(container?.textContent).toContain("가락을 붙일 악보 1에 소리 나는 음표를 넣어 주세요.");
   });
@@ -208,7 +208,7 @@ describe("음악 만들기 시작 모드", () => {
   it("기존 가락을 모드 전환으로 지우지 않고 가락만들기는 숨겨진 리듬 악보를 함께 듣지 않는다", () => {
     mount(undefined, "rhythm");
     click(button("악보 추가하기"));
-    click(scoreButton(1, "practice-duration-1"));
+    placeCurrentNote(1, false, 1);
     const originalLayers = savedDraft().rhythmLayers;
     click(button("모드 바꾸기"));
     click(button("가락만들기"));
@@ -252,24 +252,24 @@ describe("리듬 없이 바로 가락 만들기", () => {
     click(testButton("practice-melody-empty-64-2"));
     const partial = savedDraft();
     expect(partial.measures[0].notes.map((note) => note.pitch)).toEqual([67, 64]);
-    expect(button("MP3 저장").disabled).toBe(true);
+    expect(button("소리 파일(MP3)").disabled).toBe(true);
     click(testButton("practice-measure-preview-0"));
     expect(audio.previewMeasure).toHaveBeenCalledWith(0, 0);
     expect(latestAudioInput()).toMatchObject({ mode: "melody", step: "melody", melodyInstrumentId: "flute" });
-    click(testButton("practice-rest-1"));
-    click(testButton("practice-duration-1"));
+    placeCurrentNote(1, true);
+    placeCurrentNote(1, false);
     expect(savedDraft().measures[0].notes.map((note) => note.pitch)).toEqual([67, 64, null, 60]);
-    expect(button("MP3 저장").disabled).toBe(false);
-    expect(button("MP4 저장").disabled).toBe(false);
+    expect(button("소리 파일(MP3)").disabled).toBe(false);
+    expect(button("음악 영상(MP4)").disabled).toBe(false);
     click(button("가락 미리듣기"));
-    click(button("MP3 저장"));
+    click(button("소리 파일(MP3)"));
     expect(audio.preview).toHaveBeenCalledTimes(1);
     expect(audio.save).toHaveBeenCalledWith("mp3");
   });
 
-  it("빈 악보에서 팔레트로 첫 음을 넣고 다시 열어도 가락 모드와 음높이를 복원한다", () => {
+  it("빈 악보의 칸에 첫 음을 넣고 다시 열어도 가락 모드와 음높이를 복원한다", () => {
     mount(undefined, "melody");
-    click(testButton("practice-pitch-72"));
+    click(testButton("practice-melody-empty-72-0"));
     const original = savedDraft();
     expect(original.measures[0].notes[0].pitch).toBe(72);
     unmount();
@@ -283,11 +283,11 @@ describe("리듬 없이 바로 가락 만들기", () => {
   it("가락만들기에서 쉼표만 넣으면 소리 없는 미리 듣기와 저장을 잠근다", () => {
     mount(undefined, "melody");
     changeValue("연습할 마디 수", "1");
-    click(testButton("practice-rest-4"));
+    placeCurrentNote(4, true);
     expect(stage("melody").getAttribute("aria-selected")).toBe("true");
     expect(testButton("practice-measure-preview-0").disabled).toBe(true);
-    expect(button("MP3 저장").disabled).toBe(true);
-    expect(button("MP4 저장").disabled).toBe(true);
+    expect(button("소리 파일(MP3)").disabled).toBe(true);
+    expect(button("음악 영상(MP4)").disabled).toBe(true);
   });
 
   it("가락만들기에서는 저장으로 키보드 이동하고 연주 중에는 빈칸·모드 전환을 잠근다", () => {

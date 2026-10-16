@@ -4,7 +4,7 @@ import { loadSampleInstrument, queueSampleNote, releaseSampleInstrument } from "
 import { isBeatInstrumentId } from "../music/beatInstruments";
 import { findInstrument, isValidInstrumentId, type Instrument } from "../music/instruments";
 import { buildPracticeAudioPlan } from "./practiceAudioTimeline";
-import type { PracticeAudioEvent, PracticeAudioInput, PracticeAudioTrack, PracticeRenderedAudio, PracticeTimeline } from "./practiceAudioTypes";
+import type { PracticeAudioEvent, PracticeAudioInput, PracticeAudioPlan, PracticeAudioTrack, PracticeRenderedAudio, PracticeTimeline } from "./practiceAudioTypes";
 
 export {
   buildPracticeTimeline,
@@ -20,7 +20,7 @@ export type {
   PracticeTimeline
 } from "./practiceAudioTypes";
 
-type RenderOptions = Readonly<{
+export type PracticeAudioRenderOptions = Readonly<{
   signal?: AbortSignal;
   onProgress?: (percent: number) => void;
 }>;
@@ -115,10 +115,18 @@ function normalizeBuffer(buffer: AudioBuffer): void {
 /** Render all entered scores together, without adding a count-in or tail. */
 export async function renderPracticeAudio(
   input: PracticeAudioInput,
-  options: RenderOptions = {}
+  options: PracticeAudioRenderOptions = {}
 ): Promise<PracticeRenderedAudio> {
   checkAbort(options.signal);
-  const plan = buildPracticeAudioPlan(input);
+  return renderPracticeAudioPlan(buildPracticeAudioPlan(input), options);
+}
+
+/** Share sample loading, fallback and cancellation with short harmony previews. */
+export async function renderPracticeAudioPlan(
+  plan: PracticeAudioPlan,
+  options: PracticeAudioRenderOptions = {}
+): Promise<PracticeRenderedAudio> {
+  checkAbort(options.signal);
   const timeline = plan.timeline;
   if (typeof OfflineAudioContext === "undefined") {
     throw new Error("이 브라우저에서는 연습 곡을 연주할 수 없어요. 최신 크롬이나 엣지에서 열어 주세요.");
@@ -212,7 +220,7 @@ function pcm16(samples: Float32Array): Int16Array {
 
 export async function encodePracticeMp3(
   buffer: AudioBuffer,
-  options: RenderOptions = {}
+  options: PracticeAudioRenderOptions = {}
 ): Promise<Blob> {
   checkAbort(options.signal);
   const channels = Math.min(2, buffer.numberOfChannels);
@@ -242,7 +250,7 @@ export async function encodePracticeMp3(
 export async function exportPracticeMp4(
   rendered: PracticeRenderedAudio,
   input: PracticeAudioInput,
-  options: RenderOptions = {}
+  options: PracticeAudioRenderOptions = {}
 ): Promise<Blob> {
   checkAbort(options.signal);
   const { exportPracticeVideoMp4 } = await import("./exportPracticeVideoMp4");

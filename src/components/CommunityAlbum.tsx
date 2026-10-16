@@ -24,6 +24,7 @@ import type { NoteEvent } from "../music/types";
 import PdfScoreSheet from "./PdfScoreSheet";
 import AlbumPasswordDialog from "./AlbumPasswordDialog";
 import "./CommunityAlbumRename.css";
+import { useDialogFocus } from "../hooks/useDialogFocus";
 
 type CommunityAlbumProps = Readonly<{
   configured: boolean;
@@ -91,6 +92,7 @@ function PublicScorePreview({ song, onClose }: Readonly<{ song: PublishedSong; o
 }
 
 export default function CommunityAlbum({ configured, user, onClose, onRequestLogin, onPlay, onOpenProject }: CommunityAlbumProps) {
+  const dialogRef = useDialogFocus();
   const [albums, setAlbums] = useState<CommunityAlbumItem[]>([]);
   const [selectedAlbum, setSelectedAlbum] = useState<CommunityAlbumItem | null>(null);
   const [songs, setSongs] = useState<PublishedSong[]>([]);
@@ -366,7 +368,7 @@ export default function CommunityAlbum({ configured, user, onClose, onRequestLog
   }
 
   return (
-    <div className="account-overlay community-album-overlay" role="dialog" aria-modal="true" aria-label="모두의 앨범"
+    <div ref={dialogRef} tabIndex={-1} className="account-overlay community-album-overlay" role="dialog" aria-modal="true" aria-label="모두의 앨범"
       onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <section className="account-library community-album-window">
         <header className="account-library-header community-album-header">
