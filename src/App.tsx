@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, CheckCircle2, ExternalLink, FileDown, FileMusic, FileUp, Library, Menu, Mic2, Music2, Plus, QrCode, Redo2, SlidersHorizontal, Smartphone, Square, Undo2, UserRound, Volume2, WandSparkles, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, ExternalLink, FileDown, FileUp, Library, Menu, Mic2, Music2, Plus, QrCode, Redo2, Smartphone, Square, Undo2, UserRound, Volume2, WandSparkles, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
-import { exportBackingCompositionMp3, pausePlayback, playComposition, playMeasure, practiceKaraokeComposition, recordKaraokeComposition, renderKaraokePreviewMix, renderProcessedKaraokeMp3, resumePlayback, stopPlayback,
+import { pausePlayback, playComposition, playMeasure, practiceKaraokeComposition, recordKaraokeComposition, renderKaraokePreviewMix, renderProcessedKaraokeMp3, resumePlayback, stopPlayback,
   type AccompanimentOptions, type KaraokePostProcessPreset } from "./audio/player";
 import { preloadInstrument } from "./audio/samplePlayer";
 import { reviewRecordedPitch, type RecordingPitchReview } from "./audio/pitchReview";
@@ -24,6 +24,10 @@ import PublishScoreDialog from "./components/PublishScoreDialog";
 import SaveFailureDialog from "./components/SaveFailureDialog";
 import QrSongPlayback from "./components/QrSongPlayback";
 import BeatInstrumentChooser from "./components/BeatInstrumentChooser";
+import AccompanimentEditor from "./components/AccompanimentEditor";
+import AccompanimentMixer from "./components/AccompanimentMixer";
+import CompositionFileExports from "./components/CompositionFileExports";
+import CompositionMediaExportDialog from "./components/CompositionMediaExportDialog";
 import SongStoryMap from "./components/SongStoryMap";
 import SongStructureChooser from "./components/SongStructureChooser";
 import SongLengthChooser from "./components/SongLengthChooser";
@@ -31,6 +35,9 @@ import CandidateFeelingTabs from "./components/CandidateFeelingTabs";
 import MobileEditorDisclosure from "./components/MobileEditorDisclosure";
 import MobileMeasureRange from "./components/MobileMeasureRange";
 import { useBeatPatternState } from "./hooks/useBeatPatternState";
+import { useAccompanimentMixer } from "./hooks/useAccompanimentMixer";
+import { useCompositionMediaExport } from "./hooks/useCompositionMediaExport";
+import { useMelodyCandidatePriority } from "./hooks/useMelodyCandidatePriority";
 import { UNSAVED_WORK_WARNING, useUnsavedWorkWarning } from "./hooks/useUnsavedWorkWarning";
 import { backingDisplayNotes, repeatFourMeasures, rationalFromBeats } from "./components/backingDisplayNotes";
 import { firebaseConfigured } from "./firebase/config";
@@ -38,12 +45,11 @@ import type { User } from "./firebase/client";
 import type { PublishedSong } from "./firebase/communityAlbums";
 import type { CloudScore, CloudScoreListItem } from "./firebase/scores";
 import { useCloudScoreList } from "./hooks/useCloudScoreList";
-import { ACCOMPANIMENT_MODES, ACCOMPANIMENT_PLAYING_STYLES, MAX_ACCOMPANIMENT_INSTRUMENTS, accompanimentInstrumentPart, createAccompanimentPattern, findAccompanimentStyle, isAccompanimentInstrument,
+import { MAX_ACCOMPANIMENT_INSTRUMENTS, createAccompanimentPattern, findAccompanimentStyle, isAccompanimentInstrument,
   type AccompanimentStyleId } from "./music/accompaniment";
 import { getCandidates } from "./music/candidates";
 import { makeEndingCandidates } from "./music/endingCandidates";
 import { MELODY_FEELING_GROUPS, type MelodyFeelingId } from "./music/melodyFeelings";
-import { candidatePatternIndex, rankRecommendedCandidates } from "./music/recommendation";
 import { chordMidiPitches } from "./music/chord";
 import { DRAFT_STORAGE_KEY, draftFingerprint, isSavedDraft, readDraft, writeDraft, type SavedDraft } from "./music/draft";
 import { cloudSaveIssue, findDraftSaveIssues, type SaveIssue } from "./music/draftValidation";
@@ -52,7 +58,6 @@ import { normalizeBeatPattern, type BeatPatternEvent } from "./music/beatPattern
 import { findInstrument, INSTRUMENTS, type InstrumentId } from "./music/instruments";
 import { measureCapacity, meterKey, SUPPORTED_METERS, validateMeasure, type Meter } from "./music/meter";
 import { rational, toNumber } from "./music/rational";
-import { prioritizeCandidatesForRhythm } from "./music/rhythmPreference";
 import { fillStructuredRepeats, songStructurePlan, type SongStructureId } from "./music/songStructure";
 import type { SongLength } from "./music/songLength";
 import { changeCompositionHarmony, compositionFromDraft, compositionFromShare, emptyComposition, lyricText,
@@ -78,9 +83,6 @@ function uniqueAccompanimentInstrumentIds(ids: readonly InstrumentId[]): Instrum
   return unique.length > 0 ? unique : [findInstrument("piano").id];
 }
 
-const ACCOMPANIMENT_INSTRUMENTS = INSTRUMENTS.filter((instrument) =>
-  isAccompanimentInstrument(instrument.id));
-
 async function waitForVexScoreRender(timeoutMs = 4000): Promise<void> {
   const started = performance.now();
   while (performance.now() - started < timeoutMs) {
@@ -90,16 +92,11 @@ async function waitForVexScoreRender(timeoutMs = 4000): Promise<void> {
   }
 }
 
-function sameInstrumentOrder(a: readonly InstrumentId[], b: readonly InstrumentId[]): boolean {
-  return a.length === b.length && a.every((id, index) => findInstrument(id).id === findInstrument(b[index]).id);
-}
-
 // backingDisplayNotes & repeatFourMeasures moved to ./components/backingDisplayNotes
 
 type SongPlaybackState = "idle" | "playing" | "paused";
 type KaraokePhase = "idle" | "intro" | "song" | "outro" | "encoding" | "done" | "error";
 type KaraokeMode = "recording" | "practice";
-type BackingExportPhase = "idle" | "working" | "done" | "error";
 type KaraokeHighlight = Readonly<{
   section: "intro" | "song" | "outro";
   measureIndex: number | null;
@@ -262,6 +259,8 @@ export default function App() {
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [presetPreviewing, setPresetPreviewing] = useState(false);
   const [songPlaybackState, setSongPlaybackState] = useState<SongPlaybackState>("idle");
+  const [songPlaybackLoading, setSongPlaybackLoading] = useState(false);
+  const songPlaybackRequest = useRef(0);
   const [playingMeasureIndex, setPlayingMeasureIndex] = useState<number | null>(null);
   const [playingNoteId, setPlayingNoteId] = useState<string | null>(null);
   const [playingMeasure, setPlayingMeasure] = useState(false);
@@ -287,11 +286,12 @@ export default function App() {
   const [accompanimentStyleId, setAccompanimentStyleId] = useState<AccompanimentStyleId>(
     initialAccompanimentStyleId
   );
-  const [accompanimentStyleView, setAccompanimentStyleView] = useState<"mode" | "playing">("mode");
-  const [showAllAccompanimentModes, setShowAllAccompanimentModes] = useState(false);
   const [accompanimentInstrumentIds, setAccompanimentInstrumentIds] = useState<InstrumentId[]>(() =>
     uniqueAccompanimentInstrumentIds(resumableDraft?.accompanimentInstrumentIds ?? incomingShare?.accompanimentInstrumentIds ?? ["acoustic_grand_piano"])
   );
+  const accompanimentMixer = useAccompanimentMixer(accompanimentInstrumentIds,
+    resumableDraft?.accompanimentTrackMix ?? incomingShare?.accompanimentTrackMix);
+  const { trackMix: accompanimentTrackMix, onTrackState } = accompanimentMixer;
   const {
     beatPattern, setBeatPattern, beatVolume, setBeatVolume,
     beatPreviewing, setBeatPreviewing, loadBeatPattern
@@ -317,8 +317,6 @@ export default function App() {
   const [exportingPdf, setExportingPdf] = useState(false);
   const [pdfIncludeAccompaniment, setPdfIncludeAccompaniment] = useState(false);
   const [pdfPlaybackUrl, setPdfPlaybackUrl] = useState("");
-  const [exportingBacking, setExportingBacking] = useState(false);
-  const [backingExportPhase, setBackingExportPhase] = useState<BackingExportPhase>("idle");
   const [recordingSong, setRecordingSong] = useState(false);
   const [practicingSong, setPracticingSong] = useState(false);
   const [karaokeMode, setKaraokeMode] = useState<KaraokeMode>("recording");
@@ -354,10 +352,6 @@ export default function App() {
   const selectedPreset = findHarmonyPreset(selectedPresetId);
   const structurePlan = songStructurePlan(structureTemplateId, songLength);
   const selectedInstrument = findInstrument(selectedInstrumentId);
-  const selectedAccompanimentStyle = findAccompanimentStyle(accompanimentStyleId);
-  const activeAccompanimentMode = ACCOMPANIMENT_MODES.find((mode) =>
-    mode.styleId === accompanimentStyleId &&
-    sameInstrumentOrder(mode.instrumentIds, accompanimentInstrumentIds)) ?? null;
   const canRenderMobileRecordingQr = mobileRecordingUrl.length > 0 && mobileRecordingUrl.length <= QR_RENDER_LIMIT;
 
   const activeMeasure = measures[activeIndex];
@@ -366,11 +360,11 @@ export default function App() {
     version: 1, updatedAt: Date.now(), sourceHash, title: songTitle, description: songDescription,
     creator: creatorName, originalCreator, presetId: selectedPresetId, meter, songLength,
     structureTemplateId: structureTemplateId ?? undefined,
-    instrumentId: selectedInstrumentId, accompanimentStyleId, accompanimentInstrumentIds,
+    instrumentId: selectedInstrumentId, accompanimentStyleId, accompanimentInstrumentIds, accompanimentTrackMix,
     beatPattern, beatVolume, bpm, lyrics,
     measures: measures.map(({ candidateId, candidateName, notes, chords, keyFifths, effects }) => ({ candidateId, candidateName, notes, chords, keyFifths, effects })),
     showArrangement
-  }), [accompanimentInstrumentIds, accompanimentStyleId, beatPattern, beatVolume, bpm, creatorName, lyrics, measures, meter,
+  }), [accompanimentInstrumentIds, accompanimentStyleId, accompanimentTrackMix, beatPattern, beatVolume, bpm, creatorName, lyrics, measures, meter,
     originalCreator, selectedInstrumentId, selectedPresetId, songDescription, sourceHash, showArrangement, songLength,
     songTitle, structureTemplateId]);
   const currentDraftFingerprint = useMemo(() => draftFingerprint(currentDraft), [currentDraft]);
@@ -378,10 +372,12 @@ export default function App() {
   const currentAccompanimentOptions = useMemo<AccompanimentOptions>(() => ({
     styleId: accompanimentStyleId,
     instrumentIds: accompanimentInstrumentIds,
+    trackMix: accompanimentTrackMix,
+    onTrackState,
     beatPattern,
     beatVolume,
     meter
-  }), [accompanimentInstrumentIds, accompanimentStyleId, beatPattern, beatVolume, meter]);
+  }), [accompanimentInstrumentIds, accompanimentStyleId, accompanimentTrackMix, beatPattern, beatVolume, meter, onTrackState]);
   const candidates = useMemo(
     () => {
       const choices = getCandidates(activeMeasure.story, meter, activeMeasure.chords);
@@ -390,18 +386,7 @@ export default function App() {
     },
     [activeIndex, activeMeasure.story, activeMeasure.chords, measures.length, meter]
   );
-  const candidatePriority = useMemo(() => {
-    const earlierMeasures = measures.slice(0, activeIndex);
-    const previousNotes = [...earlierMeasures].reverse().find((measure) => measure.notes)?.notes ?? [];
-    const previousPitch = [...previousNotes].reverse().find((note) => note.pitch !== null)?.pitch ?? null;
-    const earlierIndexes = new Set(earlierMeasures.slice(-3)
-      .map((measure) => candidatePatternIndex(measure.candidateId, activeMeasure.story))
-      .filter((index) => index >= 0));
-    const previousCandidateIndex = candidatePatternIndex(measures[activeIndex - 1]?.candidateId ?? null, activeMeasure.story);
-    const harmonyRanked = rankRecommendedCandidates(candidates, activeMeasure.chords, previousPitch, activeIndex,
-      measures.length, previousCandidateIndex, earlierIndexes);
-    return prioritizeCandidatesForRhythm(harmonyRanked, accompanimentStyleId, activeIndex);
-  }, [accompanimentStyleId, activeIndex, activeMeasure.chords, candidates, measures]);
+  const candidatePriority = useMelodyCandidatePriority(candidates, measures, activeIndex, accompanimentStyleId);
   const pitchReviewByMeasure = useMemo(() => {
     const worstByMeasure = new Map<number, RecordingPitchReview>();
     pitchReviews.filter((review) => review.status === "off").forEach((review) => {
@@ -445,7 +430,7 @@ export default function App() {
   // Completing every measure only unlocks the finish button.  Accompaniment is
   // deliberately held back until that button opens the arrangement stage.
   const accompanimentReady = showArrangement && allValid;
-  const playingSong = songPlaybackState !== "idle";
+  const playingSong = songPlaybackState !== "idle" || songPlaybackLoading;
   const karaokeRunning = recordingSong || practicingSong;
   const isAnyPlaying = playingId !== null || playingSong || playingMeasure || karaokeRunning || presetPreviewing || beatPreviewing;
   useKaraokeAutoFocus(karaokeOpen, karaokeRunning, karaokeHighlight);
@@ -496,6 +481,17 @@ export default function App() {
     keyFifths: measure.keyFifths,
     effects: measure.effects
   }] : []);
+  const exportMeasures = useMemo(() => measures.flatMap((measure, measureIndex) => measure.notes ? [{
+    notes: measure.notes, harmony: measure.story, chords: measure.chords, effects: measure.effects,
+    measureIndex, isSongEnding: measureIndex === measures.length - 1
+  }] : []), [measures]);
+  const mediaExportBusy = isAnyPlaying || exportingPdf || processingRecording || mixingPreview || lyricVideoExport.exporting;
+  const compositionMediaExport = useCompositionMediaExport({
+    measures: exportMeasures, complete: allValid && exportMeasures.length === songLength,
+    title: songTitle, instrumentId: selectedInstrumentId, bpm, accompaniment: currentAccompanimentOptions,
+    disabled: mediaExportBusy, onStatus: setShareStatus
+  });
+  const exportingBacking = compositionMediaExport.exporting;
   const karaokeIntroMeasures = repeatFourMeasures(measures, false);
   const karaokeOutroMeasures = repeatFourMeasures(measures, true);
 
@@ -531,6 +527,7 @@ export default function App() {
     if (elapsed >= playbackDuration.current) {
       clearPlaybackTicker();
       setSongPlaybackState("idle");
+      accompanimentMixer.setSoloInstrumentId(null);
       setPlayingMeasureIndex(null);
       setPlayingNoteId(null);
     }
@@ -542,13 +539,17 @@ export default function App() {
     playbackTicker.current = window.setInterval(updatePlaybackPosition, 60);
   }
 
-  function resetPlaybackUi() {
+  function resetPlaybackUi(invalidateRequest = true) {
+    if (invalidateRequest) songPlaybackRequest.current += 1;
     clearPlaybackTicker();
     playbackElapsed.current = 0;
     playbackDuration.current = 0;
     playbackSegments.current = [];
     playbackNoteSegments.current = [];
     setSongPlaybackState("idle");
+    setSongPlaybackLoading(false);
+    accompanimentMixer.setSoloInstrumentId(null);
+    accompanimentMixer.resetTrackLevels();
     setPlayingMeasureIndex(null);
     setPlayingNoteId(null);
   }
@@ -827,15 +828,33 @@ export default function App() {
     );
   }
 
-  async function playWholeSong(startMeasureIndex = 0) {
+  async function playWholeSong(startMeasureIndex = 0, soloInstrumentId?: InstrumentId, reservedRequest?: number) {
+    const request = reservedRequest ?? ++songPlaybackRequest.current;
     const playable = measures.slice(startMeasureIndex).flatMap((measure, relativeIndex) => measure.notes ? [{
       notes: measure.notes, harmony: measure.story, chords: measure.chords, effects: measure.effects,
-      measureIndex: startMeasureIndex + relativeIndex
+      measureIndex: startMeasureIndex + relativeIndex,
+      isSongEnding: startMeasureIndex + relativeIndex === measures.length - 1
     }] : []);
     if (playable.length === 0) return;
-    const duration = await playComposition(playable, selectedInstrumentId, bpm,
-      accompanimentReady ? currentAccompanimentOptions : undefined);
-    if (duration === null) return;
+    setSongPlaybackLoading(true);
+    accompanimentMixer.setSoloInstrumentId(soloInstrumentId ?? null);
+    let duration: number | null;
+    try {
+      duration = await playComposition(playable, selectedInstrumentId, bpm,
+        accompanimentReady ? { ...currentAccompanimentOptions, soloInstrumentId,
+          onTrackState: (state) => { if (request === songPlaybackRequest.current) onTrackState(state); }
+        } : undefined);
+    } catch (error) {
+      console.error(error);
+      if (request === songPlaybackRequest.current) resetPlaybackUi();
+      return;
+    }
+    if (request !== songPlaybackRequest.current) return;
+    setSongPlaybackLoading(false);
+    if (duration === null) {
+      accompanimentMixer.setSoloInstrumentId(null);
+      return;
+    }
     const secondsPerBeat = 60 / bpm;
     let offsetSeconds = 0.08;
     const noteSegments: PlaybackNoteSegment[] = [];
@@ -878,14 +897,26 @@ export default function App() {
   }
 
   async function stopWholeSong() {
-    await stopPlayback();
     resetPlaybackUi();
+    await stopPlayback();
   }
 
   function toggleWholeSong(startMeasureIndex = activeIndex) {
-    if (songPlaybackState === "idle") void playWholeSong(startMeasureIndex);
+    if (songPlaybackLoading) void stopWholeSong();
+    else if (accompanimentMixer.soloInstrumentId) void stopWholeSong().then(() => playWholeSong(startMeasureIndex));
+    else if (songPlaybackState === "idle") void playWholeSong(startMeasureIndex);
     else if (songPlaybackState === "playing") void pauseWholeSong();
     else resumeWholeSong();
+  }
+
+  async function toggleAccompanimentSolo(instrumentId: InstrumentId) {
+    const stopSolo = accompanimentMixer.soloInstrumentId === instrumentId;
+    const request = ++songPlaybackRequest.current;
+    setSongPlaybackLoading(true);
+    await stopPlayback();
+    if (request !== songPlaybackRequest.current) return;
+    resetPlaybackUi(false);
+    if (!stopSolo) await playWholeSong(0, instrumentId, request);
   }
 
   async function playActiveMeasure() {
@@ -899,7 +930,8 @@ export default function App() {
       harmony: activeMeasure.story,
       chords: activeMeasure.chords,
       effects: activeMeasure.effects,
-      measureIndex: activeIndex
+      measureIndex: activeIndex,
+      isSongEnding: activeIndex === measures.length - 1
     }], selectedInstrumentId, bpm, accompanimentReady ? currentAccompanimentOptions : undefined);
     if (duration === null) return;
     setPlayingMeasure(true);
@@ -1295,6 +1327,7 @@ export default function App() {
       instrumentId: selectedInstrumentId,
       accompanimentStyleId,
       accompanimentInstrumentIds,
+      accompanimentTrackMix,
       beatPattern,
       beatVolume,
       bpm,
@@ -1415,52 +1448,6 @@ export default function App() {
     }
   }
 
-  async function exportBackingMp3() {
-    if (!allValid || printableMeasures.length !== songLength) {
-      setShareStatus("먼저 모든 마디를 정확한 박자로 완성해 주세요.");
-      return;
-    }
-    if (exportingBacking) return;
-    setExportingBacking(true);
-    setBackingExportPhase("working");
-    setShareStatus("인트로와 아웃트로가 들어간 반주 음악을 만들고 있어요.");
-    const playable = measures.flatMap((measure, index) => measure.notes ? [{
-      notes: measure.notes,
-      harmony: measure.story,
-      chords: measure.chords,
-      effects: measure.effects,
-      measureIndex: index
-    }] : []);
-    try {
-      const blob = await exportBackingCompositionMp3(
-        playable, selectedInstrumentId, bpm, currentAccompanimentOptions
-      );
-      if (!blob) {
-        setShareStatus("다른 연주나 녹음이 끝난 뒤에 다시 저장해 주세요.");
-        setBackingExportPhase("error");
-        await new Promise((resolve) => window.setTimeout(resolve, 1200));
-        return;
-      }
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = safeSongFileName("mp3").replace(/\.mp3$/i, "-반주음악.mp3");
-      link.click();
-      window.setTimeout(() => URL.revokeObjectURL(url), 5000);
-      setShareStatus("반주 음악 MP3를 저장했어요.");
-      setBackingExportPhase("done");
-      await new Promise((resolve) => window.setTimeout(resolve, 900));
-    } catch (error) {
-      console.error(error);
-      setShareStatus("반주 음악을 만드는 중 문제가 생겼어요. 다시 시도해 주세요.");
-      setBackingExportPhase("error");
-      await new Promise((resolve) => window.setTimeout(resolve, 1200));
-    } finally {
-      setExportingBacking(false);
-      setBackingExportPhase("idle");
-    }
-  }
-
   function saveProjectFile() {
     const blob = new Blob([JSON.stringify(currentDraft, null, 2)], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -1492,8 +1479,8 @@ export default function App() {
     setSelectedInstrumentId(findInstrument(project.instrumentId).id);
     const nextAccompanimentStyle = findAccompanimentStyle(project.accompanimentStyleId ?? "arpeggio");
     setAccompanimentStyleId(nextAccompanimentStyle.id);
-    setAccompanimentStyleView(nextAccompanimentStyle.category === "playing" ? "playing" : "mode");
     setAccompanimentInstrumentIds(uniqueAccompanimentInstrumentIds(project.accompanimentInstrumentIds ?? ["piano"]));
+    accompanimentMixer.loadTrackMix(project.accompanimentTrackMix);
     loadBeatPattern(project.beatPattern, project.beatVolume, project.meter);
     setBpm(project.bpm ?? 96);
     setShowArrangement(project.showArrangement);
@@ -1638,6 +1625,7 @@ export default function App() {
       song.draft.bpm ?? 96, song.draft.showArrangement ? {
         styleId: findAccompanimentStyle(song.draft.accompanimentStyleId ?? "arpeggio").id,
         instrumentIds: uniqueAccompanimentInstrumentIds(song.draft.accompanimentInstrumentIds ?? ["piano"]),
+        trackMix: song.draft.accompanimentTrackMix,
         beatPattern: song.draft.beatPattern,
         beatVolume: song.draft.beatVolume,
         meter: song.draft.meter
@@ -2036,40 +2024,7 @@ export default function App() {
           }} />
       )}
 
-      {exportingBacking && !mobileRecordMode && (
-        <div className="backing-export-overlay" role="dialog" aria-modal="true"
-          aria-labelledby="backing-export-title" aria-describedby="backing-export-description">
-          <section className={`backing-export-dialog ${backingExportPhase}`} aria-busy={backingExportPhase === "working"}>
-            <header className="backing-export-header" role="status" aria-live="polite">
-              <span>{backingExportPhase === "done" ? "저장 완료" : backingExportPhase === "error" ? "다시 확인해요" : "반주 제작실"}</span>
-              <h2 id="backing-export-title">
-                {backingExportPhase === "done" ? "반주 파일을 저장했어요!" :
-                  backingExportPhase === "error" ? "반주를 완성하지 못했어요" : "반주 파일 만드는 중"}
-              </h2>
-              <p id="backing-export-description">
-                {backingExportPhase === "done" ? "MP3 파일이 다운로드 폴더에 준비됐어요." :
-                  backingExportPhase === "error" ? "잠시 후 반주 저장 버튼을 다시 눌러 주세요." :
-                    "소리를 렌더링하고 있어요."}
-              </p>
-            </header>
-
-            <div className="backing-export-studio" aria-hidden="true">
-              <div className="backing-export-note note-one">♪</div>
-              <div className="backing-export-note note-two">♫</div>
-              <div className="backing-export-note note-three">♪</div>
-              {backingExportPhase === "done" && <div className="backing-export-complete-mark"><CheckCircle2 /></div>}
-              {backingExportPhase === "error" && <div className="backing-export-complete-mark error"><X /></div>}
-            </div>
-
-            <div className="backing-export-progress" aria-label={backingExportPhase === "working" ? "반주 파일 만드는 중" : undefined}>
-              <div className="backing-export-progress-track"><i /></div>
-              <div className="backing-export-steps">
-                <span>건반 연주하기</span><span>리듬 녹음하기</span><span>소리 섞어 저장하기</span>
-              </div>
-            </div>
-          </section>
-        </div>
-      )}
+      {exportingBacking && !mobileRecordMode && <CompositionMediaExportDialog media={compositionMediaExport} />}
 
       {karaokeOpen && (
         <div className="karaoke-overlay" role="dialog" aria-modal="true"
@@ -2439,6 +2394,8 @@ export default function App() {
             groups={candidateFeelingGroups.map((group) => ({ ...group, count: group.candidates.length }))}
             activeId={selectedFeelingGroup.id}
             onChange={setActiveMelodyFeeling} />
+          {activeIndex > 0 && measures[activeIndex - 1].notes?.some((note) => note.pitch !== null) &&
+            <p className="candidate-priority-note">앞마디와 자연스럽게 이어지는 가락부터 보여줘요.</p>}
 
           <div className="preview-instrument-picker candidate-instrument-picker" aria-label="가락 미리듣기 악기 선택">
             <div>
@@ -2640,153 +2597,19 @@ export default function App() {
             </div>
 
             <section className="accompaniment-builder" aria-labelledby="accompaniment-heading">
-              <div className="accompaniment-style-with-guide">
-                <div className="accompaniment-heading">
-                  <div>
-                    <span className="section-kicker">자동 반주 만들기</span>
-                    <h2 id="accompaniment-heading">반주</h2>
-                  </div>
-                </div>
-                <div className="accompaniment-summary">
-                  <small>내가 고른 반주</small>
-                  <strong>{activeAccompanimentMode?.name ?? "내가 만든 반주"}</strong>
-                  <span>{accompanimentInstrumentIds.length}개 악기가 함께 연주해요</span>
-                </div>
-
-                <div className="accompaniment-style-content">
-                  <div className="accompaniment-style-tabs" role="tablist" aria-label="반주 선택 모드">
-                    <button type="button" role="tab" id="accompaniment-mode-tab" aria-controls="accompaniment-style-panel"
-                      data-testid="accompaniment-mode-tab" aria-selected={accompanimentStyleView === "mode"}
-                      className={accompanimentStyleView === "mode" ? "active" : ""}
-                      onClick={() => setAccompanimentStyleView("mode")}>쉬운 반주 고르기</button>
-                    <button type="button" role="tab" id="accompaniment-playing-tab" aria-controls="accompaniment-style-panel"
-                      data-testid="accompaniment-playing-tab" aria-selected={accompanimentStyleView === "playing"}
-                      className={accompanimentStyleView === "playing" ? "active" : ""}
-                      onClick={() => setAccompanimentStyleView("playing")}>내가 직접 바꾸기</button>
-                  </div>
-                  <div role="tabpanel" id="accompaniment-style-panel"
-                    aria-labelledby={accompanimentStyleView === "mode" ? "accompaniment-mode-tab" : "accompaniment-playing-tab"}
-                    aria-label={accompanimentStyleView === "mode" ? "쉬운 반주 선택" : "반주 직접 바꾸기"}>
-                    {accompanimentStyleView === "mode" ? (
-                      <>
-                        <div className="accompaniment-mode-grid" role="group" aria-label="쉬운 반주 선택">
-                          {ACCOMPANIMENT_MODES.slice(0, showAllAccompanimentModes ? ACCOMPANIMENT_MODES.length : 6)
-                            .map((mode) => (
-                              <button key={mode.id} type="button" data-testid={`accompaniment-mode-${mode.id}`}
-                                className={activeAccompanimentMode?.id === mode.id ? "active" : ""}
-                                aria-pressed={activeAccompanimentMode?.id === mode.id}
-                                disabled={isAnyPlaying}
-                                onClick={() => {
-                                  setAccompanimentStyleId(mode.styleId);
-                                  setAccompanimentInstrumentIds(uniqueAccompanimentInstrumentIds(mode.instrumentIds));
-                                }}>
-                                <span>{mode.icon}</span>
-                                <strong>{mode.name}</strong>
-                              </button>
-                            ))}
-                        </div>
-                        <button type="button" className="accompaniment-more-modes"
-                          data-testid="toggle-more-accompaniment-modes"
-                          onClick={() => setShowAllAccompanimentModes((current) => !current)}>
-                          {showAllAccompanimentModes ? "자주 쓰는 6가지만 보기" : "다른 느낌 4개 더 보기"}
-                        </button>
-                        <div className="easy-accompaniment-result">
-                          <div>
-                            <strong>{activeAccompanimentMode
-                              ? `${activeAccompanimentMode.icon} ${activeAccompanimentMode.name} 반주가 준비됐어요`
-                              : "카드를 눌러 반주를 골라 보세요"}</strong>
-                          </div>
-                          <div className="easy-accompaniment-instruments" aria-label="함께 연주하는 악기">
-                            {accompanimentInstrumentIds.map((instrumentId) => {
-                              const instrument = findInstrument(instrumentId);
-                              return <span key={`easy-${instrument.id}`}>{instrument.icon} {instrument.name}</span>;
-                            })}
-                          </div>
-                          <button type="button" className="easy-accompaniment-listen" data-testid="listen-selected-accompaniment"
-                            disabled={playingId !== null || playingMeasure}
-                            onClick={() => toggleWholeSong(0)}>
-                            <PlayIcon playing={songPlaybackState === "playing"} />
-                            {songPlaybackState === "playing" ? "잠깐 멈추기"
-                              : songPlaybackState === "paused" ? "계속 들어보기" : "지금 들어보기"}
-                          </button>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="accompaniment-style-grid">
-                          {ACCOMPANIMENT_PLAYING_STYLES.map((style) => (
-                            <button key={style.id} type="button" data-testid={`accompaniment-style-${style.id}`}
-                              className={accompanimentStyleId === style.id ? "accompaniment-style active" : "accompaniment-style"}
-                              aria-pressed={accompanimentStyleId === style.id}
-                              disabled={isAnyPlaying}
-                              onClick={() => setAccompanimentStyleId(style.id)}>
-                              <span>{style.alias}</span><strong>{style.name}</strong>
-                            </button>
-                          ))}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {accompanimentStyleView === "playing" && (<>
-              <div className={`mixer-board${playingSong ? " playing" : ""}`} aria-label="현재 반주 트랙">
-                <div className="mixer-board-heading">
-                  <div><SlidersHorizontal size={18} aria-hidden="true" /><strong>지금 만드는 소리</strong></div>
-                  <span>{1 + accompanimentInstrumentIds.length}개 트랙</span>
-                </div>
-                <div className="mixer-track melody-track">
-                  <span className="mixer-track-icon">{selectedInstrument.icon}</span>
-                  <span className="mixer-track-copy"><small>가락</small><strong>{selectedInstrument.name}</strong></span>
-                  <span className="mixer-role">주인공</span>
-                  <span className="mixer-level" aria-hidden="true">{Array.from({ length: 8 }, (_, index) => <i key={index} />)}</span>
-                  <Volume2 size={17} className="mixer-volume" aria-label="가락 소리 켜짐" />
-                </div>
-                {accompanimentInstrumentIds.map((instrumentId, trackIndex) => {
-                  const instrument = findInstrument(instrumentId);
-                  return (
-                    <div className="mixer-track" key={`mixer-${instrument.id}`}>
-                      <span className="mixer-track-icon">{instrument.icon}</span>
-                      <span className="mixer-track-copy"><small>반주 {trackIndex + 1}</small><strong>{instrument.name}</strong></span>
-                      <span className="mixer-role">{accompanimentInstrumentPart(instrument.id, trackIndex).label}</span>
-                      <span className="mixer-level" aria-hidden="true">{Array.from({ length: 8 }, (_, index) => <i key={index} />)}</span>
-                      <button type="button" className="mixer-remove"
-                        aria-label={`${instrument.name} 반주에서 빼기`}
-                        onClick={() => toggleAccompanimentInstrument(instrument.id)}>
-                        <X size={15} aria-hidden="true" />
-                      </button>
-                    </div>
-                  );
-                })}
-                {accompanimentInstrumentIds.length === 0 && (
-                  <div className="mixer-empty"><Volume2 size={18} aria-hidden="true" /> 반주 악기 없음</div>
-                )}
-              </div>
-
-              <div className="instrument-bank-heading">
-                <strong>반주 트랙 추가</strong>
-                <span>최대 {MAX_ACCOMPANIMENT_INSTRUMENTS}개</span>
-              </div>
-
-              <div className="accompaniment-instruments" aria-label="반주 악기 여러 개 선택">
-                {ACCOMPANIMENT_INSTRUMENTS.map((instrument) => {
-                  const active = accompanimentInstrumentIds.includes(instrument.id);
-                  const blocked = !active && accompanimentInstrumentIds.length >= MAX_ACCOMPANIMENT_INSTRUMENTS;
-                  return (
-                    <button key={instrument.id} type="button"
-                      data-testid={`accompaniment-instrument-${instrument.id}`}
-                      className={active ? "accompaniment-instrument active" : "accompaniment-instrument"}
-                      aria-pressed={active} disabled={blocked} onClick={() => toggleAccompanimentInstrument(instrument.id)}>
-                      <span>{instrument.icon}</span><strong>{instrument.name}</strong>
-                    </button>
-                  );
-                })}
-              </div>
-              {accompanimentInstrumentIds.length === 0 &&
-                <p className="accompaniment-warning">반주 악기 없음 · 가락만 연주</p>}
-              </>)}
-
+              <AccompanimentEditor styleId={accompanimentStyleId} instrumentIds={accompanimentInstrumentIds}
+                disabled={isAnyPlaying} playback={{ state: songPlaybackState, disabled: playingId !== null || playingMeasure,
+                  onListen: () => toggleWholeSong(0) }}
+                onChange={(styleId, instrumentIds) => {
+                  setAccompanimentStyleId(styleId);
+                  if (instrumentIds) setAccompanimentInstrumentIds(uniqueAccompanimentInstrumentIds(instrumentIds));
+                }} onToggleInstrument={toggleAccompanimentInstrument}>
+                <AccompanimentMixer instrumentIds={accompanimentInstrumentIds} mixer={accompanimentMixer}
+                  canListen={accompanimentReady && !exportingBacking && (playingSong || !isAnyPlaying)} editingDisabled={isAnyPlaying}
+                  controlsDisabled={exportingBacking || karaokeRunning || processingRecording || lyricVideoExport.exporting}
+                  onSolo={(instrumentId) => void toggleAccompanimentSolo(instrumentId)}
+                  onRemove={toggleAccompanimentInstrument} />
+              </AccompanimentEditor>
               <BeatInstrumentChooser events={beatPattern}
                 meter={meter} bpm={bpm} volume={beatVolume} disabled={isAnyPlaying} playing={beatPreviewing}
                 onChange={setBeatPattern} onVolumeChange={setBeatVolume}
@@ -2845,20 +2668,8 @@ export default function App() {
                 </div>}
                 <div className="publish-action-group publish-action-group-files">
                   <h3>악보·음악 저장</h3>
-                  <div className="publish-action-group-buttons">
-                    <button type="button" className="pdf-button action-button" data-testid="export-pdf"
-                      disabled={exportingPdf} onClick={() => void exportPdf(false)}>
-                      <FileDown size={18} /> {exportingPdf ? "악보 만드는 중..." : "악보 PDF"}
-                    </button>
-                    <button type="button" className="pdf-button action-button" data-testid="export-pdf-with-accompaniment"
-                      disabled={exportingPdf} onClick={() => void exportPdf(true)}>
-                      <FileMusic size={18} /> {exportingPdf ? "악보 만드는 중..." : "반주 포함 악보 PDF"}
-                    </button>
-                    <button type="button" className="backing-mp3-button action-button" data-testid="export-backing-mp3"
-                      disabled={exportingBacking || !allValid} onClick={() => void exportBackingMp3()}>
-                      <Music2 size={18} /> {exportingBacking ? "반주 만드는 중..." : "반주 음악 MP3"}
-                    </button>
-                  </div>
+                  <CompositionFileExports media={compositionMediaExport} complete={allValid && exportMeasures.length === songLength}
+                    busy={mediaExportBusy} exportingPdf={exportingPdf} onPdf={(include) => void exportPdf(include)} />
                   <details className="publish-advanced-files">
                     <summary>나중에 고칠 작품 파일</summary>
                     <div className="publish-action-group-buttons">
@@ -2930,7 +2741,7 @@ export default function App() {
               )}
             </div>
             <p className="audio-credit">
-              음원: FluidR3 SoundFont(MIT) · 국립국악원 디지털 음원(공공누리 제1유형) · THIRD_PARTY_NOTICES.md
+              음원: FluidR3 SoundFont(CC BY 3.0) · 국립국악원 디지털 음원(공공누리 제1유형) · THIRD_PARTY_NOTICES.md
             </p>
             {allValid && printableMeasures.length === songLength && (
               <PdfScoreSheet title={songTitle} description={songDescription} creator={creatorName} originalCreator={originalCreator}

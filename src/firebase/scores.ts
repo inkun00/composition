@@ -89,7 +89,7 @@ export async function saveCloudScore(uid: string, draft: SavedDraft, scoreId?: s
     ? doc(db, "users", uid, "scores", scoreId)
     : doc(collection(db, "users", uid, "scores"));
   const savedDraft = cleanDraft({ ...draft, updatedAt: Date.now() });
-  await setDoc(scoreRef, {
+  const scoreData = {
     ownerId: uid,
     title: savedDraft.title || "제목 없는 악보",
     creator: savedDraft.creator,
@@ -97,7 +97,10 @@ export async function saveCloudScore(uid: string, draft: SavedDraft, scoreId?: s
     updatedAt: Timestamp.fromMillis(savedDraft.updatedAt),
     ...(scoreId ? {} : { createdAt: Timestamp.fromMillis(savedDraft.updatedAt) }),
     draft: savedDraft
-  }, { merge: true });
+  };
+  // Replace the complete draft snapshot so removed tracks and their old mute
+  // settings do not survive Firestore's recursive map merge.
+  await setDoc(scoreRef, scoreData, { mergeFields: Object.keys(scoreData) });
   return {
     id: scoreRef.id,
     title: savedDraft.title || "제목 없는 악보",

@@ -45,3 +45,9 @@
   font-size: 12px;
   line-height: 1.45;
 }
+.candidate-priority-note {
+  margin: 4px 0 12px;
+  color: #6759a9;
+  font-size: 12px;
+  line-height: 1.5;
+}

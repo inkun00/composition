@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { rational } from "../music/rational";
 import type { NoteEvent } from "../music/types";
 import type { PracticeAudioInput } from "./practiceAudioTypes";
+import { drawPracticeVideoBars } from "./practiceVideoBars";
 import { buildPracticeVideoPreviewPlan } from "./practiceVideoPlan";
 import { preparePracticeVideoRenderer } from "./practiceVideoRenderer";
 import { recordVideoCanvases, type VideoCanvasCommand } from "./practiceVideoRendererTestCanvas";
@@ -13,7 +14,7 @@ vi.mock("../music/vexflow", async () => {
 });
 
 function note(id: string, pitch: number | null, beats: number, lyric?: string): NoteEvent {
-  return { id, pitch, duration: rational(beats), lyric };
+  return { id, pitch, duration: rational(beats * 4, 4), lyric };
 }
 
 function videoPlan() {
@@ -57,6 +58,22 @@ function layeredVideoInput(): PracticeAudioInput {
   };
 }
 
+function rhythmSymbolInput(beats: number, rest: boolean): PracticeAudioInput {
+  return {
+    title: "박자에 맞는 음표",
+    mode: "rhythm",
+    bpm: 120,
+    meter: { beats: 4, beatUnit: 4 },
+    step: "rhythm",
+    melodyInstrumentId: "piano",
+    rhythmInstrumentId: "beat:woodblock",
+    measures: [
+      { notes: [{ ...note("symbol", rest ? null : 60, beats, rest ? undefined : "별"), dotted: [1.5, 3].includes(beats) }] },
+      { notes: [note("following", 60, 4, "빛")] }
+    ]
+  };
+}
+
 function comparableCommands(commands: readonly VideoCanvasCommand[]) {
   return commands.map((command) => ({
     ...command,
@@ -77,6 +94,65 @@ beforeEach(clearScoreDrawing);
 afterEach(() => { vi.restoreAllMocks(); });
 
 describe("연습 저장 영상의 실제 그리기", () => {
+  it.each([false, true])("리듬 막대의 쉼표=%s 기호는 일곱 길이를 구분하며 음악 글꼴이나 리듬 문구 없이 그린다", (rest) => {
+    const canvases = recordVideoCanvases();
+    const drawings: string[] = [];
+    for (const beats of [0.25, 0.5, 1, 1.5, 2, 3, 4]) {
+      const plan = buildPracticeVideoPreviewPlan(rhythmSymbolInput(beats, rest));
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d")!;
+      // Drawing one inactive bar keeps its size and highlight identical, so only
+      // the requested duration's musical symbol can distinguish these outputs.
+      drawPracticeVideoBars(context, plan, [plan.measures[0]], -1);
+      const commands = canvases.at(-1)!.commands;
+      const text = textCommands(commands).map((command) => command.args[0]);
+      expect(text).toEqual(rest ? [] : ["별"]);
+      expect(text).not.toContain("리듬");
+      expect(text).not.toContain("쉼");
+      expect(commands.some((command) => command.name === "fill" || command.name === "stroke")).toBe(true);
+      expect(commands.flatMap((command) => [
+        ...command.args, ...command.path.flatMap((part) => part.args)
+      ]).filter((argument): argument is number => typeof argument === "number").every(Number.isFinite)).toBe(true);
+      const barStrokeIndex = commands.findIndex((command) => command.name === "stroke" &&
+        command.path.some((part) => part.name === "roundRect"));
+      const bar = commands[barStrokeIndex].path.find((part) => part.name === "roundRect")!;
+      const [left, top, width, height] = bar.args as number[];
+      const lyricIndex = commands.findIndex((command, index) => index > barStrokeIndex && command.name === "fillText");
+      const symbols = commands.slice(barStrokeIndex + 1, lyricIndex)
+        .filter((command) => ["fill", "stroke", "fillRect"].includes(command.name));
+      expect(symbols.length).toBeGreaterThan(0);
+      const points: number[][] = [];
+      for (const command of symbols) {
+        expect(white(command.name === "stroke" ? command.strokeStyle : command.fillStyle)).toBe(true);
+        if (command.name === "fillRect") {
+          const [x, y, w, h] = command.args as number[];
+          points.push([x, y], [x + w, y + h]);
+        }
+        for (const part of command.path) {
+          const args = part.args as number[];
+          if (["moveTo", "lineTo", "bezierCurveTo"].includes(part.name)) {
+            for (let index = 0; index < args.length; index += 2) points.push(args.slice(index, index + 2));
+          }
+          if (part.name === "arc" || part.name === "ellipse") {
+            const [x, y, rx] = args;
+            const ry = part.name === "ellipse" ? args[3] : rx;
+            points.push([x - rx, y - ry], [x + rx, y + ry]);
+          }
+        }
+      }
+      expect(points.length).toBeGreaterThan(0);
+      expect(points.every(([x, y]) => x >= left && x <= left + width && y >= top && y <= top + height),
+        "음표·쉼표와 점은 모두 해당 리듬 막대 안에 들어가야 한다").toBe(true);
+      const dots = symbols.flatMap((command) => command.path)
+        .filter((part) => part.name === "arc" && Number(part.args[2]) <= 1.5);
+      expect(dots.length > 0).toBe([1.5, 3].includes(beats));
+      const lyric = commands[lyricIndex];
+      expect(Number(lyric.args[2]), "가사는 기호가 있는 막대 아래에서 그대로 표시한다").toBeGreaterThan(top + height);
+      drawings.push(JSON.stringify(comparableCommands(commands)));
+    }
+    expect(new Set(drawings).size, "16분·8분·4분·점4분·2분·점2분·온 기호가 각각 달라야 한다").toBe(7);
+  });
+
   it.each(["bars", "score"] as const)("%s 저장 영상은 가락 단계에서 아래 리듬을 그리지 않고 리듬 모드에서는 세 악보를 유지한다", async (mode) => {
     const input = layeredVideoInput();
     const combined = buildPracticeVideoPreviewPlan(input);
@@ -118,6 +194,8 @@ describe("연습 저장 영상의 실제 그리기", () => {
       expect(combinedDrawing.commands.flatMap(textCommands).some((command) => command.args[0] === "리듬"))
         .toBe(false);
       expect(rhythmDrawing.commands.flatMap(textCommands).some((command) => command.args[0] === "리듬"))
+        .toBe(false);
+      expect(rhythmDrawing.commands.flat().some((command) => command.path.some((part) => part.name === "ellipse")))
         .toBe(true);
     }
   });

@@ -25,6 +25,23 @@ describe("화음 구성음 계산", () => {
     expect(nearestChordTone(61, "D♭")).toBe(61);
   });
 
+  it("반주에 쓰이는 장9·단6·감7·변화9화음의 성격을 보존한다", () => {
+    expect(chordPitchClasses("Cmaj9")).toEqual([0, 4, 7, 11, 2]);
+    expect(chordPitchClasses("Fm6")).toEqual([5, 8, 0, 2]);
+    expect(chordPitchClasses("Am6")).toEqual([9, 0, 4, 6]);
+    expect(chordPitchClasses("C♯dim7")).toEqual([1, 4, 7, 10]);
+    expect(chordPitchClasses("Bm7♭5")).toEqual([11, 2, 5, 9]);
+    expect(chordPitchClasses("E7♯9")).toEqual([4, 8, 11, 2, 7]);
+    expect(chordPitchClasses("G7♭9")).toEqual([7, 11, 2, 5, 8]);
+    expect(chordPitchClasses("Cadd9")).toEqual([0, 4, 7, 2]);
+  });
+
+  it("도수 기호의 7화음도 전주·후주에서 실제 딸림화음으로 읽는다", () => {
+    expect(chordPitchClasses("I")).toEqual([0, 4, 7]);
+    expect(chordPitchClasses("IV")).toEqual([5, 9, 0]);
+    expect(chordPitchClasses("V7")).toEqual([7, 11, 2, 5]);
+  });
+
   it("화음 기호를 초등학생용 도수로 바꾼다", () => {
     expect(chordDegreeLabel("C/E")).toBe("1도");
     expect(chordDegreeLabel("B♭7")).toBe("♭7도");

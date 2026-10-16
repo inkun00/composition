@@ -8,8 +8,8 @@ function mod12(value: number): number {
 
 function rootPitchClass(symbol: string): { pitchClass: number; length: number } | null {
   const roman: Record<string, number> = { I: 0, IV: 5, V: 7 };
-  if (roman[symbol]) return { pitchClass: roman[symbol], length: symbol.length };
-  if (symbol === "I") return { pitchClass: 0, length: 1 };
+  const romanRoot = symbol.match(/^(IV|V|I)(?![IV])/);
+  if (romanRoot) return { pitchClass: roman[romanRoot[1]], length: romanRoot[1].length };
 
   const match = symbol.match(/^([A-G])([#♯b♭]?)/);
   if (!match) return null;
@@ -43,10 +43,13 @@ export function chordPitchClasses(rawSymbol: string): readonly number[] {
   else if (/^m(?!aj)/i.test(quality)) intervals = [0, 3, 7];
   else intervals = [0, 4, 7];
 
-  if (/maj7|\(maj7\)/i.test(quality)) intervals.push(11);
-  else if (/7|9|13/.test(quality)) intervals.push(10);
-  if (/^6/.test(quality)) intervals.push(9);
-  if (/9/.test(quality)) intervals.push(14);
+  const extensionQuality = quality.replace(/(?:add|omit|no)[#♯b♭]?\d+/gi, "");
+  if (/maj(?:7|9|11|13)/i.test(extensionQuality)) intervals.push(11);
+  else if (/(?:dim|°)7/i.test(extensionQuality)) intervals.push(9);
+  else if (/7|9|11|13/.test(extensionQuality)) intervals.push(10);
+  if (/^(?:m|maj)?6/i.test(quality)) intervals.push(9);
+  if (/9/.test(quality)) intervals.push(/[#♯]9/.test(quality) ? 15 : /[b♭]9/.test(quality) ? 13 : 14);
+  if (/11/.test(quality)) intervals.push(/[#♯]11/.test(quality) ? 18 : 17);
   if (/13/.test(quality)) intervals.push(21);
 
   const pitchClasses = intervals.map((interval) => root.pitchClass + interval);

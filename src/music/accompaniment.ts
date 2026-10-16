@@ -22,6 +22,9 @@ export type AccompanimentEvent = Readonly<{
   durationBeats: number;
   voice: "root" | "chord" | "step";
   step?: number;
+  velocity?: number;
+  strum?: "down" | "up";
+  sustain?: boolean;
 }>;
 
 export type AccompanimentLayerRole = Readonly<{
@@ -60,7 +63,7 @@ export const ACCOMPANIMENT_STYLES: readonly AccompanimentStyle[] = [
   },
   {
     id: "opera", name: "오페라 극장", alias: "오페라", category: "genre",
-    description: "긴 화음과 합창 소리가 천천히 이어져 웅장하게 들려요.",
+    description: "오르간과 현악기의 긴 화음에 호른이 대답하며 웅장하게 이어져요.",
     recommendedInstrumentIds: ["church_organ", "contrabass", "string_ensemble_1", "french_horn"]
   },
   {
@@ -115,7 +118,7 @@ export const ACCOMPANIMENT_MODES: readonly AccompanimentMode[] = [
     styleId: "kpop", instrumentIds: ["electric_piano_1", "electric_bass_finger", "electric_guitar_muted", "string_ensemble_1"]
   },
   {
-    id: "bounce_band", icon: "🚂", name: "신나는 바운스", description: "짧고 긴 박자가 번갈아 신나게 달려요",
+    id: "bounce_band", icon: "🚂", name: "신나는 바운스", description: "긴 박자와 짧은 박자가 짝을 이루며 신나게 달려요",
     styleId: "shuffle", instrumentIds: ["bright_acoustic_piano", "electric_bass_pick", "electric_guitar_muted", "marimba"]
   },
   {
@@ -176,7 +179,7 @@ function event(offsetBeats: number, durationBeats: number, voice: AccompanimentE
 function fitEvents(events: readonly AccompanimentEvent[], beats: number): readonly AccompanimentEvent[] {
   return events.filter((item) => item.offsetBeats >= 0 && item.offsetBeats < beats).map((item) => ({
     ...item,
-    durationBeats: Math.min(item.durationBeats, Math.max(.12, beats - item.offsetBeats))
+    durationBeats: Math.min(item.durationBeats, beats - item.offsetBeats)
   }));
 }
 
@@ -185,6 +188,7 @@ export function createAccompanimentPattern(
   beats: number,
   meter?: Meter
 ): readonly AccompanimentEvent[] {
+  if (!Number.isFinite(beats) || beats <= 0) return [];
   const events: AccompanimentEvent[] = [];
   const compoundSixEight = meter?.beats === 6 && meter.beatUnit === 8;
   if (compoundSixEight) {
@@ -325,6 +329,20 @@ const INSTRUMENT_PARTS: Readonly<Record<string, AccompanimentInstrumentPart>> = 
   orchestra_hit: PARTS.percussion
 };
 
+const INSTRUMENT_RANGES: Readonly<Record<string, AccompanimentInstrumentProfile["range"]>> = {
+  violin: [55, 88, 67],
+  viola: [48, 81, 60],
+  cello: [36, 67, 48],
+  flute: [60, 88, 74],
+  recorder: [60, 84, 72],
+  clarinet: [50, 86, 68],
+  oboe: [58, 86, 70],
+  french_horn: [41, 77, 58],
+  trumpet: [54, 82, 67],
+  trombone: [40, 72, 55],
+  timpani: [40, 57, 45]
+};
+
 export function accompanimentInstrumentPart(instrumentId: InstrumentId, layerIndex: number): AccompanimentInstrumentPart {
   const id = instrumentId.toLowerCase();
   const canonicalId = id === "piano" ? "acoustic_grand_piano" : id === "guitar" ? "acoustic_guitar_nylon" : id;
@@ -344,13 +362,13 @@ export function accompanimentInstrumentProfile(
   layerIndex: number
 ): AccompanimentInstrumentProfile {
   const part = accompanimentInstrumentPart(instrumentId, layerIndex);
-  const range: AccompanimentInstrumentProfile["range"] = part.id === "bass" ? [32, 52, 40]
+  const range: AccompanimentInstrumentProfile["range"] = INSTRUMENT_RANGES[instrumentId] ?? (part.id === "bass" ? [32, 52, 40]
     : part.id === "keys" ? [40, 72, 55]
     : part.id === "guitar" ? [48, 76, 61]
     : part.id === "strings" ? [48, 81, 63]
     : part.id === "winds" ? [58, 86, 71]
     : part.id === "percussion" ? [48, 81, 64]
-    : [48, 78, 61];
+    : [48, 78, 61]);
   const gain = instrumentId.includes("glockenspiel") || instrumentId.includes("orchestra_hit") ? .48
     : instrumentId.includes("timpani") || part.id === "winds" ? .68
     : part.id === "strings" ? .76
@@ -361,7 +379,7 @@ export function accompanimentInstrumentProfile(
     part,
     range,
     gain,
-    polyphonic: part.id === "keys" || /ensemble|choir/.test(instrumentId) ||
+    polyphonic: part.id === "keys" || part.id === "guitar" || /ensemble|choir/.test(instrumentId) ||
       instrumentId.includes("orchestra_hit")
   };
 }
@@ -372,6 +390,62 @@ function bassPulseOffsets(beats: number, meter?: Meter): readonly number[] {
     .filter((offset) => offset < beats);
 }
 
+function alternatingBass(beats: number, meter?: Meter): readonly AccompanimentEvent[] {
+  const pulse = meter?.beats === 6 && meter.beatUnit === 8 ? 1.5 : meter?.beats === 3 ? 3 : 2;
+  const events: AccompanimentEvent[] = [];
+  for (let offset = 0, index = 0; offset < beats; offset += pulse, index += 1) {
+    events.push(event(offset, Math.min(pulse * .72, beats - offset), index % 2 === 0 ? "root" : "step", 2));
+  }
+  return events;
+}
+
+function guitarStrums(beats: number, meter?: Meter): readonly AccompanimentEvent[] {
+  if (meter?.beats === 6 && meter.beatUnit === 8) {
+    return fitEvents([
+      { ...event(0, .9, "chord"), strum: "down", velocity: .95 },
+      { ...event(1, .32, "chord"), strum: "up", velocity: .62 },
+      { ...event(1.5, .9, "chord"), strum: "down", velocity: .84 },
+      { ...event(2.5, .32, "chord"), strum: "up", velocity: .58 }
+    ], beats);
+  }
+  const events: AccompanimentEvent[] = [];
+  for (let beat = 0; beat < beats; beat += 1) {
+    events.push({ ...event(beat, .68, "chord"), strum: "down", velocity: beat === 0 ? 1 : .82 });
+    if (beat % 2 === 1) events.push({ ...event(beat + .5, .3, "chord"), strum: "up", velocity: .58 });
+  }
+  return fitEvents(events, beats);
+}
+
+function bossaPart(beats: number, bass: boolean, meter?: Meter): readonly AccompanimentEvent[] {
+  if (meter?.beats === 6 && meter.beatUnit === 8) {
+    return fitEvents(bass
+      ? [event(0, 1.05, "root"), event(1.5, 1.05, "step", 2)]
+      : [event(0, .45, "chord"), event(1, .36, "chord"), event(2, .45, "chord"), event(2.5, .32, "chord")], beats);
+  }
+  const events: AccompanimentEvent[] = [];
+  for (let start = 0; start < beats; start += 4) {
+    events.push(...(bass ? [
+      event(start, 1.25, "root"), event(start + 1.5, .42, "step", 2),
+      event(start + 2, 1.25, "root"), event(start + 3.5, .42, "step", 2)
+    ] : [
+      event(start, .5, "chord"), event(start + 1.5, .38, "chord"),
+      event(start + 2.5, .5, "chord"), event(start + 3.5, .38, "chord")
+    ]));
+  }
+  return fitEvents(events, beats);
+}
+
+function shufflePart(beats: number, bass: boolean, meter?: Meter): readonly AccompanimentEvent[] {
+  const pulse = meter?.beats === 6 && meter.beatUnit === 8 ? 1.5 : 1;
+  const events: AccompanimentEvent[] = [];
+  const walk = [0, 1, 2, 1];
+  for (let start = 0, index = 0; start < beats; start += pulse, index += 1) {
+    events.push(event(start, pulse * .57, bass ? index === 0 ? "root" : "step" : "chord", walk[index % 4]));
+    if (!bass) events.push({ ...event(start + pulse * 2 / 3, pulse * .24, "chord"), velocity: .68 });
+  }
+  return fitEvents(events, beats);
+}
+
 export function createInstrumentAccompanimentPattern(
   styleId: AccompanimentStyleId,
   beats: number,
@@ -379,7 +453,37 @@ export function createInstrumentAccompanimentPattern(
   layerIndex: number,
   meter?: Meter
 ): readonly AccompanimentEvent[] {
+  if (!Number.isFinite(beats) || beats <= 0) return [];
   const part = accompanimentInstrumentPart(instrumentId, layerIndex);
+  const bass = part.id === "bass";
+  const rhythm = part.id === "keys" || part.id === "guitar" || part.id === "support";
+  if (styleId === "bossa" && (bass || rhythm)) return bossaPart(beats, bass, meter);
+  if (styleId === "bossa" && part.id === "percussion") {
+    const compound = meter?.beats === 6 && meter.beatUnit === 8;
+    return fitEvents([
+      event(compound ? 1 : Math.min(.5, beats / 2), .4, "step", 1),
+      event(compound ? 2.5 : Math.max(1.5, beats - .5), .4, "step", 2)
+    ], beats);
+  }
+  if (styleId === "shuffle" && (bass || rhythm)) return shufflePart(beats, bass, meter);
+  if (styleId === "shuffle" && part.id === "percussion") {
+    return shufflePart(beats, false, meter).map((item, index) => ({
+      ...item, voice: "step" as const, step: [0, 2, 1, 2][index % 4]
+    }));
+  }
+  if (styleId === "folk" && (bass || rhythm)) {
+    if (bass) return alternatingBass(beats, meter);
+    if (meter?.beats === 3 && meter.beatUnit === 4) return fitEvents([
+      event(0, .8, "root"), event(1, .65, "chord"), event(2, .65, "chord")
+    ], beats);
+    return createAccompanimentPattern("folk", beats, meter).map((item) =>
+      part.id === "guitar" && item.voice === "chord" ? { ...item, strum: "down" as const } : item);
+  }
+  if (styleId === "strum" && part.id === "guitar") return guitarStrums(beats, meter);
+  if (styleId === "comping" && rhythm) return createAccompanimentPattern("comping", beats, meter);
+  if ((styleId === "arpeggio" || styleId === "riff") && rhythm) {
+    return createAccompanimentPattern(styleId, beats, meter);
+  }
   if (styleId === "kpop") {
     if (instrumentId.includes("orchestra_hit")) return fitEvents([
       event(0, .3, "chord"), event(Math.max(.5, beats - .5), .3, "chord")
@@ -390,16 +494,21 @@ export function createInstrumentAccompanimentPattern(
     }
     if (part.id === "strings") return [event(0, beats, "chord")];
     if (part.id === "winds") return fitEvents([event(Math.max(0, beats - .5), .42, "chord")], beats);
-    if (part.id === "guitar" || part.id === "percussion") return createAccompanimentPattern("riff", beats, meter);
+    if (part.id === "guitar") return createAccompanimentPattern("kpop", beats, meter)
+      .filter((item) => item.voice !== "root").map((item) => ({ ...item, durationBeats: Math.min(.24, item.durationBeats) }));
+    if (part.id === "percussion") return createAccompanimentPattern("riff", beats, meter);
   }
   if (styleId === "children_song") {
     if (instrumentId.includes("pizzicato")) return createAccompanimentPattern("folk", beats, meter);
-    if (part.id === "bass" || part.id === "guitar") return createAccompanimentPattern("folk", beats, meter);
+    if (part.id === "bass") return alternatingBass(beats, meter);
+    if (part.id === "guitar") return createAccompanimentPattern("folk", beats, meter);
     if (part.id === "winds") return fitEvents([
       event(0, .42, "step", layerIndex),
       event(Math.max(.5, beats - 1), .42, "step", layerIndex + 1)
     ], beats);
-    if (part.id === "percussion") return createAccompanimentPattern("children_song", beats, meter);
+    if (part.id === "percussion") return fitEvents([
+      event(0, .38, "step", 1), event(Math.max(.5, beats - 1), .38, "step", 2)
+    ], beats);
   }
   if (styleId === "animation_ost") {
     if (instrumentId.includes("harp")) return createAccompanimentPattern("arpeggio", beats, meter);
@@ -413,7 +522,7 @@ export function createInstrumentAccompanimentPattern(
   }
   if (styleId === "opera") {
     if (part.id === "bass" || part.id === "strings" || part.id === "keys") {
-      return [event(0, beats, part.id === "bass" ? "root" : "chord")];
+      return [{ ...event(0, beats, part.id === "bass" ? "root" : "chord"), sustain: true }];
     }
     if (part.id === "winds") return fitEvents([
       event(0, .7, "chord"), event(Math.max(.5, beats - .75), .68, "step", layerIndex)
@@ -438,13 +547,15 @@ export function createInstrumentAccompanimentPattern(
       : beats >= 3 ? [0, Math.min(2, beats - .5)] : [0];
     return offsets.map((offset) => event(offset, Math.min(.82, beats - offset), "root"));
   }
-  if (part.id === "strings") return [event(0, beats, "chord")];
+  if (part.id === "strings") return instrumentId.includes("pizzicato")
+    ? createAccompanimentPattern("folk", beats, meter)
+    : [{ ...event(0, beats, "chord"), sustain: true }];
   if (part.id === "winds") {
     const ending = Math.max(.5, beats - .75);
     return [event(0, .48, "chord"), event(ending, Math.min(.48, beats - ending), "step", layerIndex)];
   }
   if (part.id === "percussion") return createAccompanimentPattern("riff", beats, meter);
-  if (part.id === "guitar") return createAccompanimentPattern(styleId === "strum" ? "strum" : "arpeggio", beats, meter);
+  if (part.id === "guitar") return createAccompanimentPattern(styleId, beats, meter);
   return createAccompanimentPattern(styleId, beats, meter);
 }
 

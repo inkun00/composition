@@ -1,7 +1,8 @@
 import { Scheduler, type NoteEvent, type SmplrOptions, type SoundfontOptions } from "smplr";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { INSTRUMENTS } from "../music/instruments";
-import { isSampleBackedInstrument, loadSampleInstrument, queueSampleNote, resetSampleInstrumentCache } from "./samplePlayer";
+import { isSampleBackedInstrument, loadSampleInstrument, queueSampleNote, releaseSampleContext,
+  releaseSampleInstrument, resetSampleInstrumentCache } from "./samplePlayer";
 
 const { soundfontMock, dispatched } = vi.hoisted(() => ({ soundfontMock: vi.fn(), dispatched: vi.fn() }));
 vi.mock("smplr", async (importActual) => ({
@@ -29,7 +30,8 @@ beforeEach(() => {
     // catches the offline lookahead bug instead of merely counting start calls.
     return {
       ready: Promise.resolve(),
-      start: (event: NoteEvent) => scheduler.schedule(event, dispatched)
+      start: (event: NoteEvent) => scheduler.schedule(event, dispatched),
+      dispose: vi.fn(() => scheduler.stop())
     };
   });
 });
@@ -45,6 +47,17 @@ afterEach(() => {
 describe("실제 악기 샘플 연결", () => {
   it("화면의 모든 악기가 샘플 재생을 지원한다", () => {
     expect(INSTRUMENTS.every((instrument) => isSampleBackedInstrument(instrument.id))).toBe(true);
+  });
+
+  it("검증한 관악기와 현악기는 루프를 쓰고 피아노와 기타의 자연 감쇠는 유지한다", async () => {
+    const context = { currentTime: 0 } as BaseAudioContext;
+    const destination = {} as AudioNode;
+    for (const id of ["clarinet", "recorder", "flute", "violin", "cello", "piri", "piano", "guitar"]) {
+      await loadSampleInstrument(context, destination, id);
+    }
+    const options = soundfontMock.mock.calls.map(([, options]) => options);
+    expect(options.slice(0, 6).every((options) => options.loadLoopData && options.loader)).toBe(true);
+    expect(options.slice(6).every((options) => !options.loadLoopData && !options.loader)).toBe(true);
   });
 
   it("offline 렌더 시작 전에 늦은 음표까지 모두 실제 scheduler에서 dispatch한다", async () => {
@@ -82,5 +95,35 @@ describe("실제 악기 샘플 연결", () => {
     queueSampleNote(loaded, context, destination, 67, 719, 1, 0.09);
     expect(dispatched).toHaveBeenCalledWith(expect.objectContaining({ note: 67, time: 719, duration: 1 }));
     expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("한 재생 context 정리는 동시에 준비된 offline 샘플을 해제하지 않는다", async () => {
+    const live = { currentTime: 0 } as BaseAudioContext;
+    const offline = new OfflineContextMock() as unknown as OfflineAudioContext;
+    const destination = {} as AudioNode;
+    const liveSample = await loadSampleInstrument(live, destination, "flute");
+    const offlineSample = await loadSampleInstrument(offline, destination, "violin");
+    releaseSampleContext(live);
+    await Promise.resolve();
+    expect(liveSample.player.dispose).toHaveBeenCalledOnce();
+    expect(offlineSample.player.dispose).not.toHaveBeenCalled();
+    expect(await loadSampleInstrument(offline, destination, "violin")).toBe(offlineSample);
+  });
+
+  it("시간 초과로 해제한 샘플이 나중에 준비되어도 즉시 폐기한다", async () => {
+    const context = { currentTime: 0 } as BaseAudioContext;
+    const destination = {} as AudioNode;
+    let finishLoad = () => {};
+    const dispose = vi.fn();
+    soundfontMock.mockImplementationOnce(() => ({
+      ready: new Promise<void>((resolve) => { finishLoad = resolve; }), dispose
+    }));
+    const pending = loadSampleInstrument(context, destination, "flute");
+    releaseSampleInstrument(context, destination, "flute");
+    finishLoad();
+    await pending;
+    await Promise.resolve();
+    expect(dispose).toHaveBeenCalledOnce();
+    expect(await loadSampleInstrument(context, destination, "flute")).not.toBe(await pending);
   });
 });

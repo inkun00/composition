@@ -25,7 +25,7 @@ export default function OpeningScreen({ hasDraft, onStart, onContinue, onPractic
         <p><strong>네 마음속 장면이 노래가 되는 곳</strong><br />친구들과 함께 첫 멜로디를 만들어 봐요.</p>
         <div className="opening-actions">
           <button type="button" className="opening-start action-button" onClick={onStart}>
-            <WandSparkles size={20} /> 추천 가락으로 만들기 <ArrowRight size={18} />
+            <WandSparkles size={20} /> 새로 시작하기 <ArrowRight size={18} />
           </button>
           <button type="button" className="opening-continue action-button" disabled={!hasDraft} onClick={onContinue}>
             <Music2 size={19} /> 이어 만들기

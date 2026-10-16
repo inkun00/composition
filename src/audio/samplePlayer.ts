@@ -1,5 +1,6 @@
 import { Scheduler, Soundfont } from "smplr";
 import { INSTRUMENTS, type InstrumentId } from "../music/instruments";
+import { soundfontSustainOptions } from "./soundfontSustain";
 
 type LoadedInstrument = Readonly<{ kind: "soundfont"; player: Soundfont }>;
 
@@ -18,6 +19,7 @@ const soundFontIds = new Set<string>([
 ]);
 
 const loaded = new Map<string, Promise<LoadedInstrument>>();
+const contextKeys = new WeakMap<BaseAudioContext, Set<string>>();
 const nodeIds = new WeakMap<object, number>();
 let nextNodeId = 1;
 let tempContext: AudioContext | null = null;
@@ -77,9 +79,15 @@ async function loadSoundFont(
     instrument: mapInstrumentId(id),
     kit: "FluidR3_GM",
     destination,
+    ...soundfontSustainOptions(context, mapInstrumentId(id)),
     ...(scheduler ? { scheduler } : {})
   });
-  await player.ready;
+  try {
+    await player.ready;
+  } catch (error) {
+    player.dispose?.();
+    throw error;
+  }
   return { kind: "soundfont", player };
 }
 
@@ -93,7 +101,15 @@ export function loadSampleInstrument(
   if (existing) return existing;
   const pending = loadSoundFont(context, destination, id);
   loaded.set(key, pending);
-  pending.catch(() => loaded.delete(key));
+  const keys = contextKeys.get(context) ?? new Set<string>();
+  keys.add(key);
+  contextKeys.set(context, keys);
+  pending.catch(() => {
+    if (loaded.get(key) === pending) {
+      loaded.delete(key);
+      keys.delete(key);
+    }
+  });
   return pending;
 }
 
@@ -102,7 +118,8 @@ export async function preloadInstrument(id: InstrumentId): Promise<void> {
     tempContext ??= new AudioContext();
     const player = Soundfont(tempContext, {
       instrument: mapInstrumentId(id),
-      kit: "FluidR3_GM"
+      kit: "FluidR3_GM",
+      ...soundfontSustainOptions(tempContext, mapInstrumentId(id))
     });
     await player.ready;
   } catch (error) {
@@ -133,6 +150,7 @@ export function isSampleBackedInstrument(id: InstrumentId): boolean {
 }
 
 export function resetSampleInstrumentCache(): void {
+  loaded.forEach((pending) => void pending.then((instrument) => instrument.player.dispose?.(), () => undefined));
   loaded.clear();
 }
 
@@ -142,5 +160,19 @@ export function releaseSampleInstrument(
   destination: AudioNode,
   id: InstrumentId
 ): void {
-  loaded.delete(cacheKey(context, destination, id));
+  const key = cacheKey(context, destination, id);
+  const pending = loaded.get(key);
+  loaded.delete(key);
+  contextKeys.get(context)?.delete(key);
+  // Timed-out loads may still finish later; dispose them on resolution as well.
+  if (pending) void pending.then((instrument) => instrument.player.dispose?.(), () => undefined);
+}
+
+export function releaseSampleContext(context: BaseAudioContext): void {
+  contextKeys.get(context)?.forEach((key) => {
+    const pending = loaded.get(key);
+    loaded.delete(key);
+    if (pending) void pending.then((instrument) => instrument.player.dispose?.(), () => undefined);
+  });
+  contextKeys.delete(context);
 }

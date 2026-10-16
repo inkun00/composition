@@ -4,6 +4,7 @@ import { isValidInstrumentId } from "./instruments";
 import { isSoundEffectId } from "./soundEffects";
 import { isSongLength } from "./songLength";
 import type { NoteEvent, SoundEffectEvent } from "./types";
+import { isValidAccompanimentTrackMix } from "./accompanimentMix";
 
 export type SaveIssueTarget = "title" | "creator" | "description" | "measure" | "settings" | "cloud";
 
@@ -62,6 +63,7 @@ export function findDraftSaveIssues(draft: SavedDraft): SaveIssue[] {
     (draft.accompanimentInstrumentIds !== undefined && (draft.accompanimentInstrumentIds.length > MAX_SAVED_ACCOMPANIMENT_INSTRUMENTS ||
       new Set(draft.accompanimentInstrumentIds).size !== draft.accompanimentInstrumentIds.length ||
       !draft.accompanimentInstrumentIds.every(isValidInstrumentId))) ||
+    (draft.accompanimentTrackMix !== undefined && !isValidAccompanimentTrackMix(draft.accompanimentTrackMix)) ||
     (draft.bpm !== undefined && (!Number.isInteger(draft.bpm) || draft.bpm < 40 || draft.bpm > 220))) {
     issues.push({ target: "settings", message: "악기나 빠르기 설정에 저장할 수 없는 값이 있어요." });
   }

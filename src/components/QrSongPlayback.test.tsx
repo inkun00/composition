@@ -29,6 +29,7 @@ const composition: SharedComposition = {
   instrumentId: "piano",
   accompanimentStyleId: "arpeggio",
   accompanimentInstrumentIds: ["piano"],
+  accompanimentTrackMix: { acoustic_grand_piano: { volume: 45, muted: false } },
   beatPattern: [{ id: "beat-1", instrumentId: "kick", measureIndex: 0, offsetBeats: 0 }],
   beatVolume: 120,
   bpm: 96,
@@ -72,7 +73,8 @@ describe("QR 악보 노래 재생", () => {
         styleId: "arpeggio",
         meter: composition.meter,
         beatPattern: composition.beatPattern,
-        beatVolume: 120
+        beatVolume: 120,
+        trackMix: composition.accompanimentTrackMix
       }),
       true
     );

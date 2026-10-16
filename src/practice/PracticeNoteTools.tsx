@@ -20,7 +20,7 @@ function beatText(beats: number): string {
 
 export default function PracticeNoteTools({
   notes, step, inputMode, selectedNoteId, disabled = false,
-  rhythmLocked = false, allowMelodyAppend = false,
+  rhythmLocked = false,
   appendDuration, appendRest, onAppendDurationChange, onAppendRestChange,
   onPitch, onDuration, onDelete
 }: PracticeEditorsProps) {
@@ -98,22 +98,9 @@ export default function PracticeNoteTools({
       </p>}
       {step === "melody" && (
         <div className="practice-melody-tools">
-          <div className="practice-pitch-options" role="group" aria-label="선택한 음표의 음높이">
-            {PRACTICE_PITCHES.map((entry) => (
-              <button type="button" key={entry.pitch}
-                disabled={disabled || !selected || selected.pitch === null}
-                style={{ backgroundColor: entry.color }} aria-pressed={selected?.pitch === entry.pitch}
-                data-testid={`practice-pitch-${entry.pitch}`}
-                aria-label={`선택한 음표를 ${entry.label}로 바꾸기`}
-                onClick={() => {
-                  if (selected && selected.pitch !== null) onPitch(selected.id, entry.pitch);
-                }}>{entry.label}</button>
-            ))}
-          </div>
           <div className="practice-pitch-navigation">
-            <span>{selected ? `${notes.findIndex((note) => note.id === selected.id) + 1}번째 ${selectedLabel} 선택`
-              : allowMelodyAppend ? "빈칸에 음표를 넣고 높낮이를 바꿔요." : "먼저 음표를 선택해 주세요."}</span>
-            {!rhythmLocked && <label className="practice-selected-duration">길이
+            {selected && <span>{notes.findIndex((note) => note.id === selected.id) + 1}번째 {selectedLabel} 선택</span>}
+            {!rhythmLocked && <label className="practice-selected-duration">
               <select aria-label="선택한 음표 길이" data-testid="practice-edit-duration"
                 disabled={disabled || !selected} value={selected ? toNumber(selected.duration) : ""}
                 onChange={(event) => {

@@ -180,6 +180,7 @@ export default function QrSongPlayback({ composition, songId = "" }: Readonly<{
           styleId: findAccompanimentStyle(activeComposition.accompanimentStyleId ?? "arpeggio").id,
           instrumentIds: (activeComposition.accompanimentInstrumentIds ?? ["acoustic_grand_piano"])
             .map((id) => findInstrument(id).id),
+          trackMix: activeComposition.accompanimentTrackMix,
           beatPattern: activeComposition.beatPattern,
           beatVolume: activeComposition.beatVolume,
           meter: activeComposition.meter

@@ -3,6 +3,7 @@ import {
   drawVideoText, measureFraction, practiceVideoTrackBounds, roundedVideoRect
 } from "./practiceVideoLayout";
 import { drawPracticeVideoPulse } from "./practiceVideoMotion";
+import { drawPracticeVideoRhythmSymbol } from "./practiceVideoRhythmSymbol";
 import type { PracticeVideoMeasure, PracticeVideoNote, PracticeVideoPlan } from "./practiceVideoTypes";
 
 function pitchRange(notes: readonly PracticeVideoNote[]): { low: number; high: number } {
@@ -12,7 +13,7 @@ function pitchRange(notes: readonly PracticeVideoNote[]): { low: number; high: n
 
 function barNoteLabel(note: PracticeVideoNote): string {
   if (note.rest) return "쉼";
-  if (note.visualPitch === null) return "리듬";
+  if (note.visualPitch === null) return "";
   return pitchName(note.visualPitch, note.note.accidental);
 }
 
@@ -84,7 +85,8 @@ export function drawPracticeVideoBars(
         }
 
         context.textAlign = "center";
-        drawVideoText(context, barNoteLabel(note), barBounds.x + noteWidth / 2, centerY,
+        if (track.rhythm) drawPracticeVideoRhythmSymbol(context, note.note, barBounds);
+        else drawVideoText(context, barNoteLabel(note), barBounds.x + noteWidth / 2, centerY,
           Math.max(1, noteWidth - 6), Math.max(11, Math.min(19, height - 2)), "#fff", 700);
         drawVideoText(context, note.note.lyric?.trim() ?? "", noteStart + (noteEnd - noteStart) / 2,
           chartBottom + 18, Math.max(1, noteWidth - 2), 18, "#fff", active ? 700 : 500);

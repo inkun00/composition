@@ -48,6 +48,12 @@ function button(testId: string): HTMLButtonElement {
   return result;
 }
 
+function labeledButton(label: string): HTMLButtonElement {
+  const result = container?.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`);
+  if (!result) throw new Error(`${label} 버튼을 찾지 못했습니다.`);
+  return result;
+}
+
 function lyricInput(label: string): HTMLInputElement {
   const result = container?.querySelector<HTMLInputElement>(`input[aria-label="${label}"]`);
   if (!result) throw new Error(`${label} 입력을 찾지 못했습니다.`);
@@ -91,11 +97,25 @@ describe("리듬과 가락 연습 입력", () => {
     expect(props.onAdd).toHaveBeenCalledWith(0.25, null, undefined, 1);
   });
 
-  it("가락만들기의 음높이 도구는 이미 놓인 음표만 바꾼다", () => {
+  it("가락만들기의 음높이 도구는 음표를 선택하기 전에는 추가하거나 바꾸지 않는다", () => {
     const props = mount({ step: "melody", allowMelodyAppend: true, appendDuration: 1.5 }, true);
-    expect(button("practice-pitch-72").disabled).toBe(true);
-    act(() => button("practice-pitch-72").click());
+    const up = labeledButton("선택한 음표 한 음 높이기");
+    const down = labeledButton("선택한 음표 한 음 낮추기");
+    expect(up.disabled).toBe(true);
+    expect(down.disabled).toBe(true);
+    act(() => {
+      up.click();
+      down.click();
+    });
     expect(props.onAdd).not.toHaveBeenCalled();
+    expect(props.onPitch).not.toHaveBeenCalled();
+  });
+
+  it("가락만들기에서는 음표를 선택하지 않아도 높은 도 빈칸으로 고른 길이의 첫 음을 넣는다", () => {
+    const props = mount({ step: "melody", allowMelodyAppend: true, appendDuration: 1.5 });
+    expect(button("practice-melody-empty-72-0").disabled).toBe(false);
+    act(() => button("practice-melody-empty-72-0").click());
+    expect(props.onAdd).toHaveBeenCalledWith(1.5, 72, true, 0);
     expect(props.onPitch).not.toHaveBeenCalled();
   });
 
@@ -108,20 +128,42 @@ describe("리듬과 가락 연습 입력", () => {
     expect(container?.querySelector('[data-testid="practice-delete-note"]')).toBeNull();
     expect(container?.querySelector('[data-testid="practice-edit-duration"]')).toBeNull();
     expect(container?.querySelector(".practice-melody-empty-slot")).toBeNull();
-    act(() => button("practice-pitch-67").click());
+    act(() => button("practice-melody-first-67").click());
     expect(props.onPitch).toHaveBeenCalledWith("first", 67);
     expect(props.onAdd).not.toHaveBeenCalled();
     expect(props.onDelete).not.toHaveBeenCalled();
     expect(props.onDuration).not.toHaveBeenCalled();
   });
 
-  it("가락만들기에서도 연주 중에는 빈칸과 첫 음높이 입력을 잠근다", () => {
+  it("가락만들기에서도 연주 중에는 서로 다른 높이의 빈칸 입력을 모두 잠근다", () => {
     const props = mount({ step: "melody", allowMelodyAppend: true, disabled: true });
     act(() => {
       button("practice-melody-empty-67-0").click();
-      button("practice-pitch-72").click();
+      button("practice-melody-empty-72-0").click();
     });
     expect(props.onAdd).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { inputMode: "grid" as const, rhythmLocked: false },
+    { inputMode: "score" as const, rhythmLocked: false },
+    { inputMode: "grid" as const, rhythmLocked: true },
+    { inputMode: "score" as const, rhythmLocked: true }
+  ])("$inputMode 가락 도구에서 리듬 잠금=$rhythmLocked여도 별도의 색깔 음높이 줄과 안내를 표시하지 않는다", ({ inputMode, rhythmLocked }) => {
+    const props = mount({
+      step: "melody", inputMode, rhythmLocked, allowMelodyAppend: !rhythmLocked,
+      notes: [{ id: "first", pitch: 67, duration: rational(1), lyric: "별" }], selectedNoteId: "first"
+    });
+    expect(container?.querySelector(".practice-pitch-options")).toBeNull();
+    expect(container?.querySelector('[data-testid^="practice-pitch-"]')).toBeNull();
+    expect(container?.textContent).not.toContain("음높이를 누르면 새 음표가 생겨요.");
+    if (!rhythmLocked) {
+      expect(button("practice-duration-1").disabled).toBe(false);
+      expect(button("practice-choose-rest").disabled).toBe(false);
+    }
+    act(() => labeledButton(inputMode === "score" ? "선택한 음표 반음 높이기" : "선택한 음표 한 음 높이기").click());
+    expect(props.onPitch).toHaveBeenCalledWith("first", inputMode === "score" ? 68 : 69);
+    expect(props.onDuration).not.toHaveBeenCalled();
   });
 
   it("음표와 쉼표 선택은 배치와 분리하고 클릭한 박자를 전달한다", () => {
@@ -298,6 +340,11 @@ describe("리듬과 가락 연습 입력", () => {
       step: "melody",
       selectedNoteId: "note"
     });
+    const durationControl = container?.querySelector(".practice-selected-duration");
+    const durationSelect = durationControl?.querySelector("select");
+    expect(durationControl?.textContent).not.toContain("길이");
+    expect(durationSelect?.getAttribute("aria-label")).toBe("선택한 음표 길이");
+    expect(durationSelect?.value).toBe("1");
     editDuration("1.5");
     expect(props.onDuration).toHaveBeenCalledWith("note", 1.5, true);
     act(() => button("practice-duration-1.5").click());
@@ -320,7 +367,9 @@ describe("리듬과 가락 연습 입력", () => {
     expect(props.onSelectNote).toHaveBeenCalledWith("rest");
     editDuration("0.5");
     expect(props.onDuration).toHaveBeenCalledWith("rest", .5, undefined);
-    expect(button("practice-pitch-60").disabled).toBe(true);
+    expect(labeledButton("선택한 음표 한 음 높이기").disabled).toBe(true);
+    act(() => labeledButton("선택한 음표 한 음 높이기").click());
+    expect(props.onPitch).not.toHaveBeenCalled();
     act(() => button("practice-delete-note").click());
     expect(props.onDelete).toHaveBeenCalledWith("rest");
   });
@@ -390,7 +439,7 @@ describe("리듬과 가락 연습 입력", () => {
     expect(container?.querySelector(".practice-lyric-rest")?.textContent).toBe("—");
   });
 
-  it("악보에서 끌거나 키보드로 반음을 입력하고 팔레트도 같은 음표를 편집한다", () => {
+  it("악보에서 끌거나 키보드로 반음을 입력하고 높이기 버튼도 같은 음표를 편집한다", () => {
     const props = mount({
       notes: [{ id: "note", pitch: 60, duration: rational(1) }],
       step: "melody",
@@ -402,8 +451,9 @@ describe("리듬과 가락 연습 입력", () => {
     expect(props.onDelete).not.toHaveBeenCalled();
     act(() => button("score-note-note").dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true })));
     expect(props.onPitch).toHaveBeenCalledWith("note", 61);
-    act(() => button("practice-pitch-72").click());
-    expect(props.onPitch).toHaveBeenLastCalledWith("note", 72);
+    act(() => labeledButton("선택한 음표 반음 높이기").click());
+    expect(props.onPitch).toHaveBeenLastCalledWith("note", 61);
+    expect(props.onPitch).toHaveBeenCalledTimes(2);
     expect(props.onDuration).not.toHaveBeenCalled();
   });
 
@@ -462,7 +512,7 @@ describe("리듬과 가락 연습 입력", () => {
       selectedNoteId: "note",
       disabled: true
     });
-    act(() => button("practice-pitch-72").click());
+    act(() => labeledButton("선택한 음표 반음 높이기").click());
     act(() => button("score-note-note").click());
     act(() => button("score-note-note").dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true })));
     expect(props.onPitch).not.toHaveBeenCalled();

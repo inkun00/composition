@@ -54,12 +54,13 @@ try {
   }
 
   async function assertPopupKeyboard() {
+    const scrollBefore = await page.evaluate(() => window.scrollY);
     await firstMode.focus();
     for (const key of ["Tab", "Tab", "Tab", "Tab", "Shift+Tab", "Shift+Tab", "Shift+Tab", "Shift+Tab"]) {
       await page.keyboard.press(key);
       assert.equal(await chooser.evaluate((dialog) => dialog.contains(document.activeElement)), true, key);
     }
-    assert.equal(await page.evaluate(() => window.scrollY), 0);
+    assert.equal(await page.evaluate(() => window.scrollY), scrollBefore);
   }
 
   async function assertPolishedPopupAtViewports() {
@@ -188,6 +189,12 @@ try {
   const preview = page.getByTestId("practice-measure-preview-0");
   const melodyTab = page.getByRole("tab", { name: /가락 만들기/ });
   const rhythmTab = page.getByRole("tab", { name: /리듬 만들기/ });
+  async function assertNoPitchPalette() {
+    assert.equal(await tools.locator(".practice-pitch-options").count(), 0);
+    assert.equal(await tools.getByRole("group", { name: "선택한 음표의 음높이", exact: true }).count(), 0);
+    assert.equal(await tools.locator('[data-testid^="practice-pitch-"]').count(), 0);
+    assert.equal(await page.getByText("음높이를 누르면 새 음표가 생겨요.", { exact: true }).count(), 0);
+  }
   const empty = await draft();
   assert.equal(empty.mode, "melody");
   assert.ok(empty.measures.every((measure) => measure.notes.length === 0));
@@ -195,10 +202,23 @@ try {
   assert.equal(await rhythmTab.count(), 0);
   assert.equal(await preview.innerText(), "미리 듣기");
   assert.equal(await preview.isEnabled(), false);
+  await assertNoPitchPalette();
 
   // The first note comes directly from the empty pitch grid, without a rhythm step.
   await page.getByTestId("practice-melody-empty-67-0").click();
+  assert.equal(await page.locator(".practice-pitch-row-label").count(), 8);
+  await page.getByRole("button", { name: "악보에 넣기", exact: true }).click();
+  await assertNoPitchPalette();
+  const staffNotes = page.getByTestId("practice-measure-card-0").locator("g.note-button");
+  await staffNotes.first().press("ArrowUp");
+  assert.equal((await draft()).measures[0].notes[0].pitch, 68);
+  await tools.getByRole("button", { name: "선택한 음표 반음 낮추기", exact: true }).click();
+  assert.equal((await draft()).measures[0].notes[0].pitch, 67);
+  // Adding another note still works in staff view without the removed palette.
   await tools.getByTestId("practice-duration-1").click();
+  await staffNotes.nth(1).press("ArrowUp");
+  assert.equal((await draft()).measures[0].notes[1].pitch, 61);
+  await page.getByRole("button", { name: "칸 채우기", exact: true }).click();
   const second = (await draft()).measures[0].notes[1];
   await page.getByTestId(`practice-melody-${second.id}-64`).click();
   assert.deepEqual((await draft()).measures[0].notes.map((note) => note.pitch), [67, 64]);
@@ -230,7 +250,8 @@ try {
     assert.equal(await page.getByTestId("practice-score-workspace-0").evaluate((element) => element === window.practiceWorkspaceElement), true);
     assert.deepEqual(await draft(), beforeCancelledMode);
     try {
-      await page.waitForFunction(() => document.activeElement === document.querySelector(".practice-mode-current button"), null, { timeout: 3000 });
+      await page.waitForFunction(() => [...document.querySelectorAll(".practice-mode-current button")]
+        .some((button) => button.textContent.trim() === "모드 바꾸기" && document.activeElement === button), null, { timeout: 3000 });
     } catch (error) {
       const details = await page.getByRole("button", { name: "모드 바꾸기", exact: true }).evaluate((button) => ({
         active: document.activeElement?.outerHTML.slice(0, 200), disabled: button.disabled,
@@ -296,11 +317,17 @@ try {
   assert.equal(await melodyTab.isEnabled(), true);
   await melodyTab.click();
   assert.equal(await melodyTab.getAttribute("aria-selected"), "true");
+  await assertNoPitchPalette();
   assert.equal(await page.getByTestId("practice-score-workspace-1").count(), 0);
   assert.equal(await page.getByLabel("리듬 연주 악기", { exact: true }).count(), 0);
   assert.equal(await page.getByRole("button", { name: "리듬 함께 듣기", exact: true }).count(), 0);
   assert.equal(await tools.getByTestId("practice-duration-1").count(), 0);
   assert.equal(await tools.getByTestId("practice-edit-duration").count(), 0);
+  const firstMelodyNote = (await draft()).measures[0].notes[0];
+  await page.getByTestId(`practice-melody-${firstMelodyNote.id}-69`).click();
+  assert.equal((await draft()).measures[0].notes[0].pitch, 69);
+  await tools.getByRole("button", { name: "선택한 음표 한 음 낮추기", exact: true }).click();
+  assert.equal((await draft()).measures[0].notes[0].pitch, 67);
   assert.equal(await page.getByRole("button", { name: "가락 미리듣기", exact: true }).isEnabled(), true);
   assert.deepEqual((await draft()).measures, completedMeasures);
   assert.deepEqual((await draft()).rhythmLayers, audibleLayer);
@@ -310,6 +337,10 @@ try {
     page.getByRole("button", { name: "가락 미리듣기", exact: true }), "연주 멈추기"
   );
   await page.screenshot({ path: path.join(outputDir, "combined-desktop.png"), fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await assertNoPitchPalette();
+  await page.screenshot({ path: path.join(outputDir, "combined-mobile.png"), fullPage: true });
+  await page.setViewportSize({ width: 1440, height: 1080 });
 
   const media = await page.evaluate(({ melodyBuffer, rhythmBuffer, isolatedMelodyBuffer,
     extraRhythmBuffer, combinedBuffer, combinedScoreBuffer, combinedWholeBuffer }) => {
@@ -399,6 +430,7 @@ try {
   assert.equal(await rhythmTab.count(), 0);
   assert.equal(await page.getByTestId("practice-score-workspace-1").count(), 0);
   await page.setViewportSize({ width: 390, height: 844 });
+  await assertNoPitchPalette();
   await page.screenshot({ path: path.join(outputDir, "melody-mobile.png"), fullPage: true });
   const mobile = await page.evaluate(() => ({
     viewport: window.innerWidth,

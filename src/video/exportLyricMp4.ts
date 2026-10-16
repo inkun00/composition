@@ -45,7 +45,7 @@ async function decodeRecording(audioUrl: string): Promise<AudioBuffer> {
 }
 
 export async function exportLyricMp4(
-  audioUrl: string,
+  audioSource: string | AudioBuffer,
   plan: LyricVideoPlan,
   onProgress: (percent: number) => void,
   signal?: AbortSignal,
@@ -59,7 +59,7 @@ export async function exportLyricMp4(
     throw new Error("가사를 한 글자 이상 적은 뒤 다시 녹음해 주세요.");
   }
   onProgress(2);
-  const audioBuffer = await decodeRecording(audioUrl);
+  const audioBuffer = typeof audioSource === "string" ? await decodeRecording(audioSource) : audioSource;
   checkAbort();
   onProgress(8);
 
@@ -112,7 +112,7 @@ export async function exportLyricMp4(
       });
       previousMeasure = frame.measureIndex;
       onProgress(18 + Math.round(77 * (index + 1) / plan.frames.length));
-      if (index % 8 === 0) await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      if (index % 8 === 0) await new Promise<void>((resolve) => setTimeout(resolve, 0));
     }
 
     checkAbort();

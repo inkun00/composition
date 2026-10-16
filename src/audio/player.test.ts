@@ -19,11 +19,11 @@ describe("녹음용 반주", () => {
     expect(karaokeBackingGainForRms(.03)).toBeGreaterThan(.9);
   });
 
-  it("첫 마디부터 최소 두 역할을 유지하고 구절에 따라 풍성해진다", () => {
+  it("첫 마디부터 선택한 모든 역할을 유지한다", () => {
     const opening = recordingArrangementPlan(0, 8, 4);
     const secondPhrase = recordingArrangementPlan(4, 8, 4);
-    expect(opening.layerCount).toBe(2);
-    expect(opening.energy).toBeGreaterThanOrEqual(.98);
+    expect(opening.layerCount).toBe(4);
+    expect(opening.energy).toBeGreaterThanOrEqual(.85);
     expect(secondPhrase.layerCount).toBeGreaterThanOrEqual(opening.layerCount);
     expect(secondPhrase.layerCount).toBeLessThanOrEqual(4);
   });
@@ -32,8 +32,8 @@ describe("녹음용 반주", () => {
     const building = recordingArrangementPlan(4, 16, 4);
     const breathing = recordingArrangementPlan(8, 16, 4);
     const finale = recordingArrangementPlan(12, 16, 4);
-    expect(breathing.layerCount).toBeLessThan(building.layerCount);
-    expect(finale.layerCount).toBeGreaterThan(breathing.layerCount);
+    expect(breathing.layerCount).toBe(building.layerCount);
+    expect(finale.layerCount).toBe(breathing.layerCount);
     expect(finale.energy).toBeGreaterThan(breathing.energy);
   });
 });

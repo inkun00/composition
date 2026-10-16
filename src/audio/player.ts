@@ -1,36 +1,23 @@
+import { renderRealtimeBackingMp3, renderOfflineBackingMp3 } from "./backingExport";
+import { renderMelodyPreview } from "./melodyPreview";
+import { createProtectedMaster, measureSeconds, compositionSeconds,
+  songArrangementPlan, recordingArrangementPlan, buildIntroMeasures, buildOutroMeasures, scheduleMeasure, prepareAccompaniment,
+  type PlaybackMeasure, type AccompanimentOptions } from "./accompanimentScore";
+import { loadSampleWithTimeout, loadAccompanimentLayers, releaseAccompanimentRuntime } from "./accompanimentRuntime";
+export type { PlaybackMeasure, AccompanimentOptions } from "./accompanimentScore";
+export { compositionIntroDuration, recordingArrangementPlan } from "./accompanimentScore";
 import { toNumber } from "../music/rational";
-import { chordMidiPitches } from "../music/chord";
-import { accompanimentInstrumentPart, accompanimentInstrumentProfile, accompanimentLayerRole, createAccompanimentPattern, createInstrumentAccompanimentPattern, createInstrumentTransitionFill, transposeOctaves, type AccompanimentInstrumentProfile, type AccompanimentStyleId } from "../music/accompaniment";
-import { findInstrument, type Instrument, type InstrumentId } from "../music/instruments";
-import type { Meter } from "../music/meter";
-import { loadSampleInstrument, queueSampleNote, resetSampleInstrumentCache } from "./samplePlayer";
-import { queueSoundEffect } from "./soundEffects";
-import { isSoundEffectId } from "../music/soundEffects";
+import { createAccompanimentPattern } from "../music/accompaniment";
+import { findInstrument, type InstrumentId } from "../music/instruments";
+import { loadSampleInstrument, releaseSampleContext } from "./samplePlayer";
 import type { HarmonyStory, NoteEvent, SoundEffectEvent } from "../music/types";
-import { Mp3Encoder } from "@breezystack/lamejs";
-import { scheduleBeatPattern } from "./drumGroove";
-import { beatPatternInstrumentIds, type BeatPatternEvent } from "../music/beatPattern";
-import { preloadBeatSamples } from "./beatSamples";
+import { renderKaraokePreviewMix } from "./audioExport";
+export { renderProcessedKaraokeMp3, renderKaraokePreviewMix } from "./audioExport";
 import { karaokeGuideSettings, type KaraokeGuideMode } from "./karaokeGuide";
-import { calculateVocalMakeupGain, createVocalMonitor, karaokeBackingGainForRms, selectRecorderMimeType, vocalCaptureProfile, type RecordingCaptureMode } from "./vocalCapture";
+import { createVocalMonitor, karaokeBackingGainForRms, vocalCaptureProfile, type RecordingCaptureMode } from "./vocalCapture";
 import { createAudioBufferFromPcm, encodeAudioBufferToWav, findBuiltInMicrophoneDeviceId, forceBuiltInMicrophoneStream, startPcmStreamCapture, type PcmStreamCapture } from "./pcmRecorder";
+import { createArrangementVoiceState } from "./accompanimentPerformance";
 export { karaokeBackingGainForRms } from "./vocalCapture";
-export type PlaybackMeasure = Readonly<{
-  notes: readonly NoteEvent[];
-  harmony: HarmonyStory;
-  chords?: readonly string[];
-  effects?: readonly SoundEffectEvent[];
-  measureIndex?: number;
-}>;
-
-export type AccompanimentOptions = Readonly<{
-  styleId: AccompanimentStyleId;
-  instrumentIds: readonly InstrumentId[];
-  beatPattern?: readonly BeatPatternEvent[];
-  beatVolume?: number;
-  meter?: Meter;
-}>;
-
 export type KaraokeRecordingResult = Readonly<{
   blob: Blob;
   audioBuffer: AudioBuffer;
@@ -41,7 +28,7 @@ export type KaraokeRecordingResult = Readonly<{
   wavBlob?: Blob;
 }>;
 
-export type KaraokePostProcessPreset = "natural" | "clear" | "soft" | "loud" | "singer";
+export type { KaraokePostProcessPreset } from "./audioExport";
 
 export type KaraokeRecordingCallbacks = Readonly<{
   guideMelodyMode?: KaraokeGuideMode;
@@ -56,56 +43,39 @@ export type KaraokeRecordingCallbacks = Readonly<{
     noteId: string | null;
   }>) => void;
 }>;
-const chordPitches: Record<HarmonyStory, number[]> = {
-  home: [48, 52, 55],
-  journey: [53, 57, 60],
-  wonder: [55, 59, 62],
-  bounce: [50, 57, 62],
-  tender: [48, 55, 60],
-  brave: [50, 57, 62],
-  shadow: [45, 51, 57],
-  sparkle: [60, 64, 67],
-  swing: [50, 56, 60],
-  floating: [57, 60, 64],
-  march: [43, 50, 55],
-  folk: [48, 55, 62]
-};
-
-type ToneEnvelope = Readonly<{ attack: number; release: number }>;
 let activePlaybackContext: AudioContext | null = null;
 let sharedAudioContext: AudioContext | null = null;
 let activeOfflineExport = false;
+const completionTimers = new Map<AudioContext, number>();
 
-
-async function loadSampleWithTimeout(context: BaseAudioContext, destination: AudioNode,
-  instrumentId: InstrumentId, timeoutMs = 2500) {
-  let timeout: number | undefined;
-  try {
-    return await Promise.race([
-      loadSampleInstrument(context, destination, instrumentId),
-      new Promise<never>((_, reject) => {
-        timeout = window.setTimeout(() => reject(new Error("악기 샘플 준비 시간 초과")), timeoutMs);
-      })
-    ]);
-  } finally {
-    if (timeout !== undefined) window.clearTimeout(timeout);
-  }
-}
 
 async function claimPlayback(): Promise<AudioContext | null> {
-  if (activePlaybackContext) return null;
+  if (activePlaybackContext || activeOfflineExport) return null;
   sharedAudioContext ??= new AudioContext();
-  if (sharedAudioContext.state === "suspended") {
-    await sharedAudioContext.resume();
+  const context = sharedAudioContext;
+  activePlaybackContext = context;
+  try {
+    if (context.state === "suspended") await context.resume();
+    return context;
+  } catch (error) {
+    if (activePlaybackContext === context) activePlaybackContext = null;
+    throw error;
   }
-  activePlaybackContext = sharedAudioContext;
-  return activePlaybackContext;
 }
 
 function releasePlayback(context: AudioContext, afterSeconds: number): void {
-  window.setTimeout(() => {
+  const end = context.currentTime + afterSeconds;
+  const previous = completionTimers.get(context);
+  if (previous !== undefined) window.clearInterval(previous);
+  const timer = window.setInterval(() => {
+    if (context.state !== "closed" && context.currentTime < end) return;
+    window.clearInterval(timer);
+    completionTimers.delete(context);
+    releaseAccompanimentRuntime(context);
+    releaseSampleContext(context);
     if (activePlaybackContext === context) activePlaybackContext = null;
-  }, afterSeconds * 1000);
+  }, 100);
+  completionTimers.set(context, timer);
 }
 
 export async function pausePlayback(): Promise<boolean> {
@@ -123,666 +93,18 @@ export async function resumePlayback(): Promise<boolean> {
 }
 
 export async function stopPlayback(): Promise<void> {
-  const context = sharedAudioContext;
+  const contexts = new Set([activePlaybackContext, sharedAudioContext]);
   activePlaybackContext = null;
   sharedAudioContext = null;
-  resetSampleInstrumentCache();
-  if (context && context.state !== "closed") await context.close();
-}
-
-function frequency(midi: number): number {
-  return 440 * 2 ** ((midi - 69) / 12);
-}
-
-function addTone(
-  context: BaseAudioContext,
-  destination: AudioNode,
-  midi: number,
-  start: number,
-  duration: number,
-  volume: number,
-  wave: OscillatorType,
-  envelope: ToneEnvelope = { attack: 0.02, release: 0.06 }
-): void {
-  const oscillator = context.createOscillator();
-  const gain = context.createGain();
-  oscillator.type = wave;
-  oscillator.frequency.value = frequency(midi);
-  gain.gain.setValueAtTime(0.0001, start);
-  const attack = Math.min(envelope.attack, duration * 0.35);
-  const release = Math.min(envelope.release, duration * 0.45);
-  gain.gain.exponentialRampToValueAtTime(volume, start + attack);
-  gain.gain.setValueAtTime(volume, Math.max(start + attack + 0.01, start + duration - release));
-  gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-  oscillator.connect(gain).connect(destination);
-  oscillator.start(start);
-  oscillator.stop(start + duration + 0.02);
-}
-
-function createProtectedMaster(context: BaseAudioContext, destination: AudioNode, volume: number): GainNode {
-  const master = context.createGain();
-  const compressor = context.createDynamicsCompressor();
-  compressor.threshold.value = -20;
-  compressor.knee.value = 16;
-  compressor.ratio.value = 3;
-  compressor.attack.value = .008;
-  compressor.release.value = .2;
-
-  const limiter = context.createDynamicsCompressor();
-  limiter.threshold.value = -2;
-  limiter.knee.value = 0;
-  limiter.ratio.value = 20;
-  limiter.attack.value = .001;
-  limiter.release.value = .08;
-
-  master.gain.value = volume;
-  master.connect(compressor).connect(limiter).connect(destination);
-  return master;
-}
-
-function addInstrumentTone(
-  context: BaseAudioContext,
-  destination: AudioNode,
-  midi: number,
-  start: number,
-  duration: number,
-  instrument: Instrument
-): void {
-  const baseFrequency = frequency(midi);
-  const attack = Math.min(instrument.attack, duration * 0.35);
-  const release = Math.min(instrument.release, duration * 0.45);
-  const sustainTime = Math.max(start + attack + 0.01, start + duration - release);
-  const decayRatio = instrument.attack < 0.02 ? 0.07 : 0.7;
-
-  instrument.partials.forEach(([ratio, partialGain]) => {
-    const oscillator = context.createOscillator();
-    const gain = context.createGain();
-    oscillator.type = instrument.wave;
-    oscillator.frequency.value = baseFrequency * ratio;
-    const peak = instrument.volume * partialGain;
-    gain.gain.setValueAtTime(0.0001, start);
-    gain.gain.exponentialRampToValueAtTime(peak, start + attack);
-    gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, peak * decayRatio), sustainTime);
-    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-
-    if (instrument.vibrato) {
-      const lfo = context.createOscillator();
-      const lfoGain = context.createGain();
-      lfo.frequency.value = instrument.vibrato.rate;
-      lfoGain.gain.value = instrument.vibrato.depth * ratio;
-      lfo.connect(lfoGain).connect(oscillator.frequency);
-      lfo.start(start);
-      lfo.stop(start + duration + 0.02);
-    }
-
-    oscillator.connect(gain).connect(destination);
-    oscillator.start(start);
-    oscillator.stop(start + duration + 0.02);
-  });
-}
-
-function melodyPlaybackEvents(notes: readonly NoteEvent[], secondsPerBeat: number) {
-  const events: Array<{ pitch: number; start: number; duration: number }> = [];
-  let cursor = 0;
-  notes.forEach((note, index) => {
-    const duration = toNumber(note.duration) * secondsPerBeat;
-    const previous = notes[index - 1];
-    if (note.pitch !== null && previous?.linkToNext && previous.pitch === note.pitch && events.length > 0) {
-      events[events.length - 1].duration += duration;
-    } else if (note.pitch !== null) {
-      events.push({ pitch: note.pitch, start: cursor, duration });
-    }
-    cursor += duration;
-  });
-  return events;
-}
-
-function measureSeconds(measure: PlaybackMeasure, secondsPerBeat: number): number {
-  return measure.notes.reduce((total, note) => total + toNumber(note.duration), 0) * secondsPerBeat;
-}
-
-function compositionSeconds(measures: readonly PlaybackMeasure[], secondsPerBeat: number): number {
-  return measures.reduce((total, measure) => total + measureSeconds(measure, secondsPerBeat), 0);
-}
-
-function performanceNudge(seed: number, secondsPerBeat: number): number {
-  const contour = [-.62, .18, -.16, .46, -.32, .08, .3, -.08];
-  return contour[Math.abs(seed) % contour.length] * Math.min(.012, secondsPerBeat * .018);
-}
-
-function accompanimentArticulation(partId: ReturnType<typeof accompanimentInstrumentPart>["id"],
-  voice: "root" | "chord" | "step"): number {
-  if (partId === "strings") return .985;
-  if (partId === "winds") return .91;
-  if (partId === "bass") return .86;
-  if (partId === "guitar" || partId === "percussion") return .76;
-  if (partId === "keys") return voice === "chord" ? .83 : .9;
-  return .88;
-}
-
-function beatAccent(offsetBeats: number, meter?: Meter): number {
-  if (meter?.beats === 6 && meter.beatUnit === 8) {
-    const compoundBeat = Math.round(offsetBeats / 1.5) * 1.5;
-    if (Math.abs(offsetBeats - compoundBeat) > .08) return .92;
-    return Math.abs(compoundBeat) < .08 ? 1.1 : 1.02;
+  for (const context of contexts) {
+    if (!context) continue;
+    const timer = completionTimers.get(context);
+    if (timer !== undefined) window.clearInterval(timer);
+    completionTimers.delete(context);
+    releaseAccompanimentRuntime(context);
+    releaseSampleContext(context);
+    if (context.state !== "closed") await context.close();
   }
-  const beat = Math.round(offsetBeats);
-  if (Math.abs(offsetBeats - beat) > .08) return .93;
-  if (beat === 0) return 1.1;
-  if (meter?.beats === 4 && beat === 2) return 1.02;
-  return .96;
-}
-
-type ArrangementVoiceState = {
-  centers: Map<string, number>;
-};
-
-function createArrangementVoiceState(): ArrangementVoiceState {
-  return { centers: new Map() };
-}
-
-function pitchInClosestOctave(pitch: number, target: number, min: number, max: number): number {
-  const choices = [-24, -12, 0, 12, 24]
-    .map((shift) => pitch + shift)
-    .filter((candidate) => candidate >= min && candidate <= max);
-  if (choices.length === 0) return Math.max(min, Math.min(max, pitch));
-  return choices.reduce((closest, candidate) =>
-    Math.abs(candidate - target) < Math.abs(closest - target) ? candidate : closest);
-}
-
-function voiceLedPitches(
-  pitches: readonly number[],
-  profile: AccompanimentInstrumentProfile,
-  layerId: InstrumentId,
-  state?: ArrangementVoiceState
-): readonly number[] {
-  if (pitches.length === 0) return pitches;
-  const [min, max, restingCenter] = profile.range;
-  const key = `${layerId}:${profile.part.id}`;
-  const previousCenter = state?.centers.get(key) ?? restingCenter;
-
-  if (pitches.length === 1) {
-    const chosen = pitchInClosestOctave(pitches[0], previousCenter, min, max);
-    state?.centers.set(key, chosen);
-    return [chosen];
-  }
-
-  const candidates: number[][] = [];
-  for (let inversion = 0; inversion < pitches.length; inversion += 1) {
-    const inverted = pitches.map((pitch, index) => pitch + (index < inversion ? 12 : 0));
-    for (const shift of [-24, -12, 0, 12, 24]) {
-      const candidate = inverted.map((pitch) => pitch + shift);
-      if (candidate.every((pitch) => pitch >= min && pitch <= max)) candidates.push(candidate);
-    }
-  }
-  const selected = candidates.reduce((best, candidate) => {
-    const bestCenter = best.reduce((sum, pitch) => sum + pitch, 0) / best.length;
-    const candidateCenter = candidate.reduce((sum, pitch) => sum + pitch, 0) / candidate.length;
-    return Math.abs(candidateCenter - previousCenter) < Math.abs(bestCenter - previousCenter) ? candidate : best;
-  }, candidates[0] ?? pitches.map((pitch) => Math.max(min, Math.min(max, pitch))));
-  const center = selected.reduce((sum, pitch) => sum + pitch, 0) / selected.length;
-  state?.centers.set(key, center);
-  return selected;
-}
-
-function melodyActivityAtBeat(
-  notes: readonly NoteEvent[],
-  targetBeat: number
-): Readonly<{ pitch: number; onset: number; duration: number }> | null {
-  let cursor = 0;
-  for (const note of notes) {
-    const duration = toNumber(note.duration);
-    const end = cursor + duration;
-    if (targetBeat >= cursor - .001 && targetBeat < end - .001) {
-      return note.pitch === null ? null : { pitch: note.pitch, onset: cursor, duration };
-    }
-    cursor = end;
-  }
-  return null;
-}
-
-function movePitchesAwayFromMelody(
-  pitches: readonly number[],
-  melodyPitch: number | null,
-  profile: AccompanimentInstrumentProfile
-): readonly number[] {
-  if (melodyPitch === null || profile.part.id === "bass") return pitches;
-  const [min, max] = profile.range;
-  const preferAbove = profile.part.id === "winds" || profile.part.id === "percussion";
-  return [...new Set(pitches.map((pitch) => {
-    const candidates = [-24, -12, 0, 12, 24]
-      .map((shift) => ({ pitch: pitch + shift, shift }))
-      .filter((candidate) => candidate.pitch >= min && candidate.pitch <= max);
-    if (candidates.length === 0) return pitch;
-    return candidates.reduce((best, candidate) => {
-      const score = (Math.abs(candidate.pitch - melodyPitch) < 7 ? 100 : 0) +
-        Math.abs(candidate.shift) * .12 +
-        (preferAbove ? candidate.pitch < melodyPitch ? 3 : 0 : candidate.pitch > melodyPitch ? 3 : 0);
-      const bestScore = (Math.abs(best.pitch - melodyPitch) < 7 ? 100 : 0) +
-        Math.abs(best.shift) * .12 +
-        (preferAbove ? best.pitch < melodyPitch ? 3 : 0 : best.pitch > melodyPitch ? 3 : 0);
-      return score < bestScore ? candidate : best;
-    }).pitch;
-  }))];
-}
-
-type ArrangementPlan = Readonly<{ layerCount: number; energy: number }>;
-
-function songArrangementPlan(measureIndex: number, measureCount: number, availableLayers: number): ArrangementPlan {
-  if (availableLayers <= 2 || measureCount <= 3) return { layerCount: availableLayers, energy: 1 };
-  const phraseIndex = Math.floor(measureIndex / 4);
-  const phrasePosition = measureIndex % 4;
-  const lastMeasure = measureIndex === measureCount - 1;
-  const phraseCount = Math.ceil(measureCount / 4);
-  const finalPhrase = phraseIndex === phraseCount - 1;
-  const breathingPhrase = phraseCount >= 4 && phraseIndex % 4 === 2 && !finalPhrase;
-  const baseLayers = breathingPhrase ? Math.min(2, availableLayers)
-    : finalPhrase ? availableLayers
-      : phraseIndex === 0 ? Math.min(2, availableLayers) : Math.min(3, availableLayers);
-  const baseEnergy = breathingPhrase ? .78 : finalPhrase ? 1.04 : phraseIndex === 0 ? .86 : .96;
-  if (lastMeasure) return { layerCount: availableLayers, energy: 1.04 };
-  if (phrasePosition === 0) return { layerCount: Math.max(1, baseLayers - 1), energy: baseEnergy - .04 };
-  if (phrasePosition === 3) return { layerCount: Math.min(baseLayers + 1, availableLayers), energy: baseEnergy + .08 };
-  return { layerCount: baseLayers, energy: baseEnergy };
-}
-
-export function recordingArrangementPlan(
-  measureIndex: number,
-  measureCount: number,
-  availableLayers: number
-): ArrangementPlan {
-  const plan = songArrangementPlan(measureIndex, measureCount, availableLayers);
-  return {
-    layerCount: Math.min(availableLayers, Math.max(Math.min(2, availableLayers), plan.layerCount + 1)),
-    energy: Math.max(.98, plan.energy * 1.08)
-  };
-}
-
-const CHROMATIC_ROOTS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-const NATURAL_ROOTS: Readonly<Record<string, number>> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
-
-function cadenceChords(target: string): readonly [string, string, string] | null {
-  const compact = target.replaceAll(" ", "").split("/")[0];
-  if (/^I(?:$|[^V])/.test(compact)) return ["IV", "V7", "I"];
-  const match = compact.match(/^([A-G])([#b]?)(.*)$/);
-  if (!match) return null;
-  const root = (NATURAL_ROOTS[match[1]] + (match[2] === "#" ? 1 : match[2] === "b" ? -1 : 0) + 12) % 12;
-  const isMinor = /^m(?!aj)/i.test(match[3]);
-  const subdominant = `${CHROMATIC_ROOTS[(root + 5) % 12]}${isMinor ? "m" : ""}`;
-  const dominant = `${CHROMATIC_ROOTS[(root + 7) % 12]}7`;
-  const tonic = `${CHROMATIC_ROOTS[root]}${isMinor ? "m" : ""}`;
-  return [subdominant, dominant, tonic];
-}
-
-function accompanimentMeasure(template: PlaybackMeasure, chord: string, measureIndex?: number): PlaybackMeasure {
-  return { ...template, chords: [chord], effects: [], measureIndex };
-}
-
-function buildIntroMeasures(measures: readonly PlaybackMeasure[]): PlaybackMeasure[] {
-  if (measures.length === 0) return [];
-  const target = measures[0].chords?.[0] ?? "";
-  const cadence = cadenceChords(target);
-  if (!cadence) return Array.from({ length: 4 }, (_, index) => accompanimentMeasure(measures[index % measures.length], measures[index % measures.length].chords?.[0] ?? "", index));
-  const [subdominant, dominant, tonic] = cadence;
-  return [tonic, subdominant, dominant, dominant].map((chord, measureIndex) => accompanimentMeasure(measures[0], chord, measureIndex));
-}
-
-export function compositionIntroDuration(measures: readonly PlaybackMeasure[], bpm: number): number {
-  return buildIntroMeasures(measures).reduce((total, measure) =>
-    total + measure.notes.reduce((beats, note) => beats + toNumber(note.duration), 0), 0) * 60 / bpm;
-}
-
-function buildOutroMeasures(measures: readonly PlaybackMeasure[]): PlaybackMeasure[] {
-  if (measures.length === 0) return [];
-  const template = measures[measures.length - 1];
-  const target = template.chords?.at(-1) ?? template.chords?.[0] ?? "";
-  const cadence = cadenceChords(target);
-  if (!cadence) {
-    const source = measures.slice(Math.max(0, measures.length - 4));
-    return Array.from({ length: 4 }, (_, index) => accompanimentMeasure(source[index % source.length], source[index % source.length].chords?.[0] ?? "", index));
-  }
-  const [subdominant, dominant, tonic] = cadence;
-  return [subdominant, dominant, tonic, tonic].map((chord, measureIndex) => accompanimentMeasure(template, chord, measureIndex));
-}
-
-async function loadAccompanimentLayers(context: BaseAudioContext, destination: AudioNode,
-  accompaniment?: AccompanimentOptions) {
-  if (accompaniment?.beatPattern && accompaniment.beatPattern.length > 0) {
-    await preloadBeatSamples(context, beatPatternInstrumentIds(accompaniment.beatPattern));
-  }
-  return Promise.all((accompaniment?.instrumentIds ?? []).map(async (id) => {
-    try {
-      return { id, sample: await loadSampleWithTimeout(context, destination, id) };
-    } catch (error) {
-      console.warn(`${id} 반주 악기 샘플을 불러오지 못해 합성 음색을 사용합니다.`, error);
-      return { id, sample: null };
-    }
-  }));
-}
-
-function scheduleMeasure(
-  context: BaseAudioContext,
-  destination: AudioNode,
-  measure: PlaybackMeasure,
-  absoluteStart: number,
-  secondsPerBeat: number,
-  options: Readonly<{
-    instrument: Instrument;
-    sampledInstrument: Awaited<ReturnType<typeof loadSampleInstrument>> | null;
-    accompaniment?: AccompanimentOptions;
-    accompanimentLayers: Awaited<ReturnType<typeof loadAccompanimentLayers>>;
-    includeMelody: boolean;
-    includeEffects: boolean;
-    backingVolumeMultiplier?: number;
-    melodyVolumeMultiplier?: number;
-    melodyDestination?: AudioNode;
-    melodyMode?: "all" | "first-note";
-    transitionFill?: boolean;
-    arrangementSection?: "intro" | "song" | "outro";
-    voiceState?: ArrangementVoiceState;
-    arrangementLayerCount?: number;
-    arrangementEnergy?: number;
-  }>
-): number {
-  const backingVolumeMultiplier = options.backingVolumeMultiplier ?? 1;
-  const melodyVolumeMultiplier = options.melodyVolumeMultiplier ?? 1;
-  const arrangementSection = options.arrangementSection ?? "song";
-  const arrangementLayerCount = Math.max(0, Math.min(options.accompanimentLayers.length,
-    options.arrangementLayerCount ?? options.accompanimentLayers.length));
-  const arrangementEnergy = options.arrangementEnergy ?? 1;
-  const layerDensityScale = arrangementLayerCount > 6 ? Math.sqrt(6 / arrangementLayerCount) : 1;
-  const measureBeats = measure.notes.reduce((total, note) => total + toNumber(note.duration), 0);
-  const chordSymbols = measure.chords && measure.chords.length > 0 ? measure.chords : [""];
-  const chordBeats = measureBeats / chordSymbols.length;
-  if (options.accompaniment?.beatPattern && options.accompaniment.beatPattern.length > 0) {
-    scheduleBeatPattern(context, destination, absoluteStart, secondsPerBeat, measureBeats,
-      measure.measureIndex ?? 0, options.accompaniment.beatPattern,
-      options.accompaniment.beatVolume ?? 100, arrangementEnergy);
-  }
-
-  chordSymbols.forEach((chord, chordIndex) => {
-    const pitches = chord ? chordMidiPitches(chord) : chordPitches[measure.harmony];
-    if (options.accompanimentLayers.length === 0 || !options.accompaniment) {
-      pitches.forEach((pitch) => {
-        addTone(context, destination, pitch, absoluteStart + chordIndex * chordBeats * secondsPerBeat,
-          chordBeats * secondsPerBeat, 0.028 * backingVolumeMultiplier, "sine");
-      });
-      return;
-    }
-    options.accompanimentLayers.slice(0, arrangementLayerCount).forEach((layer, layerIndex) => {
-      const profile = accompanimentInstrumentProfile(layer.id, layerIndex);
-      const part = profile.part;
-      const regularPattern = createInstrumentAccompanimentPattern(
-        options.accompaniment?.styleId ?? "arpeggio",
-        chordBeats,
-        layer.id,
-        layerIndex,
-        options.accompaniment?.meter
-      );
-      const pattern = options.transitionFill && chordIndex === chordSymbols.length - 1
-        ? [...regularPattern, ...createInstrumentTransitionFill(
-          chordBeats, layer.id, layerIndex, options.accompaniment?.meter
-        )] : regularPattern;
-      pattern.forEach((event) => {
-        const role = accompanimentLayerRole(layerIndex);
-        const measureBeat = chordIndex * chordBeats + event.offsetBeats;
-        const melodyActivity = arrangementSection === "song"
-          ? melodyActivityAtBeat(measure.notes, measureBeat)
-          : null;
-        const melodyPitch = melodyActivity?.pitch ?? null;
-        const compingHasSpace = melodyActivity === null ||
-          (melodyActivity.duration >= 1 && measureBeat - melodyActivity.onset >= .5);
-        if (options.accompaniment?.styleId === "comping" && !compingHasSpace) return;
-        if (part.id === "winds" && options.accompanimentLayers.length > 1 && !compingHasSpace) return;
-        let eventPitches: readonly number[];
-        if (part.id === "bass") {
-          eventPitches = [transposeOctaves(pitches[0], -2)];
-        } else if (part.id === "keys") {
-          eventPitches = event.voice === "root" ? [transposeOctaves(pitches[0], -1)] : pitches.slice(0, 3);
-        } else if (part.id === "guitar") {
-          eventPitches = event.voice === "root" ? [transposeOctaves(pitches[0], -1)]
-            : [pitches[(event.step ?? layerIndex) % pitches.length]];
-        } else if (part.id === "strings") {
-          eventPitches = profile.polyphonic
-            ? pitches.slice(0, 3)
-            : [pitches[(event.step ?? layerIndex) % pitches.length]];
-        } else if (part.id === "winds") {
-          eventPitches = [transposeOctaves(pitches[(event.step ?? layerIndex) % pitches.length], 1)];
-        } else if (part.id === "percussion") {
-          eventPitches = layer.id.includes("timpani")
-            ? [transposeOctaves(pitches[0], -1)]
-            : layer.id.includes("orchestra_hit")
-              ? pitches.slice(0, 3)
-              : [pitches[(event.step ?? layerIndex) % pitches.length]];
-        } else if (role.id === "high") {
-          eventPitches = [transposeOctaves(pitches[(event.step ?? layerIndex) % pitches.length], 1)];
-        } else if (role.id === "pulse") {
-          eventPitches = [pitches[(layerIndex + 1) % pitches.length]];
-        } else if (role.id === "middle") {
-          eventPitches = [pitches[(event.step ?? 1) % pitches.length]];
-        } else {
-          eventPitches = [transposeOctaves(pitches[pitches.length - 1], 1)];
-        }
-        eventPitches = voiceLedPitches(eventPitches, profile, layer.id, options.voiceState);
-        eventPitches = movePitchesAwayFromMelody(eventPitches, melodyPitch, profile);
-        const roleDelay = part.id === "bass" || part.id === "strings" ? 0 : arrangementSection === "song"
-          ? Math.min(event.durationBeats * secondsPerBeat * .16, secondsPerBeat * .09) * (layerIndex % 3)
-          : Math.min(event.durationBeats * secondsPerBeat * .07, secondsPerBeat * .035) * (layerIndex % 2);
-        const roleVolume = part.id === "bass" ? 1.15 : part.id === "keys" ? .82
-          : part.id === "guitar" ? .78 : part.id === "strings" ? .66
-          : part.id === "winds" ? .9 : part.id === "percussion" ? .74
-          : role.id === "bass" ? 1.15 : role.id === "chords" ? .82
-          : role.id === "high" || role.id === "sparkle" ? .9 : .72;
-        const sectionVolume = arrangementSection === "intro" ? .97 : arrangementSection === "outro" ? .95 : 1;
-        eventPitches.forEach((pitch) => {
-          const baseStart = absoluteStart + (chordIndex * chordBeats + event.offsetBeats) * secondsPerBeat;
-          const noteDuration = event.durationBeats * secondsPerBeat;
-          const expressionSeed = chordIndex * 17 + layerIndex * 7 + Math.round(event.offsetBeats * 8);
-          const noteStart = Math.max(absoluteStart,
-            baseStart + Math.min(roleDelay, noteDuration * .24) + performanceNudge(expressionSeed, secondsPerBeat));
-          const performedDuration = Math.max(.035, noteDuration * accompanimentArticulation(part.id, event.voice));
-          const layerInstrument = findInstrument(layer.id);
-          const performedVolume = layerInstrument.volume * .62 * roleVolume * profile.gain * sectionVolume *
-            backingVolumeMultiplier * arrangementEnergy * layerDensityScale *
-            beatAccent(measureBeat, options.accompaniment?.meter);
-          const shiftedPitch = Math.max(36, Math.min(96, pitch));
-          if (layer.sample) {
-            queueSampleNote(layer.sample, context, destination, shiftedPitch, noteStart, performedDuration, performedVolume);
-          } else {
-            addInstrumentTone(context, destination, shiftedPitch, noteStart, performedDuration,
-              { ...layerInstrument, volume: performedVolume });
-          }
-        });
-      });
-    });
-  });
-
-  if (options.includeMelody) {
-    melodyPlaybackEvents(measure.notes, secondsPerBeat)
-      .filter((_, index) => options.melodyMode !== "first-note" || index === 0)
-      .forEach((event, index) => {
-      const noteStart = absoluteStart + event.start + performanceNudge(index + 3, secondsPerBeat);
-      const noteDuration = Math.max(.04, event.duration * .97);
-      const melodyVolume = options.instrument.volume * melodyVolumeMultiplier * (index % 4 === 0 ? 1.06 : .98);
-      if (options.sampledInstrument) {
-        queueSampleNote(options.sampledInstrument, context, options.melodyDestination ?? destination, event.pitch,
-          noteStart, noteDuration, melodyVolume);
-      } else {
-        addInstrumentTone(context, options.melodyDestination ?? destination, event.pitch, noteStart, noteDuration,
-          { ...options.instrument, volume: melodyVolume });
-      }
-    });
-  }
-
-  if (options.includeEffects) {
-    (measure.effects ?? []).forEach((effect) => {
-      if (isSoundEffectId(effect.effectId)) {
-        queueSoundEffect(context, destination, effect.effectId,
-          absoluteStart + effect.offsetBeats * secondsPerBeat);
-      }
-    });
-  }
-
-  return measureBeats * secondsPerBeat;
-}
-
-function floatTo16BitPcm(input: Float32Array): Int16Array {
-  const output = new Int16Array(input.length);
-  for (let index = 0; index < input.length; index += 1) {
-    const sample = Math.max(-1, Math.min(1, input[index]));
-    output[index] = sample < 0 ? sample * 0x8000 : sample * 0x7fff;
-  }
-  return output;
-}
-
-function encodeAudioBufferToMp3(buffer: AudioBuffer): Blob {
-  const channels = Math.min(2, buffer.numberOfChannels);
-  const encoder = new Mp3Encoder(channels, buffer.sampleRate, 192);
-  const chunks: BlobPart[] = [];
-  const blockSize = 1152;
-  const left = buffer.getChannelData(0);
-  const right = channels > 1 ? buffer.getChannelData(1) : null;
-
-  for (let offset = 0; offset < left.length; offset += blockSize) {
-    const leftChunk = floatTo16BitPcm(left.subarray(offset, offset + blockSize));
-    const encoded = right
-      ? encoder.encodeBuffer(leftChunk, floatTo16BitPcm(right.subarray(offset, offset + blockSize)))
-      : encoder.encodeBuffer(leftChunk);
-    if (encoded.length > 0) chunks.push(new Uint8Array(encoded));
-  }
-  const finalChunk = encoder.flush();
-  if (finalChunk.length > 0) chunks.push(new Uint8Array(finalChunk));
-  return new Blob(chunks, { type: "audio/mpeg" });
-}
-
-function renderedAudioPeak(buffer: AudioBuffer): number {
-  let peak = 0;
-  for (let channel = 0; channel < buffer.numberOfChannels; channel += 1) {
-    const samples = buffer.getChannelData(channel);
-    for (let index = 0; index < samples.length; index += 1) {
-      peak = Math.max(peak, Math.abs(samples[index]));
-    }
-  }
-  return peak;
-}
-
-function createRoomImpulse(context: BaseAudioContext, seconds = 0.65, decay = 2.4): AudioBuffer {
-  const sampleRate = context.sampleRate;
-  const length = Math.max(1, Math.floor(sampleRate * seconds));
-  const impulse = context.createBuffer(2, length, sampleRate);
-  for (let channel = 0; channel < impulse.numberOfChannels; channel += 1) {
-    const data = impulse.getChannelData(channel);
-    for (let index = 0; index < length; index += 1) {
-      const fade = (1 - index / length) ** decay;
-      data[index] = (Math.random() * 2 - 1) * fade * 0.22;
-    }
-  }
-  return impulse;
-}
-
-export async function renderProcessedKaraokeMp3(
-  buffer: AudioBuffer,
-  preset: KaraokePostProcessPreset
-): Promise<Blob> {
-  const context = new OfflineAudioContext(
-    Math.min(2, buffer.numberOfChannels),
-    buffer.length,
-    buffer.sampleRate
-  );
-  const source = context.createBufferSource();
-  source.buffer = buffer;
-  const inputGain = context.createGain();
-  const tone = context.createBiquadFilter();
-  const compressor = context.createDynamicsCompressor();
-  const outputGain = context.createGain();
-
-  tone.type = "peaking";
-  tone.frequency.value = 2600;
-  tone.Q.value = 0.9;
-  tone.gain.value = 0;
-  inputGain.gain.value = 1;
-  outputGain.gain.value = 1;
-  compressor.threshold.value = -12;
-  compressor.knee.value = 12;
-  compressor.ratio.value = 2.2;
-  compressor.attack.value = 0.006;
-  compressor.release.value = 0.18;
-
-  if (preset === "clear") {
-    tone.frequency.value = 3400;
-    tone.gain.value = 3.6;
-    outputGain.gain.value = 1.02;
-  } else if (preset === "soft") {
-    tone.frequency.value = 4200;
-    tone.gain.value = -1.8;
-    outputGain.gain.value = 0.96;
-  } else if (preset === "loud") {
-    compressor.threshold.value = -20;
-    compressor.ratio.value = 4.2;
-    outputGain.gain.value = 1.18;
-  } else if (preset === "singer") {
-    tone.frequency.value = 3000;
-    tone.gain.value = 1.2;
-    compressor.threshold.value = -16;
-    compressor.ratio.value = 2.8;
-    outputGain.gain.value = 0.96;
-  }
-
-  source.connect(inputGain).connect(tone).connect(compressor).connect(outputGain).connect(context.destination);
-  if (preset === "singer") {
-    const spaceSend = context.createGain();
-    spaceSend.gain.value = 0.18;
-    const reverb = context.createConvolver();
-    reverb.buffer = createRoomImpulse(context, 1.15, 2.1);
-    const reverbReturn = context.createGain();
-    reverbReturn.gain.value = 0.5;
-    const delay = context.createDelay(0.35);
-    delay.delayTime.value = 0.11;
-    const delayGain = context.createGain();
-    delayGain.gain.value = 0.08;
-    const feedback = context.createGain();
-    feedback.gain.value = 0.18;
-    outputGain.connect(spaceSend).connect(reverb).connect(reverbReturn).connect(context.destination);
-    outputGain.connect(delay).connect(delayGain).connect(context.destination);
-    delayGain.connect(feedback).connect(delay);
-  }
-  source.start();
-  const rendered = await context.startRendering();
-  return encodeAudioBufferToMp3(rendered);
-}
-
-export async function renderKaraokePreviewMix(
-  vocalBuffer: AudioBuffer,
-  backingBuffer: AudioBuffer,
-  backingVolume: number,
-  introSeconds = 0,
-  outroSeconds = 0
-): Promise<Readonly<{ blob: Blob; audioBuffer: AudioBuffer }>> {
-  const channels = Math.min(2, Math.max(vocalBuffer.numberOfChannels, backingBuffer.numberOfChannels));
-  const sampleRate = Math.max(vocalBuffer.sampleRate, backingBuffer.sampleRate);
-  const length = Math.max(vocalBuffer.length, backingBuffer.length);
-  const context = new OfflineAudioContext(channels, length, sampleRate);
-  const vocal = context.createBufferSource();
-  const backing = context.createBufferSource();
-  vocal.buffer = vocalBuffer;
-  backing.buffer = backingBuffer;
-  const vocalGain = context.createGain();
-  const backingGain = context.createGain();
-  const compressor = context.createDynamicsCompressor();
-  vocalGain.gain.value = calculateVocalMakeupGain(vocalBuffer, introSeconds, outroSeconds);
-  backingGain.gain.value = Math.max(0.02, Math.min(1.0, backingVolume * 0.45));
-  compressor.threshold.value = -3;
-  compressor.knee.value = 6;
-  compressor.ratio.value = 8;
-  compressor.attack.value = 0.003;
-  compressor.release.value = 0.1;
-  vocal.connect(vocalGain).connect(compressor);
-  backing.connect(backingGain).connect(compressor);
-  compressor.connect(context.destination);
-  vocal.start();
-  backing.start();
-  const audioBuffer = await context.startRendering();
-  return { audioBuffer, blob: encodeAudioBufferToMp3(audioBuffer) };
 }
 
 export async function playMeasure(
@@ -796,48 +118,10 @@ export async function playMeasure(
 ): Promise<number | null> {
   const context = await claimPlayback();
   if (!context) return null;
-  const master = createProtectedMaster(context, context.destination, 0.72);
-  const secondsPerBeat = 60 / bpm;
-  const instrument = findInstrument(instrumentId);
-  let sampledInstrument: Awaited<ReturnType<typeof loadSampleInstrument>> | null = null;
-  try {
-    sampledInstrument = await loadSampleWithTimeout(context, master, instrumentId);
-  } catch (error) {
-    console.warn("악기 샘플을 불러오지 못해 합성 음색을 사용합니다.", error);
-  }
-  const start = context.currentTime + 0.06;
-
-  const totalBeats = notes.reduce((total, note) => total + toNumber(note.duration), 0);
-  if (playAccompaniment) {
-    const accompaniment = chords.length > 0 ? chords : [""];
-    const chordBeats = totalBeats / accompaniment.length;
-    accompaniment.forEach((chord, chordIndex) => {
-      const pitches = chord ? chordMidiPitches(chord) : chordPitches[harmony];
-      pitches.forEach((pitch) => {
-        addTone(context, master, pitch, start + chordIndex * chordBeats * secondsPerBeat,
-          chordBeats * secondsPerBeat, 0.035, "sine");
-      });
-    });
-  }
-
-  melodyPlaybackEvents(notes, secondsPerBeat).forEach((event) => {
-    if (sampledInstrument) {
-      queueSampleNote(sampledInstrument, context, master, event.pitch,
-        start + event.start, event.duration * .92, instrument.volume);
-    } else {
-      addInstrumentTone(context, master, event.pitch, start + event.start, event.duration * 0.92, instrument);
-    }
-  });
-  const cursor = totalBeats * secondsPerBeat;
-
-  effects.forEach((effect) => {
-    if (isSoundEffectId(effect.effectId)) {
-      queueSoundEffect(context, master, effect.effectId, start + effect.offsetBeats * secondsPerBeat);
-    }
-  });
-
-  releasePlayback(context, cursor + 0.5);
-  return cursor + 0.5;
+  const duration = await renderMelodyPreview(context, () => activePlaybackContext === context,
+    notes, harmony, chords, instrumentId, bpm, effects, playAccompaniment);
+  if (duration !== null) releasePlayback(context, duration);
+  return duration;
 }
 
 export async function playComposition(
@@ -847,6 +131,7 @@ export async function playComposition(
   accompaniment?: AccompanimentOptions,
   withIntro = false
 ): Promise<number | null> {
+  accompaniment = prepareAccompaniment(accompaniment, measures);
   const context = await claimPlayback();
   if (!context) return null;
   const master = createProtectedMaster(context, context.destination, 0.72);
@@ -858,7 +143,9 @@ export async function playComposition(
   } catch (error) {
     console.warn("악기 샘플을 불러오지 못해 합성 음색을 사용합니다.", error);
   }
+  if (activePlaybackContext !== context || context.state === "closed") return null;
   const accompanimentLayers = await loadAccompanimentLayers(context, master, accompaniment);
+  if (activePlaybackContext !== context || (context.state as string) === "closed") return null;
   const voiceState = createArrangementVoiceState();
   const start = context.currentTime + 0.08;
   let songCursor = 0;
@@ -876,7 +163,8 @@ export async function playComposition(
           includeEffects: false,
           arrangementSection: "intro",
           voiceState,
-          arrangementLayerCount: Math.min(2, accompanimentLayers.length),
+          arrangementLayerCount: accompanimentLayers.length,
+          arrangementEnergy: .98,
           transitionFill: introIndex === introMeasures.length - 1
         });
     });
@@ -884,7 +172,7 @@ export async function playComposition(
 
   measures.forEach((measure, measureIndex) => {
     const plan = songArrangementPlan(measureIndex, measures.length, accompanimentLayers.length);
-    songCursor += scheduleMeasure(context, master, { ...measure, measureIndex }, start + songCursor, secondsPerBeat, {
+    songCursor += scheduleMeasure(context, master, { ...measure, measureIndex: measure.measureIndex ?? measureIndex }, start + songCursor, secondsPerBeat, {
       instrument,
       sampledInstrument,
       accompaniment,
@@ -894,7 +182,8 @@ export async function playComposition(
       arrangementSection: "song",
       voiceState,
       arrangementLayerCount: plan.layerCount,
-      transitionFill: (measureIndex + 1) % 4 === 0 || measureIndex === measures.length - 1,
+      ending: measure.isSongEnding ?? (measures.length > 1 && measureIndex === measures.length - 1),
+      transitionFill: ((measure.measureIndex ?? measureIndex) + 1) % 4 === 0,
       arrangementEnergy: plan.energy
     });
   });
@@ -912,7 +201,8 @@ export async function practiceKaraokeComposition(
   countIn: Readonly<{ beats: number; unitBeats: number }> = { beats: 4, unitBeats: 1 },
   signal?: AbortSignal
 ): Promise<number | null> {
-  if (activePlaybackContext) return null;
+  accompaniment = prepareAccompaniment(accompaniment, measures);
+  if (activePlaybackContext || activeOfflineExport) return null;
   const AudioContextClass = window.AudioContext ||
     (window as Window & typeof globalThis & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
   if (!AudioContextClass) {
@@ -991,10 +281,10 @@ export async function practiceKaraokeComposition(
         voiceState,
         includeMelody: false,
         includeEffects: false,
-        backingVolumeMultiplier: 1.22,
         arrangementSection: "intro",
-        arrangementLayerCount: Math.min(3, accompanimentLayers.length),
-        arrangementEnergy: 1
+        transitionFill: introIndex === introMeasures.length - 1,
+        arrangementLayerCount: accompanimentLayers.length,
+        arrangementEnergy: .98
       });
     });
 
@@ -1038,9 +328,9 @@ export async function practiceKaraokeComposition(
         includeMelody: true,
         includeEffects: true,
         melodyVolumeMultiplier: .82,
-        backingVolumeMultiplier: 1.12,
         arrangementLayerCount: plan.layerCount,
-        transitionFill: (measureIndex + 1) % 4 === 0 || measureIndex === measures.length - 1,
+        ending: measure.isSongEnding ?? (measures.length > 1 && measureIndex === measures.length - 1),
+        transitionFill: ((measure.measureIndex ?? measureIndex) + 1) % 4 === 0,
         arrangementEnergy: plan.energy
       });
     });
@@ -1075,9 +365,9 @@ export async function practiceKaraokeComposition(
         voiceState,
         includeMelody: false,
         includeEffects: false,
-        backingVolumeMultiplier: 1.18,
         arrangementSection: "outro",
-        arrangementLayerCount: Math.min(3, accompanimentLayers.length),
+        ending: outroIndex === outroMeasures.length - 1,
+        arrangementLayerCount: accompanimentLayers.length,
         arrangementEnergy: .98
       });
     });
@@ -1101,6 +391,8 @@ export async function practiceKaraokeComposition(
   } finally {
     signal?.removeEventListener("abort", stopPractice);
     callbackTimers.forEach((timer) => window.clearTimeout(timer));
+    releaseAccompanimentRuntime(context);
+    releaseSampleContext(context);
     if (activePlaybackContext === context) activePlaybackContext = null;
     if (context.state !== "closed") await context.close().catch(() => undefined);
   }
@@ -1115,7 +407,8 @@ export async function recordKaraokeComposition(
   countIn: Readonly<{ beats: number; unitBeats: number }> = { beats: 4, unitBeats: 1 },
   signal?: AbortSignal
 ): Promise<KaraokeRecordingResult | null> {
-  if (activePlaybackContext) return null;
+  accompaniment = prepareAccompaniment(accompaniment, measures);
+  if (activePlaybackContext || activeOfflineExport) return null;
   if (!navigator.mediaDevices?.getUserMedia) {
     throw new Error("이 브라우저에서는 마이크 녹음을 사용할 수 없어요.");
   }
@@ -1295,9 +588,9 @@ export async function recordKaraokeComposition(
         voiceState,
         includeMelody: false,
         includeEffects: false,
-        backingVolumeMultiplier: 1.28,
         arrangementSection: "intro",
-        arrangementLayerCount: Math.min(3, accompanimentLayers.length),
+        transitionFill: introIndex === introMeasures.length - 1,
+        arrangementLayerCount: accompanimentLayers.length,
         arrangementEnergy: .98
       });
     });
@@ -1345,9 +638,9 @@ export async function recordKaraokeComposition(
         melodyDestination: guideBus,
         melodyMode: guide.melodyMode,
         melodyVolumeMultiplier: guide.volume,
-        backingVolumeMultiplier: 1.18,
         arrangementLayerCount: plan.layerCount,
-        transitionFill: (measureIndex + 1) % 4 === 0 || measureIndex === measures.length - 1,
+        ending: measure.isSongEnding ?? (measures.length > 1 && measureIndex === measures.length - 1),
+        transitionFill: ((measure.measureIndex ?? measureIndex) + 1) % 4 === 0,
         arrangementEnergy: plan.energy
       });
     });
@@ -1380,10 +673,10 @@ export async function recordKaraokeComposition(
         voiceState,
         includeMelody: false,
         includeEffects: false,
-        backingVolumeMultiplier: 1.22,
         arrangementSection: "outro",
-        arrangementLayerCount: Math.min(3, accompanimentLayers.length),
-        arrangementEnergy: .96
+        ending: outroIndex === outroMeasures.length - 1,
+        arrangementLayerCount: accompanimentLayers.length,
+        arrangementEnergy: .98
       });
     });
 
@@ -1444,9 +737,41 @@ export async function recordKaraokeComposition(
     callbackTimers.forEach((timer) => window.clearTimeout(timer));
     stopVocalMonitor?.();
     microphoneStream?.getTracks().forEach((track) => track.stop());
+    releaseAccompanimentRuntime(context);
+    releaseSampleContext(context);
     if (activePlaybackContext === context) activePlaybackContext = null;
     if (context.state !== "closed") await context.close().catch(() => undefined);
   }
+}
+
+export async function runExclusiveAudioExport<T>(render: () => Promise<T>): Promise<T | null> {
+  if (activePlaybackContext || activeOfflineExport) return null;
+  activeOfflineExport = true;
+  try {
+    return await render();
+  } finally {
+    activeOfflineExport = false;
+  }
+}
+
+async function exportBacking(
+  render: typeof renderRealtimeBackingMp3,
+  measures: readonly PlaybackMeasure[],
+  instrumentId: InstrumentId,
+  bpm: number,
+  accompaniment?: AccompanimentOptions
+): Promise<Blob | null> {
+  return runExclusiveAudioExport(async () => {
+    let exportContext: AudioContext | undefined;
+    try {
+      return await render(measures, instrumentId, bpm, accompaniment, (context) => {
+        exportContext = context;
+        activePlaybackContext = context;
+      });
+    } finally {
+      if (activePlaybackContext === exportContext) activePlaybackContext = null;
+    }
+  });
 }
 
 export async function exportBackingCompositionMp3(
@@ -1455,118 +780,7 @@ export async function exportBackingCompositionMp3(
   bpm = 96,
   accompaniment?: AccompanimentOptions
 ): Promise<Blob | null> {
-  if (activePlaybackContext || activeOfflineExport) return null;
-  activeOfflineExport = true;
-  if (typeof MediaRecorder === "undefined") {
-    throw new Error("이 브라우저에서는 MP3 저장을 사용할 수 없어요.");
-  }
-
-  const AudioContextClass = window.AudioContext ||
-    (window as Window & typeof globalThis & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-  if (!AudioContextClass) {
-    throw new Error("이 브라우저에서는 오디오 저장을 사용할 수 없어요.");
-  }
-
-  const context = new AudioContextClass();
-  activePlaybackContext = context;
-  try {
-    if (context.state === "suspended") await context.resume();
-    const secondsPerBeat = 60 / bpm;
-    const introMeasures = buildIntroMeasures(measures);
-    const outroMeasures = buildOutroMeasures(measures);
-    const tailSeconds = 0.8;
-
-    const recordingDestination = context.createMediaStreamDestination();
-    const master = createProtectedMaster(context, recordingDestination, 0.76);
-
-    const instrument = findInstrument(instrumentId);
-    let sampledInstrument: Awaited<ReturnType<typeof loadSampleInstrument>> | null = null;
-    try {
-      sampledInstrument = await loadSampleWithTimeout(context, master, instrumentId);
-    } catch (error) {
-      console.warn("악기 샘플을 불러오지 못해 합성 음색을 사용합니다.", error);
-    }
-    const accompanimentLayers = await loadAccompanimentLayers(context, master, accompaniment);
-    const voiceState = createArrangementVoiceState();
-
-    const recorderMimeType = selectRecorderMimeType();
-    const recorderOptions: MediaRecorderOptions = {
-      audioBitsPerSecond: 128000,
-      ...(recorderMimeType ? { mimeType: recorderMimeType } : {})
-    };
-    const recorder = new MediaRecorder(recordingDestination.stream, recorderOptions);
-    const chunks: BlobPart[] = [];
-    recorder.addEventListener("dataavailable", (event) => {
-      if (event.data.size > 0) chunks.push(event.data);
-    });
-    const stopped = new Promise<Blob>((resolve) => {
-      recorder.addEventListener("stop", () => {
-        resolve(new Blob(chunks, { type: recorder.mimeType || "audio/webm" }));
-      }, { once: true });
-    });
-
-    const start = context.currentTime + 0.25;
-    let cursor = 0;
-    recorder.start(250);
-    introMeasures.forEach((measure) => {
-      cursor += scheduleMeasure(context, master, measure, start + cursor, secondsPerBeat, {
-        instrument,
-        sampledInstrument: null,
-        accompaniment,
-        accompanimentLayers,
-        voiceState,
-        includeMelody: false,
-        includeEffects: false,
-        backingVolumeMultiplier: 1.28,
-        arrangementSection: "intro",
-        arrangementLayerCount: Math.min(3, accompanimentLayers.length),
-        arrangementEnergy: .98
-      });
-    });
-    measures.forEach((measure, measureIndex) => {
-      const plan = songArrangementPlan(measureIndex, measures.length, accompanimentLayers.length);
-      cursor += scheduleMeasure(context, master, { ...measure, measureIndex: measure.measureIndex ?? measureIndex }, start + cursor, secondsPerBeat, {
-        instrument,
-        sampledInstrument: null,
-        accompaniment,
-        accompanimentLayers,
-        voiceState,
-        includeMelody: false,
-        includeEffects: true,
-        arrangementLayerCount: plan.layerCount,
-        transitionFill: (measureIndex + 1) % 4 === 0 || measureIndex === measures.length - 1,
-        arrangementEnergy: plan.energy
-      });
-    });
-    outroMeasures.forEach((measure) => {
-      cursor += scheduleMeasure(context, master, measure, start + cursor, secondsPerBeat, {
-        instrument,
-        sampledInstrument: null,
-        accompaniment,
-        accompanimentLayers,
-        voiceState,
-        includeMelody: false,
-        includeEffects: false,
-        backingVolumeMultiplier: 1.22,
-        arrangementSection: "outro",
-        arrangementLayerCount: Math.min(3, accompanimentLayers.length),
-        arrangementEnergy: .96
-      });
-    });
-
-    window.setTimeout(() => {
-      if (recorder.state !== "inactive") recorder.stop();
-    }, Math.max(0, (start - context.currentTime + cursor + tailSeconds) * 1000));
-
-    const recordedBlob = await stopped;
-    const recordedBuffer = await recordedBlob.arrayBuffer();
-    const decoded = await context.decodeAudioData(recordedBuffer);
-    return encodeAudioBufferToMp3(decoded);
-  } finally {
-    activeOfflineExport = false;
-    if (activePlaybackContext === context) activePlaybackContext = null;
-    if (context.state !== "closed") await context.close();
-  }
+  return exportBacking(renderRealtimeBackingMp3, measures, instrumentId, bpm, accompaniment);
 }
 
 export async function exportBackingCompositionMp3Offline(
@@ -1575,85 +789,5 @@ export async function exportBackingCompositionMp3Offline(
   bpm = 96,
   accompaniment?: AccompanimentOptions
 ): Promise<Blob | null> {
-  if (activePlaybackContext || activeOfflineExport) return null;
-  activeOfflineExport = true;
-  try {
-    const secondsPerBeat = 60 / bpm;
-    const introMeasures = buildIntroMeasures(measures);
-    const outroMeasures = buildOutroMeasures(measures);
-    const start = 0.08;
-    const tailSeconds = 0.8;
-    const totalSeconds = start + compositionSeconds(introMeasures, secondsPerBeat) +
-      compositionSeconds(measures, secondsPerBeat) + compositionSeconds(outroMeasures, secondsPerBeat) + tailSeconds;
-    const context = new OfflineAudioContext(2, Math.ceil(totalSeconds * 44100), 44100);
-    const master = createProtectedMaster(context, context.destination, 0.76);
-
-    const instrument = findInstrument(instrumentId);
-    let sampledInstrument: Awaited<ReturnType<typeof loadSampleInstrument>> | null = null;
-    try {
-      sampledInstrument = await loadSampleWithTimeout(context, master, instrumentId);
-    } catch (error) {
-      console.warn("악기 샘플을 불러오지 못해 합성 음색을 사용합니다.", error);
-    }
-    if (accompaniment?.beatPattern && accompaniment.beatPattern.length > 0) {
-      await preloadBeatSamples(context, beatPatternInstrumentIds(accompaniment.beatPattern));
-    }
-    const accompanimentLayers = (accompaniment?.instrumentIds ?? []).map((id) => ({ id, sample: null }));
-    const voiceState = createArrangementVoiceState();
-    let cursor = 0;
-
-    introMeasures.forEach((measure) => {
-      cursor += scheduleMeasure(context, master, measure, start + cursor, secondsPerBeat, {
-        instrument,
-        sampledInstrument: null,
-        accompaniment,
-        accompanimentLayers,
-        voiceState,
-        includeMelody: false,
-        includeEffects: false,
-        backingVolumeMultiplier: 1.28,
-        arrangementSection: "intro",
-        arrangementLayerCount: Math.min(3, accompanimentLayers.length),
-        arrangementEnergy: .98
-      });
-    });
-    measures.forEach((measure, measureIndex) => {
-      const plan = songArrangementPlan(measureIndex, measures.length, accompanimentLayers.length);
-      cursor += scheduleMeasure(context, master, { ...measure, measureIndex }, start + cursor, secondsPerBeat, {
-        instrument,
-        sampledInstrument: null,
-        accompaniment,
-        accompanimentLayers,
-        voiceState,
-        includeMelody: false,
-        includeEffects: true,
-        arrangementLayerCount: plan.layerCount,
-        transitionFill: (measureIndex + 1) % 4 === 0 || measureIndex === measures.length - 1,
-        arrangementEnergy: plan.energy
-      });
-    });
-    outroMeasures.forEach((measure) => {
-      cursor += scheduleMeasure(context, master, measure, start + cursor, secondsPerBeat, {
-        instrument,
-        sampledInstrument: null,
-        accompaniment,
-        accompanimentLayers,
-        voiceState,
-        includeMelody: false,
-        includeEffects: false,
-        backingVolumeMultiplier: 1.22,
-        arrangementSection: "outro",
-        arrangementLayerCount: Math.min(3, accompanimentLayers.length),
-        arrangementEnergy: .96
-      });
-    });
-
-    const rendered = await context.startRendering();
-    if (renderedAudioPeak(rendered) < 0.0001) {
-      throw new Error("반주 소리를 만들지 못했어요. 다시 시도해 주세요.");
-    }
-    return encodeAudioBufferToMp3(rendered);
-  } finally {
-    activeOfflineExport = false;
-  }
+  return exportBacking(renderOfflineBackingMp3, measures, instrumentId, bpm, accompaniment);
 }

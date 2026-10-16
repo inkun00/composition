@@ -267,7 +267,7 @@ describe("리듬 없이 바로 가락 만들기", () => {
     expect(audio.save).toHaveBeenCalledWith("mp3");
   });
 
-  it("빈 악보의 칸에 첫 음을 넣고 다시 열어도 가락 모드와 음높이를 복원한다", () => {
+  it("빈 악보에서 높은 도 칸으로 첫 음을 넣고 다시 열어도 가락 모드와 음높이를 복원한다", () => {
     mount(undefined, "melody");
     click(testButton("practice-melody-empty-72-0"));
     const original = savedDraft();
@@ -300,6 +300,28 @@ describe("리듬 없이 바로 가락 만들기", () => {
     rerender();
     expect(button("모드 바꾸기").disabled).toBe(true);
     expect(testButton("practice-melody-empty-67-0").disabled).toBe(true);
-    expect(testButton("practice-pitch-72").disabled).toBe(true);
+    expect(testButton("practice-melody-empty-72-0").disabled).toBe(true);
+  });
+
+  it.each(["melody", "rhythm-melody"] as const)("%s 가락 화면에는 색깔 음높이 버튼 줄과 첫 음 추가 안내 없이 칸에서 직접 편집한다", (mode) => {
+    mount(undefined, mode);
+    if (mode === "rhythm-melody") {
+      completeOneMeasure("우리노래");
+      click(stage("melody"));
+    }
+    expect(container?.querySelector(".practice-pitch-options")).toBeNull();
+    expect(container?.querySelector('[data-testid^="practice-pitch-"]')).toBeNull();
+    expect(container?.textContent).not.toContain("음높이를 누르면 새 음표가 생겨요.");
+    expect(container?.querySelectorAll(".practice-melody-row").length).toBeGreaterThan(0);
+    if (mode === "melody") {
+      expect(testButton("practice-duration-1").disabled).toBe(false);
+      expect(testButton("practice-choose-rest").disabled).toBe(false);
+      click(testButton("practice-melody-empty-72-0"));
+    } else {
+      const firstId = savedDraft().measures[0].notes[0].id;
+      click(testButton(`practice-melody-${firstId}-72`));
+    }
+    expect(savedDraft().measures[0].notes[0].pitch).toBe(72);
+    expect(latestAudioInput().measures).toEqual(savedDraft().measures);
   });
 });

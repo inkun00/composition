@@ -488,28 +488,6 @@
   margin-left: 72px;
 }
 
-.practice-pitch-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-}
-
-.practice-pitch-options > button {
-  min-width: 57px;
-  min-height: 44px;
-  padding: 7px 10px;
-  border: 2px solid transparent;
-  border-radius: 9px;
-  color: #293845;
-  font-size: 14px;
-  font-weight: 800;
-}
-
-.practice-pitch-options > button[aria-pressed="true"] {
-  border-color: #4b405f;
-  box-shadow: 0 0 0 2px #e6dfef;
-}
-
 .practice-pitch-navigation {
   display: flex;
   flex-wrap: wrap;
@@ -657,7 +635,4 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .practice-pitch-options > button {
-    flex: 1 1 60px;
-  }
 }

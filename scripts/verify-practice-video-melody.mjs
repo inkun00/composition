@@ -230,7 +230,7 @@ try {
     assert.ok(reports[`${name}-score`].previews.every((frame) => frame.staffLines.length === 5), JSON.stringify(reports));
     assert.ok(reports[`${name}-score`].encoded.frames.every((frame) => frame.staffLines.length === 5), JSON.stringify(reports));
   }
-  assert.ok(reports["rhythm-bars"].previews.every((frame) => frame.rhythmLabels === 28), JSON.stringify(reports));
+  assert.ok(reports["rhythm-bars"].previews.every((frame) => frame.rhythmLabels === 0), JSON.stringify(reports));
   assert.ok(reports["rhythm-score"].previews.every((frame) => frame.staffLines.length === 15), JSON.stringify(reports));
   assert.ok(reports["rhythm-score"].encoded.frames.every((frame) => frame.staffLines.length === 15), JSON.stringify(reports));
   assert.deepEqual(errors, []);

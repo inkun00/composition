@@ -8,6 +8,7 @@ import { isValidBeatInstrumentSelection, isValidBeatVolume, type BeatInstrumentI
 import { isValidBeatPattern, type BeatPatternEvent } from "./beatPattern";
 import { isSongStructureForLength, type SongStructureId } from "./songStructure";
 import { isSongLength, type SongLength } from "./songLength";
+import { isValidAccompanimentTrackMix, type AccompanimentTrackMixMap } from "./accompanimentMix";
 
 export const DRAFT_STORAGE_KEY = "maeum-melody:draft:v1";
 
@@ -35,6 +36,7 @@ export type SavedDraft = Readonly<{
   instrumentId: InstrumentId;
   accompanimentStyleId?: AccompanimentStyleId;
   accompanimentInstrumentIds?: readonly InstrumentId[];
+  accompanimentTrackMix?: AccompanimentTrackMixMap;
   beatInstrumentIds?: readonly BeatInstrumentId[];
   beatPattern?: readonly BeatPatternEvent[];
   beatVolume?: number;
@@ -91,6 +93,7 @@ export function isSavedDraft(value: unknown): value is SavedDraft {
     draft.accompanimentInstrumentIds.length > MAX_SAVED_ACCOMPANIMENT_INSTRUMENTS ||
     new Set(draft.accompanimentInstrumentIds).size !== draft.accompanimentInstrumentIds.length ||
     !draft.accompanimentInstrumentIds.every(isValidInstrumentId))) return false;
+  if (draft.accompanimentTrackMix !== undefined && !isValidAccompanimentTrackMix(draft.accompanimentTrackMix)) return false;
   if (draft.beatInstrumentIds !== undefined &&
     !isValidBeatInstrumentSelection(draft.beatInstrumentIds)) return false;
   if (draft.beatPattern !== undefined && !isValidBeatPattern(draft.beatPattern, draft.meter)) return false;
