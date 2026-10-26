@@ -4,6 +4,8 @@ import { loadSampleInstrument, queueSampleNote, releaseSampleInstrument } from "
 import { isBeatInstrumentId } from "../music/beatInstruments";
 import { findInstrument, isValidInstrumentId, type Instrument } from "../music/instruments";
 import { buildPracticeAudioPlan } from "./practiceAudioTimeline";
+// Keep MP4 code with the editor: a later deployment can remove deferred export chunks.
+import { exportPracticeVideoMp4 } from "./exportPracticeVideoMp4";
 import type { PracticeAudioEvent, PracticeAudioInput, PracticeAudioPlan, PracticeAudioTrack, PracticeRenderedAudio, PracticeTimeline } from "./practiceAudioTypes";
 
 export {
@@ -252,8 +254,6 @@ export async function exportPracticeMp4(
   input: PracticeAudioInput,
   options: PracticeAudioRenderOptions = {}
 ): Promise<Blob> {
-  checkAbort(options.signal);
-  const { exportPracticeVideoMp4 } = await import("./exportPracticeVideoMp4");
   checkAbort(options.signal);
   return exportPracticeVideoMp4(rendered, input, options);
 }

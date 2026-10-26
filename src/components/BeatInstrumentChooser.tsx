@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Music2, Plus, Trash2, Volume2 } from "lucide-react";
+import { Music2, Plus, Trash2, Volume2 } from "./AppArtworkIcons";
 import { previewBeatPattern, stopBeatPreview } from "../audio/drumGroove";
 import {
   BEAT_PATTERN_MEASURES,
@@ -21,6 +21,7 @@ import {
 } from "../music/beatInstruments";
 import type { Meter } from "../music/meter";
 import PlayIcon from "./PlayIcon";
+import MusicChoiceArtwork from "./MusicChoiceArtwork";
 import "./BeatInstrumentChooser.css";
 
 type BeatInstrumentChooserProps = Readonly<{
@@ -294,7 +295,7 @@ export default function BeatInstrumentChooser({
                 <button type="button" role="tab" aria-selected={active}
                   data-testid={`beat-track-${index}`} disabled={disabled}
                   onClick={() => void selectTrack(index)}>
-                  <span>{instrument.icon}</span>
+                  <span><MusicChoiceArtwork symbol={instrument.icon} size={28} /></span>
                   <span><small>{index + 1}번 악기</small><strong>{instrument.name}</strong></span>
                   <em>{trackEventCount}개</em>
                 </button>
@@ -316,7 +317,7 @@ export default function BeatInstrumentChooser({
       <div className="beat-palette">
         <div className="beat-palette-heading">
           <strong>{activeTrackIndex + 1}번 악기 소리</strong>
-          <span>{activeInstrument.icon} <b>{activeInstrument.name}</b></span>
+          <span><MusicChoiceArtwork symbol={activeInstrument.icon} size={24} /> <b>{activeInstrument.name}</b></span>
         </div>
         <div className="beat-role-groups">
           {roles.map((role) => (
@@ -335,7 +336,7 @@ export default function BeatInstrumentChooser({
                       disabled={disabled || usedByAnotherTrack}
                       title={usedByAnotherTrack ? "다른 악기 줄에서 이미 사용하고 있어요." : instrument.description}
                       onClick={() => void chooseInstrument(instrument.id)}>
-                      <span>{instrument.icon}</span>
+                      <span><MusicChoiceArtwork symbol={instrument.icon} size={28} /></span>
                       <strong>{instrument.name}</strong>
                     </button>
                   );
@@ -360,7 +361,7 @@ export default function BeatInstrumentChooser({
               aria-label={`${trackIndex + 1}번 ${instrument.name} 4마디 비트`}>
               <div className="beat-pattern-heading">
                 <div className="beat-pattern-track-summary">
-                  <span aria-hidden="true">{instrument.icon}</span>
+                  <span aria-hidden="true"><MusicChoiceArtwork symbol={instrument.icon} size={26} /></span>
                   <span>
                     <strong>{trackIndex + 1}번 · {instrument.name}의 4마디</strong>
                     <small>{trackEvents.length}개 소리{active ? " · 악기 선택 중" : ""}</small>

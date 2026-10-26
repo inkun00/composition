@@ -1,11 +1,12 @@
-import { useState, type CSSProperties } from "react";
+import { useState } from "react";
 import ScoreMeasure from "../components/ScoreMeasure";
 import { measureCapacity, validateMeasure } from "../music/meter";
 import { toNumber } from "../music/rational";
-import { pitchName, positionNotes, type PositionedNote } from "../music/score";
-import { accidentalSymbol, staffDegreeForPitch } from "../music/accidental";
+import { positionNotes, type PositionedNote } from "../music/score";
 import type { NoteEvent } from "../music/types";
-import { PRACTICE_DURATIONS, PRACTICE_PITCHES } from "./practiceModel";
+import { PRACTICE_DURATIONS } from "./practiceModel";
+import PracticeMelodyGrid from "./PracticeMelodyGrid";
+import { beatText, positionStyle, TimelineBase } from "./practiceTimeline";
 import PracticeNoteTools from "./PracticeNoteTools";
 import type { PracticeEditorsProps } from "./practiceEditorTypes";
 import { usePracticeGridFocus } from "./usePracticeGridFocus";
@@ -15,53 +16,9 @@ import "./PracticeScore.css";
 export type { PracticeEditorsProps } from "./practiceEditorTypes";
 export { default as PracticeNoteTools } from "./PracticeNoteTools";
 
-type TimelineProps = {
-  slots: number;
-  capacity: number;
-  slotsPerBeat: number;
-};
-
-function beatText(beats: number): string {
-  return Number.isInteger(beats) ? String(beats) : beats.toFixed(2).replace(/0$/, "");
-}
-
 function noteSymbol(note: NoteEvent): string {
   if (note.pitch === null) return "쉼";
   return PRACTICE_DURATIONS.find((duration) => duration.beats === toNumber(note.duration))?.symbol ?? "♪";
-}
-
-function noteLabel(note: NoteEvent): string {
-  if (note.pitch === null) return "쉼표";
-  return PRACTICE_PITCHES.find((entry) => entry.pitch === note.pitch)?.label ?? pitchName(note.pitch, note.accidental);
-}
-
-function gridPitch(note: NoteEvent): number | null {
-  if (note.pitch === null) return null;
-  const degree = staffDegreeForPitch(note.pitch, note.accidental);
-  return PRACTICE_PITCHES.find((entry) => staffDegreeForPitch(entry.pitch) === degree)?.pitch ?? null;
-}
-
-function positionStyle(note: PositionedNote, slots: number, slotsPerBeat: number): CSSProperties {
-  return {
-    left: `${note.onset * slotsPerBeat / slots * 100}%`,
-    width: `${toNumber(note.duration) * slotsPerBeat / slots * 100}%`
-  };
-}
-
-function TimelineBase({ slots, capacity, slotsPerBeat }: TimelineProps) {
-  return (
-    <div className="practice-timeline-base" aria-hidden="true"
-      style={{ gridTemplateColumns: `repeat(${slots}, minmax(0, 1fr))` }}>
-      {Array.from({ length: slots }, (_, index) => (
-        <span key={index} className={[
-          "practice-half-beat",
-          index % slotsPerBeat === 0 ? "practice-beat-start" : "",
-          index / slotsPerBeat >= capacity ? "practice-overflow-slot" : ""
-        ].filter(Boolean).join(" ")} />
-      ))}
-      <span className="practice-capacity-line" style={{ left: `${capacity * slotsPerBeat / slots * 100}%` }} />
-    </div>
-  );
 }
 
 function LyricTimeline({ notes, slots, capacity, slotsPerBeat, disabled, playingNoteId, onSelectNote, onNoteLyric }: {
@@ -165,93 +122,6 @@ function RhythmGrid({ notes, slots, capacity, slotsPerBeat, total, selectedNoteI
   );
 }
 
-function MelodyGrid({ notes, slots, capacity, slotsPerBeat, total, selectedNoteId, playingNoteId, disabled, onSelectNote, onPitch, onAppendPitch }: {
-  notes: readonly PositionedNote[];
-  slots: number;
-  capacity: number;
-  slotsPerBeat: number;
-  total: number;
-  selectedNoteId: string | null;
-  playingNoteId?: string | null;
-  disabled: boolean;
-  onSelectNote: (id: string) => void;
-  onPitch: (id: string, pitch: number) => void;
-  onAppendPitch?: (pitch: number, onset: number) => void;
-}) {
-  const emptySlots = onAppendPitch ? Array.from({ length: slots }, (_, index) => index)
-    .filter((index) => index / slotsPerBeat >= total && index / slotsPerBeat < capacity) : [];
-  const pitches = [...PRACTICE_PITCHES].reverse();
-  const keys = pitches.flatMap((entry) => [
-    ...notes.filter((note) => note.pitch !== null || entry.pitch === 65).map((note) => `${note.id}-${entry.pitch}`),
-    ...emptySlots.map((slot) => `empty-${entry.pitch}-${slot}`)
-  ]);
-  const selected = notes.find((note) => note.id === selectedNoteId);
-  const preferred = selected ? `${selected.id}-${gridPitch(selected) ?? 65}` : undefined;
-  const focus = usePracticeGridFocus(keys, preferred);
-  return (
-    <div ref={focus.ref} className="practice-melody-rows" aria-label="낮은 도부터 높은 도까지 가락 칸 채우기, 방향키로 이동" onKeyDown={focus.onKeyDown}>
-      {pitches.map((entry, row) => (
-        <div key={entry.pitch} className="practice-melody-row">
-          <span className="practice-pitch-row-label" style={{ backgroundColor: entry.color }}>{entry.label}</span>
-          <div className="practice-melody-timeline">
-            <TimelineBase slots={slots} capacity={capacity} slotsPerBeat={slotsPerBeat} />
-            {emptySlots.map((slot) => (
-              <button key={`empty-${slot}`} type="button" disabled={disabled}
-                {...focus.cell(`empty-${entry.pitch}-${slot}`, row, slot / slotsPerBeat)}
-                className="practice-empty-slot practice-melody-empty-slot"
-                style={{ left: `${slot / slots * 100}%`, width: `${1 / slots * 100}%` }}
-                data-testid={`practice-melody-empty-${entry.pitch}-${slot}`}
-                aria-label={`${entry.label} ${beatText(slot / slotsPerBeat + 1)}박 빈칸에 선택한 음표 넣기`}
-                onClick={() => onAppendPitch?.(entry.pitch, slot / slotsPerBeat)}>
-                <span aria-hidden="true">+</span>
-              </button>
-            ))}
-            {notes.map((note, index) => {
-              if (note.pitch === null) {
-                if (entry.pitch === 65) {
-                  return (
-                    <button key={note.id} type="button" disabled={disabled}
-                      {...focus.cell(`${note.id}-${entry.pitch}`, row, note.onset)}
-                      className={`practice-grid-rest${selectedNoteId === note.id ? " is-selected" : ""}${playingNoteId === note.id ? " is-playing" : ""}`}
-                      style={positionStyle(note, slots, slotsPerBeat)} data-testid={`practice-melody-rest-${note.id}`}
-                      aria-label={`${index + 1}번째 쉼표, ${beatText(toNumber(note.duration))}박 선택`}
-                      aria-pressed={selectedNoteId === note.id} onClick={() => onSelectNote(note.id)}>
-                      쉼표
-                    </button>
-                  );
-                }
-                return <span key={note.id} className="practice-grid-rest"
-                  style={positionStyle(note, slots, slotsPerBeat)} aria-hidden="true" />;
-              }
-              const active = gridPitch(note) === entry.pitch;
-              return (
-                <button key={note.id} type="button" disabled={disabled}
-                  {...focus.cell(`${note.id}-${entry.pitch}`, row, note.onset)}
-                  className={[
-                    "practice-melody-cell",
-                    active ? "is-filled" : "",
-                    active && selectedNoteId === note.id ? "is-selected" : "",
-                    active && playingNoteId === note.id ? "is-playing" : ""
-                  ].filter(Boolean).join(" ")}
-                  style={{ ...positionStyle(note, slots, slotsPerBeat), ...(active ? { backgroundColor: entry.color } : {}) }}
-                  data-testid={`practice-melody-${note.id}-${entry.pitch}`} aria-pressed={active}
-                  aria-label={`${index + 1}번째 음표를 ${entry.label}로, ${beatText(toNumber(note.duration))}박 유지`}
-                  onClick={() => {
-                    onSelectNote(note.id);
-                    onPitch(note.id, entry.pitch);
-                  }}>
-                  {active && <><span aria-hidden="true">●</span><span>{note.lyric || noteLabel(note)}</span>
-                    {note.lyric && note.pitch !== entry.pitch && <small>{accidentalSymbol(note.pitch, note.accidental)}</small>}
-                  </>}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 export default function PracticeEditors({
   notes, meter, step, inputMode, selectedNoteId, playingNoteId, disabled = false,
@@ -324,12 +194,14 @@ export default function PracticeEditors({
                 selectedNoteId={selectedNoteId} playingNoteId={playingNoteId} disabled={disabled}
                 onDelete={onDelete} onAppend={append} />
             ) : (
-              <MelodyGrid notes={positioned} slots={slots} capacity={capacity} slotsPerBeat={slotsPerBeat} total={total}
+              <PracticeMelodyGrid notes={positioned} slots={slots} capacity={capacity} slotsPerBeat={slotsPerBeat} total={total}
                 selectedNoteId={selectedNoteId} playingNoteId={playingNoteId} disabled={disabled}
                 onSelectNote={onSelectNote} onPitch={onPitch}
-                onAppendPitch={allowMelodyAppend && !rhythmLocked ? appendPitch : undefined} />
+                onAppendPitch={allowMelodyAppend && !rhythmLocked ? appendPitch : undefined}>
+                <div className="practice-timeline-offset">{lyricTimeline}</div>
+              </PracticeMelodyGrid>
             )}
-            <div className={step === "melody" ? "practice-timeline-offset" : ""}>{lyricTimeline}</div>
+            {step === "rhythm" && lyricTimeline}
           </div>
           {notes.length === 0 && step === "melody" && <p className="practice-editor-empty">
             {allowMelodyAppend ? "원하는 음높이의 빈칸을 눌러 가락을 넣어요." : "리듬을 만든 뒤 음높이를 골라요."}

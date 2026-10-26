@@ -1,3 +1,4 @@
+import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   button, changeValue, click, completeOneMeasure, completeScoreMeasure, container, latestAudioInput, mount,
@@ -43,6 +44,12 @@ function modeButton(mode: "bars" | "score"): HTMLButtonElement {
   const found = [...(container?.querySelectorAll<HTMLButtonElement>(".practice-video-modes button") ?? [])]
     .find((item) => item.textContent?.includes(label));
   if (!found) throw new Error(`${label} 버튼을 찾지 못했습니다.`);
+  return found;
+}
+
+function videoChoice(text: string): HTMLButtonElement {
+  const found = document.querySelector<HTMLButtonElement>(`.practice-video-choice-dialog button[aria-label="${text}"]`);
+  if (!found) throw new Error(`${text} 영상 선택을 찾지 못했습니다.`);
   return found;
 }
 
@@ -139,7 +146,9 @@ describe("음악 저장과 공유 단계", () => {
     click(modeButton("score"));
     expect(container?.querySelector('[data-testid="save-preview"]')?.getAttribute("data-step")).toBe("melody");
     click(button("음악 영상(MP4)"));
-    expect(audio.save).toHaveBeenCalledWith("mp4");
+    expect(audio.save).not.toHaveBeenCalled();
+    click(videoChoice("가락과 함께 재생"));
+    expect(audio.save).toHaveBeenCalledWith("mp4", { videoMode: "score" });
     expect(latestAudioInput().rhythmLayers).toEqual(before.rhythmLayers);
     expect(savedDraft()).toEqual(before);
 
@@ -180,7 +189,10 @@ describe("음악 저장과 공유 단계", () => {
     expect(button("음악 영상(MP4)").disabled).toBe(false);
     expect(latestAudioInput().step).toBe("rhythm");
     click(button("음악 영상(MP4)"));
-    expect(audio.save).toHaveBeenCalledWith("mp4");
+    expect(audio.save).not.toHaveBeenCalled();
+    expect(videoChoice("가사만 재생").disabled).toBe(true);
+    click(videoChoice("리듬과 함께 재생"));
+    expect(audio.save).toHaveBeenCalledWith("mp4", { videoMode: "bars" });
   });
 
   it("막대·악보 모드는 영상 미리보기와 음원 입력으로 전달되며 리듬·가사·악기는 보존한다", () => {
@@ -195,6 +207,9 @@ describe("음악 저장과 공유 단계", () => {
     expect(latestAudioInput()).toMatchObject({ step: "rhythm", videoMode: "score", rhythmInstrumentId: "beat:shaker" });
     expect(container?.querySelector('[data-testid="save-preview"]')?.getAttribute("data-mode")).toBe("score");
     click(button("음악 영상(MP4)"));
+    expect(audio.save).not.toHaveBeenCalled();
+    click(videoChoice("리듬과 함께 재생"));
+    expect(audio.save).toHaveBeenCalledWith("mp4", { videoMode: "score" });
     click(modeButton("bars"));
     expect(latestAudioInput().videoMode).toBe("bars");
     expect(savedDraft()).toEqual(before);
@@ -250,5 +265,39 @@ describe("음악 저장과 공유 단계", () => {
     click(modeButton("score"));
     expect(button("음악 영상(MP4)").disabled).toBe(true);
     expect(container?.textContent).toContain("영상에 넣을 가사");
+  });
+
+  it("MP4 선택을 취소하거나 Escape로 닫으면 저장하지 않는다", () => {
+    mount();
+    completeOneMeasure("우리노래");
+    click(button("음악 영상(MP4)"));
+    const cancel = document.querySelector<HTMLButtonElement>(".practice-video-choice-cancel");
+    expect(cancel).not.toBeNull();
+    click(cancel!);
+    expect(document.querySelector(".practice-video-choice-dialog")).toBeNull();
+    expect(audio.save).not.toHaveBeenCalled();
+    click(button("음악 영상(MP4)"));
+    act(() => videoChoice("가사만 재생").dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+    expect(document.querySelector(".practice-video-choice-dialog")).toBeNull();
+    expect(audio.save).not.toHaveBeenCalled();
+  });
+
+  it.each(["rhythm", "melody"] as const)("%s 단계의 가사만 영상 선택은 한 번만 저장하며 화면 설정을 유지한다", (step) => {
+    mount();
+    completeOneMeasure("우리노래");
+    if (step === "melody") click(stage("melody"));
+    click(stage("save"));
+    click(modeButton("score"));
+    const before = savedDraft();
+    click(button("음악 영상(MP4)"));
+    const choice = videoChoice("가사만 재생");
+    expect(document.querySelector(".practice-video-choice-dialog")?.textContent)
+      .toContain(step === "rhythm" ? "리듬과 함께 재생" : "가락과 함께 재생");
+    click(choice);
+    click(choice);
+    expect(audio.save).toHaveBeenCalledExactlyOnceWith("mp4", { videoMode: "lyrics" });
+    expect(document.querySelector(".practice-video-choice-dialog")).toBeNull();
+    expect(latestAudioInput().videoMode).toBe("score");
+    expect(savedDraft()).toEqual(before);
   });
 });

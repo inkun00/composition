@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { LyricVideoPlan } from "../video/lyricVideoPlan";
+import { exportLyricMp4 } from "../video/exportLyricMp4";
 
 export function useLyricVideoExport() {
   const [exporting, setExporting] = useState(false);
@@ -17,7 +18,6 @@ export function useLyricVideoExport() {
     setProgress(0);
     setStatus("가사 영상을 만들고 있어요.");
     try {
-      const { exportLyricMp4 } = await import("../video/exportLyricMp4");
       const blob = await exportLyricMp4(audioUrl, plan, setProgress);
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");

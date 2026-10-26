@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CheckCircle2, Lightbulb, Square, Volume2 } from "lucide-react";
+import { CheckCircle2, Lightbulb, Square, Volume2 } from "../components/AppArtworkIcons";
 import { measureCapacity, type Meter } from "../music/meter";
 import { toNumber } from "../music/rational";
 import type { MeasureValidation } from "../music/types";

@@ -66,6 +66,10 @@ describe("저장 영상 미리보기", () => {
     expect(preparePracticeVideoRenderer).toHaveBeenLastCalledWith(first[0], "score");
     expect(host.querySelectorAll("canvas")).toHaveLength(1);
     expect(host.querySelector("canvas")?.getAttribute("aria-label")).toBe("악보 모드 영상 미리보기");
+    await render(draft, "lyrics");
+    expect(preparePracticeVideoRenderer).toHaveBeenLastCalledWith(first[0], "lyrics");
+    expect(host.querySelectorAll("canvas")).toHaveLength(1);
+    expect(host.querySelector("canvas")?.getAttribute("aria-label")).toBe("가사 모드 영상 미리보기");
   });
 
   it("위치를 옮기면 다른 마디의 영상 프레임을 그리고 저장 중에는 이동을 잠근다", async () => {
@@ -82,7 +86,7 @@ describe("저장 영상 미리보기", () => {
     expect(slider.disabled).toBe(true);
   });
 
-  it.each(["bars", "score"] as const)("%s 미리보기는 가락으로 넘어갈 때 하단 리듬 화면을 남기지 않는다", async (mode) => {
+  it.each(["bars", "score", "lyrics"] as const)("%s 미리보기는 가락으로 넘어갈 때 하단 리듬 화면을 남기지 않는다", async (mode) => {
     const draft = filledDraft();
     draft.mode = "rhythm-melody";
     draft.rhythmLayers = ["beat:shaker", "beat:woodblock"].map((instrumentId, index) => ({

@@ -159,7 +159,7 @@ try {
     return reports;
   }
 
-  await page.getByRole("button", { name: "기능 연습하기", exact: false }).first().click();
+  await page.getByRole("button", { name: "리듬·가락 직접 만들기", exact: false }).first().click();
   await assertPopup();
   for (const name of ["리듬만들기", "리듬만들고 가락넣기", "가락만들기"]) {
     assert.equal(await page.getByRole("button", { name, exact: true }).isVisible(), true);
@@ -169,9 +169,9 @@ try {
   await assertPopupKeyboard();
   await page.getByRole("button", { name: "모드 선택 창 닫기", exact: true }).click();
   assert.equal(await chooser.count(), 0);
-  assert.equal(await page.getByRole("button", { name: "기능 연습하기", exact: false }).first().isVisible(), true);
+  assert.equal(await page.getByRole("button", { name: "리듬·가락 직접 만들기", exact: false }).first().isVisible(), true);
   assert.notEqual(await page.evaluate(() => document.body.style.overflow), "hidden");
-  await page.getByRole("button", { name: "기능 연습하기", exact: false }).first().click();
+  await page.getByRole("button", { name: "리듬·가락 직접 만들기", exact: false }).first().click();
   await assertPopup();
   await page.screenshot({ path: path.join(outputDir, "mode-chooser.png"), fullPage: true });
   const polishedPopup = await assertPolishedPopupAtViewports();
@@ -193,6 +193,10 @@ try {
     assert.equal(await tools.locator(".practice-pitch-options").count(), 0);
     assert.equal(await tools.getByRole("group", { name: "선택한 음표의 음높이", exact: true }).count(), 0);
     assert.equal(await tools.locator('[data-testid^="practice-pitch-"]').count(), 0);
+    assert.equal(await page.locator(".practice-current-measure").count(), 0);
+    assert.equal(await page.locator(".practice-pitch-navigation").count(), 0);
+    assert.equal(await page.getByRole("button", { name: /선택한 음표 (반음|한 음) (낮추기|높이기)/ }).count(), 0);
+    assert.equal(await page.getByText("만든 리듬에 높낮이를 붙여요. 길이를 고치려면 리듬만들기로 돌아가요.", { exact: true }).count(), 0);
     assert.equal(await page.getByText("음높이를 누르면 새 음표가 생겨요.", { exact: true }).count(), 0);
   }
   const empty = await draft();
@@ -212,7 +216,7 @@ try {
   const staffNotes = page.getByTestId("practice-measure-card-0").locator("g.note-button");
   await staffNotes.first().press("ArrowUp");
   assert.equal((await draft()).measures[0].notes[0].pitch, 68);
-  await tools.getByRole("button", { name: "선택한 음표 반음 낮추기", exact: true }).click();
+  await staffNotes.first().press("ArrowDown");
   assert.equal((await draft()).measures[0].notes[0].pitch, 67);
   // Adding another note still works in staff view without the removed palette.
   await tools.getByTestId("practice-duration-1").click();
@@ -326,7 +330,7 @@ try {
   const firstMelodyNote = (await draft()).measures[0].notes[0];
   await page.getByTestId(`practice-melody-${firstMelodyNote.id}-69`).click();
   assert.equal((await draft()).measures[0].notes[0].pitch, 69);
-  await tools.getByRole("button", { name: "선택한 음표 한 음 낮추기", exact: true }).click();
+  await page.getByTestId(`practice-melody-${firstMelodyNote.id}-67`).click();
   assert.equal((await draft()).measures[0].notes[0].pitch, 67);
   assert.equal(await page.getByRole("button", { name: "가락 미리듣기", exact: true }).isEnabled(), true);
   assert.deepEqual((await draft()).measures, completedMeasures);
@@ -423,7 +427,7 @@ try {
   await changeMode("가락만들기");
   const completed = await draft();
   await page.reload();
-  await page.getByRole("button", { name: "기능 연습하기", exact: false }).first().click();
+  await page.getByRole("button", { name: "리듬·가락 직접 만들기", exact: false }).first().click();
   assert.equal((await draft()).mode, "melody");
   assert.deepEqual(await draft(), completed);
   assert.equal(await page.getByRole("button", { name: "모드 바꾸기", exact: true }).isVisible(), true);

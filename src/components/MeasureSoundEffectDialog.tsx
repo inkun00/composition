@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { Play, X } from "lucide-react";
+import { Play, X } from "./AppArtworkIcons";
 import type { Meter } from "../music/meter";
 import type { SoundEffectId } from "../music/soundEffects";
 import type { NoteEvent, SoundEffectEvent } from "../music/types";
 import NoteLyrics from "./NoteLyrics";
 import ScoreMeasure from "./ScoreMeasure";
 import SoundEffectEditor from "./SoundEffectEditor";
+import ComposerChildArtwork from "./ComposerChildArtwork";
 import "./MeasureSoundEffectDialog.css";
 
 type Props = Readonly<{
@@ -46,7 +47,8 @@ export default function MeasureSoundEffectDialog({
       <section className="measure-sound-dialog" role="dialog" aria-modal="true"
         aria-labelledby="measure-sound-title">
         <header className="measure-sound-header">
-          <div>
+          <div className="composer-sound-title">
+            <ComposerChildArtwork kind="sound" />
             <h2 id="measure-sound-title">{measureIndex + 1}마디 효과음</h2>
           </div>
           <div className="measure-sound-header-actions">

@@ -244,7 +244,26 @@ describe("연습 초안 저장과 복원", () => {
     expect(readPracticeDraft().measures[0].notes).toEqual(draft.measures[0].notes.map((note) => ({ ...note, dotted: undefined })));
   });
 
-  it.each([59, 73, 60.5, 999, undefined])("연습 음역에 없는 음높이 %s를 손상값으로 판단한다", (pitch) => {
+  it("높은 도 위의 자연음과 반음도 임시표·길이·가사를 보존해서 다시 불러온다", () => {
+    const draft = storedExample();
+    draft.mode = "melody";
+    draft.measures[0].lyric = "높은하늘";
+    draft.measures[0].notes = [
+      { id: "upper-re", pitch: 74, duration: rational(1, 2), lyric: "높" },
+      { id: "upper-sol", pitch: 79, duration: rational(1, 2), lyric: "은" },
+      { id: "upper-flat", pitch: 82, accidental: "flat", duration: rational(1), lyric: "하" },
+      { id: "highest-do", pitch: 84, duration: rational(2), lyric: "늘" }
+    ];
+    expect(writePracticeDraft(draft)).toBe(true);
+    const restored = readPracticeDraft();
+    expect(restored.mode).toBe("melody");
+    expect(restored.measures[0].notes).toEqual(draft.measures[0].notes.map((note) => ({
+      ...note, dotted: undefined
+    })));
+    expect(restored.measures[1].notes).toMatchObject(draft.measures[1].notes);
+  });
+
+  it.each([59, 85, 60.5, 999, undefined])("연습 음역에 없는 음높이 %s를 손상값으로 판단한다", (pitch) => {
     const draft = storedExample();
     draft.measures[0].notes = [{ id: "bad", pitch, duration: rational(1) } as NoteEvent];
     saveRaw(draft);

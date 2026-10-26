@@ -1,6 +1,8 @@
-import { ArrowRight, GraduationCap, Music2, WandSparkles } from "lucide-react";
+import { ArrowRight, Music2, WandSparkles } from "./AppArtworkIcons";
+import AppArtwork from "./AppArtwork";
 import { publicAssetUrl } from "../platform/portable";
 import "../practice/PracticeMode.css";
+import "./AppExperienceArtwork.css";
 
 type OpeningScreenProps = {
   hasDraft: boolean;
@@ -11,7 +13,7 @@ type OpeningScreenProps = {
 
 export default function OpeningScreen({ hasDraft, onStart, onContinue, onPractice }: OpeningScreenProps) {
   return (
-    <section className="opening-screen" aria-label="마음멜로디 시작 화면">
+    <section className="opening-screen opening-with-children" aria-label="마음멜로디 시작 화면">
       <picture className="opening-visual" aria-hidden="true">
         <source media="(max-width: 700px)" srcSet={publicAssetUrl("/illustrations/opening-studio-mobile-v1.webp")} />
         <img src={publicAssetUrl("/illustrations/opening-studio-desktop-v2.webp")} alt="" fetchPriority="high" />
@@ -31,7 +33,7 @@ export default function OpeningScreen({ hasDraft, onStart, onContinue, onPractic
             <Music2 size={19} /> 이어 만들기
           </button>
           <button type="button" className="opening-practice action-button" onClick={onPractice}>
-            <GraduationCap size={22} />
+            <AppArtwork name="rhythm-stage" size={96} className="app-opening-practice-art" />
             <span><strong>리듬·가락 직접 만들기</strong><small>한 마디씩 연습해요</small></span>
             <ArrowRight size={18} />
           </button>

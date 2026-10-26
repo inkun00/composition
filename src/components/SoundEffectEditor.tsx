@@ -1,8 +1,9 @@
 import { useMemo, useRef, useState } from "react";
-import { Play } from "lucide-react";
+import { Play } from "./AppArtworkIcons";
 import { previewSoundEffect } from "../audio/soundEffects";
 import { findSoundEffect, SOUND_EFFECTS, type SoundEffectCategory, type SoundEffectId } from "../music/soundEffects";
 import type { SoundEffectEvent } from "../music/types";
+import ComposerChildArtwork from "./ComposerChildArtwork";
 
 type SoundEffectEditorProps = Readonly<{
   measureIndex: number;
@@ -54,12 +55,13 @@ export default function SoundEffectEditor({
   };
 
   return (
-    <section className={`sound-effect-editor${compact ? " compact" : ""}`}
+    <section className={`sound-effect-editor${compact ? " compact" : " composer-settings-side-art composer-sound-side-art"}`}
       aria-label={`${measureIndex + 1}마디 효과음 편집`}>
       {!compact && <>
         <div className="sound-effect-heading">
           <div><h2>{measureIndex + 1}마디 효과음</h2></div>
         </div>
+        <ComposerChildArtwork kind="sound" className="composer-settings-child" />
       </>}
       <label className="sound-effect-filter">
         <span>소리 종류</span>

@@ -163,7 +163,8 @@ export default function HarmonyPresetChooser({
   }, []);
 
   return (
-    <section className="preset-chooser setup-with-guide" aria-labelledby="preset-heading">
+    <section className="preset-chooser composer-setting-card"
+      aria-labelledby="preset-heading">
       <div className="compact-heading">
         <span className="number-badge">2</span>
         <div>

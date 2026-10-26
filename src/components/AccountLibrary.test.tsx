@@ -149,7 +149,7 @@ describe("이메일 계정 화면", () => {
       onPasswordReset={vi.fn().mockResolvedValue(true)} onClearError={() => undefined} onSignOut={() => undefined}
       onSave={() => undefined} onLoad={() => undefined} onPublish={() => undefined} onDelete={() => undefined} />));
     expect(container.textContent).toContain("계정 번호: user-123");
-    expect(container.textContent).toContain("임시저장: 이 기기 · 내 악보함: 로그인한 계정");
+    expect(container.textContent).toContain("그림은 이 기기에 자동 보관되며, 로그인하면 프로젝트에도 자동 저장돼요.");
     expect(container.textContent).toContain("목록을 불러오지 못했어요");
     expect(container.textContent).not.toContain("아직 저장된 악보가 없어요");
     expect(container.querySelector(".account-score-heading span")?.textContent).toBe("확인 전");

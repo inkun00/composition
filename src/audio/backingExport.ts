@@ -1,7 +1,7 @@
 import { buildIntroMeasures, buildOutroMeasures, compositionSeconds, createProtectedMaster,
   prepareAccompaniment, scheduleMeasure, songArrangementPlan,
   type AccompanimentOptions, type PlaybackMeasure } from "./accompanimentScore";
-import { loadAccompanimentLayers, releaseAccompanimentRuntime } from "./accompanimentRuntime";
+import { loadAccompanimentLayers, loadSampleWithTimeout, releaseAccompanimentRuntime } from "./accompanimentRuntime";
 import { createArrangementVoiceState } from "./accompanimentPerformance";
 import { encodeAudioBufferToMp3, renderedAudioPeak } from "./audioExport";
 import { findInstrument, type InstrumentId } from "../music/instruments";
@@ -134,7 +134,8 @@ export async function renderOfflineBackingAudio(
   instrumentId: InstrumentId = "piano",
   bpm = 96,
   accompaniment?: AccompanimentOptions,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  options: Readonly<{ includeMelody?: boolean }> = {}
 ): Promise<RenderedBackingAudio> {
   const checkAbort = () => {
     if (signal?.aborted) throw new DOMException("파일 만들기를 멈췄어요.", "AbortError");
@@ -155,6 +156,15 @@ export async function renderOfflineBackingAudio(
     const master = createProtectedMaster(renderContext, renderContext.destination, 0.76);
 
     const instrument = findInstrument(instrumentId);
+    let sampledInstrument: Awaited<ReturnType<typeof loadSampleWithTimeout>> | null = null;
+    if (options.includeMelody) {
+      try {
+        sampledInstrument = await loadSampleWithTimeout(renderContext, master, instrumentId);
+      } catch (error) {
+        console.warn("악기 샘플을 불러오지 못해 합성 음색을 사용합니다.", error);
+      }
+      checkAbort();
+    }
     const accompanimentLayers = await loadAccompanimentLayers(renderContext, master, accompaniment);
     checkAbort();
     const voiceState = createArrangementVoiceState();
@@ -179,11 +189,11 @@ export async function renderOfflineBackingAudio(
       const plan = songArrangementPlan(measureIndex, measures.length, accompanimentLayers.length);
       cursor += scheduleMeasure(renderContext, master, { ...measure, measureIndex: measure.measureIndex ?? measureIndex }, start + cursor, secondsPerBeat, {
         instrument,
-        sampledInstrument: null,
+        sampledInstrument,
         accompaniment,
         accompanimentLayers,
         voiceState,
-        includeMelody: false,
+        includeMelody: options.includeMelody ?? false,
         includeEffects: true,
         arrangementLayerCount: plan.layerCount,
         ending: measure.isSongEnding ?? (measures.length > 1 && measureIndex === measures.length - 1),

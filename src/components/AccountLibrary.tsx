@@ -1,10 +1,12 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Cloud, Copy, Eye, EyeOff, FileMusic, Library, LogIn, LogOut, Mail, Save, Share2, Trash2, UserRound, X } from "lucide-react";
+import { Cloud, Copy, Eye, EyeOff, FileMusic, Library, LogIn, LogOut, Mail, Save, Share2, Trash2, UserRound, X } from "./AppArtworkIcons";
 import type { User } from "../firebase/client";
 import type { CloudScore, CloudScoreListItem } from "../firebase/scores";
 import type { CloudListStatus } from "../hooks/useCloudScoreList";
 import "./AccountLibrarySync.css";
 import { useDialogFocus } from "../hooks/useDialogFocus";
+import BrowserProjectRecovery from "./BrowserProjectRecovery";
+import type { SavedDraft } from "../music/draft";
 
 type AccountLibraryProps = Readonly<{
   configured: boolean;
@@ -25,6 +27,8 @@ type AccountLibraryProps = Readonly<{
   onSignOut: () => void;
   onSave: (asCopy: boolean) => void;
   onLoad: (score: CloudScore) => void;
+  onLoadLocal?: (draft: SavedDraft) => void;
+  onFindLostDrawings?: () => void;
   onPublish: (score: CloudScore) => void;
   onDelete: (score: CloudScoreListItem) => void;
 }>;
@@ -46,7 +50,7 @@ function isPublishableScore(score: CloudScoreListItem): score is CloudScore {
 
 export default function AccountLibrary({ configured, user, authReady, scores, listStatus, onRetryList, busy, error, saveNotice,
   currentScoreId, onClose, onGoogleSignIn, onEmailAuth, onPasswordReset, onClearError,
-  onSignOut, onSave, onLoad, onPublish, onDelete }: AccountLibraryProps) {
+  onSignOut, onSave, onLoad, onLoadLocal, onFindLostDrawings, onPublish, onDelete }: AccountLibraryProps) {
   const dialogRef = useDialogFocus();
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
@@ -118,6 +122,11 @@ export default function AccountLibrary({ configured, user, authReady, scores, li
           <button type="button" className="account-close" aria-label="내 악보함 닫기" onClick={onClose}><X size={20} /></button>
         </header>
 
+        {onFindLostDrawings && <div className="account-recovery-search">
+          <button type="button" className="account-secondary" disabled={busy} onClick={onFindLostDrawings}>
+            <FileMusic size={18} aria-hidden="true" /> 사라진 그림 찾아보기</button></div>}
+        {onLoadLocal && <BrowserProjectRecovery onLoad={onLoadLocal} busy={busy} />}
+
         {!configured ? (
           <div className="account-empty">
             <Cloud size={34} aria-hidden="true" />
@@ -182,7 +191,7 @@ export default function AccountLibrary({ configured, user, authReady, scores, li
             </form>
             {openedFromFile ? (
               <p className="account-sync-warning">
-                HTML 파일로 열었을 때는 이메일로 로그인할 수 있어요. Google 로그인은 작품 파일을 저장한 뒤
+                HTML 파일로 열었을 때는 이메일로 로그인할 수 있어요. Google 로그인을 사용하려면
                 Windows에서 전체기능-실행.cmd를 실행해 주세요. <a href="./실행안내.html" target="_blank" rel="noreferrer">실행 안내 보기</a>
               </p>
             ) : (
@@ -212,7 +221,7 @@ export default function AccountLibrary({ configured, user, authReady, scores, li
                 </button>
               )}
             </div>
-            <p className="account-sync-explain">임시저장: 이 기기 · 내 악보함: 로그인한 계정</p>
+            <p className="account-sync-explain">그림은 이 기기에 자동 보관되며, 로그인하면 프로젝트에도 자동 저장돼요.</p>
             {saveNotice && <p className="account-sync-notice" role="status">{saveNotice}</p>}
             {error && <p className="account-error" role="status">{error}</p>}
             <div className="account-score-heading"><strong>저장된 악보</strong><span>{listStatus === "ready"

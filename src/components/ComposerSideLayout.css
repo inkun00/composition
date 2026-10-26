@@ -1,0 +1,245 @@
+/* Illustrations share the controls' rows instead of making tall title banners. */
+.publish-details-intro,
+.composition-perform-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 88px;
+  align-items: start;
+  gap: 14px;
+}
+
+.publish-details-content,
+.composition-file-export-content {
+  min-width: 0;
+}
+
+.candidate-selection-header {
+  min-width: 0;
+  margin-bottom: 12px;
+}
+
+.candidate-sidebar .section-heading.app-candidate-heading {
+  position: static;
+  min-height: 0;
+  margin: 0 0 12px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.app-candidate-heading > .app-candidate-heading-copy {
+  width: 100%;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.publish-details-intro > .composer-child-artwork,
+.composition-perform-content > .composer-child-artwork {
+  width: 88px;
+  height: 128px;
+  margin: 0;
+  align-self: center;
+}
+
+.candidate-selection-header .candidate-feeling-selector {
+  margin: 0;
+}
+
+.candidate-selection-header .candidate-priority-note {
+  margin-bottom: 0;
+}
+
+.candidate-selection-header .candidate-feeling-tabs {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.candidate-selection-header .candidate-feeling-tabs button {
+  grid-column: span 2;
+  justify-content: center;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 6px;
+}
+
+.candidate-selection-header .candidate-feeling-tabs button:nth-child(n + 4) {
+  grid-column: span 3;
+}
+
+.preview-instrument-picker.measure-instrument-picker {
+  grid-template-columns: 88px minmax(0, 1fr);
+  grid-template-areas: "child title" "child controls";
+  align-items: start;
+  gap: 8px 14px;
+}
+
+.measure-instrument-picker > .preview-instrument-intro {
+  grid-area: title;
+  display: block;
+  margin: 0;
+}
+
+.measure-instrument-picker > .preview-instrument-options {
+  grid-area: controls;
+}
+
+.measure-instrument-picker > .composer-child-artwork {
+  grid-area: child;
+  align-self: center;
+  width: 88px;
+  height: 128px;
+}
+
+.accompaniment-style-with-guide {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "heading"
+    "summary"
+    "description"
+    "styles";
+  gap: 12px;
+}
+
+.accompaniment-style-with-guide > .accompaniment-heading {
+  min-height: 0;
+}
+
+.accompaniment-style-with-guide > .accompaniment-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-self: stretch;
+  gap: 6px 12px;
+  width: auto;
+  margin: 0;
+  padding: 10px 12px;
+}
+
+.accompaniment-summary > strong,
+.accompaniment-summary > span {
+  margin-top: 0;
+}
+
+.accompaniment-guide-description {
+  grid-area: description;
+  margin: 0;
+}
+
+.accompaniment-style-content > .accompaniment-style-tabs {
+  width: 100%;
+  margin-top: 0;
+}
+
+.accompaniment-style-tabs > button {
+  min-width: 0;
+  min-height: 44px;
+}
+
+.accompaniment-mode-grid > button {
+  grid-template-rows: auto;
+}
+
+.accompaniment-mode-grid > button > span {
+  grid-row: auto;
+}
+
+.accompaniment-mode-grid > button > strong {
+  align-self: center;
+}
+
+.publish-details-intro {
+  grid-template-columns: minmax(0, 1fr) 112px;
+  margin-bottom: 16px;
+}
+
+.publish-details-intro > .composer-child-artwork {
+  width: 112px;
+  height: 154px;
+}
+
+.publish-details-content .publish-heading h2 {
+  margin-top: 0;
+}
+
+.publish-details-content .publish-fields {
+  margin-top: 12px;
+}
+
+.publish-actions {
+  align-items: start;
+}
+
+.composition-file-exports {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.composition-file-exports > .composer-child-artwork {
+  width: 80px;
+  height: 128px;
+}
+
+.composition-perform-content > .publish-action-group-buttons {
+  min-width: 0;
+}
+
+.composition-perform-content .publish-board-help {
+  grid-column: 1 / -1;
+}
+
+.publish-actions .publish-action-group-buttons > button,
+.publish-actions .publish-action-group-buttons > a,
+.publish-actions .publish-share-pair > button,
+.publish-actions .publish-share-pair > a {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 760px) {
+  .publish-details-intro,
+  .composition-perform-content {
+    grid-template-columns: minmax(0, 1fr) 56px;
+    column-gap: 10px;
+  }
+
+  .publish-details-intro > .composer-child-artwork,
+  .composition-perform-content > .composer-child-artwork {
+    width: 56px;
+    height: 92px;
+  }
+
+  .composition-file-exports {
+    grid-template-columns: 56px minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .composition-file-exports > .composer-child-artwork {
+    width: 56px;
+    height: 92px;
+  }
+
+  .publish-action-group-files .composition-file-export-buttons,
+  .composition-perform-content > .publish-action-group-buttons {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .accompaniment-style-with-guide > .accompaniment-summary {
+    padding: 8px;
+    gap: 4px 8px;
+  }
+}
+
+@media (max-width: 360px) {
+  .candidate-selection-header .candidate-feeling-tabs button {
+    grid-column: span 3;
+  }
+
+  .candidate-selection-header .candidate-feeling-tabs button:last-child {
+    grid-column: 1 / -1;
+  }
+}

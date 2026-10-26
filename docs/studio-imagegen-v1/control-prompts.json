@@ -1,0 +1,146 @@
+[
+  {
+    "key": "select",
+    "prompt": "Use case: stylized-concept. Asset type: one production raster UI icon for a premium charcoal music-video drawing studio. Generate exactly ONE isolated icon, centered on a genuinely transparent background with alpha, never a contact sheet or icon grid. Style: tactile premium 3D ceramic and subtly layered colored paper, rounded substantial shapes, warm ivory and muted periwinkle blue with a very restrained coral accent, delicate soft studio light from upper left and gentle self-shadow. Clear unmistakable silhouette when displayed at 24–32 px. Square composition; object occupies about 84% of canvas with safe transparent edges. Match a small dimensional handcrafted clapperboard icon in this same palette. No surrounding button, tile, card, opaque backdrop, checkerboard texture, text, letters, numbers, brand, logo, or watermark. Subject: a single thick front-facing mouse selection cursor arrow, pointing diagonally upper-left, ivory ceramic face with a periwinkle bevel, one tiny restrained coral edge detail. Familiar conventional arrowhead and stem shape, bold and easy to recognize; no other objects.",
+    "source": "C:\\Users\\user\\.codex\\generated_images\\01a14a90-3b97-7462-a39f-9b86fa163f2b\\exec-41d2a29b-db1d-4851-baa0-dc6eca340659.png",
+    "original": "artifacts/studio-imagegen-v1/originals/select.png",
+    "runtime": "public/studio-images/v1/select.webp",
+    "mode": "built-in image_gen",
+    "transparent_background": true
+  },
+  {
+    "key": "brush",
+    "prompt": "Use case: stylized-concept. Asset type: one production raster UI icon for a premium charcoal music-video drawing studio. Generate exactly ONE isolated icon, centered on a genuinely transparent background with alpha, never a contact sheet or icon grid. Style: tactile premium 3D ceramic and subtly layered colored paper, rounded substantial shapes, warm ivory and muted periwinkle blue with a very restrained coral accent, delicate soft studio light from upper left and gentle self-shadow. Clear unmistakable silhouette when displayed at 24–32 px. Square composition; object occupies about 84% of canvas with safe transparent edges. Match a small dimensional handcrafted clapperboard icon in this same palette. No surrounding button, tile, card, opaque backdrop, checkerboard texture, text, letters, numbers, brand, logo, or watermark. Subject: one beautiful artist paintbrush, diagonally pointing upper-right, warm ivory handle, short periwinkle ferrule, soft chunky bristles loaded with a little muted coral paint. Three-quarter product view, substantial easy-to-read silhouette; no paint spill or extra props.",
+    "source": "C:\\Users\\user\\.codex\\generated_images\\01a14a90-3b97-7462-a39f-9b86fa163f2b\\exec-a1f73ddd-9c8d-41c8-ad14-ba6515120bce.png",
+    "original": "artifacts/studio-imagegen-v1/originals/brush.png",
+    "runtime": "public/studio-images/v1/brush.webp",
+    "mode": "built-in image_gen",
+    "transparent_background": true
+  },
+  {
+    "key": "eraser",
+    "prompt": "Use case: stylized-concept. Asset type: one production raster UI icon for a premium charcoal music-video drawing studio. Generate exactly ONE isolated icon, centered on a genuinely transparent background with alpha, never a contact sheet or icon grid. Style: tactile premium 3D ceramic and subtly layered colored paper, rounded substantial shapes, warm ivory and muted periwinkle blue with a very restrained coral accent, delicate soft studio light from upper left and gentle self-shadow. Clear unmistakable silhouette when displayed at 24–32 px. Square composition; object occupies about 84% of canvas with safe transparent edges. Match a small dimensional handcrafted clapperboard icon in this same palette. No surrounding button, tile, card, opaque backdrop, checkerboard texture, text, letters, numbers, brand, logo, or watermark. Subject: one friendly block eraser, diagonally placed in a restrained three-quarter view, a rounded warm ivory erasing end and a periwinkle paper sleeve with one small coral band. A clearly recognizable eraser, with no printed marks or text and no extra props.",
+    "source": "C:\\Users\\user\\.codex\\generated_images\\01a14a90-3b97-7462-a39f-9b86fa163f2b\\exec-12c40385-46b6-4e24-8b8e-3bcd9154cca7.png",
+    "original": "artifacts/studio-imagegen-v1/originals/eraser.png",
+    "runtime": "public/studio-images/v1/eraser.webp",
+    "mode": "built-in image_gen",
+    "transparent_background": true
+  },
+  {
+    "key": "line",
+    "prompt": "Use case: stylized-concept. Asset type: one production raster UI icon for a premium charcoal music-video drawing studio. Generate exactly ONE isolated icon, centered on a genuinely transparent background with alpha, never a contact sheet or icon grid. Style: tactile premium 3D ceramic and subtly layered colored paper, rounded substantial shapes, warm ivory and muted periwinkle blue with a very restrained coral accent, delicate soft studio light from upper left and gentle self-shadow. Clear unmistakable silhouette when displayed at 24–32 px. Square composition; object occupies about 84% of canvas with safe transparent edges. Match a small dimensional handcrafted clapperboard icon in this same palette. No surrounding button, tile, card, opaque backdrop, checkerboard texture, text, letters, numbers, brand, logo, or watermark. Subject: one small ivory ceramic ruler beside a single bold straight periwinkle stroke, diagonally rising from lower-left to upper-right. Ruler has only a few simple embossed tick marks without numbers; minimal compact composition, actual drawing tool meaning, no extra objects.",
+    "source": "C:\\Users\\user\\.codex\\generated_images\\01a14a90-3b97-7462-a39f-9b86fa163f2b\\exec-36cee23f-7f8a-4bc5-bcba-7cafaee0600f.png",
+    "original": "artifacts/studio-imagegen-v1/originals/line.png",
+    "runtime": "public/studio-images/v1/line.webp",
+    "mode": "built-in image_gen",
+    "transparent_background": true
+  },
+  {
+    "key": "rectangle",
+    "prompt": "Use case: stylized-concept. Asset type: one production raster UI icon for a premium charcoal music-video drawing studio. Generate exactly ONE isolated icon, centered on a genuinely transparent background with alpha, never a contact sheet or icon grid. Style: tactile premium 3D ceramic and subtly layered colored paper, rounded substantial shapes, warm ivory and muted periwinkle blue with a very restrained coral accent, delicate soft studio light from upper left and gentle self-shadow. Clear unmistakable silhouette when displayed at 24–32 px. Square composition; object occupies about 84% of canvas with safe transparent edges. Match a small dimensional handcrafted clapperboard icon in this same palette. No surrounding button, tile, card, opaque backdrop, checkerboard texture, text, letters, numbers, brand, logo, or watermark. Subject: ONE thick rounded-square outline frame, front-facing and perfectly square, made of substantial warm ivory ceramic with periwinkle beveled side edges and a tiny coral corner detail. The open central hole must be genuinely transparent. It represents the rectangle drawing tool. No back plate, extra shapes, or surrounding square tile.",
+    "source": "C:\\Users\\user\\.codex\\generated_images\\01a14a90-3b97-7462-a39f-9b86fa163f2b\\exec-a4693562-602d-4695-98f8-ead34c7ccfc6.png",
+    "original": "artifacts/studio-imagegen-v1/originals/rectangle.png",
+    "runtime": "public/studio-images/v1/rectangle.webp",
+    "mode": "built-in image_gen",
+    "transparent_background": true
+  },
+  {
+    "key": "ellipse",
+    "prompt": "Use case: stylized-concept. Asset type: one production raster UI icon for a premium charcoal music-video drawing studio. Generate exactly ONE isolated icon, centered on a genuinely transparent background with alpha, never a contact sheet or icon grid. Style: tactile premium 3D ceramic and subtly layered colored paper, rounded substantial shapes, warm ivory and muted periwinkle blue with a very restrained coral accent, delicate soft studio light from upper left and gentle self-shadow. Clear unmistakable silhouette when displayed at 24–32 px. Square composition; object occupies about 84% of canvas with safe transparent edges. Match a small dimensional handcrafted clapperboard icon in this same palette. No surrounding button, tile, card, opaque backdrop, checkerboard texture, text, letters, numbers, brand, logo, or watermark. Subject: ONE thick round circular outline ring, front-facing, made of substantial warm ivory ceramic with periwinkle beveled side edges and a tiny coral edge detail. The open central hole must be genuinely transparent. It represents the ellipse drawing tool. No back plate, extra shapes, or surrounding tile.",
+    "source": "C:\\Users\\user\\.codex\\generated_images\\01a14a90-3b97-7462-a39f-9b86fa163f2b\\exec-2484275e-808f-4a09-8d6f-3c969177213f.png",
+    "original": "artifacts/studio-imagegen-v1/originals/ellipse.png",
+    "runtime": "public/studio-images/v1/ellipse.webp",
+    "mode": "built-in image_gen",
+    "transparent_background": true
+  },
+  {
+    "key": "rotate-back",
+    "prompt": "Use case: stylized-concept. Asset type: one production raster UI icon for a premium charcoal music-video drawing studio. Generate exactly ONE isolated icon, centered on a genuinely transparent background with alpha, never a contact sheet or icon grid. Style: tactile premium 3D ceramic and subtly layered colored paper, rounded substantial shapes, warm ivory and muted periwinkle blue with a very restrained coral accent, delicate soft studio light from upper left and gentle self-shadow. Clear unmistakable silhouette when displayed at 24–32 px. Square composition; object occupies about 84% of canvas with safe transparent edges. Match a small dimensional handcrafted clapperboard icon in this same palette. No surrounding button, tile, card, opaque backdrop, checkerboard texture, text, letters, numbers, brand, logo, or watermark. Subject: ONE chunky counterclockwise curved return arrow, front-facing, a familiar undo/reset arrow curving leftward with its arrowhead on the upper-left. Warm ivory ceramic front and periwinkle dimensional beveled sides, one tiny coral accent. Strong clean open-arrow silhouette, no circle tile or surrounding button.",
+    "source": "C:\\Users\\user\\.codex\\generated_images\\01a14a90-3b97-7462-a39f-9b86fa163f2b\\exec-f804f0a4-d700-46a8-b257-1bcb540f4afe.png",
+    "original": "artifacts/studio-imagegen-v1/originals/rotate-back.png",
+    "runtime": "public/studio-images/v1/rotate-back.webp",
+    "mode": "built-in image_gen",
+    "transparent_background": true
+  },
+  {
+    "key": "redo",
+    "prompt": "Use case: stylized-concept. Asset type: one production raster UI icon for a premium charcoal music-video drawing studio. Generate exactly ONE isolated icon, centered on a genuinely transparent background with alpha, never a contact sheet or icon grid. Style: tactile premium 3D ceramic and subtly layered colored paper, rounded substantial shapes, warm ivory and muted periwinkle blue with a very restrained coral accent, delicate soft studio light from upper left and gentle self-shadow. Clear unmistakable silhouette when displayed at 24–32 px. Square composition; object occupies about 84% of canvas with safe transparent edges. Match a small dimensional handcrafted clapperboard icon in this same palette. No surrounding button, tile, card, opaque backdrop, checkerboard texture, text, letters, numbers, brand, logo, or watermark. Subject: ONE chunky clockwise curved redo arrow, front-facing, a familiar redo arrow curving rightward with its arrowhead on the upper-right. Warm ivory ceramic front and periwinkle dimensional beveled sides, one tiny coral accent. Strong clean open-arrow silhouette, no circle tile or surrounding button.",
+    "source": "C:\\Users\\user\\.codex\\generated_images\\01a14a90-3b97-7462-a39f-9b86fa163f2b\\exec-864ed038-bb1b-4638-8b96-7ce8f0b44e1b.png",
+    "original": "artifacts/studio-imagegen-v1/originals/redo.png",
+    "runtime": "public/studio-images/v1/redo.webp",
+    "mode": "built-in image_gen",
+    "transparent_background": true
+  },
+  {
+    "key": "delete",
+    "prompt": "Use case: stylized-concept. Asset type: one production raster UI icon for a premium charcoal music-video drawing studio. Generate exactly ONE isolated icon, centered on a genuinely transparent background with alpha, never a contact sheet or icon grid. Style: tactile premium 3D ceramic and subtly layered colored paper, rounded substantial shapes, warm ivory and muted periwinkle blue with a very restrained coral accent, delicate soft studio light from upper left and gentle self-shadow. Clear unmistakable silhouette when displayed at 24–32 px. Square composition; object occupies about 84% of canvas with safe transparent edges. Match a small dimensional handcrafted clapperboard icon in this same palette. No surrounding button, tile, card, opaque backdrop, checkerboard texture, text, letters, numbers, brand, logo, or watermark. Subject: ONE compact wastebasket with a separate slightly lifted lid, premium periwinkle ceramic bin with a warm ivory rim and one subtle coral handle accent. Three-quarter view, unmistakable chunky trash/delete symbol. No rubbish, ground, or extra objects.",
+    "source": "C:\\Users\\user\\.codex\\generated_images\\01a14a90-3b97-7462-a39f-9b86fa163f2b\\exec-c766be1f-0706-4eac-b936-d09dfcc01c4a.png",
+    "original": "artifacts/studio-imagegen-v1/originals/delete.png",
+    "runtime": "public/studio-images/v1/delete.webp",
+    "mode": "built-in image_gen",
+    "transparent_background": true
+  },
+  {
+    "key": "palette",
+    "prompt": "Use case: stylized-concept. Asset type: one production raster UI icon for a premium charcoal music-video drawing studio. Generate exactly ONE isolated icon, centered on a genuinely transparent background with alpha, never a contact sheet or icon grid. Style: tactile premium 3D ceramic and subtly layered colored paper, rounded substantial shapes, warm ivory and muted periwinkle blue with a very restrained coral accent, delicate soft studio light from upper left and gentle self-shadow. Clear unmistakable silhouette when displayed at 24–32 px. Square composition; object occupies about 84% of canvas with safe transparent edges. Match a small dimensional handcrafted clapperboard icon in this same palette. No surrounding button, tile, card, opaque backdrop, checkerboard texture, text, letters, numbers, brand, logo, or watermark. Subject: ONE small artist's oval paint palette with an open thumb hole, warm ivory ceramic surface and periwinkle edge, with four substantial paint dabs in periwinkle, restrained coral, sage and warm yellow. Gentle three-quarter view, a clearly recognizable palette. No brush, text, or extra props.",
+    "source": "C:\\Users\\user\\.codex\\generated_images\\01a14a90-3b97-7462-a39f-9b86fa163f2b\\exec-6e61989a-bed5-4d05-b1ca-646647896a33.png",
+    "original": "artifacts/studio-imagegen-v1/originals/palette.png",
+    "runtime": "public/studio-images/v1/palette.webp",
+    "mode": "built-in image_gen",
+    "transparent_background": true
+  },
+  {
+    "key": "check",
+    "prompt": "Use case: stylized-concept. Asset type: one production raster UI icon for a premium charcoal music-video drawing studio. Generate exactly ONE isolated icon, centered on a genuinely transparent background with alpha, never a contact sheet or icon grid. Style: tactile premium 3D ceramic and subtly layered colored paper, rounded substantial shapes, warm ivory and muted periwinkle blue with a very restrained coral accent, delicate soft studio light from upper left and gentle self-shadow. Clear unmistakable silhouette when displayed at 24–32 px. Square composition; object occupies about 84% of canvas with safe transparent edges. Match a small dimensional handcrafted clapperboard icon in this same palette. No surrounding button, tile, card, opaque backdrop, checkerboard texture, text, letters, numbers, brand, logo, or watermark. Subject: ONE simple bold checkmark, front-facing, a solid chunky warm ivory ceramic tick with periwinkle beveled sides and a very small restrained coral edge detail. Unmistakable confirmation symbol, no containing circle, tile, or button.",
+    "source": "C:\\Users\\user\\.codex\\generated_images\\01a14a90-3b97-7462-a39f-9b86fa163f2b\\exec-05ad2e43-23cc-4ae2-bbcb-036c7545e93f.png",
+    "original": "artifacts/studio-imagegen-v1/originals/check.png",
+    "runtime": "public/studio-images/v1/check.webp",
+    "mode": "built-in image_gen",
+    "transparent_background": true
+  },
+  {
+    "key": "play",
+    "prompt": "Use case: stylized-concept. Asset type: one production raster UI icon for a premium charcoal music-video drawing studio. Generate exactly ONE isolated icon, centered on a genuinely transparent background with alpha, never a contact sheet or icon grid. Style: tactile premium 3D ceramic and subtly layered colored paper, rounded substantial shapes, warm ivory and muted periwinkle blue with a very restrained coral accent, delicate soft studio light from upper left and gentle self-shadow. Clear unmistakable silhouette when displayed at 24–32 px. Square composition; object occupies about 84% of canvas with safe transparent edges. Match a small dimensional handcrafted clapperboard icon in this same palette. No surrounding button, tile, card, opaque backdrop, checkerboard texture, text, letters, numbers, brand, logo, or watermark. Subject: ONE simple solid rounded triangular play symbol pointing exactly RIGHT, front-facing. Warm ivory ceramic face and periwinkle thick beveled sides with one very small coral edge detail. Unmistakable media play triangle, no containing circle, tile, or button.",
+    "source": "C:\\Users\\user\\.codex\\generated_images\\01a14a90-3b97-7462-a39f-9b86fa163f2b\\exec-4b8dfeb7-87a9-48c4-8487-19ad4ef9f113.png",
+    "original": "artifacts/studio-imagegen-v1/originals/play.png",
+    "runtime": "public/studio-images/v1/play.webp",
+    "mode": "built-in image_gen",
+    "transparent_background": true
+  },
+  {
+    "key": "pause",
+    "prompt": "Use case: stylized-concept. Asset type: one production raster UI icon for a premium charcoal music-video drawing studio. Generate exactly ONE isolated icon, centered on a genuinely transparent background with alpha, never a contact sheet or icon grid. Style: tactile premium 3D ceramic and subtly layered colored paper, rounded substantial shapes, warm ivory and muted periwinkle blue with a very restrained coral accent, delicate soft studio light from upper left and gentle self-shadow. Clear unmistakable silhouette when displayed at 24–32 px. Square composition; object occupies about 84% of canvas with safe transparent edges. Match a small dimensional handcrafted clapperboard icon in this same palette. No surrounding button, tile, card, opaque backdrop, checkerboard texture, text, letters, numbers, brand, logo, or watermark. Subject: ONE media pause symbol composed of exactly TWO parallel vertical rounded bars, straight front view. Warm ivory ceramic faces with thick periwinkle beveled sides and one tiny restrained coral edge accent. Both bars same height and thickness, clearly separated by transparent space. No surrounding circle, tile, or button.",
+    "source": "C:\\Users\\user\\.codex\\generated_images\\01a14a90-3b97-7462-a39f-9b86fa163f2b\\exec-c2d482cc-1645-4bc2-8221-0ea0a6c1958f.png",
+    "original": "artifacts/studio-imagegen-v1/originals/pause.png",
+    "runtime": "public/studio-images/v1/pause.webp",
+    "mode": "built-in image_gen",
+    "transparent_background": true
+  },
+  {
+    "key": "close",
+    "prompt": "Use case: stylized-concept. Asset type: one production raster UI icon for a premium charcoal music-video drawing studio. Generate exactly ONE isolated icon, centered on a genuinely transparent background with alpha, never a contact sheet or icon grid. Style: tactile premium 3D ceramic and subtly layered colored paper, rounded substantial shapes, warm ivory and muted periwinkle blue with a very restrained coral accent, delicate soft studio light from upper left and gentle self-shadow. Clear unmistakable silhouette when displayed at 24–32 px. Square composition; object occupies about 84% of canvas with safe transparent edges. Match a small dimensional handcrafted clapperboard icon in this same palette. No surrounding button, tile, card, opaque backdrop, checkerboard texture, text, letters, numbers, brand, logo, or watermark. Subject: ONE bold chunky multiplication-style X close symbol made from two crossed solid bars, front-facing, warm ivory ceramic face with periwinkle dimensional beveled sides and one tiny coral edge accent. Familiar simple close/cancel X, no surrounding circle, tile, or button.",
+    "source": "C:\\Users\\user\\.codex\\generated_images\\01a14a90-3b97-7462-a39f-9b86fa163f2b\\exec-2111890a-54e3-4c3a-9e84-7636ecda7e65.png",
+    "original": "artifacts/studio-imagegen-v1/originals/close.png",
+    "runtime": "public/studio-images/v1/close.webp",
+    "mode": "built-in image_gen",
+    "transparent_background": true
+  },
+  {
+    "key": "expand",
+    "prompt": "Use case: stylized-concept. Asset type: one production raster UI icon for a premium charcoal music-video drawing studio. Generate exactly ONE isolated icon, centered on a genuinely transparent background with alpha, never a contact sheet or icon grid. Style: tactile premium 3D ceramic and subtly layered colored paper, rounded substantial shapes, warm ivory and muted periwinkle blue with a very restrained coral accent, delicate soft studio light from upper left and gentle self-shadow. Clear unmistakable silhouette when displayed at 24–32 px. Square composition; object occupies about 84% of canvas with safe transparent edges. Match a small dimensional handcrafted clapperboard icon in this same palette. No surrounding button, tile, card, opaque backdrop, checkerboard texture, text, letters, numbers, brand, logo, or watermark. Subject: ONE compact expand/fullscreen symbol: four thick ivory ceramic right-angle corner brackets pointing outward, arranged at the four corners of an implied square. Front-facing, thick periwinkle beveled sides and a tiny coral accent on one corner. Wide genuinely transparent central space, no connecting border, backplate, surrounding tile, or extra objects. Clear expand-canvas meaning at small size.",
+    "source": "C:\\Users\\user\\.codex\\generated_images\\01a14a90-3b97-7462-a39f-9b86fa163f2b\\exec-9abd2f66-d606-4ef1-8002-e34cd96ee170.png",
+    "original": "artifacts/studio-imagegen-v1/originals/expand.png",
+    "runtime": "public/studio-images/v1/expand.webp",
+    "mode": "built-in image_gen",
+    "transparent_background": true
+  },
+  {
+    "key": "plus",
+    "prompt": "Use case: stylized-concept. Asset type: one production raster UI icon for a premium charcoal music-video drawing studio. Generate exactly ONE isolated icon, centered on a genuinely transparent background with alpha, never a contact sheet or icon grid. Style: tactile premium 3D ceramic and subtly layered colored paper, rounded substantial shapes, warm ivory and muted periwinkle blue with a very restrained coral accent, delicate soft studio light from upper left and gentle self-shadow. Clear unmistakable silhouette when displayed at 24–32 px. Square composition; object occupies about 84% of canvas with safe transparent edges. Match a small dimensional handcrafted clapperboard icon in this same palette. No surrounding button, tile, card, opaque backdrop, checkerboard texture, text, letters, numbers, brand, logo, or watermark. Subject: ONE simple bold plus/add symbol with equal horizontal and vertical solid rounded bars, front-facing. Warm ivory ceramic face and periwinkle thick beveled sides with one tiny restrained coral edge accent. Familiar clean addition cross, no surrounding circle, tile, or button.",
+    "source": "C:\\Users\\user\\.codex\\generated_images\\01a14a90-3b97-7462-a39f-9b86fa163f2b\\exec-4af8aecc-c2df-447d-aba6-03931b51d1d2.png",
+    "original": "artifacts/studio-imagegen-v1/originals/plus.png",
+    "runtime": "public/studio-images/v1/plus.webp",
+    "mode": "built-in image_gen",
+    "transparent_background": true
+  }
+]

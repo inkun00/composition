@@ -1,0 +1,101 @@
+[
+  {
+    "key": "opening-studio",
+    "prompt": "Use case: stylized-concept\nAsset type: premium illustration for a bright Korean music-composition web app, displayed at 120–320px in activity cards.\nStyle: sophisticated rounded ceramic and layered colored-paper 3D product illustration, periwinkle blue, warm ivory, coral pink and restrained teal, subtle navy edge accents, finely crafted material, polished creative-app quality.\nComposition: one centered cohesive group with a broad landscape silhouette, subject fills 82% of image, clean 3/4 isometric perspective and safe edges. Soft bright studio lighting, very subtle contact shadow. Genuinely transparent background with preserved alpha.\nConstraints: no words, no letters, no UI, no enclosing tile, no human characters, no logos, no watermark, no photographic backdrop. An appealing finished raster illustration, not a flat outline symbol.\nSubject: A miniature isometric music creation studio: a cream upright piano with periwinkle keys, a coral microphone, one teal small drum, floating sculpted music notes and a few ivory score pages. A coherent welcoming tabletop diorama for making a first song.",
+    "source": "C:/Users/user/.codex/generated_images/01a14a1f-9277-7182-bad5-3a49ad863aa5/exec-2e495dbc-dc31-4779-9ebc-3552f634717f.png",
+    "original": "artifacts/app-imagegen-v1/originals/opening-studio.png",
+    "runtime": "public/app-images/v1/opening-studio.webp",
+    "tool": "built-in image_gen",
+    "transparent_background": true
+  },
+  {
+    "key": "rhythm-stage",
+    "prompt": "Use case: stylized-concept\nAsset type: premium illustration for a bright Korean music-composition web app, displayed at 120–320px in activity cards.\nStyle: sophisticated rounded ceramic and layered colored-paper 3D product illustration, periwinkle blue, warm ivory, coral pink and restrained teal, subtle navy edge accents, finely crafted material, polished creative-app quality.\nComposition: one centered cohesive group with a broad landscape silhouette, subject fills 82% of image, clean 3/4 isometric perspective and safe edges. Soft bright studio lighting, very subtle contact shadow. Genuinely transparent background with preserved alpha.\nConstraints: no words, no letters, no UI, no enclosing tile, no human characters, no logos, no watermark, no photographic backdrop. An appealing finished raster illustration, not a flat outline symbol.\nSubject: A tactile rhythmic music workshop: a teal and coral small snare drum with two crossed ivory drumsticks, four rounded periwinkle beat blocks stepping in a rhythm, and two small sculpted musical notes. A coherent educational music activity illustration.",
+    "source": "C:/Users/user/.codex/generated_images/01a14a1f-9277-7182-bad5-3a49ad863aa5/exec-8c458bdf-84cc-4a92-8b17-75b6e104cdaa.png",
+    "original": "artifacts/app-imagegen-v1/originals/rhythm-stage.png",
+    "runtime": "public/app-images/v1/rhythm-stage.webp",
+    "tool": "built-in image_gen",
+    "transparent_background": true
+  },
+  {
+    "key": "melody-stage",
+    "prompt": "Use case: stylized-concept\nAsset type: premium illustration for a bright Korean music-composition web app, displayed at 120–320px in activity cards.\nStyle: sophisticated rounded ceramic and layered colored-paper 3D product illustration, periwinkle blue, warm ivory, coral pink and restrained teal, subtle navy edge accents, finely crafted material, polished creative-app quality.\nComposition: one centered cohesive group with a broad landscape silhouette, subject fills 82% of image, clean 3/4 isometric perspective and safe edges. Soft bright studio lighting, very subtle contact shadow. Genuinely transparent background with preserved alpha.\nConstraints: no words, no letters, no UI, no enclosing tile, no human characters, no logos, no watermark, no photographic backdrop. An appealing finished raster illustration, not a flat outline symbol.\nSubject: A tactile melody writing workshop: a cream and periwinkle miniature keyboard, one gently arcing coral musical phrase of sculpted notes, and a folded ivory score sheet. A coherent educational activity illustration focused on composing a melody.",
+    "source": "C:/Users/user/.codex/generated_images/01a14a1f-9277-7182-bad5-3a49ad863aa5/exec-285f4a95-604b-48b0-a75d-050e34454f61.png",
+    "original": "artifacts/app-imagegen-v1/originals/melody-stage.png",
+    "runtime": "public/app-images/v1/melody-stage.webp",
+    "tool": "built-in image_gen",
+    "transparent_background": true
+  },
+  {
+    "key": "recording-stage",
+    "prompt": "Use case: stylized-concept\nAsset type: premium raster illustration for a bright Korean music creation app.\nStyle: tactile rounded ceramic and layered paper 3D product illustration, warm ivory, periwinkle blue, coral pink and restrained teal, navy edge accents for legibility, refined material and soft bright studio lighting.\nComposition: one centered cohesive object group fills 82% of image, safe edges, clean three-quarter view. Genuinely transparent background with preserved alpha. Only subtle contact shadow; no hazy backdrop.\nConstraints: no letters, no words, no UI, no card frame, no human faces, no logos or watermark. Finished polished raster art.\nSubject: A miniature recording station with a beautiful coral condenser microphone on a short ivory stand, periwinkle over-ear headphones, and a small teal waveform sculpture floating beside them. Broad cohesive landscape silhouette. For a recording section illustration displayed at 120–240px.",
+    "source": "C:\\Users\\user\\.codex\\generated_images\\01a14a1f-9277-7182-bad5-3a49ad863aa5\\exec-fa5e71b1-ed9b-4b0d-82ed-50c68a8c92e3.png",
+    "original": "artifacts/app-imagegen-v1/originals/recording-stage.png",
+    "runtime": "public/app-images/v1/recording-stage.webp",
+    "tool": "built-in image_gen",
+    "transparent_background": true
+  },
+  {
+    "key": "publishing-stage",
+    "prompt": "Use case: stylized-concept\nAsset type: premium raster illustration for a bright Korean music creation app.\nStyle: tactile rounded ceramic and layered paper 3D product illustration, warm ivory, periwinkle blue, coral pink and restrained teal, navy edge accents for legibility, refined material and soft bright studio lighting.\nComposition: one centered cohesive object group fills 82% of image, safe edges, clean three-quarter view. Genuinely transparent background with preserved alpha. Only subtle contact shadow; no hazy backdrop.\nConstraints: no letters, no words, no UI, no card frame, no human faces, no logos or watermark. Finished polished raster art.\nSubject: A miniature creative sharing station: an open periwinkle file folder holding ivory music score pages, a coral play triangle token, and a small teal cloud connected by a curved ivory ribbon. Broad landscape silhouette. For a save and publish section illustration displayed at 120–240px.",
+    "source": "C:\\Users\\user\\.codex\\generated_images\\01a14a1f-9277-7182-bad5-3a49ad863aa5\\exec-21930e49-e00a-404e-a08e-9e3276302929.png",
+    "original": "artifacts/app-imagegen-v1/originals/publishing-stage.png",
+    "runtime": "public/app-images/v1/publishing-stage.webp",
+    "tool": "built-in image_gen",
+    "transparent_background": true
+  },
+  {
+    "key": "tempo-slow",
+    "prompt": "Use case: stylized-concept\nAsset type: premium raster illustration for a bright Korean music creation app.\nStyle: tactile rounded ceramic and layered paper 3D product illustration, warm ivory, periwinkle blue, coral pink and restrained teal, navy edge accents for legibility, refined material and soft bright studio lighting.\nComposition: one centered cohesive object group fills 82% of image, safe edges, clean three-quarter view. Genuinely transparent background with preserved alpha. Only subtle contact shadow; no hazy backdrop.\nConstraints: no letters, no words, no UI, no card frame, no human faces, no logos or watermark. Finished polished raster art.\nSubject: One small cozy periwinkle crescent moon resting beside one ivory four-point star. Simple sculpted moon, unmistakable slow and calm tempo visual, shown at 28–48px. Square framing, no detailed scene.",
+    "source": "C:\\Users\\user\\.codex\\generated_images\\01a14a1f-9277-7182-bad5-3a49ad863aa5\\exec-ab8f619c-291e-4d57-80ef-195f0e6d072c.png",
+    "original": "artifacts/app-imagegen-v1/originals/tempo-slow.png",
+    "runtime": "public/app-images/v1/tempo-slow.webp",
+    "tool": "built-in image_gen",
+    "transparent_background": true
+  },
+  {
+    "key": "tempo-normal",
+    "prompt": "Use case: stylized-concept\nAsset type: standalone premium raster UI illustration for a bright Korean children's music composition app, displayed at 28–48px.\nStyle: tactile rounded ceramic and layered colored paper, periwinkle blue, warm ivory, restrained coral and teal accents, dark navy edge details for readability on white. Polished soft studio lighting and very subtle contact shadow.\nComposition: one centered clear subject, square framing, fills 84% with safe edges. Genuinely transparent background and preserved alpha.\nConstraints: no letters, no words, no UI card, no watermark, no scenery, no backdrop or hazy glow, minimal details, unmistakable silhouette.\nSubject: A small simple ivory pair of walking shoes taking a calm even step, with periwinkle soles and one tiny coral step mark. A calm normal walking tempo.",
+    "source": "C:\\Users\\user\\.codex\\generated_images\\01a14a1f-9277-7182-bad5-3a49ad863aa5\\exec-c99fd411-1836-4c0f-acc0-319ec16fb784.png",
+    "original": "artifacts/app-imagegen-v1/originals/tempo-normal.png",
+    "runtime": "public/app-images/v1/tempo-normal.webp",
+    "tool": "built-in image_gen",
+    "transparent_background": true
+  },
+  {
+    "key": "tempo-fast",
+    "prompt": "Use case: stylized-concept\nAsset type: standalone premium raster UI illustration for a bright Korean children's music composition app, displayed at 28–48px.\nStyle: tactile rounded ceramic and layered colored paper, periwinkle blue, warm ivory, restrained coral and teal accents, dark navy edge details for readability on white. Polished soft studio lighting and very subtle contact shadow.\nComposition: one centered clear subject, square framing, fills 84% with safe edges. Genuinely transparent background and preserved alpha.\nConstraints: no letters, no words, no UI card, no watermark, no scenery, no backdrop or hazy glow, minimal details, unmistakable silhouette.\nSubject: A charming miniature periwinkle bicycle with ivory wheels and a restrained coral saddle, in clear side view. Energetic fast tempo; no rider.",
+    "source": "C:\\Users\\user\\.codex\\generated_images\\01a14a1f-9277-7182-bad5-3a49ad863aa5\\exec-72434512-8774-4df9-90ed-27d342db782d.png",
+    "original": "artifacts/app-imagegen-v1/originals/tempo-fast.png",
+    "runtime": "public/app-images/v1/tempo-fast.webp",
+    "tool": "built-in image_gen",
+    "transparent_background": true
+  },
+  {
+    "key": "rhythm-short",
+    "prompt": "Use case: stylized-concept\nAsset type: standalone premium raster UI illustration for a bright Korean children's music composition app, displayed at 28–48px.\nStyle: tactile rounded ceramic and layered colored paper, periwinkle blue, warm ivory, restrained coral and teal accents, dark navy edge details for readability on white. Polished soft studio lighting and very subtle contact shadow.\nComposition: one centered clear subject, square framing, fills 84% with safe edges. Genuinely transparent background and preserved alpha.\nConstraints: no letters, no words, no UI card, no watermark, no scenery, no backdrop or hazy glow, minimal details, unmistakable silhouette.\nSubject: One small periwinkle ceramic rabbit crouched as if ready for a tiny hop, long ivory inner ears and a coral nose, simple friendly rounded shape. A short bouncing rhythm.",
+    "source": "C:\\Users\\user\\.codex\\generated_images\\01a14a1f-9277-7182-bad5-3a49ad863aa5\\exec-9e0a9fbc-9107-44ad-9812-a34cf98a6b85.png",
+    "original": "artifacts/app-imagegen-v1/originals/rhythm-short.png",
+    "runtime": "public/app-images/v1/rhythm-short.webp",
+    "tool": "built-in image_gen",
+    "transparent_background": true
+  },
+  {
+    "key": "rhythm-medium",
+    "prompt": "Use case: stylized-concept\nAsset type: standalone premium raster UI illustration for a bright Korean music app, displayed at 28–48px.\nStyle: tactile rounded ceramic, periwinkle, warm ivory, coral and restrained teal, subtle navy accents for legibility on a white interface, polished soft bright studio lighting.\nComposition: one centered clear subject fills 84% of square with safe edges, genuinely transparent background, preserved alpha, only subtle contact shadow.\nConstraints: no letters, no words, no enclosing card, no watermark, no backdrop, no fog or glow. Simple readable silhouette, not an outline glyph.\nSubject: Two small ivory shoeprint footprints with periwinkle soles and one coral toe accent, aligned as evenly spaced walking steps. An even regular rhythm.",
+    "source": "C:\\Users\\user\\.codex\\generated_images\\01a14a1f-9277-7182-bad5-3a49ad863aa5\\exec-7996c076-84f4-4f48-b524-2d93a6eb9511.png",
+    "original": "artifacts/app-imagegen-v1/originals/rhythm-medium.png",
+    "runtime": "public/app-images/v1/rhythm-medium.webp",
+    "tool": "built-in image_gen",
+    "transparent_background": true
+  },
+  {
+    "key": "rhythm-long",
+    "prompt": "Use case: stylized-concept\nAsset type: standalone premium raster UI illustration for a bright Korean music app, displayed at 28–48px.\nStyle: tactile rounded ceramic, periwinkle, warm ivory, coral and restrained teal, subtle navy accents for legibility on a white interface, polished soft bright studio lighting.\nComposition: one centered clear subject fills 84% of square with safe edges, genuinely transparent background, preserved alpha, only subtle contact shadow.\nConstraints: no letters, no words, no enclosing card, no watermark, no backdrop, no fog or glow. Simple readable silhouette, not an outline glyph.\nSubject: One small friendly teal ceramic turtle with a rounded periwinkle shell and warm ivory feet, resting calmly in a side three-quarter view. A long relaxed rhythm, clean simple form.",
+    "source": "C:\\Users\\user\\.codex\\generated_images\\01a14a1f-9277-7182-bad5-3a49ad863aa5\\exec-0616413a-d374-424e-9bdc-e78faf1241d5.png",
+    "original": "artifacts/app-imagegen-v1/originals/rhythm-long.png",
+    "runtime": "public/app-images/v1/rhythm-long.webp",
+    "tool": "built-in image_gen",
+    "transparent_background": true
+  }
+]

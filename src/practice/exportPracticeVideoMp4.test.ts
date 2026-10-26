@@ -93,7 +93,22 @@ describe("리듬·가락 MP4 인코딩", () => {
     expect(mocks.prepare.mock.calls[0][0].measures[0].tracks[0][0].note.pitch).toBe(60);
   });
 
-  it.each(["bars", "score"] as const)("%s MP4에는 저장된 하단 리듬 악보를 넣지 않고 가락만 인코딩한다", async (videoMode) => {
+  it("가사만 보이는 MP4도 같은 음악 버퍼와 가사 시간표를 함께 인코딩한다", async () => {
+    const settings = { ...input, videoMode: "lyrics" as const,
+      measures: [{ notes: [{ ...input.measures[0].notes[0], lyric: "봄" }, input.measures[0].notes[1]] }]
+    };
+    await exportPracticeVideoMp4(rendered, settings);
+    const [plan, mode] = mocks.prepare.mock.calls[0];
+    expect(mode).toBe("lyrics");
+    expect(plan.measures[0].tracks[0][0]).toMatchObject({
+      note: { lyric: "봄" }, startSeconds: 0, endSeconds: 0.25
+    });
+    expect(mocks.audioAdd).toHaveBeenCalledExactlyOnceWith(rendered.buffer);
+    expect(mocks.videoAdd.mock.calls.at(-1)?.slice(0, 2)).toEqual([expect.any(Number), expect.any(Number)]);
+    expect(mocks.finalize).toHaveBeenCalledOnce();
+  });
+
+  it.each(["bars", "score", "lyrics"] as const)("%s MP4에는 저장된 하단 리듬 악보를 넣지 않고 가락만 인코딩한다", async (videoMode) => {
     const settings: PracticeAudioInput = {
       ...input, mode: "rhythm-melody", step: "melody", videoMode,
       rhythmLayers: ["beat:shaker", "beat:kick"].map((instrumentId, index) => ({

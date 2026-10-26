@@ -1,0 +1,14 @@
+{
+  "tool": "Built-in image_gen",
+  "prompt": "Use case: illustration-story. Asset type: transparent child character illustration for a Korean children's music composing app, beside the Listen and Sing action buttons. Input image is a style reference only, not an edit target. Create ONE new original cheerful elementary-school-age Korean boy listening through teal over-ear headphones and singing happily into a small wireless microphone, one hand gently touching an earcup. Full body from head to sneakers, natural lively standing pose, friendly expressive dark eyes, short soft dark brown hair, cream and teal casual sweatshirt, navy trousers and pale sneakers. Match the reference's polished hand-painted 2D children's educational illustration, fine clean linework, warm soft cel shading and believable child proportions. Centered isolated single figure, tightly composed with modest padding so it reads well at 100px high. Genuine transparent background, no text, no logos, no frame, no floor or scenery, no other characters, no floating music notes. All fingers and both shoes clearly drawn. Do not reproduce the girl; use only the shared illustration style.",
+  "reference": "public/illustrations/character-recording-singer-girl-v1.webp (style only)",
+  "original": "artifacts/child-side-layout/originals/character-listen-sing-boy-v1.png",
+  "runtime": "public/illustrations/character-listen-sing-boy-v1.webp",
+  "size": [
+    256,
+    384
+  ],
+  "bytes": 19550,
+  "transparent": true,
+  "optimization": "Alpha-preserving resize and WebP encoding, quality 90. Existing character images unchanged."
+}

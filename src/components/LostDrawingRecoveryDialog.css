@@ -1,0 +1,59 @@
+.lost-drawing-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgb(16 30 46 / 54%);
+  backdrop-filter: blur(7px);
+}
+.lost-drawing-dialog {
+  width: min(730px, 100%);
+  max-height: calc(100dvh - 40px);
+  overflow: auto;
+  border: 1px solid #dce6ee;
+  border-radius: 24px;
+  background: #fff;
+  color: #23354a;
+  box-shadow: 0 28px 100px rgb(12 27 44 / 28%);
+}
+.lost-drawing-dialog > header { display: flex; align-items: center; gap: 14px; padding: 25px 27px 10px; }
+.lost-drawing-mark { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 16px; background: #e8f7f8; color: #0a7a8c; }
+.lost-drawing-eyebrow { color: #168395; font-size: 11px; font-weight: 700; letter-spacing: .12em; }
+.lost-drawing-dialog h2 { margin: 4px 0 0; font-size: clamp(18px, 3vw, 23px); line-height: 1.4; }
+.lost-drawing-close { display: grid; place-items: center; width: 34px; height: 34px; margin-left: auto; border: 0; border-radius: 50%; background: #f1f5f8; cursor: pointer; }
+.lost-drawing-dialog > p { margin: 10px 27px 18px; color: #627287; font-size: 13px; line-height: 1.6; }
+.lost-drawing-candidates { display: grid; gap: 12px; padding: 0 27px; }
+.lost-drawing-card { display: block; padding: 15px; border: 1px solid #dbe4ed; border-radius: 16px; background: #f9fbfd; cursor: pointer; }
+.lost-drawing-card.selected { border-color: #248fa3; background: #f1fafb; box-shadow: 0 0 0 2px rgb(36 143 163 / 12%); }
+.lost-drawing-choice { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.lost-drawing-choice input { accent-color: #168395; }
+.lost-drawing-choice strong { flex: 1; overflow-wrap: anywhere; font-size: 14px; }
+.lost-drawing-choice > span { color: #687a8b; font-size: 11px; }
+.lost-drawing-thumbnails { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 13px 0 11px; }
+.lost-drawing-thumbnails > div { aspect-ratio: 16 / 9; overflow: hidden; border: 1px solid #dce6ed; border-radius: 8px; background: white; }
+.lost-drawing-thumbnails svg { display: block; width: 100%; height: 100%; }
+.lost-drawing-details { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 5px 12px; color: #60778b; font-size: 11px; }
+.lost-drawing-partial { margin: 8px 0 0; color: #92601e; font-size: 12px; line-height: 1.5; }
+.lost-drawing-dialog > .lost-drawing-note { margin-bottom: 16px; font-size: 11px; color: #7b8796; }
+.lost-drawing-dialog > .lost-drawing-error { color: #a23535; background: #fff0ef; border-radius: 10px; padding: 10px 13px; }
+.lost-drawing-dialog footer { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 9px; padding: 17px 27px 23px; border-top: 1px solid #edf1f5; }
+.lost-drawing-dialog footer button { min-height: 42px; padding: 10px 16px; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; }
+.lost-drawing-secondary { border: 1px solid #dbe4ec; background: #fff; color: #5b6e80; }
+.lost-drawing-primary { border: 1px solid #127e94; background: #127e94; color: white; }
+.lost-drawing-dialog button:disabled { opacity: .55; cursor: wait; }
+.recovery-storage-warning { margin: 16px auto; padding: 13px 17px; max-width: 1100px; border: 1px solid #f0d4a0; border-radius: 12px; background: #fff7e9; color: #81541e; font-size: 13px; line-height: 1.6; }
+.recovery-storage-warning button { margin-left: 12px; padding: 7px 11px; border: 1px solid #d8b476; border-radius: 8px; color: inherit; background: white; cursor: pointer; }
+@media (max-width: 560px) {
+  .lost-drawing-overlay { padding: 10px; }
+  .lost-drawing-dialog { max-height: calc(100dvh - 20px); border-radius: 18px; }
+  .lost-drawing-dialog > header { padding: 20px 17px 8px; gap: 10px; }
+  .lost-drawing-dialog > p { margin-left: 17px; margin-right: 17px; }
+  .lost-drawing-candidates { padding: 0 17px; }
+  .lost-drawing-choice { flex-wrap: wrap; }
+  .lost-drawing-choice > span { margin-left: 26px; }
+  .lost-drawing-thumbnails { grid-template-columns: repeat(2, 1fr); }
+  .lost-drawing-dialog footer { padding: 15px 17px 18px; }
+  .lost-drawing-dialog footer button { flex: 1; }
+}

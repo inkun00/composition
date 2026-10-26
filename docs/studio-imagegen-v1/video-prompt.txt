@@ -1,0 +1,6 @@
+Use case: stylized-concept
+Asset type: one finished raster illustration for a premium Korean music-video drawing studio interface, displayed at 32–64px.
+Subject: a miniature handcrafted film clapperboard leaning on a folded cream drawing sheet, with one small glossy periwinkle music note. This image represents the music video studio.
+Style: sophisticated tactile 3D product illustration, softly rounded ceramic and colored paper, subtle realistic material, clear silhouette, polished creative-app quality, not a flat outline glyph. Existing app has charcoal panels and a periwinkle blue accent; use periwinkle, warm ivory, a restrained coral accent.
+Composition: single centered coherent object group, front three-quarter view, strong readable shape filling 82% of a square image, even visual weight and generous safe edge, soft studio lighting, only very subtle contact shadow.
+Constraints: genuinely transparent background and preserved alpha; no UI mockup, no surrounding card, no text or letters, no logo, no watermark, no decorative extras. Production-ready standalone image.

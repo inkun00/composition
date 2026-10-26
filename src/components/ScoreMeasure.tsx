@@ -5,8 +5,9 @@ import { toNumber } from "../music/rational";
 import { scoreLayout } from "../music/scoreLayout";
 import { loadVexFlow } from "../music/vexflow";
 import type { NoteEvent } from "../music/types";
-import { displayedAccidentalSymbol, keySignatureName, midiToVexKey, staffDegreeForPitch } from "../music/accidental";
+import { displayedAccidentalSymbol, keySignatureName, midiToVexKey } from "../music/accidental";
 import { publicAssetUrl } from "../platform/portable";
+import { expandedStaffLedgerLines, expandedStaffLines, expandedStaffNoteY, expandedStaveY, pitchAfterStaffDrag } from "./scorePitchGeometry";
 
 type ScoreMeasureProps = {
   notes: readonly NoteEvent[];
@@ -45,14 +46,6 @@ function vexDuration(duration: number, dotted?: boolean): string {
 
 function noteY(pitch: number): number {
   return 42 - (pitch - 60) * 3;
-}
-
-function expandedStaffNoteY(pitch: number, accidental?: NoteEvent["accidental"]): number {
-  // A sharp or flat sits on the same staff position as its natural letter.
-  const staffStep = staffDegreeForPitch(pitch, accidental);
-  const e4Step = 4 * 7 + 2;
-  // E4 is the bottom line (y 84); one staff step is half a line gap.
-  return Math.max(10, Math.min(138, 84 - (staffStep - e4Step) * 9));
 }
 
 function defaultRestY(duration: number): number {
@@ -130,7 +123,7 @@ export default function ScoreMeasure({
   const [vexPositions, setVexPositions] = useState<Record<string, { x: number; y: number }>>({});
   const useVexLayer = !plain;
   const positioned = positionNotes(notes);
-  const staffLines = expandedStaff ? [12, 30, 48, 66, 84] : [2, 14, 26, 38, 50];
+  const staffLines = expandedStaff ? expandedStaffLines : [2, 14, 26, 38, 50];
   const { width, height: scoreHeight, left, noteStartX, usableWidth: usable } = scoreLayout({
     compact,
     wide,
@@ -150,7 +143,7 @@ export default function ScoreMeasure({
     logicalX,
     durationValue: toNumber(note.duration),
       y: vexPosition?.y ?? (note.pitch === null
-      ? note.restY ?? (expandedStaff ? 48 : defaultRestY(toNumber(note.duration)))
+      ? note.restY ?? (expandedStaff ? 88 : defaultRestY(toNumber(note.duration)))
       : expandedStaff ? expandedStaffNoteY(note.pitch, note.accidental) : noteY(note.pitch))
     });
   });
@@ -272,7 +265,7 @@ export default function ScoreMeasure({
       const staveRightPadding = (connectedSystem ? (endBarline === "final" ? 8 : 1) : compact ? 8 : 12) / notationScale;
       const staveX = staveMargin;
       const staveWidth = renderWidth - staveMargin - staveRightPadding;
-      const stave = new Stave(staveX, 16, staveWidth, {
+      const stave = new Stave(staveX, expandedStaff ? expandedStaveY : 16, staveWidth, {
         leftBar: false,
         rightBar: true,
         spacingBetweenLinesPx: 12,
@@ -413,7 +406,7 @@ export default function ScoreMeasure({
       cancelled = true;
       if (layoutFrame !== null) window.cancelAnimationFrame(layoutFrame);
     };
-  }, [connectedSystem, endBarline, meter.beatUnit, meter.beats, notationScale, signatureNoteStartX, renderBackend, reviewIssueNoteIds, scoreHeight, showSignature, systemMeasure, useVexLayer, vexRenderKey, width]);
+  }, [connectedSystem, endBarline, expandedStaff, meter.beatUnit, meter.beats, notationScale, signatureNoteStartX, renderBackend, reviewIssueNoteIds, scoreHeight, showSignature, systemMeasure, useVexLayer, vexRenderKey, width]);
 
   useEffect(() => {
     const host = vexHost.current;
@@ -437,9 +430,9 @@ export default function ScoreMeasure({
         <line key={y} x1={systemMeasure ? 0 : 10} x2={systemMeasure ? width : width - 10}
           y1={y} y2={y} className="staff-line" />
       ))}
-      {!useVexLayer && showSignature && <text x="12" y={expandedStaff ? 75 : 41} className="clef" aria-hidden="true">𝄞</text>}
-      {!useVexLayer && showSignature && <text x={compact ? 38 : 40} y={expandedStaff ? 42 : 19} className="meter-number">{meter.beats}</text>}
-      {!useVexLayer && showSignature && <text x={compact ? 38 : 40} y={expandedStaff ? 72 : 39} className="meter-number">{meter.beatUnit}</text>}
+      {!useVexLayer && showSignature && <text x="12" y={expandedStaff ? 112 : 41} className="clef" aria-hidden="true">𝄞</text>}
+      {!useVexLayer && showSignature && <text x={compact ? 38 : 40} y={expandedStaff ? 85 : 19} className="meter-number">{meter.beats}</text>}
+      {!useVexLayer && showSignature && <text x={compact ? 38 : 40} y={expandedStaff ? 107 : 39} className="meter-number">{meter.beatUnit}</text>}
       {!useVexLayer && <line x1={systemMeasure ? width - 1 : width - 10} x2={systemMeasure ? width - 1 : width - 10}
         y1={staffLines[0]} y2={staffLines[staffLines.length - 1]} className="bar-line" />}
       {drawnNotes.map((note, noteIndex) => {
@@ -492,8 +485,10 @@ export default function ScoreMeasure({
             setDragPreview({ id: note.id, dx: viewBoxDeltaX });
             if (drag.current.kind === "rest" || !onMoveNote) return;
             const viewBoxDelta = (moveEvent.clientY - drag.current.startY) * scoreHeight / drag.current.svgHeight;
-            const semitones = Math.round(-viewBoxDelta / 3);
-            onMoveNote(note.id, Math.max(48, Math.min(84, drag.current.startValue + semitones)));
+            const pitch = expandedStaff
+              ? pitchAfterStaffDrag(drag.current.startValue, viewBoxDelta, useVexLayer ? notationScale : 1, note.accidental)
+              : Math.max(48, Math.min(84, drag.current.startValue + Math.round(-viewBoxDelta / 3)));
+            onMoveNote(note.id, pitch);
           };
           const endFromWindow = (upEvent: PointerEvent) => {
             if (drag.current?.id !== note.id) return;
@@ -524,8 +519,10 @@ export default function ScoreMeasure({
           setDragPreview({ id: note.id, dx: viewBoxDeltaX });
           if (drag.current.kind === "rest" || !onMoveNote) return;
           const viewBoxDelta = (event.clientY - drag.current.startY) * scoreHeight / drag.current.svgHeight;
-          const semitones = Math.round(-viewBoxDelta / 3);
-          onMoveNote(note.id, Math.max(48, Math.min(84, drag.current.startValue + semitones)));
+          const pitch = expandedStaff
+            ? pitchAfterStaffDrag(drag.current.startValue, viewBoxDelta, useVexLayer ? notationScale : 1, note.accidental)
+            : Math.max(48, Math.min(84, drag.current.startValue + Math.round(-viewBoxDelta / 3)));
+          onMoveNote(note.id, pitch);
         };
         const endPointerDrag = (event: React.PointerEvent<SVGGElement>) => {
           if (drag.current?.id === note.id) {
@@ -575,6 +572,10 @@ export default function ScoreMeasure({
               className="score-pitch-name" pointerEvents="none" aria-hidden="true">
               {pitchName(note.pitch, note.accidental)}
             </text>}
+            {!useVexLayer && expandedStaff && expandedStaffLedgerLines(note.pitch, note.accidental).map((ledgerY) => (
+              <line key={ledgerY} x1={displayX - 12} x2={displayX + 12} y1={ledgerY} y2={ledgerY}
+                className="staff-line ledger-line" />
+            ))}
             {!useVexLayer && <ellipse cx={displayX} cy={y} rx="7" ry="5" className={isHalf ? "note-head hollow" : "note-head"}
               transform={`rotate(-14 ${displayX} ${y})`} />}
             {!useVexLayer && duration < 4 && <line x1={stemX} x2={stemX} y1={y}

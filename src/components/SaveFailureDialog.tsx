@@ -1,4 +1,4 @@
-import { AlertTriangle, LocateFixed, X } from "lucide-react";
+import { AlertTriangle, LocateFixed, X } from "./AppArtworkIcons";
 import type { SaveIssue } from "../music/draftValidation";
 import "./SaveFailureDialog.css";
 

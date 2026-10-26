@@ -1,4 +1,4 @@
-import { Volume2 } from "lucide-react";
+import { Volume2 } from "../components/AppArtworkIcons";
 import { toNumber } from "../music/rational";
 import { positionNotes } from "../music/score";
 import type { NoteEvent } from "../music/types";

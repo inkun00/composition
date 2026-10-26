@@ -47,7 +47,8 @@ export default function PracticeVideoPreview({ draft, step, mode, disabled = fal
     void preparePracticeVideoRenderer(plan, mode).then((next) => {
       if (cancelled || !host.current) return;
       renderer.current = next;
-      next.canvas.setAttribute("aria-label", `${mode === "bars" ? "막대" : "악보"} 모드 영상 미리보기`);
+      const label = mode === "lyrics" ? "가사" : mode === "bars" ? "막대" : "악보";
+      next.canvas.setAttribute("aria-label", `${label} 모드 영상 미리보기`);
       next.canvas.setAttribute("role", "img");
       host.current.replaceChildren(next.canvas);
       next.draw(0);

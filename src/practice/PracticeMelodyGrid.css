@@ -1,0 +1,37 @@
+.practice-melody-grid {
+  --practice-melody-row-height: 52px;
+}
+
+.practice-editors-compact .practice-melody-grid {
+  --practice-melody-row-height: 36px;
+}
+
+.practice-melody-viewport {
+  height: calc(var(--practice-melody-row-height) * 8 + 1px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  border-top: 1px solid #708694;
+  overscroll-behavior-y: contain;
+  scrollbar-color: #879ba7 #edf2f5;
+  scrollbar-gutter: stable;
+}
+
+.practice-melody-viewport .practice-melody-rows {
+  border-top: 0;
+}
+
+.practice-melody-lyric-wrap {
+  padding-right: var(--practice-melody-scrollbar-width, 0px);
+}
+
+.practice-melody-grid .practice-pitch-row-label {
+  max-width: 70px;
+  line-height: 1.1;
+  text-align: center;
+}
+
+.practice-editors-compact .practice-pitch-row-label {
+  max-width: 46px;
+  white-space: normal;
+  letter-spacing: -.5px;
+}

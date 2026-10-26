@@ -4,6 +4,9 @@ import type { RecordingCaptureMode } from "../audio/vocalCapture";
 import RecordingGuideSelector from "./RecordingGuideSelector";
 import "./RecordingGuideDialog.css";
 import { useDialogFocus } from "../hooks/useDialogFocus";
+import ComposerChildArtwork from "./ComposerChildArtwork";
+import { Headphones, Mic2, Music2, Users, Volume2 } from "./AppArtworkIcons";
+import "./AppExperienceArtwork.css";
 
 type Props = Readonly<{
   value: KaraokeGuideMode;
@@ -26,23 +29,24 @@ export default function RecordingGuideDialog({ value, onChange, onCancel, onStar
   return (
     <div className="recording-guide-overlay" role="presentation"
       onMouseDown={(event) => { if (event.target === event.currentTarget) onCancel(); }}>
-      <section ref={dialogRef} tabIndex={-1} className="recording-guide-dialog" role="dialog" aria-modal="true"
+      <section ref={dialogRef} tabIndex={-1} className="recording-guide-dialog app-recording-guide" role="dialog" aria-modal="true"
         aria-labelledby="recording-guide-title">
         <header>
-          <span>🎤 노래 녹음 준비</span>
+          <span><Mic2 size={22} /> 노래 녹음 준비</span>
           <h2 id="recording-guide-title">
             {step === "mode" ? "누가 함께 녹음하나요?"
               : step === "personal" ? "어떤 도움을 들으며 부를까요?" : "합창 녹음을 준비해요"}
           </h2>
+          <ComposerChildArtwork kind="recording" className="composer-recording-child" />
         </header>
         {step === "mode" && (
           <div className="recording-mode-options" aria-label="녹음 방법 선택">
             <button type="button" onClick={() => setStep("personal")}>
-              <span>🎧</span><strong>개인 녹음</strong>
+              <span><Headphones size={44} /></span><strong>개인 녹음</strong>
               <small>이어폰을 끼고 한 명이 노래해요</small>
             </button>
             <button type="button" onClick={() => setStep("choir")}>
-              <span>👥</span><strong>합창 녹음</strong>
+              <span><Users size={44} /></span><strong>합창 녹음</strong>
               <small>스피커 반주를 들으며 함께 불러요</small>
             </button>
           </div>
@@ -50,9 +54,9 @@ export default function RecordingGuideDialog({ value, onChange, onCancel, onStar
         {step === "personal" && <RecordingGuideSelector value={value} onChange={onChange} />}
         {step === "choir" && (
           <div className="choir-recording-guide">
-            <div><span>🔊</span><strong>스피커는 학생 쪽으로</strong><small>마이크와 떨어뜨려 주세요.</small></div>
-            <div><span>🎙️</span><strong>마이크는 합창단 앞 가운데에</strong></div>
-            <div><span>🎵</span><strong>가락 도움은 자동으로 꺼져요</strong></div>
+            <div><span><Volume2 size={26} /></span><strong>스피커는 학생 쪽으로</strong><small>마이크와 떨어뜨려 주세요.</small></div>
+            <div><span><Mic2 size={26} /></span><strong>마이크는 합창단 앞 가운데에</strong></div>
+            <div><span><Music2 size={26} /></span><strong>가락 도움은 자동으로 꺼져요</strong></div>
           </div>
         )}
         <footer>

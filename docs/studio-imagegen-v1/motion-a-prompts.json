@@ -1,0 +1,354 @@
+{
+  "tool": "built-in image_gen",
+  "style": "stylized-concept",
+  "contactSheet": "artifacts/studio-imagegen-v1/motion-a-contact-100.png",
+  "review": {
+    "assetCount": 15,
+    "generatedIndividually": true,
+    "allOriginalCopiesSha256Matched": true,
+    "allRuntimeDimensions": [
+      480,
+      480
+    ],
+    "allRuntimeAlpha": [
+      0,
+      255
+    ],
+    "visualReviewSize": 100,
+    "visualReview": "passed",
+    "generationFailures": 0,
+    "totalRuntimeBytes": 862976
+  },
+  "assets": [
+    {
+      "key": "motion-still",
+      "prompt": "Use case: stylized-concept.\nAsset type: one standalone premium motion-preset thumbnail for a charcoal Korean music-video creative studio.\nSubject and consistent collection style: a small coral folded-paper bird with periwinkle folded wings, a tiny warm ivory beak and accents, tactile colored-paper folds combined with softly glazed ceramic-like edges, sitting or moving over a small warm cream circular stage. Charming sculptural bird, crisp silhouette, premium polished 3D illustration, front three-quarter view, soft studio lighting and delicate contact shadows. Coral, periwinkle, warm ivory and a few warm gold accents only.\nComposition: a square transparent canvas, centered coherent scene filling about 80% of the square, generous safe padding, strong forms clearly readable at 100 pixels. Render only this one asset, not a sheet or comparison grid.\nPrimary request: Show STILL: one complete balanced bird standing calmly at the exact center of its circular stage, wings neatly folded. Perfectly stable and restful. No trails, no duplicate poses, no arrows and no decorative particles.\nConstraints: genuinely transparent background; no text, letters, numerals, logos, watermarks, cards, UI panels, button borders, photographic room, harsh black backdrop or checkerboard artwork. Preserve transparent alpha. One distinct thumbnail only.",
+      "status": "optimized",
+      "output_hint": "Generated images are saved to C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998 as C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998\\exec-0ffe8e00-bc7a-4b84-aa18-3282e3124ee1.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link.",
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998\\exec-0ffe8e00-bc7a-4b84-aa18-3282e3124ee1.png",
+      "kind": "motion",
+      "width": 480,
+      "height": 480,
+      "alpha": [
+        0,
+        255
+      ],
+      "bytes": 40810,
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\studio-imagegen-v1\\originals\\motion-still.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\studio-images\\v1\\motion-still.webp",
+      "qa": {
+        "visualReview": "passed at 100px on #20232b",
+        "sourceCopyMatch": true,
+        "transparentAlpha": true
+      }
+    },
+    {
+      "key": "motion-draw-on",
+      "prompt": "Use case: stylized-concept.\nAsset type: one standalone premium motion-preset thumbnail for a charcoal Korean music-video creative studio.\nSubject and consistent collection style: a small coral folded-paper bird with periwinkle folded wings, a tiny warm ivory beak and accents, tactile colored-paper folds combined with softly glazed ceramic-like edges, sitting or moving over a small warm cream circular stage. Charming sculptural bird, crisp silhouette, premium polished 3D illustration, front three-quarter view, soft studio lighting and delicate contact shadows. Coral, periwinkle, warm ivory and a few warm gold accents only.\nComposition: a square transparent canvas, centered coherent scene filling about 80% of the square, generous safe padding, strong forms clearly readable at 100 pixels. Render only this one asset, not a sheet or comparison grid.\nPrimary request: Show DRAW ON IN STROKE ORDER: the bird is being drawn into existence. Its left half is finished tactile coral and periwinkle paper, its right wing transitions into clean warm-ivory outline strokes and a few separated curved unfinished strokes. A tiny ivory drawing pencil at the unfinished wing tip makes the progressive drawing action unmistakable. Keep the completed bird silhouette dominant.\nConstraints: genuinely transparent background; no text, letters, numerals, logos, watermarks, cards, UI panels, button borders, photographic room, harsh black backdrop or checkerboard artwork. Preserve transparent alpha. One distinct thumbnail only.",
+      "status": "optimized",
+      "output_hint": "Generated images are saved to C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998 as C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998\\exec-422ba102-56b3-4a2b-87d3-de78fbeab8a2.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link.",
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998\\exec-422ba102-56b3-4a2b-87d3-de78fbeab8a2.png",
+      "kind": "motion",
+      "width": 480,
+      "height": 480,
+      "alpha": [
+        0,
+        255
+      ],
+      "bytes": 65640,
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\studio-imagegen-v1\\originals\\motion-draw-on.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\studio-images\\v1\\motion-draw-on.webp",
+      "qa": {
+        "visualReview": "passed at 100px on #20232b",
+        "sourceCopyMatch": true,
+        "transparentAlpha": true
+      }
+    },
+    {
+      "key": "motion-fade",
+      "prompt": "Use case: stylized-concept.\nAsset type: one standalone premium motion-preset thumbnail for a charcoal Korean music-video creative studio.\nSubject and consistent collection style: a small coral folded-paper bird with periwinkle folded wings, a tiny warm ivory beak and accents, tactile colored-paper folds combined with softly glazed ceramic-like edges, sitting or moving over a small warm cream circular stage. Charming sculptural bird, crisp silhouette, premium polished 3D illustration, front three-quarter view, soft studio lighting and delicate contact shadows. Coral, periwinkle, warm ivory and a few warm gold accents only.\nComposition: a square transparent canvas, centered coherent scene filling about 80% of the square, generous safe padding, strong forms clearly readable at 100 pixels. Render only this one asset, not a sheet or comparison grid.\nPrimary request: Show FADE IN: a main fully opaque coral/periwinkle bird at center-right gradually appears from two closely aligned translucent ghost silhouettes at the left. The faintest ghost is barely visible; the middle ghost has soft partial opacity; the complete central bird is vivid and sharply finished. Show a smooth opacity progression, not fast travel, no speed arrows.\nConstraints: genuinely transparent background; no text, letters, numerals, logos, watermarks, cards, UI panels, button borders, photographic room, harsh black backdrop or checkerboard artwork. Preserve transparent alpha. One distinct thumbnail only.",
+      "status": "optimized",
+      "output_hint": "Generated images are saved to C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998 as C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998\\exec-667d1d50-7145-4596-b966-e4c3f46c1ebf.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link.",
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998\\exec-667d1d50-7145-4596-b966-e4c3f46c1ebf.png",
+      "kind": "motion",
+      "width": 480,
+      "height": 480,
+      "alpha": [
+        0,
+        255
+      ],
+      "bytes": 48610,
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\studio-imagegen-v1\\originals\\motion-fade.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\studio-images\\v1\\motion-fade.webp",
+      "qa": {
+        "visualReview": "passed at 100px on #20232b",
+        "sourceCopyMatch": true,
+        "transparentAlpha": true
+      }
+    },
+    {
+      "key": "motion-slide",
+      "prompt": "Use case: stylized-concept.\nAsset type: one standalone premium motion-preset thumbnail for a charcoal Korean music-video creative studio.\nSubject and consistent collection style: a small coral folded-paper bird with periwinkle folded wings, a tiny warm ivory beak and accents, tactile colored-paper folds combined with softly glazed ceramic-like edges, sitting or moving over a small warm cream circular stage. Charming sculptural bird, crisp silhouette, premium polished 3D illustration, front three-quarter view, soft studio lighting and delicate contact shadows. Coral, periwinkle, warm ivory and a few warm gold accents only.\nComposition: a square transparent canvas, centered coherent scene filling about 80% of the square, generous safe padding, strong forms clearly readable at 100 pixels. Render only this one asset, not a sheet or comparison grid.\nPrimary request: Show SLIDE IN FROM THE LEFT: the main bird arrives horizontally from the left onto the middle of the cream stage. Two small translucent ghost poses line up behind it at the left at the SAME height, plus one broad graceful ivory horizontal swoosh pointing right. Clear left-to-right entrance, calm smooth motion, no vertical jumping.\nConstraints: genuinely transparent background; no text, letters, numerals, logos, watermarks, cards, UI panels, button borders, photographic room, harsh black backdrop or checkerboard artwork. Preserve transparent alpha. One distinct thumbnail only.",
+      "status": "optimized",
+      "output_hint": "Generated images are saved to C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998 as C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998\\exec-dae25049-9c4d-4eba-b7e0-51225b27b8c9.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link.",
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998\\exec-dae25049-9c4d-4eba-b7e0-51225b27b8c9.png",
+      "kind": "motion",
+      "width": 480,
+      "height": 480,
+      "alpha": [
+        0,
+        255
+      ],
+      "bytes": 45300,
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\studio-imagegen-v1\\originals\\motion-slide.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\studio-images\\v1\\motion-slide.webp",
+      "qa": {
+        "visualReview": "passed at 100px on #20232b",
+        "sourceCopyMatch": true,
+        "transparentAlpha": true
+      }
+    },
+    {
+      "key": "motion-zoom",
+      "prompt": "Use case: stylized-concept.\nAsset type: one standalone premium motion-preset thumbnail for a charcoal Korean music-video creative studio.\nSubject and consistent collection style: a small coral folded-paper bird with periwinkle folded wings, a tiny warm ivory beak and accents, tactile colored-paper folds combined with softly glazed ceramic-like edges, sitting or moving over a small warm cream circular stage. Charming sculptural bird, crisp silhouette, premium polished 3D illustration, front three-quarter view, soft studio lighting and delicate contact shadows. Coral, periwinkle, warm ivory and a few warm gold accents only.\nComposition: a square transparent canvas, centered coherent scene filling about 80% of the square, generous safe padding, strong forms clearly readable at 100 pixels. Render only this one asset, not a sheet or comparison grid.\nPrimary request: Show SLOW ZOOM IN: a large crisp bird in the foreground at center, with two smaller faint bird silhouettes receding directly behind it toward the same central point. Nested silhouettes and a few subtle outward ivory scale rays express the whole bird gently growing larger while its proportions remain unchanged. No left-right travel, no circular rotation.\nConstraints: genuinely transparent background; no text, letters, numerals, logos, watermarks, cards, UI panels, button borders, photographic room, harsh black backdrop or checkerboard artwork. Preserve transparent alpha. One distinct thumbnail only.",
+      "status": "optimized",
+      "output_hint": "Generated images are saved to C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998 as C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998\\exec-266b425b-f698-4638-85b2-a896effacd6a.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link.",
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998\\exec-266b425b-f698-4638-85b2-a896effacd6a.png",
+      "kind": "motion",
+      "width": 480,
+      "height": 480,
+      "alpha": [
+        0,
+        255
+      ],
+      "bytes": 60490,
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\studio-imagegen-v1\\originals\\motion-zoom.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\studio-images\\v1\\motion-zoom.webp",
+      "qa": {
+        "visualReview": "passed at 100px on #20232b",
+        "sourceCopyMatch": true,
+        "transparentAlpha": true
+      }
+    },
+    {
+      "key": "motion-float",
+      "prompt": "Use case: stylized-concept.\nAsset type: one standalone premium motion-preset thumbnail for a charcoal Korean music-video creative studio.\nSubject and consistent collection style: a small coral folded-paper bird with periwinkle folded wings, a tiny warm ivory beak and accents, tactile colored-paper folds combined with softly glazed ceramic-like edges, sitting or moving over a small warm cream circular stage. Charming sculptural bird, crisp silhouette, premium polished 3D illustration, front three-quarter view, soft studio lighting and delicate contact shadows. Coral, periwinkle, warm ivory and a few warm gold accents only.\nComposition: a square transparent canvas, centered coherent scene filling about 80% of the square, generous safe padding, strong forms clearly readable at 100 pixels. Render only this one asset, not a sheet or comparison grid.\nPrimary request: Show GENTLE FLOATING: the complete coral/periwinkle bird levitates serenely above the cream circular stage, with its small soft shadow clearly separated below. One very faint lower ghost pose and two soft curved ivory upward breeze lines express slow up-and-down hovering. Dreamy, light and balanced; no impact marks or fast bounce.\nConstraints: genuinely transparent background; no text, letters, numerals, logos, watermarks, cards, UI panels, button borders, photographic room, harsh black backdrop or checkerboard artwork. Preserve transparent alpha. One distinct thumbnail only.",
+      "status": "optimized",
+      "output_hint": "Generated images are saved to C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998 as C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998\\exec-b3f1f48f-5efb-48c6-8349-bfab0576ac6f.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link.",
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998\\exec-b3f1f48f-5efb-48c6-8349-bfab0576ac6f.png",
+      "kind": "motion",
+      "width": 480,
+      "height": 480,
+      "alpha": [
+        0,
+        255
+      ],
+      "bytes": 56952,
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\studio-imagegen-v1\\originals\\motion-float.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\studio-images\\v1\\motion-float.webp",
+      "qa": {
+        "visualReview": "passed at 100px on #20232b",
+        "sourceCopyMatch": true,
+        "transparentAlpha": true
+      }
+    },
+    {
+      "key": "motion-bounce",
+      "prompt": "Use case: stylized-concept.\nAsset type: one standalone premium motion-preset thumbnail for a charcoal Korean music-video creative studio.\nSubject and consistent collection style: a small coral folded-paper bird with periwinkle folded wings, a tiny warm ivory beak and accents, tactile colored-paper folds combined with softly glazed ceramic-like edges, sitting or moving over a small warm cream circular stage. Charming sculptural bird, crisp silhouette, premium polished 3D illustration, front three-quarter view, soft studio lighting and delicate contact shadows. Coral, periwinkle, warm ivory and a few warm gold accents only.\nComposition: a square transparent canvas, centered coherent scene filling about 80% of the square, generous safe padding, strong forms clearly readable at 100 pixels. Render only this one asset, not a sheet or comparison grid.\nPrimary request: Show RHYTHMIC BOUNCING IN PLACE: the complete bird is lifted above the center of its cream stage, its feet tucked up and wings slightly raised. A soft flattened shadow, one faint compressed landing pose directly underneath, and a short ivory elastic curved bounce trail express springy vertical hops on the beat. No horizontal travel.\nConstraints: genuinely transparent background; no text, letters, numerals, logos, watermarks, cards, UI panels, button borders, photographic room, harsh black backdrop or checkerboard artwork. Preserve transparent alpha. One distinct thumbnail only.",
+      "status": "optimized",
+      "output_hint": "Generated images are saved to C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998 as C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998\\exec-f54fa520-2d2f-4a16-9657-2a2b61ec2c1b.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link.",
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998\\exec-f54fa520-2d2f-4a16-9657-2a2b61ec2c1b.png",
+      "kind": "motion",
+      "width": 480,
+      "height": 480,
+      "alpha": [
+        0,
+        255
+      ],
+      "bytes": 45856,
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\studio-imagegen-v1\\originals\\motion-bounce.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\studio-images\\v1\\motion-bounce.webp",
+      "qa": {
+        "visualReview": "passed at 100px on #20232b",
+        "sourceCopyMatch": true,
+        "transparentAlpha": true
+      }
+    },
+    {
+      "key": "motion-pulse",
+      "prompt": "Use case: stylized-concept.\nAsset type: one standalone premium motion-preset thumbnail for a charcoal Korean music-video creative studio.\nSubject and consistent collection style: a small coral folded-paper bird with periwinkle folded wings, a tiny warm ivory beak and accents, tactile colored-paper folds combined with softly glazed ceramic-like edges, sitting or moving over a small warm cream circular stage. Charming sculptural bird, crisp silhouette, premium polished 3D illustration, front three-quarter view, soft studio lighting and delicate contact shadows. Coral, periwinkle, warm ivory and a few warm gold accents only.\nComposition: a square transparent canvas, centered coherent scene filling about 80% of the square, generous safe padding, strong forms clearly readable at 100 pixels. Render only this one asset, not a sheet or comparison grid.\nPrimary request: Show A MUSICAL SIZE PULSE: one centered complete bird has two subtly larger translucent silhouettes expanding around the exact same center and six short rounded warm-ivory radiating beat marks. The bird grows and settles in place like a rhythmic heartbeat, with no vertical or horizontal travel, no confetti and no circular motion arrow.\nConstraints: genuinely transparent background; no text, letters, numerals, logos, watermarks, cards, UI panels, button borders, photographic room, harsh black backdrop or checkerboard artwork. Preserve transparent alpha. One distinct thumbnail only.",
+      "status": "optimized",
+      "output_hint": "Generated images are saved to C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998 as C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998\\exec-2334e335-17d8-4708-9483-729b3f1deed6.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link.",
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998\\exec-2334e335-17d8-4708-9483-729b3f1deed6.png",
+      "kind": "motion",
+      "width": 480,
+      "height": 480,
+      "alpha": [
+        0,
+        255
+      ],
+      "bytes": 65740,
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\studio-imagegen-v1\\originals\\motion-pulse.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\studio-images\\v1\\motion-pulse.webp",
+      "qa": {
+        "visualReview": "passed at 100px on #20232b",
+        "sourceCopyMatch": true,
+        "transparentAlpha": true
+      }
+    },
+    {
+      "key": "motion-pop-in",
+      "prompt": "Use case: stylized-concept.\nAsset type: one standalone premium motion-preset thumbnail for a charcoal Korean music-video creative studio.\nSubject and consistent collection style: a small coral folded-paper bird with periwinkle folded wings, a tiny warm ivory beak and accents, tactile colored-paper folds combined with softly glazed ceramic-like edges, sitting or moving over a small warm cream circular stage. Charming sculptural bird, crisp silhouette, premium polished 3D illustration, front three-quarter view, soft studio lighting and delicate contact shadows. Coral, periwinkle, warm ivory and a few warm gold accents only.\nComposition: a square transparent canvas, centered coherent scene filling about 80% of the square, generous safe padding, strong forms clearly readable at 100 pixels. Render only this one asset, not a sheet or comparison grid.\nPrimary request: Show POP IN ENTRANCE: the bird springs from a tiny faint miniature silhouette into one full-size vivid bird, hovering just over a small cream stage with a compact soft ivory pop cloud and three short coral/ivory burst rays beneath it. A single delightful appearance with a slight overshoot; make the complete bird large and readable.\nConstraints: genuinely transparent background; no text, letters, numerals, logos, watermarks, cards, UI panels, button borders, photographic room, harsh black backdrop or checkerboard artwork. Preserve transparent alpha. One distinct thumbnail only.",
+      "status": "optimized",
+      "output_hint": "Generated images are saved to C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998 as C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998\\exec-7f0792ea-c756-4e2a-ad1a-623ae08f733c.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link.",
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998\\exec-7f0792ea-c756-4e2a-ad1a-623ae08f733c.png",
+      "kind": "motion",
+      "width": 480,
+      "height": 480,
+      "alpha": [
+        0,
+        255
+      ],
+      "bytes": 46822,
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\studio-imagegen-v1\\originals\\motion-pop-in.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\studio-images\\v1\\motion-pop-in.webp",
+      "qa": {
+        "visualReview": "passed at 100px on #20232b",
+        "sourceCopyMatch": true,
+        "transparentAlpha": true
+      }
+    },
+    {
+      "key": "motion-iris",
+      "prompt": "Use case: stylized-concept.\nAsset type: one standalone premium motion-preset thumbnail for a charcoal Korean music-video creative studio.\nSubject and consistent collection style: a small coral folded-paper bird with periwinkle folded wings, a tiny warm ivory beak and accents, tactile colored-paper folds combined with softly glazed ceramic-like edges, sitting or moving over a small warm cream circular stage. Charming sculptural bird, crisp silhouette, premium polished 3D illustration, front three-quarter view, soft studio lighting and delicate contact shadows. Coral, periwinkle, warm ivory and a few warm gold accents only.\nComposition: a square transparent canvas, centered coherent scene filling about 80% of the square, generous safe padding, strong forms clearly readable at 100 pixels. Render only this one asset, not a sheet or comparison grid.\nPrimary request: Show CIRCULAR IRIS REVEAL: the coral/periwinkle bird is being uncovered through a widening round ivory aperture. A sculptural warm cream circular ring with a few simple paper iris petals frames the bird, with its outer wing tips partially hidden by the rim while its head and center are clearly revealed. The opening reads as a circle expanding outward, no text, no camera icon.\nConstraints: genuinely transparent background; no text, letters, numerals, logos, watermarks, cards, UI panels, button borders, photographic room, harsh black backdrop or checkerboard artwork. Preserve transparent alpha. One distinct thumbnail only.",
+      "status": "optimized",
+      "output_hint": "Generated images are saved to C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998 as C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998\\exec-c8d321c6-3979-44b8-9a28-6402a18000eb.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link.",
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998\\exec-c8d321c6-3979-44b8-9a28-6402a18000eb.png",
+      "kind": "motion",
+      "width": 480,
+      "height": 480,
+      "alpha": [
+        0,
+        255
+      ],
+      "bytes": 56826,
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\studio-imagegen-v1\\originals\\motion-iris.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\studio-images\\v1\\motion-iris.webp",
+      "qa": {
+        "visualReview": "passed at 100px on #20232b",
+        "sourceCopyMatch": true,
+        "transparentAlpha": true
+      }
+    },
+    {
+      "key": "motion-curtain",
+      "prompt": "Use case: stylized-concept.\nAsset type: one standalone premium motion-preset thumbnail for a charcoal Korean music-video creative studio.\nSubject and consistent collection style: a small coral folded-paper bird with periwinkle folded wings, a tiny warm ivory beak and accents, tactile colored-paper folds combined with softly glazed ceramic-like edges, sitting or moving over a small warm cream circular stage. Charming sculptural bird, crisp silhouette, premium polished 3D illustration, front three-quarter view, soft studio lighting and delicate contact shadows. Coral, periwinkle, warm ivory and a few warm gold accents only.\nComposition: a square transparent canvas, centered coherent scene filling about 80% of the square, generous safe padding, strong forms clearly readable at 100 pixels. Render only this one asset, not a sheet or comparison grid.\nPrimary request: Show CURTAIN OPEN REVEAL: two warm ivory folded-paper curtains part symmetrically from the center toward left and right, unveiling one complete coral/periwinkle bird on its small cream circular stage. Clear central gap with the bird fully readable and broad elegant curtain folds pulled to either side. No theatre scenery or room background.\nConstraints: genuinely transparent background; no text, letters, numerals, logos, watermarks, cards, UI panels, button borders, photographic room, harsh black backdrop or checkerboard artwork. Preserve transparent alpha. One distinct thumbnail only.",
+      "status": "optimized",
+      "output_hint": "Generated images are saved to C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998 as C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998\\exec-61fcf238-e18e-4636-8356-f87d9e0f126b.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link.",
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998\\exec-61fcf238-e18e-4636-8356-f87d9e0f126b.png",
+      "kind": "motion",
+      "width": 480,
+      "height": 480,
+      "alpha": [
+        0,
+        255
+      ],
+      "bytes": 74364,
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\studio-imagegen-v1\\originals\\motion-curtain.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\studio-images\\v1\\motion-curtain.webp",
+      "qa": {
+        "visualReview": "passed at 100px on #20232b",
+        "sourceCopyMatch": true,
+        "transparentAlpha": true
+      }
+    },
+    {
+      "key": "motion-assemble",
+      "prompt": "Use case: stylized-concept.\nAsset type: one standalone premium motion-preset thumbnail for a charcoal Korean music-video creative studio.\nSubject and consistent collection style: a small coral folded-paper bird with periwinkle folded wings, a tiny warm ivory beak and accents, tactile colored-paper folds combined with softly glazed ceramic-like edges, sitting or moving over a small warm cream circular stage. Charming sculptural bird, crisp silhouette, premium polished 3D illustration, front three-quarter view, soft studio lighting and delicate contact shadows. Coral, periwinkle, warm ivory and a few warm gold accents only.\nComposition: a square transparent canvas, centered coherent scene filling about 80% of the square, generous safe padding, strong forms clearly readable at 100 pixels. Render only this one asset, not a sheet or comparison grid.\nPrimary request: Show RECTANGULAR PIECES ASSEMBLING: the coral/periwinkle folded-paper bird is almost complete, made of a handful of clean rectangular image tiles. Three small offset coral and periwinkle tiles fly inward to matching visible slots at the wing and lower body, with subtle ivory inward motion streaks. Keep its head, beak and overall bird silhouette recognizable; no debris cloud.\nConstraints: genuinely transparent background; no text, letters, numerals, logos, watermarks, cards, UI panels, button borders, photographic room, harsh black backdrop or checkerboard artwork. Preserve transparent alpha. One distinct thumbnail only.",
+      "status": "optimized",
+      "output_hint": "Generated images are saved to C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998 as C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998\\exec-1995c947-24d4-4ffe-9d5c-4c25596ccad8.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link.",
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998\\exec-1995c947-24d4-4ffe-9d5c-4c25596ccad8.png",
+      "kind": "motion",
+      "width": 480,
+      "height": 480,
+      "alpha": [
+        0,
+        255
+      ],
+      "bytes": 53920,
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\studio-imagegen-v1\\originals\\motion-assemble.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\studio-images\\v1\\motion-assemble.webp",
+      "qa": {
+        "visualReview": "passed at 100px on #20232b",
+        "sourceCopyMatch": true,
+        "transparentAlpha": true
+      }
+    },
+    {
+      "key": "motion-sparkle",
+      "prompt": "Use case: stylized-concept.\nAsset type: one standalone premium motion-preset thumbnail for a charcoal Korean music-video creative studio.\nSubject and consistent collection style: a small coral folded-paper bird with periwinkle folded wings, a tiny warm ivory beak and accents, tactile colored-paper folds combined with softly glazed ceramic-like edges, sitting or moving over a small warm cream circular stage. Charming sculptural bird, crisp silhouette, premium polished 3D illustration, front three-quarter view, soft studio lighting and delicate contact shadows. Coral, periwinkle, warm ivory and a few warm gold accents only.\nComposition: a square transparent canvas, centered coherent scene filling about 80% of the square, generous safe padding, strong forms clearly readable at 100 pixels. Render only this one asset, not a sheet or comparison grid.\nPrimary request: Show SPARKLING STARLIGHT: a complete calm coral/periwinkle bird on its cream stage is surrounded by five clearly shaped warm-ivory four-point stars of varied small sizes, a couple with periwinkle glazed centers. The stars twinkle close to the bird's wings with soft tiny glints. Minimal elegant magic, no confetti, no snowfall or circular motion arrows.\nConstraints: genuinely transparent background; no text, letters, numerals, logos, watermarks, cards, UI panels, button borders, photographic room, harsh black backdrop or checkerboard artwork. Preserve transparent alpha. One distinct thumbnail only.",
+      "status": "optimized",
+      "output_hint": "Generated images are saved to C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998 as C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998\\exec-c752536a-0ac4-4c3e-9441-a8770d2ae2d5.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link.",
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998\\exec-c752536a-0ac4-4c3e-9441-a8770d2ae2d5.png",
+      "kind": "motion",
+      "width": 480,
+      "height": 480,
+      "alpha": [
+        0,
+        255
+      ],
+      "bytes": 58366,
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\studio-imagegen-v1\\originals\\motion-sparkle.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\studio-images\\v1\\motion-sparkle.webp",
+      "qa": {
+        "visualReview": "passed at 100px on #20232b",
+        "sourceCopyMatch": true,
+        "transparentAlpha": true
+      }
+    },
+    {
+      "key": "motion-confetti",
+      "prompt": "Use case: stylized-concept.\nAsset type: one standalone premium motion-preset thumbnail for a charcoal Korean music-video creative studio.\nSubject and consistent collection style: a small coral folded-paper bird with periwinkle folded wings, a tiny warm ivory beak and accents, tactile colored-paper folds combined with softly glazed ceramic-like edges, sitting or moving over a small warm cream circular stage. Charming sculptural bird, crisp silhouette, premium polished 3D illustration, front three-quarter view, soft studio lighting and delicate contact shadows. Coral, periwinkle, warm ivory and a few warm gold accents only.\nComposition: a square transparent canvas, centered coherent scene filling about 80% of the square, generous safe padding, strong forms clearly readable at 100 pixels. Render only this one asset, not a sheet or comparison grid.\nPrimary request: Show CONFETTI CELEBRATION: a cheerful complete coral/periwinkle bird with slightly raised wings on its small cream stage, with a graceful shower of distinct tiny curled paper ribbons and rectangular confetti in coral, periwinkle, warm ivory and a few warm gold pieces. Confetti falls from above around the bird without hiding its face. Festive but uncluttered.\nConstraints: genuinely transparent background; no text, letters, numerals, logos, watermarks, cards, UI panels, button borders, photographic room, harsh black backdrop or checkerboard artwork. Preserve transparent alpha. One distinct thumbnail only.",
+      "status": "optimized",
+      "output_hint": "Generated images are saved to C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998 as C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998\\exec-b46bb70d-8c74-491d-b8df-0fc845555d47.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link.",
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998\\exec-b46bb70d-8c74-491d-b8df-0fc845555d47.png",
+      "kind": "motion",
+      "width": 480,
+      "height": 480,
+      "alpha": [
+        0,
+        255
+      ],
+      "bytes": 81606,
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\studio-imagegen-v1\\originals\\motion-confetti.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\studio-images\\v1\\motion-confetti.webp",
+      "qa": {
+        "visualReview": "passed at 100px on #20232b",
+        "sourceCopyMatch": true,
+        "transparentAlpha": true
+      }
+    },
+    {
+      "key": "motion-rotate-in",
+      "prompt": "Use case: stylized-concept.\nAsset type: one standalone premium motion-preset thumbnail for a charcoal Korean music-video creative studio.\nSubject and consistent collection style: a small coral folded-paper bird with periwinkle folded wings, a tiny warm ivory beak and accents, tactile colored-paper folds combined with softly glazed ceramic-like edges, sitting or moving over a small warm cream circular stage. Charming sculptural bird, crisp silhouette, premium polished 3D illustration, front three-quarter view, soft studio lighting and delicate contact shadows. Coral, periwinkle, warm ivory and a few warm gold accents only.\nComposition: a square transparent canvas, centered coherent scene filling about 80% of the square, generous safe padding, strong forms clearly readable at 100 pixels. Render only this one asset, not a sheet or comparison grid.\nPrimary request: Show ROTATING ENTRANCE: the complete coral/periwinkle bird is caught at a graceful 25-degree tilt as it spins into an upright landing on the small cream stage. One smaller faint rotated bird silhouette behind it and a single broad warm-ivory curved arrow sweeping three-quarters of a circle convey rotation settling into place. Bird fills the center; preserve its clean paper proportions.\nConstraints: genuinely transparent background; no text, letters, numerals, logos, watermarks, cards, UI panels, button borders, photographic room, harsh black backdrop or checkerboard artwork. Preserve transparent alpha. One distinct thumbnail only.",
+      "status": "optimized",
+      "output_hint": "Generated images are saved to C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998 as C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998\\exec-31a1f0b9-450f-478a-b1e2-d634070ed497.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link.",
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd5-8bd6-7b72-8518-a55aa3834998\\exec-31a1f0b9-450f-478a-b1e2-d634070ed497.png",
+      "kind": "motion",
+      "width": 480,
+      "height": 480,
+      "alpha": [
+        0,
+        255
+      ],
+      "bytes": 61674,
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\studio-imagegen-v1\\originals\\motion-rotate-in.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\studio-images\\v1\\motion-rotate-in.webp",
+      "qa": {
+        "visualReview": "passed at 100px on #20232b",
+        "sourceCopyMatch": true,
+        "transparentAlpha": true
+      }
+    }
+  ]
+}

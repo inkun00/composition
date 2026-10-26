@@ -9,10 +9,11 @@ import {
   writeBatch,
   type Timestamp
 } from "firebase/firestore";
-import { firestore } from "./client";
-import { isSavedDraft, type SavedDraft } from "../music/draft";
+import { firebaseAuth, firestore } from "./client";
+import type { SavedDraft } from "../music/draft";
 import type { CloudScore } from "./scores";
 import { albumPasswordProof, newAlbumPasswordSalt } from "./albumPassword";
+import { decodeCloudDraft, encodeCloudDraft } from "./cloudDraft";
 
 export type PublicationAccess = "audio" | "score" | "project";
 
@@ -21,6 +22,7 @@ export type CommunityAlbum = Readonly<{
   name: string;
   ownerId: string;
   ownerName: string;
+  // Kept for existing albums: this flag protects deletion, never album entry.
   locked: boolean;
   passwordSalt?: string;
   createdAt: number;
@@ -44,10 +46,6 @@ export type PublishedSong = Readonly<{
 function requireFirestore() {
   if (!firestore) throw new Error("firebase-not-configured");
   return firestore;
-}
-
-function cleanDraft(draft: SavedDraft): SavedDraft {
-  return JSON.parse(JSON.stringify(draft)) as SavedDraft;
 }
 
 function timestampMillis(value: unknown): number {
@@ -125,8 +123,25 @@ export async function createCommunityAlbum(
   };
 }
 
-export async function deleteCommunityAlbum(albumId: string): Promise<void> {
+export async function deleteCommunityAlbum(
+  albumId: string,
+  authorization?: Readonly<{ userId: string; password: string; salt: string }>
+): Promise<void> {
   const db = requireFirestore();
+  const userId = authorization?.userId ?? firebaseAuth?.currentUser?.uid;
+  if (!userId) throw new Error("login-required");
+  let proof = "";
+  if (authorization) {
+    const password = authorization.password.trim();
+    if (!password || !authorization.salt) throw new Error("missing-album-password");
+    proof = await albumPasswordProof(password, authorization.salt);
+  }
+  // Always check server permissions first, including stale or unlocked albums.
+  await setDoc(doc(db, "albumDeletionAccess", albumId), {
+    ownerId: userId,
+    proof,
+    verifiedAt: serverTimestamp()
+  });
   const songSnapshots = await getDocs(collection(db, "communityAlbums", albumId, "songs"));
   const songRefs = songSnapshots.docs.map((snapshot) => snapshot.ref);
   for (let index = 0; index < songRefs.length; index += 450) {
@@ -136,6 +151,7 @@ export async function deleteCommunityAlbum(albumId: string): Promise<void> {
   }
   const batch = writeBatch(db);
   batch.delete(doc(db, "albumSecrets", albumId));
+  batch.delete(doc(db, "albumDeletionAccess", albumId));
   batch.delete(doc(db, "communityAlbums", albumId));
   await batch.commit();
 }
@@ -170,31 +186,24 @@ export async function setCommunityAlbumPassword(
   return { locked: Boolean(salt), passwordSalt: salt };
 }
 
-export async function enterCommunityAlbum(
-  albumId: string, userId: string, password: string, salt: string
-): Promise<void> {
-  if (!password || !salt) throw new Error("missing-album-password");
-  const proof = await albumPasswordProof(password, salt);
-  await setDoc(doc(requireFirestore(), "albumMemberAccess", albumId, "users", userId), { proof });
-}
-
 export async function listPublishedSongs(albumId: string): Promise<PublishedSong[]> {
   const result = await getDocs(collection(requireFirestore(), "communityAlbums", albumId, "songs"));
   return result.docs.flatMap((snapshot) => {
     const data = snapshot.data();
-    if (!isSavedDraft(data.draft) || !isPublicationAccess(data.access) || typeof data.ownerId !== "string") return [];
+    const draft = decodeCloudDraft(data.draft);
+    if (!draft || !isPublicationAccess(data.access) || typeof data.ownerId !== "string") return [];
     return [{
       id: snapshot.id,
       albumId,
       ownerId: data.ownerId,
       ownerName: typeof data.ownerName === "string" ? data.ownerName : "마음멜로디 사용자",
       sourceScoreId: typeof data.sourceScoreId === "string" ? data.sourceScoreId : "",
-      title: typeof data.title === "string" ? data.title : data.draft.title,
-      creator: typeof data.creator === "string" ? data.creator : data.draft.creator,
+      title: typeof data.title === "string" ? data.title : draft.title,
+      creator: typeof data.creator === "string" ? data.creator : draft.creator,
       access: data.access,
       publishedAt: timestampMillis(data.publishedAt),
       updatedAt: timestampMillis(data.updatedAt),
-      draft: data.draft
+      draft
     }];
   }).sort((a, b) => b.updatedAt - a.updatedAt || a.title.localeCompare(b.title, "ko"));
 }
@@ -209,7 +218,7 @@ export async function publishScoreToAlbum(
   if (!isPublishableScore(score)) throw new Error("incomplete-score");
   const songId = `${ownerId}_${score.id}`;
   const songRef = doc(requireFirestore(), "communityAlbums", albumId, "songs", songId);
-  await setDoc(songRef, {
+  const songData = {
     ownerId,
     ownerName: ownerName.trim().slice(0, 40) || "마음멜로디 사용자",
     sourceScoreId: score.id,
@@ -218,8 +227,9 @@ export async function publishScoreToAlbum(
     access,
     publishedAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
-    draft: cleanDraft(score.draft)
-  }, { merge: true });
+    draft: encodeCloudDraft(score.draft)
+  };
+  await setDoc(songRef, songData, { mergeFields: Object.keys(songData) });
 }
 
 export async function updatePublishedSongAccess(

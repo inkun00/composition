@@ -1,4 +1,4 @@
-import { FileVideo } from "lucide-react";
+import { FileVideo } from "./AppArtworkIcons";
 import "./LyricVideoExportButton.css";
 
 type Props = Readonly<{

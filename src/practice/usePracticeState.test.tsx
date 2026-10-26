@@ -224,16 +224,16 @@ describe("리듬을 만들고 가락으로 이어 가는 연습 상태", () => {
     ]);
     act(() => {
       current.setPitch("sharp", 59);
-      current.setPitch("flat", 75);
+      current.setPitch("flat", 85);
     });
-    expect(current.active.notes.map((note) => note.pitch)).toEqual([60, 72, null]);
+    expect(current.active.notes.map((note) => note.pitch)).toEqual([60, 84, null]);
     const beforeInvalid = current.draft;
     act(() => {
       current.setPitch("sharp", Number.NaN);
       current.setPitch("flat", Infinity);
     });
     expect(current.draft).toBe(beforeInvalid);
-    expect(readPracticeDraft().measures[0].notes.map((note) => note.pitch)).toEqual([60, 72, null]);
+    expect(readPracticeDraft().measures[0].notes.map((note) => note.pitch)).toEqual([60, 84, null]);
   });
 
   it("가락 단계에서도 리듬을 고치며 부족한 박자를 채우면 저장 가능 상태가 복구된다", () => {
@@ -255,7 +255,7 @@ describe("리듬을 만들고 가락으로 이어 가는 연습 상태", () => {
     expect(current.complete).toBe(true);
     expect(current.active.notes.map((note) => note.lyric)).toEqual(["안", undefined, "녕"]);
     act(() => { current.setPitch("first-a", 76); });
-    expect(current.active.notes[0].pitch).toBe(72);
+    expect(current.active.notes[0].pitch).toBe(76);
     expect(current.active.notes[2].pitch).toBe(65);
     expect(current.draft.measures[1]).toEqual(second);
     expect(current.step).toBe("melody");

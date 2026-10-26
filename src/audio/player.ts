@@ -1,7 +1,9 @@
 import { renderRealtimeBackingMp3, renderOfflineBackingMp3 } from "./backingExport";
 import { renderMelodyPreview } from "./melodyPreview";
+import { renderCompositionPlayback, type CompositionPlaybackControl } from "./compositionPlayback";
+export type { CompositionPlaybackClock, CompositionPlaybackControl } from "./compositionPlayback";
 import { createProtectedMaster, measureSeconds, compositionSeconds,
-  songArrangementPlan, recordingArrangementPlan, buildIntroMeasures, buildOutroMeasures, scheduleMeasure, prepareAccompaniment,
+  recordingArrangementPlan, buildIntroMeasures, buildOutroMeasures, scheduleMeasure, prepareAccompaniment,
   type PlaybackMeasure, type AccompanimentOptions } from "./accompanimentScore";
 import { loadSampleWithTimeout, loadAccompanimentLayers, releaseAccompanimentRuntime } from "./accompanimentRuntime";
 export type { PlaybackMeasure, AccompanimentOptions } from "./accompanimentScore";
@@ -47,18 +49,50 @@ let activePlaybackContext: AudioContext | null = null;
 let sharedAudioContext: AudioContext | null = null;
 let activeOfflineExport = false;
 const completionTimers = new Map<AudioContext, number>();
+const playbackControls = new Map<AudioContext, Readonly<{
+  control: CompositionPlaybackControl;
+  dedicated: boolean;
+  onAbort: () => void;
+}>>();
 
+async function finishPlayback(context: AudioContext, closeContext = false): Promise<void> {
+  const timer = completionTimers.get(context);
+  if (timer !== undefined) window.clearInterval(timer);
+  completionTimers.delete(context);
+  const playback = playbackControls.get(context);
+  playbackControls.delete(context);
+  playback?.control.signal?.removeEventListener("abort", playback.onAbort);
+  if (activePlaybackContext === context) activePlaybackContext = null;
+  if (closeContext && sharedAudioContext === context) sharedAudioContext = null;
+  releaseAccompanimentRuntime(context);
+  releaseSampleContext(context);
+  const closing = (closeContext || playback?.dedicated) && context.state !== "closed"
+    ? context.close() : undefined;
+  try {
+    playback?.control.onEnded?.();
+  } catch (error) {
+    console.error("음악 재생 종료 알림을 처리하지 못했어요.", error);
+  }
+  await closing;
+}
 
-async function claimPlayback(): Promise<AudioContext | null> {
-  if (activePlaybackContext || activeOfflineExport) return null;
-  sharedAudioContext ??= new AudioContext();
-  const context = sharedAudioContext;
+async function claimPlayback(control?: CompositionPlaybackControl): Promise<AudioContext | null> {
+  if (control?.signal?.aborted || activePlaybackContext || activeOfflineExport) return null;
+  const dedicated = Boolean(control?.signal);
+  const context = dedicated ? new AudioContext() : (sharedAudioContext ??= new AudioContext());
   activePlaybackContext = context;
+  if (control) {
+    const onAbort = () => { void finishPlayback(context, true).catch(console.error); };
+    playbackControls.set(context, { control, dedicated, onAbort });
+    control.signal?.addEventListener("abort", onAbort, { once: true });
+  }
   try {
     if (context.state === "suspended") await context.resume();
+    if (control?.signal?.aborted || activePlaybackContext !== context || context.state === "closed") return null;
     return context;
   } catch (error) {
-    if (activePlaybackContext === context) activePlaybackContext = null;
+    await finishPlayback(context, true);
+    if (control?.signal?.aborted) return null;
     throw error;
   }
 }
@@ -69,11 +103,7 @@ function releasePlayback(context: AudioContext, afterSeconds: number): void {
   if (previous !== undefined) window.clearInterval(previous);
   const timer = window.setInterval(() => {
     if (context.state !== "closed" && context.currentTime < end) return;
-    window.clearInterval(timer);
-    completionTimers.delete(context);
-    releaseAccompanimentRuntime(context);
-    releaseSampleContext(context);
-    if (activePlaybackContext === context) activePlaybackContext = null;
+    void finishPlayback(context).catch(console.error);
   }, 100);
   completionTimers.set(context, timer);
 }
@@ -98,12 +128,7 @@ export async function stopPlayback(): Promise<void> {
   sharedAudioContext = null;
   for (const context of contexts) {
     if (!context) continue;
-    const timer = completionTimers.get(context);
-    if (timer !== undefined) window.clearInterval(timer);
-    completionTimers.delete(context);
-    releaseAccompanimentRuntime(context);
-    releaseSampleContext(context);
-    if (context.state !== "closed") await context.close();
+    await finishPlayback(context, true);
   }
 }
 
@@ -129,67 +154,24 @@ export async function playComposition(
   instrumentId: InstrumentId = "piano",
   bpm = 96,
   accompaniment?: AccompanimentOptions,
-  withIntro = false
+  withIntro = false,
+  control?: CompositionPlaybackControl
 ): Promise<number | null> {
   accompaniment = prepareAccompaniment(accompaniment, measures);
-  const context = await claimPlayback();
+  const context = await claimPlayback(control);
   if (!context) return null;
-  const master = createProtectedMaster(context, context.destination, 0.72);
-  const secondsPerBeat = 60 / bpm;
-  const instrument = findInstrument(instrumentId);
-  let sampledInstrument: Awaited<ReturnType<typeof loadSampleInstrument>> | null = null;
   try {
-    sampledInstrument = await loadSampleWithTimeout(context, master, instrumentId);
+    const duration = await renderCompositionPlayback(context,
+      () => activePlaybackContext === context && !control?.signal?.aborted,
+      measures, instrumentId, bpm, accompaniment, withIntro, control);
+    if (duration !== null) releasePlayback(context, duration);
+    else await finishPlayback(context, Boolean(control?.signal));
+    return duration;
   } catch (error) {
-    console.warn("악기 샘플을 불러오지 못해 합성 음색을 사용합니다.", error);
+    await finishPlayback(context, true);
+    if (control?.signal?.aborted) return null;
+    throw error;
   }
-  if (activePlaybackContext !== context || context.state === "closed") return null;
-  const accompanimentLayers = await loadAccompanimentLayers(context, master, accompaniment);
-  if (activePlaybackContext !== context || (context.state as string) === "closed") return null;
-  const voiceState = createArrangementVoiceState();
-  const start = context.currentTime + 0.08;
-  let songCursor = 0;
-
-  if (withIntro) {
-    const introMeasures = buildIntroMeasures(measures);
-    introMeasures.forEach((measure, introIndex) => {
-      songCursor += scheduleMeasure(context, master, { ...measure, measureIndex: introIndex },
-        start + songCursor, secondsPerBeat, {
-          instrument,
-          sampledInstrument,
-          accompaniment,
-          accompanimentLayers,
-          includeMelody: false,
-          includeEffects: false,
-          arrangementSection: "intro",
-          voiceState,
-          arrangementLayerCount: accompanimentLayers.length,
-          arrangementEnergy: .98,
-          transitionFill: introIndex === introMeasures.length - 1
-        });
-    });
-  }
-
-  measures.forEach((measure, measureIndex) => {
-    const plan = songArrangementPlan(measureIndex, measures.length, accompanimentLayers.length);
-    songCursor += scheduleMeasure(context, master, { ...measure, measureIndex: measure.measureIndex ?? measureIndex }, start + songCursor, secondsPerBeat, {
-      instrument,
-      sampledInstrument,
-      accompaniment,
-      accompanimentLayers,
-      includeMelody: true,
-      includeEffects: true,
-      arrangementSection: "song",
-      voiceState,
-      arrangementLayerCount: plan.layerCount,
-      ending: measure.isSongEnding ?? (measures.length > 1 && measureIndex === measures.length - 1),
-      transitionFill: ((measure.measureIndex ?? measureIndex) + 1) % 4 === 0,
-      arrangementEnergy: plan.energy
-    });
-  });
-
-  releasePlayback(context, songCursor + 0.5);
-  return songCursor + 0.5;
 }
 
 export async function practiceKaraokeComposition(

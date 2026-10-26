@@ -17,7 +17,7 @@
   }
 
   /* 2. 하단 고정 바가 페이지 최하단 콘텐츠를 가리지 않도록 main 하단 여백 확보 */
-  main {
+  main:not(.qr-playback-page) {
     padding-bottom: 175px !important;
   }
 
@@ -258,7 +258,7 @@
 
 /* 430px 이하 소형 스마트폰 (iPhone SE, 소형 Galaxy) 추가 미세 조정 */
 @media (max-width: 430px) {
-  main {
+  main:not(.qr-playback-page) {
     padding-bottom: 205px !important;
   }
 

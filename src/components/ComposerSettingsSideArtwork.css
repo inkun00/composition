@@ -1,0 +1,78 @@
+/* Artwork sits beside the controls instead of making a tall title row. */
+.composer-settings-side-art {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 108px;
+  grid-template-areas:
+    "heading artwork"
+    "controls artwork";
+  column-gap: 18px;
+  align-items: start;
+}
+
+.composer-settings-side-art > .sound-effect-heading {
+  grid-area: heading;
+  min-width: 0;
+  min-height: 0;
+  margin-bottom: 14px;
+}
+
+.composer-settings-side-art > .composer-settings-child {
+  grid-area: artwork;
+  align-self: center;
+  justify-self: center;
+  width: 108px;
+  height: 144px;
+  margin: 0;
+}
+
+.composer-sound-side-art {
+  grid-template-areas:
+    "heading artwork"
+    "filter artwork"
+    "controls artwork"
+    "timeline timeline";
+}
+
+.composer-sound-side-art > .sound-effect-heading {
+  margin-bottom: 0;
+}
+
+.composer-sound-side-art > .sound-effect-filter {
+  grid-area: filter;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.composer-sound-side-art > .sound-effect-filter select {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.composer-sound-side-art > .sound-effect-palette {
+  grid-area: controls;
+  min-width: 0;
+}
+
+.composer-sound-side-art > .sound-effect-timeline {
+  grid-area: timeline;
+  min-width: 0;
+}
+
+@media (max-width: 760px) {
+  .composer-settings-side-art {
+    grid-template-columns: minmax(0, 1fr) 60px;
+    column-gap: 10px;
+  }
+
+  .composer-settings-side-art > .composer-settings-child {
+    width: 60px;
+    height: 90px;
+  }
+
+}
+
+@media (max-width: 440px) {
+  .composer-sound-side-art > .sound-effect-palette {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

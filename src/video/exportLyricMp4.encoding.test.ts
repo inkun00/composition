@@ -80,6 +80,23 @@ describe("가사 MP4 오디오 입력과 인코딩", () => {
     expect(addAudio).toHaveBeenCalledWith(audioBuffer);
   });
 
+  it("움직이는 장면을 24fps로 나누어도 가사 경계와 오디오 길이가 일치한다", async () => {
+    const drawFrame = vi.fn();
+    await exportLyricMp4(audioBuffer, plan, vi.fn(), undefined, { frameRate: 24, drawFrame });
+    expect(canEncodeVideo).toHaveBeenCalledWith("avc", expect.objectContaining({ frameRate: 24 }));
+    expect(addVideo).toHaveBeenCalledTimes(72);
+    const segments = addVideo.mock.calls.map(([startSeconds, duration]) => [startSeconds, duration] as number[]);
+    expect(segments[0][0]).toBe(0);
+    expect(segments.at(-1)![0] + segments.at(-1)![1]).toBe(3);
+    expect(segments.reduce((sum, [, duration]) => sum + duration, 0)).toBeCloseTo(3, 8);
+    expect(segments.every(([startSeconds, duration], index) =>
+      duration > 0 && (index === 0 || Math.abs(startSeconds - segments[index - 1][0] - segments[index - 1][1]) < 1e-8)))
+      .toBe(true);
+    expect(drawFrame.mock.calls[24][1]).toMatchObject({ startSeconds: 1, activeSyllable: 0 });
+    expect(drawFrame.mock.calls[36][1]).toMatchObject({ startSeconds: 1.5, activeSyllable: 1 });
+    expect(drawFrame.mock.calls.map((call) => call[2])).toEqual(segments.map(([startSeconds]) => startSeconds));
+  });
+
   it("지원하지 않는 브라우저는 출력 생성을 시작하기 전에 안내한다", async () => {
     canEncodeAudio.mockResolvedValueOnce(false);
     await expect(exportLyricMp4(audioBuffer, plan, vi.fn())).rejects.toThrow("최신 크롬이나 엣지");

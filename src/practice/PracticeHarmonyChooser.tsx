@@ -36,4 +36,4 @@ export default function PracticeHarmonyChooser({
     </div>
   );
 }
-import { Square, Volume2 } from "lucide-react";
+import { Square, Volume2 } from "../components/AppArtworkIcons";

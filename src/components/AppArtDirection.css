@@ -1,0 +1,54 @@
+.app-artwork {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: var(--app-artwork-size, 24px);
+  height: var(--app-artwork-size, 24px);
+  object-fit: contain;
+  vertical-align: middle;
+  user-select: none;
+  pointer-events: none;
+}
+
+.app-control-artwork {
+  overflow: visible;
+}
+
+button:disabled .app-control-artwork {
+  opacity: .52;
+}
+
+.candidate-sidebar .section-heading.app-candidate-heading {
+  min-height: 104px;
+  padding: 8px 14px 8px 18px;
+  border: 1px solid #e0e8f3;
+  border-radius: 18px;
+  background: linear-gradient(120deg, #f7fbff, #fff8f0);
+}
+
+.app-candidate-heading > .app-candidate-heading-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 9px;
+}
+
+.app-candidate-heading-copy > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.candidate-sidebar .app-candidate-heading-art {
+  flex-shrink: 0;
+  width: 112px;
+  height: 88px;
+}
+
+.note-tools button:has(.app-artwork) {
+  color: #6251bb;
+}
+
+.note-tools button:has(.app-artwork) span {
+  color: #675a8d;
+  font-weight: 700;
+}

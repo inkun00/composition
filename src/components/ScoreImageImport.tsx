@@ -14,7 +14,7 @@ import {
   X,
   ZoomIn,
   ZoomOut
-} from "lucide-react";
+} from "./AppArtworkIcons";
 import type { SavedDraft } from "../music/draft";
 import { HomrLocalError, recognizeWithHomr } from "../music/homrClient";
 import { validateMeasure } from "../music/meter";

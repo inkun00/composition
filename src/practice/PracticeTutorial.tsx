@@ -1,4 +1,4 @@
-import { BookOpen, ChevronRight, X } from "lucide-react";
+import { BookOpen, ChevronRight, X } from "../components/AppArtworkIcons";
 import { useState } from "react";
 
 const LESSONS = [

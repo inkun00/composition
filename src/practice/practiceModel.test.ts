@@ -18,8 +18,10 @@ function note(id: string, pitch: number | null, beats: number, lyric?: string): 
 }
 
 describe("처음 작곡하는 사람의 연습 모델", () => {
-  it("낮은 도부터 높은 도까지 여덟 음과 실제 길이의 점음표를 제공한다", () => {
-    expect(PRACTICE_PITCHES.map((option) => option.pitch)).toEqual([60, 62, 64, 65, 67, 69, 71, 72]);
+  it("낮은 도부터 두 옥타브 위 도까지 자연음과 실제 길이의 점음표를 제공한다", () => {
+    expect(PRACTICE_PITCHES.map((option) => option.pitch)).toEqual([
+      60, 62, 64, 65, 67, 69, 71, 72, 74, 76, 77, 79, 81, 83, 84
+    ]);
     expect(PRACTICE_DURATIONS.filter((duration) => duration.dotted).map((duration) => duration.beats))
       .toEqual([1.5, 3]);
     expect(PRACTICE_DURATIONS[0]).toMatchObject({ beats: 0.25, label: "16분음표 · 1/4박", symbol: "𝅘𝅥𝅯" });

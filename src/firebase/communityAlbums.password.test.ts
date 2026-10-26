@@ -1,15 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { albumPasswordProof } from "./albumPassword";
-import { createCommunityAlbum, deleteCommunityAlbum, enterCommunityAlbum, renameCommunityAlbum, setCommunityAlbumPassword } from "./communityAlbums";
+import { createCommunityAlbum, deleteCommunityAlbum, listPublishedSongs, renameCommunityAlbum, setCommunityAlbumPassword } from "./communityAlbums";
 
 const mocks = vi.hoisted(() => ({
   setDoc: vi.fn(),
   updateDoc: vi.fn(),
   getDocs: vi.fn(),
+  firebaseAuth: { currentUser: { uid: "owner-1" } as { uid: string } | null },
   batch: { set: vi.fn(), update: vi.fn(), delete: vi.fn(), commit: vi.fn() }
 }));
 
-vi.mock("./client", () => ({ firestore: {} }));
+vi.mock("./client", () => ({ firestore: {}, firebaseAuth: mocks.firebaseAuth }));
 vi.mock("firebase/firestore", () => ({
   collection: () => ({ path: "communityAlbums" }),
   doc: (_parent: unknown, ...segments: string[]) => segments.length
@@ -25,6 +26,7 @@ vi.mock("firebase/firestore", () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.firebaseAuth.currentUser = { uid: "owner-1" };
   mocks.setDoc.mockResolvedValue(undefined);
   mocks.updateDoc.mockResolvedValue(undefined);
   mocks.batch.commit.mockResolvedValue(undefined);
@@ -63,13 +65,76 @@ describe("암호 있는 앨범 저장", () => {
     expect(mocks.batch.delete).toHaveBeenCalledWith({ id: "album-1", path: "albumSecrets/album-1" });
   });
 
-  it("구성원별 접근 기록에는 평문 암호가 아닌 검증값을 쓴다", async () => {
+  it("앨범 읽기는 암호 검증 기록을 쓰지 않는다", async () => {
+    mocks.getDocs.mockResolvedValue({ docs: [] });
+
+    expect(await listPublishedSongs("album-1")).toEqual([]);
+
+    expect(mocks.getDocs).toHaveBeenCalledOnce();
+    expect(mocks.setDoc).not.toHaveBeenCalled();
+  });
+
+  it("삭제 전 만든 사람의 암호 검증값을 먼저 확인한다", async () => {
     const salt = "a".repeat(32);
-    await enterCommunityAlbum("album-1", "friend-1", "우리반1234", salt);
+    mocks.getDocs.mockResolvedValue({ docs: [] });
+    mocks.setDoc.mockImplementationOnce(async () => {
+      expect(mocks.getDocs).not.toHaveBeenCalled();
+      expect(mocks.batch.delete).not.toHaveBeenCalled();
+    });
+
+    await deleteCommunityAlbum("album-1", { userId: "owner-1", password: "  우리반1234  ", salt });
+
     expect(mocks.setDoc).toHaveBeenCalledWith(
-      { id: "friend-1", path: "albumMemberAccess/album-1/users/friend-1" },
-      { proof: await albumPasswordProof("우리반1234", salt) }
+      { id: "album-1", path: "albumDeletionAccess/album-1" },
+      { ownerId: "owner-1", proof: await albumPasswordProof("우리반1234", salt), verifiedAt: "server-time" }
     );
+  });
+
+  it("암호 검증이 거절되면 노래를 조회하거나 지우지 않는다", async () => {
+    mocks.setDoc.mockRejectedValueOnce(new Error("permission-denied"));
+
+    await expect(deleteCommunityAlbum("album-1", {
+      userId: "owner-1", password: "틀린암호", salt: "a".repeat(32)
+    })).rejects.toThrow("permission-denied");
+
+    expect(mocks.getDocs).not.toHaveBeenCalled();
+    expect(mocks.batch.delete).not.toHaveBeenCalled();
+    expect(mocks.batch.commit).not.toHaveBeenCalled();
+  });
+
+  it("암호 없이 요청해도 서버 확인이 거절되면 삭제 전에 멈춘다", async () => {
+    mocks.setDoc.mockRejectedValueOnce(new Error("permission-denied"));
+
+    await expect(deleteCommunityAlbum("album-1")).rejects.toThrow("permission-denied");
+
+    expect(mocks.setDoc).toHaveBeenCalledWith(
+      { id: "album-1", path: "albumDeletionAccess/album-1" },
+      { ownerId: "owner-1", proof: "", verifiedAt: "server-time" }
+    );
+    expect(mocks.getDocs).not.toHaveBeenCalled();
+    expect(mocks.batch.delete).not.toHaveBeenCalled();
+  });
+
+  it("로그인 정보 없이 삭제를 요청하면 쓰기 전에 멈춘다", async () => {
+    mocks.firebaseAuth.currentUser = null;
+
+    await expect(deleteCommunityAlbum("album-1")).rejects.toThrow("login-required");
+
+    expect(mocks.setDoc).not.toHaveBeenCalled();
+    expect(mocks.getDocs).not.toHaveBeenCalled();
+    expect(mocks.batch.delete).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { password: "   ", salt: "a".repeat(32) },
+    { password: "우리반1234", salt: "" }
+  ])("삭제 암호와 소금값이 없으면 쓰기 전에 멈춘다: %j", async (authorization) => {
+    await expect(deleteCommunityAlbum("album-1", { userId: "owner-1", ...authorization }))
+      .rejects.toThrow("missing-album-password");
+
+    expect(mocks.setDoc).not.toHaveBeenCalled();
+    expect(mocks.getDocs).not.toHaveBeenCalled();
+    expect(mocks.batch.delete).not.toHaveBeenCalled();
   });
 
   it("앨범 삭제 시 노래와 암호 정보까지 함께 지운다", async () => {
@@ -80,8 +145,13 @@ describe("암호 있는 앨범 저장", () => {
 
     expect(mocks.batch.delete).toHaveBeenCalledWith(songRef);
     expect(mocks.batch.delete).toHaveBeenCalledWith({ id: "album-1", path: "albumSecrets/album-1" });
+    expect(mocks.batch.delete).toHaveBeenCalledWith({ id: "album-1", path: "albumDeletionAccess/album-1" });
     expect(mocks.batch.delete).toHaveBeenCalledWith({ id: "album-1", path: "communityAlbums/album-1" });
     expect(mocks.batch.commit).toHaveBeenCalledTimes(2);
+    expect(mocks.setDoc).toHaveBeenCalledWith(
+      { id: "album-1", path: "albumDeletionAccess/album-1" },
+      { ownerId: "owner-1", proof: "", verifiedAt: "server-time" }
+    );
   });
 
   it("앨범 이름만 수정하고 공백과 길이를 검증한다", async () => {

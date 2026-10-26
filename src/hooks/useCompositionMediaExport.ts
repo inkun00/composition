@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { exportBackingCompositionMp3, type AccompanimentOptions, type PlaybackMeasure } from "../audio/player";
 import type { InstrumentId } from "../music/instruments";
+import { exportCompositionLyricsMp4 } from "../video/exportCompositionLyricsMp4";
 
 export type CompositionExportFormat = "mp3" | "mp4";
 export type CompositionExportPhase = "idle" | "working" | "done" | "error";
@@ -76,7 +77,7 @@ export function useCompositionMediaExport(options: Options) {
     try {
       const blob = nextFormat === "mp3"
         ? await exportBackingCompositionMp3(options.measures, options.instrumentId, options.bpm, options.accompaniment)
-        : await (await import("../video/exportCompositionLyricsMp4")).exportCompositionLyricsMp4(
+        : await exportCompositionLyricsMp4(
           options.measures, options.instrumentId, options.bpm, options.accompaniment,
           (value) => { if (mounted.current) setProgress(value); }, currentJob.abort.signal,
           { title: options.title }

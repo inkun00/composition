@@ -1,4 +1,5 @@
 import type { KaraokeGuideMode } from "../audio/karaokeGuide";
+import { Headphones, Mic2, Music2, type LucideIcon } from "./AppArtworkIcons";
 import "./RecordingGuideSelector.css";
 
 type Props = Readonly<{
@@ -7,10 +8,10 @@ type Props = Readonly<{
   onChange: (mode: KaraokeGuideMode) => void;
 }>;
 
-const OPTIONS: readonly Readonly<{ id: KaraokeGuideMode; icon: string; label: string }>[] = [
-  { id: "first-note", icon: "👂", label: "마디 첫 음" },
-  { id: "off", icon: "🎤", label: "도움 없이" },
-  { id: "soft", icon: "🎵", label: "가락 작게" }
+const OPTIONS: readonly Readonly<{ id: KaraokeGuideMode; Icon: LucideIcon; label: string }>[] = [
+  { id: "first-note", Icon: Headphones, label: "마디 첫 음" },
+  { id: "off", Icon: Mic2, label: "도움 없이" },
+  { id: "soft", Icon: Music2, label: "가락 작게" }
 ];
 
 export default function RecordingGuideSelector({ value, disabled, onChange }: Props) {
@@ -25,7 +26,7 @@ export default function RecordingGuideSelector({ value, disabled, onChange }: Pr
           <button key={option.id} type="button" disabled={disabled}
             className={value === option.id ? "selected" : ""}
             aria-pressed={value === option.id} onClick={() => onChange(option.id)}>
-            <span>{option.icon}</span>{option.label}
+            <span><option.Icon size={22} /></span>{option.label}
           </button>
         ))}
       </div>

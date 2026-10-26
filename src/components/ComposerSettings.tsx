@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { SlidersHorizontal } from "lucide-react";
+import { Minus, Plus, SlidersHorizontal } from "./AppArtworkIcons";
 import "./ComposerSimplification.css";
 
 type Props = Readonly<{
@@ -12,7 +12,8 @@ export default function ComposerSettings({ summary, children }: Props) {
     <summary>
       <SlidersHorizontal size={18} aria-hidden="true" />
       <strong>곡 설정</strong>
-      <span>{summary}</span>
+      <span className="composer-settings-description">{summary}</span>
+      <span className="app-settings-indicator" aria-hidden="true"><Plus size={20} /><Minus size={20} /></span>
     </summary>
     <div className="composer-settings-content">{children}</div>
   </details>;

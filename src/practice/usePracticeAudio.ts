@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { practiceAudioScores, practicePlaysMelodyOnly } from "./practiceAudioScores";
 import { renderPracticeHarmonyAudio } from "./practiceHarmonyAudio";
+import { isPracticeExportModuleLoadError, PRACTICE_EXPORT_REFRESH_MESSAGE } from "./practiceExportRefresh";
+import type { PracticeVideoMode } from "./practiceVideoTypes";
 import {
   encodePracticeMp3,
   exportPracticeMp4,
@@ -43,6 +45,7 @@ export function usePracticeAudio(input: PracticeAudioInput) {
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState("");
+  const [exportNeedsRefresh, setExportNeedsRefresh] = useState(false);
   const [playingNoteId, setPlayingNoteId] = useState<string | null>(null);
   const [playingNoteIds, setPlayingNoteIds] = useState<readonly string[]>([]);
   const [previewMeasureIndex, setPreviewMeasureIndex] = useState<number | null>(null);
@@ -81,6 +84,7 @@ export function usePracticeAudio(input: PracticeAudioInput) {
     };
     activeSession.current = session;
     setBusy(true);
+    setExportNeedsRefresh(false);
     setProgress(0);
     setPlayingNoteId(null);
     setPlayingNoteIds([]);
@@ -152,6 +156,7 @@ export function usePracticeAudio(input: PracticeAudioInput) {
       if (mounted.current) {
         setProgress(0);
         setStatus("");
+        setExportNeedsRefresh(false);
       }
       return;
     }
@@ -167,6 +172,7 @@ export function usePracticeAudio(input: PracticeAudioInput) {
     setPreviewScoreIndex(null);
     setPreviewRhythmMixing(false);
     setPreviewHarmonyIndex(null);
+    setExportNeedsRefresh(false);
     setStatus("연주와 파일 만들기를 멈췄어요.");
   }
 
@@ -273,10 +279,12 @@ export function usePracticeAudio(input: PracticeAudioInput) {
     downloadUrls.current.set(url, timer);
   }
 
-  async function save(format: "mp3" | "mp4"): Promise<void> {
+  async function save(format: "mp3" | "mp4", selection: Readonly<{ videoMode?: PracticeVideoMode }> = {}): Promise<void> {
     const session = begin();
     if (!session) return;
-    const videoLabel = input.videoMode === "score" ? "악보" : "막대";
+    const exportInput = format === "mp4" && selection.videoMode ? { ...input, videoMode: selection.videoMode } : input;
+    const videoLabel = exportInput.videoMode === "lyrics" ? "검은 배경에 흰색 가사만 나오는"
+      : exportInput.videoMode === "score" ? "악보" : "막대";
     setStatus(format === "mp4" ? `${videoLabel} 화면으로 연습 곡 MP4를 만들고 있어요.` : "연습 곡 MP3를 만들고 있어요.");
     try {
       const rendered = await prepare(session, 45);
@@ -289,12 +297,17 @@ export function usePracticeAudio(input: PracticeAudioInput) {
       };
       const blob = format === "mp3"
         ? await encodePracticeMp3(rendered.buffer, options)
-        : await exportPracticeMp4(rendered, input, options);
+        : await exportPracticeMp4(rendered, exportInput, options);
       if (!isCurrent(session)) return;
       download(blob, practiceAudioFileName(input.title, format));
       setProgress(100);
       finish(session, `${format.toUpperCase()} 파일을 저장했어요.${fallbackMessage(rendered)}`);
     } catch (error) {
+      if (format === "mp4" && isCurrent(session) && isPracticeExportModuleLoadError(error)) {
+        setExportNeedsRefresh(true);
+        finish(session, PRACTICE_EXPORT_REFRESH_MESSAGE);
+        return;
+      }
       finish(session, error instanceof Error ? error.message : "파일을 만들지 못했어요. 다시 시도해 주세요.");
     }
   }
@@ -304,6 +317,7 @@ export function usePracticeAudio(input: PracticeAudioInput) {
     playing,
     progress,
     status,
+    exportNeedsRefresh,
     playingNoteId,
     playingNoteIds,
     previewMeasureIndex,

@@ -1,0 +1,70 @@
+.mv-preset-card {
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  border-color: #3d4557;
+  border-radius: 10px;
+  background: #252b38;
+  text-align: left;
+}
+
+.mv-preset-artwork-stage {
+  display: grid;
+  width: 100%;
+  height: 96px;
+  place-items: center;
+  overflow: hidden;
+  border-bottom: 1px solid #ffffff0b;
+  background: radial-gradient(ellipse at 50% 75%, #65739c32, transparent 75%), #1c2230;
+}
+
+.mv-preset-artwork-stage > .mv-preset-artwork {
+  width: 100%;
+  height: 94px;
+  filter: drop-shadow(0 5px 7px #0002);
+  transition: transform .18s ease;
+}
+
+.mv-preset-card:hover:enabled .mv-preset-artwork {
+  transform: translateY(-2px) scale(1.04);
+}
+
+.mv-preset-card .mv-preset-copy {
+  width: 100%;
+  padding: 10px 10px 11px;
+  box-sizing: border-box;
+  text-align: left;
+}
+
+.mv-preset-card .mv-preset-copy strong {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.mv-preset-card .mv-preset-copy small {
+  margin-top: 4px;
+  color: #9caac6;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.mv-preset-card[aria-pressed="true"] .mv-preset-artwork-stage {
+  background: radial-gradient(ellipse at 50% 75%, #839eff40, transparent 75%), #293553;
+}
+
+.mv-preset-card > .mv-preset-check {
+  top: 7px;
+  right: 7px;
+  width: 20px;
+  height: 20px;
+  padding: 3px;
+  border: 1px solid #b2c2ff55;
+  border-radius: 50%;
+  background: #475f9b;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mv-preset-artwork-stage > .mv-preset-artwork {
+    transition: none;
+  }
+}

@@ -116,41 +116,6 @@
   grid-column: 1 / -1;
 }
 
-.publish-advanced-files {
-  padding-top: 8px;
-  border-top: 1px solid #e5ebe6;
-}
-
-.publish-advanced-files summary {
-  min-height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  color: #35715b;
-  font-size: 12px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.publish-advanced-files summary::after {
-  content: "⌄";
-  font-size: 18px;
-  line-height: 1;
-}
-
-.publish-advanced-files[open] summary::after {
-  transform: rotate(180deg);
-}
-
-.publish-advanced-files summary:focus-visible {
-  outline: 3px solid #8c77d5;
-  outline-offset: 2px;
-}
-
-.publish-advanced-files .publish-action-group-buttons {
-  margin-top: 8px;
-}
-
 .publish-actions .publish-action-group-perform button,
 .publish-actions .publish-action-group-perform a {
   border-color: #e7d4b8 !important;

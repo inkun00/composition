@@ -1,4 +1,6 @@
-import { ArrowLeft, Download, ExternalLink, Headphones, Music2, SlidersHorizontal, Square, Video } from "lucide-react";
+import { useRef, useState } from "react";
+import { ArrowLeft, Download, ExternalLink, Music2, SlidersHorizontal, Square, Video } from "../components/AppArtworkIcons";
+import AppArtwork from "../components/AppArtwork";
 import { BEAT_INSTRUMENTS } from "../music/beatInstruments";
 import { findInstrument } from "../music/instruments";
 import { lyricSyllables } from "./practiceModel";
@@ -6,8 +8,11 @@ import type { PracticeDraft } from "./practiceStorage";
 import type { usePracticeAudio } from "./usePracticeAudio";
 import type { PracticeVideoMode } from "./practiceVideoTypes";
 import PracticeVideoPreview from "./PracticeVideoPreview";
+import PracticeExportRecovery from "./PracticeExportRecovery";
+import PracticeVideoChoiceDialog from "./PracticeVideoChoiceDialog";
 import { PRACTICE_SHARE_URL } from "./PracticeStages";
 import "./PracticePlayback.css";
+import "../components/AppExperienceArtwork.css";
 
 type PracticePlaybackProps = {
   draft: PracticeDraft;
@@ -20,10 +25,13 @@ type PracticePlaybackProps = {
   onSaveSettings: () => void;
   onReturnToEditing: () => void;
   onEditLyrics?: (scoreIndex: number, measureIndex: number) => void;
+  onBeforeRefresh?: () => void;
 };
 
 export default function PracticePlayback({ draft, step, complete, audio, saving, videoMode,
-  onVideoMode, onSaveSettings, onReturnToEditing, onEditLyrics }: PracticePlaybackProps) {
+  onVideoMode, onSaveSettings, onReturnToEditing, onEditLyrics, onBeforeRefresh }: PracticePlaybackProps) {
+  const [videoChoiceOpen, setVideoChoiceOpen] = useState(false);
+  const videoChoiceConfirmed = useRef(false);
   const busy = audio.busy || audio.playing;
   const separatePreviewActive = audio.previewScoreIndex !== null || audio.previewMeasureIndex !== null ||
     audio.previewRhythmMixing || audio.previewHarmonyIndex != null;
@@ -44,13 +52,27 @@ export default function PracticePlayback({ draft, step, complete, audio, saving,
     return beat?.name ?? findInstrument(id).name;
   });
 
+  function openVideoChoice() {
+    if (!complete || busy || !allLyricsPlaced) return;
+    videoChoiceConfirmed.current = false;
+    setVideoChoiceOpen(true);
+  }
+
+  function confirmVideoChoice(mode: PracticeVideoMode) {
+    if (!videoChoiceOpen || videoChoiceConfirmed.current || !complete || busy || !allLyricsPlaced) return;
+    videoChoiceConfirmed.current = true;
+    setVideoChoiceOpen(false);
+    void audio.save("mp4", { videoMode: mode });
+  }
+
   return (
     <section className={`practice-listen-card${saving ? " practice-save-panel" : ""}`}
       id={saving ? "practice-save-panel" : undefined} role={saving ? "tabpanel" : undefined}
       aria-labelledby={saving ? "practice-save-tab" : undefined}
       aria-label={saving ? undefined : "음악 듣기와 저장 설정"}>
       <div className="practice-listen-intro">
-        <span className="practice-card-icon"><Headphones size={25} /></span>
+        <AppArtwork name={saving ? "publishing-stage" : step === "rhythm" ? "rhythm-stage" : "melody-stage"}
+          size={112} className="app-practice-output-art" />
         <div>
           <h2>{saving ? "음악 저장하기" : `${musicLabel} 듣고 저장하기`}</h2>
         </div>
@@ -66,7 +88,7 @@ export default function PracticePlayback({ draft, step, complete, audio, saving,
           <legend>MP4 저장 화면</legend>
           <div role="group" aria-label="MP4 저장 모드">
             <button type="button" aria-pressed={videoMode === "bars"} onClick={() => onVideoMode("bars")}>
-              <span className="practice-bars-mode-icon" aria-hidden="true"><i /><i /><i /></span>
+              <AppArtwork name="layers" size={30} />
               <strong>막대 모드</strong>
             </button>
             <button type="button" aria-pressed={videoMode === "score"} onClick={() => onVideoMode("score")}>
@@ -89,7 +111,7 @@ export default function PracticePlayback({ draft, step, complete, audio, saving,
               <Download size={17} /> 소리 파일(MP3)
             </button>
             <button type="button" disabled={!complete || busy || !allLyricsPlaced}
-              onClick={() => void audio.save("mp4")}>
+              aria-haspopup="dialog" aria-expanded={videoChoiceOpen} onClick={openVideoChoice}>
               <Video size={17} /> 음악 영상(MP4)
             </button>
           </div>
@@ -118,6 +140,9 @@ export default function PracticePlayback({ draft, step, complete, audio, saving,
         </div>
       )}
       {audio.status && <p className="practice-audio-status" role="status" aria-live="polite">{audio.status}</p>}
+      {audio.exportNeedsRefresh && <PracticeExportRecovery draft={draft} onBeforeRefresh={onBeforeRefresh} />}
+      {videoChoiceOpen && <PracticeVideoChoiceDialog draft={draft} step={step} mode={videoMode}
+        disabled={busy} onConfirm={confirmVideoChoice} onClose={() => setVideoChoiceOpen(false)} />}
     </section>
   );
 }

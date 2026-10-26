@@ -1,7 +1,7 @@
 import type { Meter } from "../music/meter";
 import type { NoteEvent } from "../music/types";
 
-export type PracticeVideoMode = "bars" | "score";
+export type PracticeVideoMode = "bars" | "score" | "lyrics";
 
 export type PracticeVideoNote = Readonly<{
   note: NoteEvent;

@@ -1,0 +1,246 @@
+{
+  "group": "motion-b",
+  "subject": "Coral folded-paper bird with periwinkle wings and warm ivory accents",
+  "entries": [
+    {
+      "key": "motion-flip-in",
+      "prompt": "Use case: stylized-concept.\nAsset type: standalone premium motion-preset thumbnail for a charcoal creative studio, clear at 100 px.\nSubject/style: one small coral folded-paper bird with periwinkle-blue wings and warm ivory accents; premium tactile 3D ceramic and colored-paper craftsmanship, softly rounded folded edges, restrained material detail. A very small warm-ivory circular stage is allowed only if it helps the motion cue.\nComposition: square image, centered subject and all motion cues within the central 80 percent, front three-quarter view, soft studio light from upper left, crisp clean silhouette, subtle contact shadows only.\nMotion cue: Show CARD FLIP ENTRANCE: the bird is appearing by flipping like a stiff paper card around its vertical axis. One narrow edge-on coral/periwinkle ghost silhouette at left, a mid-turn slim silhouette near center, and the crisp final three-quarter bird at right, together as a compact turning fan. Two curved ivory rotation strokes make the vertical-axis flip unmistakable. The final bird is the main focus.\nBackground: genuinely transparent alpha cutout, including the canvas corners and all space outside the objects. No background panel, no opaque shadow field, no checkerboard drawn into the artwork.\nConstraints: make exactly this one motion illustration, no collage, no card, no UI, no lettering, no words, no typography, no logo, no watermark. Consistent coral/periwinkle/ivory palette, large readable subject, avoid small clutter, avoid photorealistic birds.",
+      "generationMode": "built-in image_gen",
+      "transparentBackground": true,
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd6-9f58-7a32-92dd-6a906195da65\\exec-0b3e83ea-66a9-46b9-95cb-6f1fa18ef9aa.png",
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\studio-imagegen-v1\\originals\\motion-flip-in.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\studio-images\\v1\\motion-flip-in.webp",
+      "width": 480,
+      "height": 480,
+      "alpha": [
+        0,
+        255
+      ],
+      "bytes": 46696
+    },
+    {
+      "key": "motion-diagonal-reveal",
+      "prompt": "Use case: stylized-concept.\nAsset type: standalone premium motion-preset thumbnail for a charcoal creative studio, clear at 100 px.\nSubject/style: one small coral folded-paper bird with periwinkle-blue wings and warm ivory accents; premium tactile 3D ceramic and colored-paper craftsmanship, softly rounded folded edges, restrained material detail. A very small warm-ivory circular stage is allowed only if it helps the motion cue.\nComposition: square image, centered subject and all motion cues within the central 80 percent, front three-quarter view, soft studio light from upper left, crisp clean silhouette, subtle contact shadows only.\nMotion cue: Show DIAGONAL WIPE REVEAL: the bird is being revealed along a crisp diagonal seam from lower left to upper right. The lower-left half is fully visible in coral and periwinkle, the upper-right half is an ivory ghost outline of the same bird; a thin folded ivory ribbon follows the diagonal reveal edge. This must read as one bird gradually revealed on a diagonal, not a bird flying diagonally.\nBackground: genuinely transparent alpha cutout, including the canvas corners and all space outside the objects. No background panel, no opaque shadow field, no checkerboard drawn into the artwork.\nConstraints: make exactly this one motion illustration, no collage, no card, no UI, no lettering, no words, no typography, no logo, no watermark. Consistent coral/periwinkle/ivory palette, large readable subject, avoid small clutter, avoid photorealistic birds.",
+      "generationMode": "built-in image_gen",
+      "transparentBackground": true,
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd6-9f58-7a32-92dd-6a906195da65\\exec-4ce19f24-a0c9-4a5f-8a17-2d44e548bae0.png",
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\studio-imagegen-v1\\originals\\motion-diagonal-reveal.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\studio-images\\v1\\motion-diagonal-reveal.webp",
+      "width": 480,
+      "height": 480,
+      "alpha": [
+        0,
+        255
+      ],
+      "bytes": 41508
+    },
+    {
+      "key": "motion-zoom-out",
+      "prompt": "Use case: stylized-concept.\nAsset type: standalone premium motion-preset thumbnail for a charcoal creative studio, clear at 100 px.\nSubject/style: one small coral folded-paper bird with periwinkle-blue wings and warm ivory accents; premium tactile 3D ceramic and colored-paper craftsmanship, softly rounded folded edges, restrained material detail. A very small warm-ivory circular stage is allowed only if it helps the motion cue.\nComposition: square image, centered subject and all motion cues within the central 80 percent, front three-quarter view, soft studio light from upper left, crisp clean silhouette, subtle contact shadows only.\nMotion cue: Show SLOW ZOOM OUT: a large very pale ivory ghost silhouette of this same bird sits behind a medium translucent coral silhouette, with one small crisp coral/periwinkle bird nested at the center in front. Three concentric perspective scale stages clearly communicate the subject becoming smaller and receding into distance. Use short inward-pointing ivory tapered motion cues; do not draw magnifying glass or text.\nBackground: genuinely transparent alpha cutout, including the canvas corners and all space outside the objects. No background panel, no opaque shadow field, no checkerboard drawn into the artwork.\nConstraints: make exactly this one motion illustration, no collage, no card, no UI, no lettering, no words, no typography, no logo, no watermark. Consistent coral/periwinkle/ivory palette, large readable subject, avoid small clutter, avoid photorealistic birds.",
+      "generationMode": "built-in image_gen",
+      "transparentBackground": true,
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd6-9f58-7a32-92dd-6a906195da65\\exec-12d95d47-48ce-4517-93fa-dbc8163ceb18.png",
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\studio-imagegen-v1\\originals\\motion-zoom-out.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\studio-images\\v1\\motion-zoom-out.webp",
+      "width": 480,
+      "height": 480,
+      "alpha": [
+        0,
+        255
+      ],
+      "bytes": 28312
+    },
+    {
+      "key": "motion-snow",
+      "prompt": "Use case: stylized-concept.\nAsset type: standalone premium motion-preset thumbnail for a charcoal creative studio, clear at 100 px.\nSubject/style: one small coral folded-paper bird with periwinkle-blue wings and warm ivory accents; premium tactile 3D ceramic and colored-paper craftsmanship, softly rounded folded edges, restrained material detail. A very small warm-ivory circular stage is allowed only if it helps the motion cue.\nComposition: square image, centered subject and all motion cues within the central 80 percent, front three-quarter view, soft studio light from upper left, crisp clean silhouette, subtle contact shadows only.\nMotion cue: Show FALLING SNOW: the crisp coral bird with periwinkle wings sits near the center of a small warm-ivory circular stage. Seven large simple soft-white ceramic snowflakes and snow puffs descend around it at staggered heights, with tiny downward trails and a little ivory snow resting on the stage. Make the snowfall readable on charcoal while preserving true transparent space between every object.\nBackground: genuinely transparent alpha cutout, including the canvas corners and all space outside the objects. No background panel, no opaque shadow field, no checkerboard drawn into the artwork.\nConstraints: make exactly this one motion illustration, no collage, no card, no UI, no lettering, no words, no typography, no logo, no watermark. Consistent coral/periwinkle/ivory palette, large readable subject, avoid small clutter, avoid photorealistic birds.",
+      "generationMode": "built-in image_gen",
+      "transparentBackground": true,
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd6-9f58-7a32-92dd-6a906195da65\\exec-d2dac4df-eb41-4ace-8239-258211f87ca6.png",
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\studio-imagegen-v1\\originals\\motion-snow.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\studio-images\\v1\\motion-snow.webp",
+      "width": 480,
+      "height": 480,
+      "alpha": [
+        0,
+        255
+      ],
+      "bytes": 64410
+    },
+    {
+      "key": "motion-spotlight",
+      "prompt": "Use case: stylized-concept.\nAsset type: standalone premium motion-preset thumbnail for a charcoal creative studio, clear at 100 px.\nSubject/style: one small coral folded-paper bird with periwinkle-blue wings and warm ivory accents; premium tactile 3D ceramic and colored-paper craftsmanship, softly rounded folded edges, restrained material detail. A very small warm-ivory circular stage is allowed only if it helps the motion cue.\nComposition: square image, centered subject and all motion cues within the central 80 percent, front three-quarter view, soft studio light from upper left, crisp clean silhouette, subtle contact shadows only.\nMotion cue: Show SPOTLIGHT: the coral bird with periwinkle wings stands on a small ivory circular stage while one sculptural warm-ivory lamp above-right casts a clearly defined translucent warm beam down-left around the bird. A second very faint beam arc shows the light sweeping across the subject. Lamp, beam, lit bird and stage form one compact isolated composition. Background remains alpha transparent, not a dark theater rectangle.\nBackground: genuinely transparent alpha cutout, including the canvas corners and all space outside the objects. No background panel, no opaque shadow field, no checkerboard drawn into the artwork.\nConstraints: make exactly this one motion illustration, no collage, no card, no UI, no lettering, no words, no typography, no logo, no watermark. Consistent coral/periwinkle/ivory palette, large readable subject, avoid small clutter, avoid photorealistic birds.",
+      "generationMode": "built-in image_gen",
+      "transparentBackground": true,
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd6-9f58-7a32-92dd-6a906195da65\\exec-6201b7e8-7cf5-4e39-8bc4-7d29faf66ff2.png",
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\studio-imagegen-v1\\originals\\motion-spotlight.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\studio-images\\v1\\motion-spotlight.webp",
+      "width": 480,
+      "height": 480,
+      "alpha": [
+        0,
+        255
+      ],
+      "bytes": 51538
+    },
+    {
+      "key": "motion-move-left",
+      "prompt": "Use case: stylized-concept.\nAsset type: standalone premium motion-preset thumbnail for a charcoal creative studio, clear at 100 px.\nSubject/style: one small coral folded-paper bird with periwinkle-blue wings and warm ivory accents; premium tactile 3D ceramic and colored-paper craftsmanship, softly rounded folded edges, restrained material detail. A very small warm-ivory circular stage is allowed only if it helps the motion cue.\nComposition: square image, centered subject and all motion cues within the central 80 percent, front three-quarter view, soft studio light from upper left, crisp clean silhouette, subtle contact shadows only.\nMotion cue: Show LEFTWARD TRAVEL: main crisp coral bird with periwinkle wings sits on the LEFT of center and faces LEFT; two progressively fainter same-bird ghost positions trail to its RIGHT. One broad warm-ivory direction arrow underneath points horizontally LEFT, with its triangular arrowhead on the LEFT. No vertical motion. The complete composition is centered and compact.\nBackground: genuinely transparent alpha cutout, including the canvas corners and all space outside the objects. No background panel, no opaque shadow field, no checkerboard drawn into the artwork.\nConstraints: make exactly this one motion illustration, no collage, no card, no UI, no lettering, no words, no typography, no logo, no watermark. Consistent coral/periwinkle/ivory palette, large readable subject, avoid small clutter, avoid photorealistic birds.",
+      "generationMode": "built-in image_gen",
+      "transparentBackground": true,
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd6-9f58-7a32-92dd-6a906195da65\\exec-3216b52b-16ac-4d36-b949-09bad9a0ea84.png",
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\studio-imagegen-v1\\originals\\motion-move-left.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\studio-images\\v1\\motion-move-left.webp",
+      "width": 480,
+      "height": 480,
+      "alpha": [
+        0,
+        255
+      ],
+      "bytes": 40526
+    },
+    {
+      "key": "motion-move-right",
+      "prompt": "Use case: stylized-concept.\nAsset type: standalone premium motion-preset thumbnail for a charcoal creative studio, clear at 100 px.\nSubject/style: one small coral folded-paper bird with periwinkle-blue wings and warm ivory accents; premium tactile 3D ceramic and colored-paper craftsmanship, softly rounded folded edges, restrained material detail. A very small warm-ivory circular stage is allowed only if it helps the motion cue.\nComposition: square image, centered subject and all motion cues within the central 80 percent, front three-quarter view, soft studio light from upper left, crisp clean silhouette, subtle contact shadows only.\nMotion cue: Show RIGHTWARD TRAVEL: main crisp coral bird with periwinkle wings sits on the RIGHT of center and faces RIGHT; two progressively fainter same-bird ghost positions trail to its LEFT. One broad warm-ivory direction arrow underneath points horizontally RIGHT, with its triangular arrowhead on the RIGHT. No vertical motion. The complete composition is centered and compact.\nBackground: genuinely transparent alpha cutout, including the canvas corners and all space outside the objects. No background panel, no opaque shadow field, no checkerboard drawn into the artwork.\nConstraints: make exactly this one motion illustration, no collage, no card, no UI, no lettering, no words, no typography, no logo, no watermark. Consistent coral/periwinkle/ivory palette, large readable subject, avoid small clutter, avoid photorealistic birds.",
+      "generationMode": "built-in image_gen",
+      "transparentBackground": true,
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd6-9f58-7a32-92dd-6a906195da65\\exec-234b6c5d-2972-4e2e-85fa-f1fa21697376.png",
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\studio-imagegen-v1\\originals\\motion-move-right.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\studio-images\\v1\\motion-move-right.webp",
+      "width": 480,
+      "height": 480,
+      "alpha": [
+        0,
+        255
+      ],
+      "bytes": 40310
+    },
+    {
+      "key": "motion-move-up",
+      "prompt": "Use case: stylized-concept.\nAsset type: standalone premium motion-preset thumbnail for a charcoal creative studio, clear at 100 px.\nSubject/style: one small coral folded-paper bird with periwinkle-blue wings and warm ivory accents; premium tactile 3D ceramic and colored-paper craftsmanship, softly rounded folded edges, restrained material detail. A very small warm-ivory circular stage is allowed only if it helps the motion cue.\nComposition: square image, centered subject and all motion cues within the central 80 percent, front three-quarter view, soft studio light from upper left, crisp clean silhouette, subtle contact shadows only.\nMotion cue: Show UPWARD TRAVEL: main crisp coral bird with periwinkle wings is at the UPPER center; two progressively fainter same-bird ghost positions trail vertically BELOW it. One broad warm-ivory direction arrow beside it points straight UP, with its triangular arrowhead at the TOP. No sideways movement. The complete composition is centered and compact.\nBackground: genuinely transparent alpha cutout, including the canvas corners and all space outside the objects. No background panel, no opaque shadow field, no checkerboard drawn into the artwork.\nConstraints: make exactly this one motion illustration, no collage, no card, no UI, no lettering, no words, no typography, no logo, no watermark. Consistent coral/periwinkle/ivory palette, large readable subject, avoid small clutter, avoid photorealistic birds.",
+      "generationMode": "built-in image_gen",
+      "transparentBackground": true,
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd6-9f58-7a32-92dd-6a906195da65\\exec-aaff14b4-4ace-4bd8-a56b-9750fe1b591e.png",
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\studio-imagegen-v1\\originals\\motion-move-up.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\studio-images\\v1\\motion-move-up.webp",
+      "width": 480,
+      "height": 480,
+      "alpha": [
+        0,
+        255
+      ],
+      "bytes": 40768
+    },
+    {
+      "key": "motion-move-down",
+      "prompt": "Use case: stylized-concept.\nAsset type: standalone premium motion-preset thumbnail for a charcoal creative studio, clear at 100 px.\nSubject/style: one small coral folded-paper bird with periwinkle-blue wings and warm ivory accents; premium tactile 3D ceramic and colored-paper craftsmanship, softly rounded folded edges, restrained material detail. A very small warm-ivory circular stage is allowed only if it helps the motion cue.\nComposition: square image, centered subject and all motion cues within the central 80 percent, front three-quarter view, soft studio light from upper left, crisp clean silhouette, subtle contact shadows only.\nMotion cue: Show DOWNWARD TRAVEL: main crisp coral bird with periwinkle wings is at the LOWER center; two progressively fainter same-bird ghost positions trail vertically ABOVE it. One broad warm-ivory direction arrow beside it points straight DOWN, with its triangular arrowhead at the BOTTOM. No sideways movement. The complete composition is centered and compact.\nBackground: genuinely transparent alpha cutout, including the canvas corners and all space outside the objects. No background panel, no opaque shadow field, no checkerboard drawn into the artwork.\nConstraints: make exactly this one motion illustration, no collage, no card, no UI, no lettering, no words, no typography, no logo, no watermark. Consistent coral/periwinkle/ivory palette, large readable subject, avoid small clutter, avoid photorealistic birds.",
+      "generationMode": "built-in image_gen",
+      "transparentBackground": true,
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd6-9f58-7a32-92dd-6a906195da65\\exec-fb5859aa-1d5d-47a5-b3a1-caf91a9e970d.png",
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\studio-imagegen-v1\\originals\\motion-move-down.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\studio-images\\v1\\motion-move-down.webp",
+      "width": 480,
+      "height": 480,
+      "alpha": [
+        0,
+        255
+      ],
+      "bytes": 46426
+    },
+    {
+      "key": "motion-move-up-left",
+      "prompt": "Use case: stylized-concept.\nAsset type: standalone premium motion-preset thumbnail for a charcoal creative studio, clear at 100 px.\nSubject/style: one small coral folded-paper bird with periwinkle-blue wings and warm ivory accents; premium tactile 3D ceramic and colored-paper craftsmanship, softly rounded folded edges, restrained material detail. A very small warm-ivory circular stage is allowed only if it helps the motion cue.\nComposition: square image, centered subject and all motion cues within the central 80 percent, front three-quarter view, soft studio light from upper left, crisp clean silhouette, subtle contact shadows only.\nMotion cue: Show DIAGONAL UP-LEFT TRAVEL: main crisp coral bird with periwinkle wings is at the UPPER-LEFT; two fainter same-bird ghost positions trail toward the LOWER-RIGHT. One broad warm-ivory arrow parallel to this path points UP AND LEFT, with the triangular arrowhead at the UPPER-LEFT. The bird stays a whole visible object; do not use diagonal wiping or reveal seams. Entire composition centered within 80 percent.\nBackground: genuinely transparent alpha cutout, including the canvas corners and all space outside the objects. No background panel, no opaque shadow field, no checkerboard drawn into the artwork.\nConstraints: make exactly this one motion illustration, no collage, no card, no UI, no lettering, no words, no typography, no logo, no watermark. Consistent coral/periwinkle/ivory palette, large readable subject, avoid small clutter, avoid photorealistic birds.",
+      "generationMode": "built-in image_gen",
+      "transparentBackground": true,
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd6-9f58-7a32-92dd-6a906195da65\\exec-5096fff4-4281-45ad-b12d-99375790e00a.png",
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\studio-imagegen-v1\\originals\\motion-move-up-left.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\studio-images\\v1\\motion-move-up-left.webp",
+      "width": 480,
+      "height": 480,
+      "alpha": [
+        0,
+        255
+      ],
+      "bytes": 41462
+    },
+    {
+      "key": "motion-move-up-right",
+      "prompt": "Use case: stylized-concept.\nAsset type: standalone premium motion-preset thumbnail for a charcoal creative studio, clear at 100 px.\nSubject/style: one small coral folded-paper bird with periwinkle-blue wings and warm ivory accents; premium tactile 3D ceramic and colored-paper craftsmanship, softly rounded folded edges, restrained material detail. A very small warm-ivory circular stage is allowed only if it helps the motion cue.\nComposition: square image, centered subject and all motion cues within the central 80 percent, front three-quarter view, soft studio light from upper left, crisp clean silhouette, subtle contact shadows only.\nMotion cue: Show DIAGONAL UP-RIGHT TRAVEL: main crisp coral bird with periwinkle wings is at the UPPER-RIGHT; two fainter same-bird ghost positions trail toward the LOWER-LEFT. One broad warm-ivory arrow parallel to this path points UP AND RIGHT, with the triangular arrowhead at the UPPER-RIGHT. The bird stays a whole visible object; do not use diagonal wiping or reveal seams. Entire composition centered within 80 percent.\nBackground: genuinely transparent alpha cutout, including the canvas corners and all space outside the objects. No background panel, no opaque shadow field, no checkerboard drawn into the artwork.\nConstraints: make exactly this one motion illustration, no collage, no card, no UI, no lettering, no words, no typography, no logo, no watermark. Consistent coral/periwinkle/ivory palette, large readable subject, avoid small clutter, avoid photorealistic birds.",
+      "generationMode": "built-in image_gen",
+      "transparentBackground": true,
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd6-9f58-7a32-92dd-6a906195da65\\exec-afcaa449-e58b-4e6f-b646-7831b04592b5.png",
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\studio-imagegen-v1\\originals\\motion-move-up-right.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\studio-images\\v1\\motion-move-up-right.webp",
+      "width": 480,
+      "height": 480,
+      "alpha": [
+        0,
+        255
+      ],
+      "bytes": 38766
+    },
+    {
+      "key": "motion-move-down-left",
+      "prompt": "Use case: stylized-concept.\nAsset type: standalone premium motion-preset thumbnail for a charcoal creative studio, clear at 100 px.\nSubject/style: one small coral folded-paper bird with periwinkle-blue wings and warm ivory accents; premium tactile 3D ceramic and colored-paper craftsmanship, softly rounded folded edges, restrained material detail. A very small warm-ivory circular stage is allowed only if it helps the motion cue.\nComposition: square image, centered subject and all motion cues within the central 80 percent, front three-quarter view, soft studio light from upper left, crisp clean silhouette, subtle contact shadows only.\nMotion cue: Show DIAGONAL DOWN-LEFT TRAVEL: main crisp coral bird with periwinkle wings is at the LOWER-LEFT; two fainter same-bird ghost positions trail toward the UPPER-RIGHT. One broad warm-ivory arrow parallel to this path points DOWN AND LEFT, with the triangular arrowhead at the LOWER-LEFT. The bird stays a whole visible object; do not use diagonal wiping or reveal seams. Entire composition centered within 80 percent.\nBackground: genuinely transparent alpha cutout, including the canvas corners and all space outside the objects. No background panel, no opaque shadow field, no checkerboard drawn into the artwork.\nConstraints: make exactly this one motion illustration, no collage, no card, no UI, no lettering, no words, no typography, no logo, no watermark. Consistent coral/periwinkle/ivory palette, large readable subject, avoid small clutter, avoid photorealistic birds.",
+      "generationMode": "built-in image_gen",
+      "transparentBackground": true,
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd6-9f58-7a32-92dd-6a906195da65\\exec-9d48ea81-eaa3-4acd-8b7c-d6afa8367cc9.png",
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\studio-imagegen-v1\\originals\\motion-move-down-left.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\studio-images\\v1\\motion-move-down-left.webp",
+      "width": 480,
+      "height": 480,
+      "alpha": [
+        0,
+        255
+      ],
+      "bytes": 36410
+    },
+    {
+      "key": "motion-move-down-right",
+      "prompt": "Use case: stylized-concept.\nAsset type: standalone premium motion-preset thumbnail for a charcoal creative studio, clear at 100 px.\nSubject/style: one small coral folded-paper bird with periwinkle-blue wings and warm ivory accents; premium tactile 3D ceramic and colored-paper craftsmanship, softly rounded folded edges, restrained material detail. A very small warm-ivory circular stage is allowed only if it helps the motion cue.\nComposition: square image, centered subject and all motion cues within the central 80 percent, front three-quarter view, soft studio light from upper left, crisp clean silhouette, subtle contact shadows only.\nMotion cue: Show DIAGONAL DOWN-RIGHT TRAVEL: main crisp coral bird with periwinkle wings is at the LOWER-RIGHT; two fainter same-bird ghost positions trail toward the UPPER-LEFT. One broad warm-ivory arrow parallel to this path points DOWN AND RIGHT, with the triangular arrowhead at the LOWER-RIGHT. The bird stays a whole visible object; do not use diagonal wiping or reveal seams. Entire composition centered within 80 percent.\nBackground: genuinely transparent alpha cutout, including the canvas corners and all space outside the objects. No background panel, no opaque shadow field, no checkerboard drawn into the artwork.\nConstraints: make exactly this one motion illustration, no collage, no card, no UI, no lettering, no words, no typography, no logo, no watermark. Consistent coral/periwinkle/ivory palette, large readable subject, avoid small clutter, avoid photorealistic birds.",
+      "generationMode": "built-in image_gen",
+      "transparentBackground": true,
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd6-9f58-7a32-92dd-6a906195da65\\exec-cb8464a8-1e5d-410a-9672-dd9a6c42c731.png",
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\studio-imagegen-v1\\originals\\motion-move-down-right.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\studio-images\\v1\\motion-move-down-right.webp",
+      "width": 480,
+      "height": 480,
+      "alpha": [
+        0,
+        255
+      ],
+      "bytes": 32890
+    },
+    {
+      "key": "motion-bounce-left",
+      "prompt": "Use case: stylized-concept.\nAsset type: standalone premium motion-preset thumbnail for a charcoal creative studio, clear at 100 px.\nSubject/style: one small coral folded-paper bird with periwinkle-blue wings and warm ivory accents; premium tactile 3D ceramic and colored-paper craftsmanship, softly rounded folded edges, restrained material detail. A very small warm-ivory circular stage is allowed only if it helps the motion cue.\nComposition: square image, centered subject and all motion cues within the central 80 percent, front three-quarter view, soft studio light from upper left, crisp clean silhouette, subtle contact shadows only.\nMotion cue: Show BOUNCING LEFTWARD: a crisp coral folded-paper bird with periwinkle wings lands at the LEFT end of two clear warm-ivory arcing bounce paths, with two translucent ghost positions behind it at different heights to the RIGHT. A small squash-and-stretch landing puff beneath the leftmost main bird and a clear LEFT-pointing arrowhead on the left end of the curved path communicate rhythmic hopping LEFT. Not simple straight travel. Compact centered composition.\nBackground: genuinely transparent alpha cutout, including the canvas corners and all space outside the objects. No background panel, no opaque shadow field, no checkerboard drawn into the artwork.\nConstraints: make exactly this one motion illustration, no collage, no card, no UI, no lettering, no words, no typography, no logo, no watermark. Consistent coral/periwinkle/ivory palette, large readable subject, avoid small clutter, avoid photorealistic birds.",
+      "generationMode": "built-in image_gen",
+      "transparentBackground": true,
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd6-9f58-7a32-92dd-6a906195da65\\exec-6befc570-bac8-45a0-88aa-00c4081d5f79.png",
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\studio-imagegen-v1\\originals\\motion-bounce-left.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\studio-images\\v1\\motion-bounce-left.webp",
+      "width": 480,
+      "height": 480,
+      "alpha": [
+        0,
+        255
+      ],
+      "bytes": 39854
+    },
+    {
+      "key": "motion-bounce-right",
+      "prompt": "Use case: stylized-concept.\nAsset type: standalone premium motion-preset thumbnail for a charcoal creative studio, clear at 100 px.\nSubject/style: one small coral folded-paper bird with periwinkle-blue wings and warm ivory accents; premium tactile 3D ceramic and colored-paper craftsmanship, softly rounded folded edges, restrained material detail. A very small warm-ivory circular stage is allowed only if it helps the motion cue.\nComposition: square image, centered subject and all motion cues within the central 80 percent, front three-quarter view, soft studio light from upper left, crisp clean silhouette, subtle contact shadows only.\nMotion cue: Show BOUNCING RIGHTWARD: a crisp coral folded-paper bird with periwinkle wings lands at the RIGHT end of two clear warm-ivory arcing bounce paths, with two translucent ghost positions behind it at different heights to the LEFT. A small squash-and-stretch landing puff beneath the rightmost main bird and a clear RIGHT-pointing arrowhead on the right end of the curved path communicate rhythmic hopping RIGHT. Not simple straight travel. Compact centered composition.\nBackground: genuinely transparent alpha cutout, including the canvas corners and all space outside the objects. No background panel, no opaque shadow field, no checkerboard drawn into the artwork.\nConstraints: make exactly this one motion illustration, no collage, no card, no UI, no lettering, no words, no typography, no logo, no watermark. Consistent coral/periwinkle/ivory palette, large readable subject, avoid small clutter, avoid photorealistic birds.",
+      "generationMode": "built-in image_gen",
+      "transparentBackground": true,
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd6-9f58-7a32-92dd-6a906195da65\\exec-84cbbd24-3563-4e12-a7da-c3f4f1135749.png",
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\studio-imagegen-v1\\originals\\motion-bounce-right.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\studio-images\\v1\\motion-bounce-right.webp",
+      "width": 480,
+      "height": 480,
+      "alpha": [
+        0,
+        255
+      ],
+      "bytes": 42502
+    }
+  ]
+}

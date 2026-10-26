@@ -1,5 +1,5 @@
 import { useRef, useState, type CSSProperties } from "react";
-import { ArrowLeft, ArrowRight, GraduationCap, RotateCcw, Square, Volume2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, GraduationCap, RotateCcw, Square, Volume2 } from "../components/AppArtworkIcons";
 import { useUnsavedWorkWarning } from "../hooks/useUnsavedWorkWarning";
 import { PracticeNoteTools } from "./PracticeEditors";
 import PracticeMeasureCard from "./PracticeMeasureCard";
@@ -44,7 +44,7 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
     title: draft.title,
     mode: draft.mode ?? undefined
   });
-  useUnsavedWorkWarning(!practice.saved);
+  const skipRefreshWarning = useUnsavedWorkWarning(!practice.saved);
   const busy = audio.busy || audio.playing;
   const visibleScores = step === "melody" ? scores.slice(0, 1) : scores;
   const visibleValidations = step === "melody" ? scoreValidations.slice(0, 1) : scoreValidations;
@@ -119,6 +119,8 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
           <PracticeRhythmScores practice={practice} audio={audio} />
 
           {visibleScores.map((score, scoreIndex) => {
+            const melodicScore = scoreIndex === 0 && step === "melody";
+            const rhythmLocked = melodicScore && draft.mode === "rhythm-melody";
             const scorePreviewActive = audio.previewScoreIndex === scoreIndex && audio.previewMeasureIndex === null;
             const hasSound = score.measures.some((measure) => measure.notes.some((note) => note.pitch !== null));
             const scorePreviewLabel = `악보${scoreIndex + 1} ${scorePreviewActive
@@ -142,22 +144,22 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
                   )}
                 </div>
               </div>
-              <div className="practice-shared-tools" data-testid={`practice-score-tools-${scoreIndex}`}>
-                <p className="practice-current-measure" role={activeScoreIndex === scoreIndex ? "status" : undefined}>
+              {!rhythmLocked && <div className="practice-shared-tools" data-testid={`practice-score-tools-${scoreIndex}`}>
+                {!melodicScore && <p className="practice-current-measure" role={activeScoreIndex === scoreIndex ? "status" : undefined}>
                   {visibleScores.length > 1 ? `${scoreIndex + 1}번 악보 · ` : ""}{activeIndex + 1}마디에 넣기
-                </p>
-                {draft.meter.beatUnit === 8 && <p className="practice-editor-help">6/8박자 · 8분음표 6개가 한 마디예요.</p>}
+                </p>}
+                {!melodicScore && draft.meter.beatUnit === 8 && <p className="practice-editor-help">6/8박자 · 8분음표 6개가 한 마디예요.</p>}
                 <PracticeNoteTools notes={score.measures[activeIndex].notes} meter={draft.meter}
                   step={scoreIndex === 0 ? step : "rhythm"} inputMode={inputMode}
                   selectedNoteId={practice.selectedNoteId} disabled={busy}
-                  rhythmLocked={draft.mode === "rhythm-melody" && step === "melody" && scoreIndex === 0}
+                  rhythmLocked={rhythmLocked}
                   allowMelodyAppend={draft.mode === "melody"}
                   appendDuration={appendDuration} appendRest={appendRest}
                   onAppendDurationChange={setAppendDuration} onAppendRestChange={setAppendRest}
                   onSelectNote={practice.setSelectedNoteId} onPitch={practice.setPitch}
                   onDuration={practice.setDuration} onDelete={practice.deleteNote}
                   onAdd={(beats, pitch, dotted) => practice.addNote(beats, pitch, dotted, activeIndex, scoreIndex)} />
-              </div>
+              </div>}
               <div className="practice-input-toggle practice-measure-input-toggle" role="group"
                 aria-label={scoreIndex === 0 ? "음표 입력 방식" : `${scoreIndex + 1}번 악보 음표 입력 방식`}>
                 <button type="button" aria-pressed={inputMode === "grid"} disabled={busy}
@@ -206,6 +208,7 @@ export default function PracticeMode({ onClose }: PracticeModeProps) {
         </section>
 
         <PracticePlayback draft={draft} step={step} complete={complete} audio={audio}
+          onBeforeRefresh={skipRefreshWarning}
           saving={saving} videoMode={videoMode} onVideoMode={setVideoMode} onSaveSettings={() => setSaving(true)}
           onReturnToEditing={() => setSaving(false)}
           onEditLyrics={(scoreIndex, index) => {

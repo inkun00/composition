@@ -1,3 +1,7 @@
+import {
+  AudioBufferSource, BufferTarget, CanvasSource, Mp4OutputFormat, Output, Quality,
+  canEncodeAudio, canEncodeVideo
+} from "mediabunny";
 import type { PracticeAudioInput, PracticeRenderedAudio } from "./practiceAudioTypes";
 import { PRACTICE_VIDEO_FPS, PRACTICE_VIDEO_HEIGHT, PRACTICE_VIDEO_WIDTH } from "./practiceVideoLayout";
 import { buildPracticeVideoPlan } from "./practiceVideoPlan";
@@ -18,11 +22,6 @@ export async function exportPracticeVideoMp4(
   checkAbort();
   const plan = buildPracticeVideoPlan(input, rendered);
   options.onProgress?.(2);
-  const {
-    AudioBufferSource, BufferTarget, CanvasSource, Mp4OutputFormat, Output, Quality,
-    canEncodeAudio, canEncodeVideo
-  } = await import("mediabunny");
-  checkAbort();
   const videoQuality = new Quality({ bitrate: 1_800_000 });
   const audioQuality = new Quality({ bitrate: 192_000 });
   const [videoSupported, audioSupported] = await Promise.all([

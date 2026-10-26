@@ -1,0 +1,87 @@
+.composer-child-artwork {
+  display: block;
+  position: static;
+  flex: 0 0 auto;
+  width: 128px;
+  height: 160px;
+  object-fit: contain;
+  object-position: center bottom;
+  pointer-events: none;
+  user-select: none;
+}
+
+.measure-sound-header > .composer-sound-title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.composer-sound-title > .composer-child-artwork {
+  width: 72px;
+  height: 96px;
+}
+
+.app-recording-guide .composer-recording-child {
+  position: absolute;
+  top: -8px;
+  right: 0;
+  width: 112px;
+  height: 140px;
+}
+
+.app-recording-guide:has(.composer-recording-child) header {
+  min-height: 140px;
+}
+
+.completion-celebration:has(.composer-child-artwork) {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 16px;
+}
+
+.completion-celebration:has(.composer-child-artwork) > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.completion-celebration > .composer-child-artwork {
+  width: 88px;
+  height: 110px;
+}
+
+.backing-export-studio.composer-export-children {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-evenly;
+  gap: 4px;
+  height: 260px;
+}
+
+.composer-export-children > .composer-child-artwork {
+  position: relative;
+  z-index: 2;
+  width: 30%;
+  height: 235px;
+}
+
+@media (max-width: 760px) {
+  .app-recording-guide .composer-recording-child {
+    width: 84px;
+    height: 106px;
+  }
+
+  .app-recording-guide:has(.composer-recording-child) header {
+    min-height: 110px;
+  }
+
+  .backing-export-studio.composer-export-children {
+    height: 190px;
+  }
+
+  .composer-export-children > .composer-child-artwork {
+    height: 175px;
+  }
+}

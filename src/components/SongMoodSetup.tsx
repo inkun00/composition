@@ -1,7 +1,8 @@
-import { Bike, Footprints, MoonStar, PersonStanding, Rabbit, Turtle, type LucideIcon } from "lucide-react";
+import { Bike, Footprints, MoonStar, PersonStanding, Rabbit, Turtle, type LucideIcon } from "./AppArtworkIcons";
 import type { AccompanimentStyleId } from "../music/accompaniment";
 import { rhythmPreferenceForStyle } from "../music/rhythmPreference";
 import "./SongMoodSetup.css";
+import "./AppExperienceArtwork.css";
 
 const TEMPO_CHOICES = [
   { id: "slow", Icon: MoonStar, name: "느림", bpm: 72, description: "차분하고 포근해요" },
@@ -55,11 +56,13 @@ export default function SongMoodSetup({
   onRhythmChange
 }: SongMoodSetupProps) {
   return (
-    <section className="song-mood-setup" aria-labelledby="song-mood-heading">
+    <section className="song-mood-setup app-mood-setup composer-setting-card"
+      aria-labelledby="song-mood-heading">
       <div className="compact-heading">
         <span className="number-badge">1</span>
         <div>
           <h2 id="song-mood-heading">빠르기·리듬</h2>
+          <p>노래의 걸음과 분위기를 골라요.</p>
         </div>
       </div>
 

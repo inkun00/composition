@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Check, Download, ExternalLink, LoaderCircle, RotateCw, ScanLine, X } from "lucide-react";
+import { Check, Download, ExternalLink, LoaderCircle, RotateCw, ScanLine, X } from "./AppArtworkIcons";
 import { isPortableBuild, publicAssetUrl } from "../platform/portable";
 import {
   getHomrStatus,

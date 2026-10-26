@@ -1,0 +1,86 @@
+{
+  "group": "control-b",
+  "subject": "Periwinkle and warm-ivory tactile ceramic studio controls",
+  "entries": [
+    {
+      "key": "loading",
+      "prompt": "Use case: stylized-concept.\nAsset type: standalone toolbar icon for a charcoal professional creative studio, immediately readable at 24 pixels.\nStyle/medium: premium tactile ceramic and colored-paper-inspired 3D object with smooth rounded bevels, understated fine material texture, same crafted quality as a periwinkle-and-ivory music clapperboard icon. Palette: periwinkle blue, warm ivory, tiny restrained coral accent only where useful. Soft light from upper left and subtle object-only contact shading.\nComposition: square, a single isolated centered object, front or clear three-quarter view, fills central 84 percent with a clean bold silhouette and generous transparent edge.\nSubject: a thick segmented circular loading ring, six broad rounded periwinkle ceramic arc segments arranged into an open circle with a clear gap at the upper right. One small warm ivory segment indicates progress. A sculptural spinner ring only, no arrows, no clock hands, no gear teeth. Front view, large clear transparent center hole.\nBackground: genuinely transparent alpha background everywhere outside the object, including all four corners; no backdrop, no background square, no rectangular shadow plate, no drawn checkerboard.\nConstraints: exactly one icon, no other symbols, no card, no UI frame, no text, no letters, no logo, no watermark, no tiny decoration. Prioritize an unambiguous silhouette at 24 px.",
+      "generationMode": "built-in image_gen",
+      "transparentBackground": true,
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd6-9f58-7a32-92dd-6a906195da65\\exec-97802e42-9f61-4959-9e07-21462eac59dd.png",
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\studio-imagegen-v1\\originals\\loading.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\studio-images\\v1\\loading.webp",
+      "width": 144,
+      "height": 144,
+      "alpha": [
+        0,
+        255
+      ],
+      "bytes": 7898
+    },
+    {
+      "key": "settings",
+      "prompt": "Use case: stylized-concept.\nAsset type: standalone toolbar icon for a charcoal professional creative studio, immediately readable at 24 pixels.\nStyle/medium: premium tactile ceramic and colored-paper-inspired 3D object with smooth rounded bevels, understated fine material texture, same crafted quality as a periwinkle-and-ivory music clapperboard icon. Palette: periwinkle blue, warm ivory, tiny restrained coral accent only where useful. Soft light from upper left and subtle object-only contact shading.\nComposition: square, a single isolated centered object, front or clear three-quarter view, fills central 84 percent with a clean bold silhouette and generous transparent edge.\nSubject: a miniature compact mixing deck with exactly three large vertical slider tracks on a softly beveled periwinkle ceramic slab; three broad warm-ivory slider knobs at distinct heights, with a tiny coral accent on the middle knob. Near-front three-quarter view; the slab is the physical mixer object, not a UI card or background. No buttons, no cables, no text, no numbers. Three sliders must read clearly at 24 px.\nBackground: genuinely transparent alpha background everywhere outside the object, including all four corners; no backdrop, no background square, no rectangular shadow plate, no drawn checkerboard.\nConstraints: exactly one icon, no other symbols, no card, no UI frame, no text, no letters, no logo, no watermark, no tiny decoration. Prioritize an unambiguous silhouette at 24 px.",
+      "generationMode": "built-in image_gen",
+      "transparentBackground": true,
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd6-9f58-7a32-92dd-6a906195da65\\exec-373a10ff-bd63-4ebf-8404-b47203c1b19e.png",
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\studio-imagegen-v1\\originals\\settings.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\studio-images\\v1\\settings.webp",
+      "width": 144,
+      "height": 144,
+      "alpha": [
+        0,
+        255
+      ],
+      "bytes": 6412
+    },
+    {
+      "key": "headphones",
+      "prompt": "Use case: stylized-concept.\nAsset type: standalone toolbar icon for a charcoal professional creative studio, immediately readable at 24 pixels.\nStyle/medium: premium tactile ceramic and colored-paper-inspired 3D object with smooth rounded bevels, understated fine material texture, same crafted quality as a periwinkle-and-ivory music clapperboard icon. Palette: periwinkle blue, warm ivory, tiny restrained coral accent only where useful. Soft light from upper left and subtle object-only contact shading.\nComposition: square, a single isolated centered object, front or clear three-quarter view, fills central 84 percent with a clean bold silhouette and generous transparent edge.\nSubject: one pair of premium periwinkle over-ear headphones with a thick curved periwinkle headband and two large warm-ivory ear cushions, facing front in a slight three-quarter product view. Open space under the headband is transparent. Bold simple iconic silhouette, no cable, no microphone, no music notes, no stand.\nBackground: genuinely transparent alpha background everywhere outside the object, including all four corners; no backdrop, no background square, no rectangular shadow plate, no drawn checkerboard.\nConstraints: exactly one icon, no other symbols, no card, no UI frame, no text, no letters, no logo, no watermark, no tiny decoration. Prioritize an unambiguous silhouette at 24 px.",
+      "generationMode": "built-in image_gen",
+      "transparentBackground": true,
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd6-9f58-7a32-92dd-6a906195da65\\exec-e1967737-12f7-4a99-8e45-fdf20b40c76b.png",
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\studio-imagegen-v1\\originals\\headphones.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\studio-images\\v1\\headphones.webp",
+      "width": 144,
+      "height": 144,
+      "alpha": [
+        0,
+        255
+      ],
+      "bytes": 9522
+    },
+    {
+      "key": "download",
+      "prompt": "Use case: stylized-concept.\nAsset type: standalone toolbar icon for a charcoal professional creative studio, immediately readable at 24 pixels.\nStyle/medium: premium tactile ceramic and colored-paper-inspired 3D object with smooth rounded bevels, understated fine material texture, same crafted quality as a periwinkle-and-ivory music clapperboard icon. Palette: periwinkle blue, warm ivory, tiny restrained coral accent only where useful. Soft light from upper left and subtle object-only contact shading.\nComposition: square, a single isolated centered object, front or clear three-quarter view, fills central 84 percent with a clean bold silhouette and generous transparent edge.\nSubject: a broad warm-ivory open receiving tray with a single thick periwinkle downward-pointing arrow floating directly above it; the triangular arrowhead points into the center of the tray. Front three-quarter product view, stout rounded ceramic shapes, an unmistakable DOWNLOAD symbol. No upward arrow, no file, no paper, no text.\nBackground: genuinely transparent alpha background everywhere outside the object, including all four corners; no backdrop, no background square, no rectangular shadow plate, no drawn checkerboard.\nConstraints: exactly one icon, no other symbols, no card, no UI frame, no text, no letters, no logo, no watermark, no tiny decoration. Prioritize an unambiguous silhouette at 24 px.",
+      "generationMode": "built-in image_gen",
+      "transparentBackground": true,
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd6-9f58-7a32-92dd-6a906195da65\\exec-846e5bba-0231-4fcf-a2bd-75b3c262c2ef.png",
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\studio-imagegen-v1\\originals\\download.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\studio-images\\v1\\download.webp",
+      "width": 144,
+      "height": 144,
+      "alpha": [
+        0,
+        255
+      ],
+      "bytes": 5472
+    },
+    {
+      "key": "arrow-right",
+      "prompt": "Use case: stylized-concept.\nAsset type: standalone toolbar icon for a charcoal professional creative studio, immediately readable at 24 pixels.\nStyle/medium: premium tactile ceramic and colored-paper-inspired 3D object with smooth rounded bevels, understated fine material texture, same crafted quality as a periwinkle-and-ivory music clapperboard icon. Palette: periwinkle blue, warm ivory, tiny restrained coral accent only where useful. Soft light from upper left and subtle object-only contact shading.\nComposition: square, a single isolated centered object, front or clear three-quarter view, fills central 84 percent with a clean bold silhouette and generous transparent edge.\nSubject: one single thick rounded warm-ivory arrow pointing horizontally RIGHT with a short sturdy shaft and a large clear triangular arrowhead at the RIGHT. A periwinkle-blue side bevel gives tactile ceramic depth. Front three-quarter view from slightly above; no circle, no button plate, no arrow loop, no second arrow. Unmistakably RIGHT, not left.\nBackground: genuinely transparent alpha background everywhere outside the object, including all four corners; no backdrop, no background square, no rectangular shadow plate, no drawn checkerboard.\nConstraints: exactly one icon, no other symbols, no card, no UI frame, no text, no letters, no logo, no watermark, no tiny decoration. Prioritize an unambiguous silhouette at 24 px.",
+      "generationMode": "built-in image_gen",
+      "transparentBackground": true,
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd6-9f58-7a32-92dd-6a906195da65\\exec-59f7b3bf-3f26-4599-b4e0-f3f13bb79e98.png",
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\studio-imagegen-v1\\originals\\arrow-right.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\studio-images\\v1\\arrow-right.webp",
+      "width": 144,
+      "height": 96,
+      "alpha": [
+        0,
+        255
+      ],
+      "bytes": 3114
+    }
+  ]
+}

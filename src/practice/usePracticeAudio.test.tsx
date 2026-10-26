@@ -92,6 +92,47 @@ afterEach(() => {
 });
 
 describe("연습 미리듣기와 파일 저장", () => {
+  it("MP4 모듈 다운로드 실패는 작업을 유지하고 최신 화면으로 복구하도록 안내한다", async () => {
+    const before = structuredClone(input);
+    mocks.mp4.mockRejectedValueOnce(new TypeError(
+      "Failed to fetch dynamically imported module: https://example.com/assets/exportPracticeVideoMp4-old.js"
+    ));
+    await act(async () => current.save("mp4"));
+    expect(current.busy).toBe(false);
+    expect(current.exportNeedsRefresh).toBe(true);
+    expect(current.status).toContain("작업을 저장하고 최신 화면");
+    expect(current.status).not.toContain("Failed to fetch");
+    expect(createdUrl).not.toHaveBeenCalled();
+    expect(input).toEqual(before);
+    await act(async () => current.save("mp4"));
+    expect(current.exportNeedsRefresh).toBe(false);
+    expect(current.status).toContain("MP4 파일을 저장했어요");
+  });
+
+  it("인코딩 오류와 MP3 오류는 최신 화면 열기 상태로 바꾸지 않는다", async () => {
+    mocks.mp4.mockRejectedValueOnce(new Error("영상 인코더를 사용할 수 없어요."));
+    await act(async () => current.save("mp4"));
+    expect(current.exportNeedsRefresh).toBe(false);
+    expect(current.status).toBe("영상 인코더를 사용할 수 없어요.");
+    mocks.encode.mockRejectedValueOnce(new TypeError("Failed to fetch dynamically imported module: old.js"));
+    await act(async () => current.save("mp3"));
+    expect(current.exportNeedsRefresh).toBe(false);
+  });
+
+  it("취소된 MP4 작업의 모듈 오류가 뒤늦게 도착해도 복구 안내를 띄우지 않는다", async () => {
+    let reject!: (reason: Error) => void;
+    mocks.mp4.mockReturnValueOnce(new Promise((_, fail) => { reject = fail; }));
+    let pending!: Promise<void>;
+    await act(async () => { pending = current.save("mp4"); await Promise.resolve(); });
+    act(() => current.stop());
+    await act(async () => {
+      reject(new TypeError("Failed to fetch dynamically imported module: old.js"));
+      await pending;
+    });
+    expect(current.exportNeedsRefresh).toBe(false);
+    expect(current.status).toBe("연주와 파일 만들기를 멈췄어요.");
+  });
+
   it("화음은 별도로 듣고 멈추며 저장에는 원래 가락 버퍼만 사용한다", async () => {
     const before = structuredClone(input);
     await act(async () => current.previewHarmony(0, "G7"));

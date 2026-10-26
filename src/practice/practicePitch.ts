@@ -1,5 +1,5 @@
 export const PRACTICE_MIN_PITCH = 60;
-export const PRACTICE_MAX_PITCH = 72;
+export const PRACTICE_MAX_PITCH = 84;
 
 export const PRACTICE_PITCHES: readonly {
   pitch: number;
@@ -13,7 +13,14 @@ export const PRACTICE_PITCHES: readonly {
   { pitch: 67, label: "솔", color: "#419ebd" },
   { pitch: 69, label: "라", color: "#657bc9" },
   { pitch: 71, label: "시", color: "#a177b3" },
-  { pitch: 72, label: "높은 도", color: "#d96d95" }
+  { pitch: 72, label: "높은 도", color: "#d96d95" },
+  { pitch: 74, label: "높은 레", color: "#ed922f" },
+  { pitch: 76, label: "높은 미", color: "#d7ad19" },
+  { pitch: 77, label: "높은 파", color: "#79a94e" },
+  { pitch: 79, label: "높은 솔", color: "#419ebd" },
+  { pitch: 81, label: "높은 라", color: "#657bc9" },
+  { pitch: 83, label: "높은 시", color: "#a177b3" },
+  { pitch: 84, label: "더 높은 도", color: "#d96d95" }
 ];
 
 export function isPracticePitch(pitch: unknown): pitch is number {

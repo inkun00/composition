@@ -8,6 +8,32 @@
   line-height: 1.5;
 }
 
+.composition-music-video {
+  min-width: 0;
+  margin-top: 20px;
+}
+
+.composition-music-video > .mv-feature {
+  margin-top: 0;
+}
+
+.composition-music-video .mv-open-button {
+  flex-shrink: 0;
+  min-height: 48px;
+  padding: 10px 20px;
+  border: 1px solid #9bcdd7;
+  border-radius: 16px;
+  background: var(--lab-cyan-soft, #eef8fb);
+  color: var(--lab-cyan-dark, #176977);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.composition-music-video .mv-open-button:hover:not(:disabled) {
+  border-color: var(--lab-cyan-dark, #176977);
+  background: #d8f0f5;
+}
+
 .composition-video-progress {
   width: 100%;
   height: 10px;

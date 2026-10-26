@@ -1,0 +1,22 @@
+.mv-action-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  overflow: visible;
+  cursor: crosshair;
+  touch-action: none;
+  user-select: none;
+}
+.mv-action-canvas:focus-visible { outline: 2px solid #b394d4; outline-offset: 3px; }
+.mv-action-handle { cursor: grab; outline: none; }
+.mv-action-handle:active { cursor: grabbing; }
+.mv-action-handle > circle:not(.mv-action-handle-hit) { transition: filter .15s; }
+.mv-action-handle:hover > circle:not(.mv-action-handle-hit),
+.mv-action-handle:focus-visible > circle:not(.mv-action-handle-hit) { filter: drop-shadow(0 0 5px #8764b6); stroke-width: 3px; }
+.mv-action-handle > text { font-size: 17px; font-weight: 600; }
+@media (max-width: 700px) {
+  .mv-action-handle > circle:not(.mv-action-handle-hit) { r: 19px; }
+  .mv-action-handle > .mv-action-handle-hit { r: 42px; }
+  .mv-action-handle > text { font-size: 23px; }
+}

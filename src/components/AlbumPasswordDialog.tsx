@@ -1,11 +1,11 @@
 import { useState, type FormEvent } from "react";
-import { Lock, X } from "lucide-react";
+import { Lock, Trash2, X } from "./AppArtworkIcons";
 import type { CommunityAlbum } from "../firebase/communityAlbums";
 import "./AlbumPasswordDialog.css";
 
 type Props = Readonly<{
   album: CommunityAlbum;
-  mode: "unlock" | "manage";
+  mode: "delete" | "manage";
   signedIn: boolean;
   onRequestLogin: () => void;
   onSubmit: (password: string) => Promise<void>;
@@ -56,27 +56,27 @@ export default function AlbumPasswordDialog({ album, mode, signedIn, onRequestLo
   }
 
   return <div className="album-subdialog-overlay" role="dialog" aria-modal="true"
-    aria-label={manage ? `${album.name} 앨범 암호 설정` : `${album.name} 앨범 입장`}
+    aria-label={manage ? `${album.name} 앨범 삭제 암호 설정` : `${album.name} 앨범 삭제`}
     onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onClose(); }}>
     <section className="album-subdialog album-password-dialog">
       <header className="album-subdialog-header">
-        <div><Lock size={20} /><strong>{manage ? "앨범 암호 설정" : album.name}</strong></div>
+        <div><Lock size={20} /><strong>{manage ? "앨범 삭제 암호 설정" : "앨범 삭제"}</strong></div>
         <button type="button" aria-label="암호 창 닫기" disabled={busy} onClick={onClose}><X size={20} /></button>
       </header>
       <form className="album-create-form" onSubmit={(event) => void submit(event)}>
         <p className="album-password-help">{manage
-          ? "새 암호를 정해 주세요. 암호를 바꾸면 친구들도 새 암호를 입력해야 해요."
-          : "이 앨범의 암호를 알고 있는 친구만 노래를 볼 수 있어요."}</p>
-        <label><span>{manage ? "새 앨범 암호" : "앨범 암호"}</span>
+          ? "만든 사람이 앨범을 삭제할 때 쓸 암호예요. 누구나 암호 없이 앨범에 들어갈 수 있어요."
+          : `'${album.name}' 앨범의 삭제 암호를 입력해 주세요. 앨범에 공개된 음악도 모두 삭제되며 되돌릴 수 없어요.`}</p>
+        <label><span>{manage ? "새 삭제 암호" : "앨범 삭제 암호"}</span>
           <input type="password" value={password} maxLength={40} autoComplete="off" autoFocus
-            placeholder={manage ? "4글자 이상 적어 주세요" : "앨범 암호를 입력해 주세요"}
+            placeholder={manage ? "4글자 이상 적어 주세요" : "삭제 암호를 입력해 주세요"}
             onChange={(event) => { setPassword(event.target.value); setError(""); }} /></label>
         {!signedIn && <div className="album-login-needed"><Lock size={18} /><span>암호를 확인하려면 먼저 로그인해 주세요.</span>
           <button type="button" onClick={onRequestLogin}>로그인</button></div>}
         {error && <p className="community-album-error" role="status">{error}</p>}
         <button type="submit" className={manage ? "account-primary save-album-password" : "account-primary"}
           disabled={!signedIn || busy || !password.trim()}>
-          <Lock size={17} /> {busy ? "확인하는 중..." : manage ? "암호 저장" : "앨범 들어가기"}
+          {manage ? <Lock size={17} /> : <Trash2 size={17} />} {busy ? "처리하는 중..." : manage ? "암호 저장" : "앨범 삭제"}
         </button>
         {manage && album.locked && onRemove && <button type="button" className="album-password-remove"
           disabled={busy} onClick={() => void remove()}>암호 해제하기</button>}

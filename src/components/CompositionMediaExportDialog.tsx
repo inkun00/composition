@@ -1,6 +1,7 @@
-import { CheckCircle2, X } from "lucide-react";
+import { CheckCircle2, X } from "./AppArtworkIcons";
 import type { CompositionMediaExportController } from "../hooks/useCompositionMediaExport";
 import { useDialogFocus } from "../hooks/useDialogFocus";
+import ComposerChildArtwork from "./ComposerChildArtwork";
 import "./CompositionFileExports.css";
 
 export default function CompositionMediaExportDialog({ media }: Readonly<{ media: CompositionMediaExportController }>) {
@@ -17,7 +18,10 @@ export default function CompositionMediaExportDialog({ media }: Readonly<{ media
           : media.phase === "error" ? `${label}을 완성하지 못했어요` : `${label} 만드는 중`}</h2>
         <p id="backing-export-description">{media.status}</p>
       </header>
-      <div className="backing-export-studio" aria-hidden="true">
+      <div className="backing-export-studio composer-export-children" aria-hidden="true">
+        <ComposerChildArtwork kind="exportKeyboard" />
+        <ComposerChildArtwork kind="exportRhythm" />
+        <ComposerChildArtwork kind="exportMix" />
         <div className="backing-export-note note-one">♪</div>
         <div className="backing-export-note note-two">♫</div>
         <div className="backing-export-note note-three">♪</div>

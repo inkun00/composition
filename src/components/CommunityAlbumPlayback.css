@@ -1,0 +1,40 @@
+.community-album-overlay .album-song-actions button.album-playback-active,
+.album-subdialog-header .album-score-stop {
+  border-color: #df9ba7;
+  background: #fff1f3;
+  color: #a52f48;
+}
+
+.album-score-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 0 0 auto;
+  gap: 10px;
+}
+
+.album-score-header-actions .album-score-close {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--lab-border, #e8e3ec);
+  border-radius: 8px;
+  background: #f3f1f4;
+  cursor: pointer;
+}
+
+.album-subdialog-header .album-score-stop {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid #df9ba7;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+}

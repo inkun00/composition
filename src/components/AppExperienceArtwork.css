@@ -1,0 +1,257 @@
+.app-opening-practice-art {
+  flex: 0 0 96px;
+}
+
+.practice-mode-overlay .practice-mode-chooser .practice-mode-close {
+  width: 44px;
+  height: 44px;
+}
+
+@media (max-width: 700px) {
+  .opening-screen.opening-with-children {
+    display: block;
+  }
+
+  .opening-with-children .opening-content {
+    padding-top: max(52svh, 128vw);
+  }
+}
+
+.app-mood-setup {
+  border-color: #dde6f2;
+  background: linear-gradient(135deg, #ffffff, #f8fbff);
+}
+
+.app-mood-setup > .compact-heading {
+  display: grid;
+  grid-template-columns: auto 1fr 112px;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 15px;
+}
+
+.app-mood-setup .compact-heading p {
+  margin: 7px 0 0;
+  color: #7a8496;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.app-mood-setup .mood-option-icon .app-artwork {
+  width: 38px;
+  height: 38px;
+}
+
+.app-mood-setup .mood-choice-group {
+  border-color: #e0e6f3;
+  background: #ffffffd9;
+}
+
+.app-mood-setup .tempo-mood-options button,
+.app-mood-setup .rhythm-mood-options button {
+  background: #f4f7fc;
+}
+
+.app-mood-setup .tempo-mood-options button.active,
+.app-mood-setup .rhythm-mood-options button.active {
+  border-color: #8b9fd8;
+  background: #eef3ff;
+}
+
+.app-recording-guide {
+  border-color: #dce4f1;
+  background: linear-gradient(145deg, #fff, #f8faff);
+}
+
+.app-recording-guide header {
+  position: relative;
+  min-height: 110px;
+  padding: 8px 140px 8px 0;
+}
+
+.app-recording-guide header > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.app-recording-stage-art {
+  position: absolute;
+  top: -8px;
+  right: -4px;
+}
+
+.app-recording-guide .recording-mode-options button {
+  gap: 9px;
+  border-color: #dfe6f1;
+  background: #ffffffd9;
+}
+
+.app-recording-guide .recording-mode-options button:hover {
+  border-color: #9db0dc;
+  box-shadow: 0 10px 24px #6b86bc17;
+}
+
+.recording-guide-options button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 44px;
+}
+
+.recording-guide-options button span {
+  display: flex;
+  margin-right: 0;
+}
+
+.practice-shell .practice-listen-intro:has(.app-practice-output-art) {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 8px;
+}
+
+.practice-shell .practice-listen-intro:has(.app-practice-output-art) h2 {
+  line-height: 1.5;
+}
+
+details.composer-settings > summary::after {
+  content: none;
+}
+
+.composer-settings > summary > .app-settings-indicator {
+  display: flex;
+  flex: 0 0 22px;
+  justify-content: center;
+  margin-left: auto;
+}
+
+.composer-settings .app-settings-indicator > .app-artwork:last-child,
+.composer-settings[open] .app-settings-indicator > .app-artwork:first-child {
+  display: none;
+}
+
+.composer-settings[open] .app-settings-indicator > .app-artwork:last-child {
+  display: inline-block;
+}
+
+.practice-hint-card > .app-control-artwork {
+  margin-bottom: 9px;
+}
+
+.practice-harmony-warning button .app-control-artwork,
+.practice-harmony-good .app-control-artwork {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.practice-mode-footer > .app-control-artwork,
+.practice-overview-tip .app-control-artwork,
+.practice-share-stage strong .app-control-artwork,
+.score-image-recognition-progress > .app-control-artwork,
+.score-image-review-ready > .app-control-artwork,
+.action-button > .app-artwork,
+.account-score-open > .app-control-artwork,
+.community-album-folder > .app-control-artwork,
+.publish-album-grid button > .app-control-artwork {
+  flex: 0 0 auto;
+}
+
+.more-candidates-button .app-control-artwork.rotated {
+  transform: rotate(90deg);
+}
+
+.practice-overview-tip .app-control-artwork {
+  margin-top: 3px;
+}
+
+.practice-share-stage strong .app-control-artwork {
+  vertical-align: -2px;
+}
+
+.note-tools button:has(.app-control-artwork) span {
+  color: #675a8d;
+  font-weight: 700;
+}
+
+.backing-export-complete-mark .app-control-artwork {
+  width: 48px;
+  height: 48px;
+}
+
+@media (max-width: 760px) {
+  .app-shell .beat-volume-control {
+    grid-template-columns: minmax(0, 1fr) 58px;
+    gap: 10px 12px;
+  }
+
+  .app-shell .beat-volume-control > label {
+    grid-column: 1 / -1;
+  }
+
+  .app-shell .beat-volume-control > input {
+    min-width: 0;
+  }
+
+  .app-mood-setup > .compact-heading {
+    grid-template-columns: auto 1fr 76px;
+    gap: 9px;
+  }
+
+  .app-mood-art {
+    width: 76px;
+    height: 76px;
+  }
+
+  .app-mood-setup .compact-heading p {
+    max-width: 190px;
+    font-size: 11px;
+  }
+
+  .app-recording-guide header {
+    min-height: 90px;
+    padding-right: 98px;
+  }
+
+  .app-recording-stage-art {
+    top: 0;
+    right: -8px;
+    width: 96px;
+    height: 96px;
+  }
+
+  .app-recording-guide .recording-mode-options {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .app-recording-guide .recording-mode-options button {
+    min-height: 150px;
+    padding: 15px 12px;
+  }
+
+  .practice-shell .practice-listen-intro:has(.app-practice-output-art) {
+    grid-template-columns: 76px minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .app-practice-output-art {
+    width: 76px;
+    height: 76px;
+  }
+
+  .practice-listen-intro .practice-return-to-editor {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+
+  .practice-step-tabs > .app-control-artwork {
+    display: none;
+  }
+
+  .community-create-button .app-control-artwork {
+    width: 16px;
+    height: 16px;
+  }
+}

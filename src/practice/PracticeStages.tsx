@@ -1,4 +1,4 @@
-import { ExternalLink } from "lucide-react";
+import { ExternalLink } from "../components/AppArtworkIcons";
 import type { KeyboardEvent } from "react";
 import type { PracticeCreationMode } from "./practiceCreationMode";
 

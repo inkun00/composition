@@ -1,0 +1,308 @@
+{
+  "schemaVersion": 1,
+  "generator": "Built-in image_gen.imagegen",
+  "transparentBackground": true,
+  "optimization": "scripts/optimize-app-image.py: alpha-preserving resampling and WebP encoding only, control maximum 192px",
+  "assets": [
+    {
+      "key": "book",
+      "kind": "control",
+      "prompt": "Use case: stylized-concept.\nAsset type: one standalone premium app toolbar icon for a friendly Korean children's music-composition app on a WHITE/LIGHT interface. Must stay instantly recognizable at 24 to 32 pixels.\nStyle: calm tactile ceramic and subtly folded-paper 3D craftsmanship, rounded bevels, clean bold silhouette, restrained detail, soft studio lighting and delicate object-only ambient shading. Palette: periwinkle blue, coral, teal and warm ivory; add crisp dark-navy structural accents so the object is legible on white.\nComposition: square, one isolated centered icon filling the central 80 percent, front or clear three-quarter view, all edges comfortably inside the canvas.\nSubject: an OPEN LEARNING GUIDE BOOK, with two generous warm-ivory curved pages, a thick periwinkle cover, dark-navy spine and navy page-edge definition, and one small coral bookmark ribbon. No writing or diagrams on the pages. A compact sculptural open book in a slightly elevated front three-quarter view, immediately recognizable as a helpful learning guide.\nBackground: truly transparent alpha cutout including all four corners and all negative space. No opaque backdrop, no rectangular shadow panel, no checkerboard pattern.\nAvoid: letters, words, numbers, logos, watermark, UI card/frame around the icon, people or cartoon characters, extra props, decorative confetti, tiny busy details, harsh gloss or metallic glare. Exactly one requested icon.",
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd6-9f58-7a32-92dd-6a906195da65\\exec-59700aca-a58e-4e0e-9b82-039f5441c1d1.png",
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\app-imagegen-v1\\originals\\book.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\app-images\\v1\\book.webp",
+      "width": 192,
+      "height": 192,
+      "bytes": 9158,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "key": "graduation",
+      "kind": "control",
+      "prompt": "Use case: stylized-concept.\nAsset type: one standalone premium app toolbar icon for a friendly Korean children's music-composition app on a WHITE/LIGHT interface. Must stay instantly recognizable at 24 to 32 pixels.\nStyle: calm tactile ceramic and subtly folded-paper 3D craftsmanship, rounded bevels, clean bold silhouette, restrained detail, soft studio lighting and delicate object-only ambient shading. Palette: periwinkle blue, coral, teal and warm ivory; add crisp dark-navy structural accents so the object is legible on white.\nComposition: square, one isolated centered icon filling the central 80 percent, front or clear three-quarter view, all edges comfortably inside the canvas.\nSubject: one GRADUATION CAP, a broad periwinkle mortarboard tilted in a clear three-quarter view, dark-navy underside and rounded periwinkle base, with a warm-ivory tassel and tiny coral tassel knot. Bold simple academic-cap silhouette, no diploma, no books, no person.\nBackground: truly transparent alpha cutout including all four corners and all negative space. No opaque backdrop, no rectangular shadow panel, no checkerboard pattern.\nAvoid: letters, words, numbers, logos, watermark, UI card/frame around the icon, people or cartoon characters, extra props, decorative confetti, tiny busy details, harsh gloss or metallic glare. Exactly one requested icon.",
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd6-9f58-7a32-92dd-6a906195da65\\exec-1f0228c8-29f4-4225-9591-aa47703f7fa1.png",
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\app-imagegen-v1\\originals\\graduation.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\app-images\\v1\\graduation.webp",
+      "width": 192,
+      "height": 128,
+      "bytes": 6398,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "key": "drum",
+      "kind": "control",
+      "prompt": "Use case: stylized-concept.\nAsset type: one standalone premium app toolbar icon for a friendly Korean children's music-composition app on a WHITE/LIGHT interface. Must stay instantly recognizable at 24 to 32 pixels.\nStyle: calm tactile ceramic and subtly folded-paper 3D craftsmanship, rounded bevels, clean bold silhouette, restrained detail, soft studio lighting and delicate object-only ambient shading. Palette: periwinkle blue, coral, teal and warm ivory; add crisp dark-navy structural accents so the object is legible on white.\nComposition: square, one isolated centered icon filling the central 80 percent, front or clear three-quarter view, all edges comfortably inside the canvas.\nSubject: one small RHYTHM DRUM with a warm-ivory drumhead, coral cylindrical shell, teal rims and restrained dark-navy tension details; two thick warm-ivory drumsticks cross above the head and rest as part of this single drum icon. Clear three-quarter view, compact and playful but premium. No music notes or surrounding objects.\nBackground: truly transparent alpha cutout including all four corners and all negative space. No opaque backdrop, no rectangular shadow panel, no checkerboard pattern.\nAvoid: letters, words, numbers, logos, watermark, UI card/frame around the icon, people or cartoon characters, extra props, decorative confetti, tiny busy details, harsh gloss or metallic glare. Exactly one requested icon.",
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd6-9f58-7a32-92dd-6a906195da65\\exec-a93d63a3-96c6-4adc-b52c-5269d288671e.png",
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\app-imagegen-v1\\originals\\drum.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\app-images\\v1\\drum.webp",
+      "width": 192,
+      "height": 192,
+      "bytes": 11632,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "key": "piano",
+      "kind": "control",
+      "prompt": "Use case: stylized-concept.\nAsset type: one standalone premium app toolbar icon for a friendly Korean children's music-composition app on a WHITE/LIGHT interface. Must stay instantly recognizable at 24 to 32 pixels.\nStyle: calm tactile ceramic and subtly folded-paper 3D craftsmanship, rounded bevels, clean bold silhouette, restrained detail, soft studio lighting and delicate object-only ambient shading. Palette: periwinkle blue, coral, teal and warm ivory; add crisp dark-navy structural accents so the object is legible on white.\nComposition: square, one isolated centered icon filling the central 80 percent, front or clear three-quarter view, all edges comfortably inside the canvas.\nSubject: one miniature PIANO KEYBOARD: a stout rounded periwinkle housing containing six broad warm-ivory white keys and four bold dark-navy raised black keys. Very clear slightly elevated front three-quarter view. The contrast of ivory and navy piano keys must remain readable at 24 pixels. No legs, pedals, cord, display, buttons, letters, numbers or music notes.\nBackground: truly transparent alpha cutout including all four corners and all negative space. No opaque backdrop, no rectangular shadow panel, no checkerboard pattern.\nAvoid: letters, words, numbers, logos, watermark, UI card/frame around the icon, people or cartoon characters, extra props, decorative confetti, tiny busy details, harsh gloss or metallic glare. Exactly one requested icon.",
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd6-9f58-7a32-92dd-6a906195da65\\exec-ff6f7a37-9eee-4a2e-af4b-316ef6b95c91.png",
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\app-imagegen-v1\\originals\\piano.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\app-images\\v1\\piano.webp",
+      "width": 192,
+      "height": 128,
+      "bytes": 7130,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "key": "lightbulb",
+      "kind": "control",
+      "prompt": "Use case: stylized-concept.\nAsset type: one standalone premium app toolbar icon for a friendly Korean children's music-composition app on a WHITE/LIGHT interface. Must stay instantly recognizable at 24 to 32 pixels.\nStyle: calm tactile ceramic and subtly folded-paper 3D craftsmanship, rounded bevels, clean bold silhouette, restrained detail, soft studio lighting and delicate object-only ambient shading. Palette: periwinkle blue, coral, teal and warm ivory; add crisp dark-navy structural accents so the object is legible on white.\nComposition: square, one isolated centered icon filling the central 80 percent, front or clear three-quarter view, all edges comfortably inside the canvas.\nSubject: one MELODY IDEA LIGHTBULB, a rounded softly glowing warm-ivory and pale-amber bulb above a short teal ceramic screw base, with dark-navy structural outlines at the base and bulb neck. Three short stout coral/ivory light rays sit close to its top as a single compact idea symbol. No notes, faces or additional objects.\nBackground: truly transparent alpha cutout including all four corners and all negative space. No opaque backdrop, no rectangular shadow panel, no checkerboard pattern.\nAvoid: letters, words, numbers, logos, watermark, UI card/frame around the icon, people or cartoon characters, extra props, decorative confetti, tiny busy details, harsh gloss or metallic glare. Exactly one requested icon.",
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd6-9f58-7a32-92dd-6a906195da65\\exec-7bfaa60f-853f-4bd0-9f98-c21111b72eec.png",
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\app-imagegen-v1\\originals\\lightbulb.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\app-images\\v1\\lightbulb.webp",
+      "width": 192,
+      "height": 192,
+      "bytes": 7940,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "key": "lock",
+      "kind": "control",
+      "prompt": "Use case: stylized-concept.\nAsset type: one standalone premium app toolbar icon for a friendly Korean children's music-composition app on a WHITE/LIGHT interface. Must stay instantly recognizable at 24 to 32 pixels.\nStyle: calm tactile ceramic and subtly folded-paper 3D craftsmanship, rounded bevels, clean bold silhouette, restrained detail, soft studio lighting and delicate object-only ambient shading. Palette: periwinkle blue, coral, teal and warm ivory; add crisp dark-navy structural accents so the object is legible on white.\nComposition: square, one isolated centered icon filling the central 80 percent, front or clear three-quarter view, all edges comfortably inside the canvas.\nSubject: one PASSWORD PADLOCK, with a thick dark-navy rounded U-shaped shackle and a softly beveled periwinkle rectangular body, warm-ivory inset keyhole and one restrained teal edge accent. Front three-quarter view, bold and reassuring. The opening through the shackle must be transparent. No key or extra props.\nBackground: truly transparent alpha cutout including all four corners and all negative space. No opaque backdrop, no rectangular shadow panel, no checkerboard pattern.\nAvoid: letters, words, numbers, logos, watermark, UI card/frame around the icon, people or cartoon characters, extra props, decorative confetti, tiny busy details, harsh gloss or metallic glare. Exactly one requested icon.",
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd6-9f58-7a32-92dd-6a906195da65\\exec-95cb8257-481f-4ca7-a0aa-e94434939d64.png",
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\app-imagegen-v1\\originals\\lock.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\app-images\\v1\\lock.webp",
+      "width": 192,
+      "height": 192,
+      "bytes": 8156,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "key": "mail",
+      "kind": "control",
+      "prompt": "Use case: stylized-concept.\nAsset type: one standalone premium app toolbar icon for a friendly Korean children's music-composition app on a WHITE/LIGHT interface. Must stay instantly recognizable at 24 to 32 pixels.\nStyle: calm tactile ceramic and subtly folded-paper 3D craftsmanship, rounded bevels, clean bold silhouette, restrained detail, soft studio lighting and delicate object-only ambient shading. Palette: periwinkle blue, coral, teal and warm ivory; add crisp dark-navy structural accents so the object is legible on white.\nComposition: square, one isolated centered icon filling the central 80 percent, front or clear three-quarter view, all edges comfortably inside the canvas.\nSubject: one LOGIN ENVELOPE, a thick warm-ivory paper envelope with a coral folded triangular flap and teal/periwinkle edge bevels, defined by dark-navy folded seam lines. Slightly elevated front three-quarter view, bold simple recognizable envelope silhouette. No letter sticking out, no stamps, no text, no at-sign, no extra props.\nBackground: truly transparent alpha cutout including all four corners and all negative space. No opaque backdrop, no rectangular shadow panel, no checkerboard pattern.\nAvoid: letters, words, numbers, logos, watermark, UI card/frame around the icon, people or cartoon characters, extra props, decorative confetti, tiny busy details, harsh gloss or metallic glare. Exactly one requested icon.",
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd6-9f58-7a32-92dd-6a906195da65\\exec-aa32fc7c-0d3b-486f-a96d-945b910ba419.png",
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\app-imagegen-v1\\originals\\mail.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\app-images\\v1\\mail.webp",
+      "width": 192,
+      "height": 154,
+      "bytes": 7254,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "key": "eye",
+      "kind": "control",
+      "prompt": "Use case: stylized-concept.\nAsset type: one standalone premium app toolbar icon for a friendly Korean children's music-composition app on a WHITE/LIGHT interface. Must stay instantly recognizable at 24 to 32 pixels.\nStyle: calm tactile ceramic and subtly folded-paper 3D craftsmanship, rounded bevels, clean bold silhouette, restrained detail, soft studio lighting and delicate object-only ambient shading. Palette: periwinkle blue, coral, teal and warm ivory; add crisp dark-navy structural accents so the object is legible on white.\nComposition: square, one isolated centered icon filling the central 80 percent, front or clear three-quarter view, all edges comfortably inside the canvas.\nSubject: one PASSWORD VISIBILITY EYE SYMBOL, a bold almond-shaped warm-ivory ceramic eye framed by a thick dark-navy rim, with one large periwinkle iris and dark-navy pupil, front view. Symmetrical simple eye icon with no face, eyelashes, eyebrow or skin. Clean friendly sculptural symbol, not a realistic human eye.\nBackground: truly transparent alpha cutout including all four corners and all negative space. No opaque backdrop, no rectangular shadow panel, no checkerboard pattern.\nAvoid: letters, words, numbers, logos, watermark, UI card/frame around the icon, people or cartoon characters, extra props, decorative confetti, tiny busy details, harsh gloss or metallic glare. Exactly one requested icon.",
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd6-9f58-7a32-92dd-6a906195da65\\exec-b03d820c-bde7-4007-8575-a11de1bd659c.png",
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\app-imagegen-v1\\originals\\eye.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\app-images\\v1\\eye.webp",
+      "width": 192,
+      "height": 192,
+      "bytes": 7524,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "key": "eye-off",
+      "kind": "control",
+      "prompt": "Use case: stylized-concept.\nAsset type: one standalone premium app toolbar icon for a friendly Korean children's music-composition app on a WHITE/LIGHT interface. Must stay instantly recognizable at 24 to 32 pixels.\nStyle: calm tactile ceramic and subtly folded-paper 3D craftsmanship, rounded bevels, clean bold silhouette, restrained detail, soft studio lighting and delicate object-only ambient shading. Palette: periwinkle blue, coral, teal and warm ivory; add crisp dark-navy structural accents so the object is legible on white.\nComposition: square, one isolated centered icon filling the central 80 percent, front or clear three-quarter view, all edges comfortably inside the canvas.\nSubject: one HIDDEN PASSWORD EYE SYMBOL: the same bold almond-shaped warm-ivory ceramic eye with dark-navy rim, periwinkle iris and navy pupil, front view, crossed by one thick rounded CORAL diagonal ceramic slash from upper left to lower right. The slash clearly communicates hidden/visibility off while remaining gentle. No face, eyelashes, eyebrow, skin or prohibition circle.\nBackground: truly transparent alpha cutout including all four corners and all negative space. No opaque backdrop, no rectangular shadow panel, no checkerboard pattern.\nAvoid: letters, words, numbers, logos, watermark, UI card/frame around the icon, people or cartoon characters, extra props, decorative confetti, tiny busy details, harsh gloss or metallic glare. Exactly one requested icon.",
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd6-9f58-7a32-92dd-6a906195da65\\exec-22fd8e5b-5946-4c6a-acc0-5db2de189683.png",
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\app-imagegen-v1\\originals\\eye-off.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\app-images\\v1\\eye-off.webp",
+      "width": 192,
+      "height": 128,
+      "bytes": 6424,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "key": "logout",
+      "kind": "control",
+      "prompt": "Use case: stylized-concept.\nAsset type: one standalone premium app toolbar icon for a friendly Korean children's music-composition app on a WHITE/LIGHT interface. Must stay instantly recognizable at 24 to 32 pixels.\nStyle: calm tactile ceramic and subtly folded-paper 3D craftsmanship, rounded bevels, clean bold silhouette, restrained detail, soft studio lighting and delicate object-only ambient shading. Palette: periwinkle blue, coral, teal and warm ivory; add crisp dark-navy structural accents so the object is legible on white.\nComposition: square, one isolated centered icon filling the central 80 percent, front or clear three-quarter view, all edges comfortably inside the canvas.\nSubject: one LOG OUT SYMBOL: a small open periwinkle doorway with dark-navy inner edge and teal door leaf angled open, together with one stout CORAL arrow pointing horizontally RIGHT out of the doorway. The arrow exits toward the viewer's right and extends beyond the frame. Single compact coherent object, no people, no floor plate, no extra props.\nBackground: truly transparent alpha cutout including all four corners and all negative space. No opaque backdrop, no rectangular shadow panel, no checkerboard pattern.\nAvoid: letters, words, numbers, logos, watermark, UI card/frame around the icon, people or cartoon characters, extra props, decorative confetti, tiny busy details, harsh gloss or metallic glare. Exactly one requested icon.",
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd6-9f58-7a32-92dd-6a906195da65\\exec-31eac59f-a32c-4090-8f65-9c2d2b9b0322.png",
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\app-imagegen-v1\\originals\\logout.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\app-images\\v1\\logout.webp",
+      "width": 192,
+      "height": 192,
+      "bytes": 7898,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "key": "external-link",
+      "kind": "control",
+      "prompt": "Use case: stylized-concept.\nAsset type: one standalone premium app toolbar icon for a friendly Korean children's music-composition app on a WHITE/LIGHT interface. Must stay instantly recognizable at 24 to 32 pixels.\nStyle: calm tactile ceramic and subtly folded-paper 3D craftsmanship, rounded bevels, clean bold silhouette, restrained detail, soft studio lighting and delicate object-only ambient shading. Palette: periwinkle blue, coral, teal and warm ivory; add crisp dark-navy structural accents so the object is legible on white.\nComposition: square, one isolated centered icon filling the central 80 percent, front or clear three-quarter view, all edges comfortably inside the canvas.\nSubject: one EXTERNAL LINK SYMBOL: a small simplified warm-ivory browser-window frame with periwinkle bevel, navy edge definition and three plain dark-navy tiny top-bar dots; one thick TEAL arrow emerges diagonally UP AND RIGHT from the opening, with a strong triangular arrowhead above-right beyond the window. Single compact cohesive sculptural icon, no text, no letters, no actual website content.\nBackground: truly transparent alpha cutout including all four corners and all negative space. No opaque backdrop, no rectangular shadow panel, no checkerboard pattern.\nAvoid: letters, words, numbers, logos, watermark, UI card/frame around the icon, people or cartoon characters, extra props, decorative confetti, tiny busy details, harsh gloss or metallic glare. Exactly one requested icon.",
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd6-9f58-7a32-92dd-6a906195da65\\exec-5d736709-0cd2-4aa9-88ed-d2356abe38f8.png",
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\app-imagegen-v1\\originals\\external-link.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\app-images\\v1\\external-link.webp",
+      "width": 192,
+      "height": 192,
+      "bytes": 10542,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "key": "alert",
+      "kind": "control",
+      "prompt": "Use case: stylized-concept.\nAsset type: one standalone premium app toolbar icon for a friendly Korean children's music-composition app on a WHITE/LIGHT interface. Must stay instantly recognizable at 24 to 32 pixels.\nStyle: calm tactile ceramic and subtly folded-paper 3D craftsmanship, rounded bevels, clean bold silhouette, restrained detail, soft studio lighting and delicate object-only ambient shading. Palette: periwinkle blue, coral, teal and warm ivory; add crisp dark-navy structural accents so the object is legible on white.\nComposition: square, one isolated centered icon filling the central 80 percent, front or clear three-quarter view, all edges comfortably inside the canvas.\nSubject: one WARM AMBER WARNING TRIANGLE, a thick rounded amber/ivory ceramic triangular frame with a bold dark-navy raised capsule and round dot at its center forming the familiar attention symbol. Front three-quarter view, friendly calm warning rather than danger; a tiny coral side bevel is allowed. No words, no lettering, no extra objects.\nBackground: truly transparent alpha cutout including all four corners and all negative space. No opaque backdrop, no rectangular shadow panel, no checkerboard pattern.\nAvoid: letters, words, numbers, logos, watermark, UI card/frame around the icon, people or cartoon characters, extra props, decorative confetti, tiny busy details, harsh gloss or metallic glare. Exactly one requested icon.",
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd6-9f58-7a32-92dd-6a906195da65\\exec-5bd51008-2653-467d-a6cb-bb05c6471b00.png",
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\app-imagegen-v1\\originals\\alert.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\app-images\\v1\\alert.webp",
+      "width": 192,
+      "height": 192,
+      "bytes": 8402,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "key": "volume-on",
+      "kind": "control",
+      "prompt": "Use case: stylized-concept.\nAsset type: one standalone premium app toolbar icon for a friendly Korean children's music-composition app on a WHITE/LIGHT interface. Must stay instantly recognizable at 24 to 32 pixels.\nStyle: calm tactile ceramic and subtly folded-paper 3D craftsmanship, rounded bevels, clean bold silhouette, restrained detail, soft studio lighting and delicate object-only ambient shading. Palette: periwinkle blue, coral, teal and warm ivory; add crisp dark-navy structural accents so the object is legible on white.\nComposition: square, one isolated centered icon filling the central 80 percent, front or clear three-quarter view, all edges comfortably inside the canvas.\nSubject: a compact AUDIO SPEAKER WITH SOUND WAVES. A dark-navy small cone in a rounded periwinkle speaker body, three thick teal curved wave bars extending to the RIGHT, with warm ivory inner cone and a tiny coral edge accent. Strong simple sound-on silhouette, no music note.\nBackground: truly transparent alpha cutout including all four corners and all negative space. No opaque backdrop, no rectangular shadow panel, no checkerboard pattern.\nAvoid: letters, words, numbers, logos, watermark, UI card/frame around the icon, people or cartoon characters, extra props, decorative confetti, tiny busy details, harsh gloss or metallic glare. Exactly one requested icon.",
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd6-9f58-7a32-92dd-6a906195da65\\exec-327dde5a-5f72-4e40-b680-80dfada66ea8.png",
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\app-imagegen-v1\\originals\\volume-on.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\app-images\\v1\\volume-on.webp",
+      "width": 192,
+      "height": 128,
+      "bytes": 8880,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "key": "volume-off",
+      "kind": "control",
+      "prompt": "Use case: stylized-concept.\nAsset type: one standalone premium app toolbar icon for a friendly Korean children's music-composition app on a WHITE/LIGHT interface. Must stay instantly recognizable at 24 to 32 pixels.\nStyle: calm tactile ceramic and subtly folded-paper 3D craftsmanship, rounded bevels, clean bold silhouette, restrained detail, soft studio lighting and delicate object-only ambient shading. Palette: periwinkle blue, coral, teal and warm ivory; add crisp dark-navy structural accents so the object is legible on white.\nComposition: square, one isolated centered icon filling the central 80 percent, front or clear three-quarter view, all edges comfortably inside the canvas.\nSubject: a compact MUTED AUDIO SPEAKER. A dark-navy small cone in a rounded periwinkle speaker body with warm ivory inner cone, crossed once by a stout rounded CORAL diagonal slash running upper left to lower right. Clearly recognizable mute symbol, no sound waves and no music note.\nBackground: truly transparent alpha cutout including all four corners and all negative space. No opaque backdrop, no rectangular shadow panel, no checkerboard pattern.\nAvoid: letters, words, numbers, logos, watermark, UI card/frame around the icon, people or cartoon characters, extra props, decorative confetti, tiny busy details, harsh gloss or metallic glare. Exactly one requested icon.",
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd6-9f58-7a32-92dd-6a906195da65\\exec-bae98731-8c76-42bb-80a7-1fc28a32ce47.png",
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\app-imagegen-v1\\originals\\volume-off.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\app-images\\v1\\volume-off.webp",
+      "width": 192,
+      "height": 192,
+      "bytes": 9640,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "key": "letters",
+      "kind": "control",
+      "prompt": "Use case: stylized-concept.\nAsset type: one standalone premium app toolbar icon for a friendly Korean children's music-composition app on a WHITE/LIGHT interface. Must stay instantly recognizable at 24 to 32 pixels.\nStyle: calm tactile ceramic and subtly folded-paper 3D craftsmanship, rounded bevels, clean bold silhouette, restrained detail, soft studio lighting and delicate object-only ambient shading. Palette: periwinkle blue, coral, teal and warm ivory; add crisp dark-navy structural accents so the object is legible on white.\nComposition: square, one isolated centered icon filling the central 80 percent, front or clear three-quarter view, all edges comfortably inside the canvas.\nSubject: a small warm-IVORY LYRICS PAPER sheet with a gently folded corner and dark-navy defined edge. Exactly THREE SHORT thick periwinkle horizontal line bars on its face represent lyric rows, with a tiny coral corner accent. Abstract bars only: NO real letters, symbols, words, or readable text. Clean immediately recognizable lyrics/document icon.\nBackground: truly transparent alpha cutout including all four corners and all negative space. No opaque backdrop, no rectangular shadow panel, no checkerboard pattern.\nAvoid: letters, words, numbers, logos, watermark, UI card/frame around the icon, people or cartoon characters, extra props, decorative confetti, tiny busy details, harsh gloss or metallic glare. Exactly one requested icon.",
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd6-9f58-7a32-92dd-6a906195da65\\exec-0b923aa5-92c4-425c-9780-6199f84a9b0f.png",
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\app-imagegen-v1\\originals\\letters.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\app-images\\v1\\letters.webp",
+      "width": 192,
+      "height": 192,
+      "bytes": 5672,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "key": "heart",
+      "kind": "control",
+      "prompt": "Use case: stylized-concept.\nAsset type: one standalone premium app toolbar icon for a friendly Korean children's music-composition app on a WHITE/LIGHT interface. Must stay instantly recognizable at 24 to 32 pixels.\nStyle: calm tactile ceramic and subtly folded-paper 3D craftsmanship, rounded bevels, clean bold silhouette, restrained detail, soft studio lighting and delicate object-only ambient shading. Palette: periwinkle blue, coral, teal and warm ivory; add crisp dark-navy structural accents so the object is legible on white.\nComposition: square, one isolated centered icon filling the central 80 percent, front or clear three-quarter view, all edges comfortably inside the canvas.\nSubject: one generously rounded warm CORAL HEART made of matte glazed ceramic, with a subtle warm-ivory highlight and small dark-navy beveled lower edge for contrast on white. Friendly simple sculptural heart silhouette, not a face, no other symbols or decorations.\nBackground: truly transparent alpha cutout including all four corners and all negative space. No opaque backdrop, no rectangular shadow panel, no checkerboard pattern.\nAvoid: letters, words, numbers, logos, watermark, UI card/frame around the icon, people or cartoon characters, extra props, decorative confetti, tiny busy details, harsh gloss or metallic glare. Exactly one requested icon.",
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd6-9f58-7a32-92dd-6a906195da65\\exec-879d44c2-0dde-40af-91dc-738075534990.png",
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\app-imagegen-v1\\originals\\heart.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\app-images\\v1\\heart.webp",
+      "width": 192,
+      "height": 192,
+      "bytes": 7842,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "key": "layers",
+      "kind": "control",
+      "prompt": "Use case: stylized-concept.\nAsset type: one standalone premium app toolbar icon for a friendly Korean children's music-composition app on a WHITE/LIGHT interface. Must stay instantly recognizable at 24 to 32 pixels.\nStyle: calm tactile ceramic and subtly folded-paper 3D craftsmanship, rounded bevels, clean bold silhouette, restrained detail, soft studio lighting and delicate object-only ambient shading. Palette: periwinkle blue, coral, teal and warm ivory; add crisp dark-navy structural accents so the object is legible on white.\nComposition: square, one isolated centered icon filling the central 80 percent, front or clear three-quarter view, all edges comfortably inside the canvas.\nSubject: exactly THREE STACKED floating rounded square colored plates, offset diagonally just enough to reveal all three. Periwinkle top plate, warm ivory middle, teal lower plate, dark-navy edge definition and one restrained coral bevel accent. A clean compact LAYERS icon, no writings, no photo, no extra tiles.\nBackground: truly transparent alpha cutout including all four corners and all negative space. No opaque backdrop, no rectangular shadow panel, no checkerboard pattern.\nAvoid: letters, words, numbers, logos, watermark, UI card/frame around the icon, people or cartoon characters, extra props, decorative confetti, tiny busy details, harsh gloss or metallic glare. Exactly one requested icon.",
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd6-9f58-7a32-92dd-6a906195da65\\exec-e0f18f01-2297-4dbb-8c30-e1ed243c090e.png",
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\app-imagegen-v1\\originals\\layers.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\app-images\\v1\\layers.webp",
+      "width": 192,
+      "height": 192,
+      "bytes": 9664,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "key": "zoom-in",
+      "kind": "control",
+      "prompt": "Use case: stylized-concept.\nAsset type: one standalone premium app toolbar icon for a friendly Korean children's music-composition app on a WHITE/LIGHT interface. Must stay instantly recognizable at 24 to 32 pixels.\nStyle: calm tactile ceramic and subtly folded-paper 3D craftsmanship, rounded bevels, clean bold silhouette, restrained detail, soft studio lighting and delicate object-only ambient shading. Palette: periwinkle blue, coral, teal and warm ivory; add crisp dark-navy structural accents so the object is legible on white.\nComposition: square, one isolated centered icon filling the central 80 percent, front or clear three-quarter view, all edges comfortably inside the canvas.\nSubject: a simple chunky MAGNIFYING GLASS with a circular periwinkle rim, deep dark-navy handle tilted down right, and transparent lens center. A thick teal PLUS made of two rounded perpendicular bars is centered inside the open lens; warm ivory bevel accents. Clearly zoom in, no other glyphs, no actual glass glare.\nBackground: truly transparent alpha cutout including all four corners and all negative space. No opaque backdrop, no rectangular shadow panel, no checkerboard pattern.\nAvoid: letters, words, numbers, logos, watermark, UI card/frame around the icon, people or cartoon characters, extra props, decorative confetti, tiny busy details, harsh gloss or metallic glare. Exactly one requested icon.",
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd6-9f58-7a32-92dd-6a906195da65\\exec-15c52947-a2c3-4df8-8a67-1c99f1f8a5ba.png",
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\app-imagegen-v1\\originals\\zoom-in.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\app-images\\v1\\zoom-in.webp",
+      "width": 192,
+      "height": 192,
+      "bytes": 12688,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "key": "zoom-out",
+      "kind": "control",
+      "prompt": "Use case: stylized-concept.\nAsset type: one standalone premium app toolbar icon for a friendly Korean children's music-composition app on a WHITE/LIGHT interface. Must stay instantly recognizable at 24 to 32 pixels.\nStyle: calm tactile ceramic and subtly folded-paper 3D craftsmanship, rounded bevels, clean bold silhouette, restrained detail, soft studio lighting and delicate object-only ambient shading. Palette: periwinkle blue, coral, teal and warm ivory; add crisp dark-navy structural accents so the object is legible on white.\nComposition: square, one isolated centered icon filling the central 80 percent, front or clear three-quarter view, all edges comfortably inside the canvas.\nSubject: a simple chunky MAGNIFYING GLASS with a circular periwinkle rim, deep dark-navy handle tilted down right, and transparent lens center. A single thick teal horizontal MINUS bar is centered inside the open lens; warm ivory bevel accents. Clearly zoom out, no other glyphs, no actual glass glare.\nBackground: truly transparent alpha cutout including all four corners and all negative space. No opaque backdrop, no rectangular shadow panel, no checkerboard pattern.\nAvoid: letters, words, numbers, logos, watermark, UI card/frame around the icon, people or cartoon characters, extra props, decorative confetti, tiny busy details, harsh gloss or metallic glare. Exactly one requested icon.",
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd6-9f58-7a32-92dd-6a906195da65\\exec-76482f9b-67cd-42d9-8cf2-8c8229395a96.png",
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\app-imagegen-v1\\originals\\zoom-out.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\app-images\\v1\\zoom-out.webp",
+      "width": 192,
+      "height": 192,
+      "bytes": 10082,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "key": "minus",
+      "kind": "control",
+      "prompt": "Use case: stylized-concept.\nAsset type: one standalone premium app toolbar icon for a friendly Korean children's music-composition app on a WHITE/LIGHT interface. Must stay instantly recognizable at 24 to 32 pixels.\nStyle: calm tactile ceramic and subtly folded-paper 3D craftsmanship, rounded bevels, clean bold silhouette, restrained detail, soft studio lighting and delicate object-only ambient shading. Palette: periwinkle blue, coral, teal and warm ivory; add crisp dark-navy structural accents so the object is legible on white.\nComposition: square, one isolated centered icon filling the central 80 percent, front or clear three-quarter view, all edges comfortably inside the canvas.\nSubject: one stout horizontal MINUS BAR, a single rounded capsule-shaped ivory ceramic block with a periwinkle beveled edge and dark-navy underside for strong contrast on white. Front view, bar lies perfectly horizontal in the center, aspect about 3.2 to 1, simple arithmetic remove icon. No surrounding circle, no second bar, no other marks.\nBackground: truly transparent alpha cutout including all four corners and all negative space. No opaque backdrop, no rectangular shadow panel, no checkerboard pattern.\nAvoid: letters, words, numbers, logos, watermark, UI card/frame around the icon, people or cartoon characters, extra props, decorative confetti, tiny busy details, harsh gloss or metallic glare. Exactly one requested icon.",
+      "source": "C:\\Users\\user\\.codex\\generated_images\\01a14cd6-9f58-7a32-92dd-6a906195da65\\exec-3e7dac81-fc50-4023-9f86-9572a34b6dd2.png",
+      "original": "C:\\Users\\user\\Documents\\Codex\\composition\\artifacts\\app-imagegen-v1\\originals\\minus.png",
+      "runtime": "C:\\Users\\user\\Documents\\Codex\\composition\\public\\app-images\\v1\\minus.webp",
+      "width": 192,
+      "height": 71,
+      "bytes": 3042,
+      "alpha": [
+        0,
+        255
+      ]
+    }
+  ]
+}

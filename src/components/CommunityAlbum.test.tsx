@@ -16,7 +16,6 @@ const firebaseMocks = vi.hoisted(() => ({
   listCommunityAlbums: vi.fn(),
   createCommunityAlbum: vi.fn(),
   renameCommunityAlbum: vi.fn(),
-  enterCommunityAlbum: vi.fn(),
   setCommunityAlbumPassword: vi.fn(),
   listPublishedSongs: vi.fn(),
   publishScoreToAlbum: vi.fn(),
@@ -126,7 +125,6 @@ beforeEach(() => {
   firebaseMocks.listPublishedSongs.mockResolvedValue([song]);
   firebaseMocks.createCommunityAlbum.mockResolvedValue(album);
   firebaseMocks.renameCommunityAlbum.mockImplementation(async (_albumId: string, name: string) => name);
-  firebaseMocks.enterCommunityAlbum.mockResolvedValue(undefined);
   firebaseMocks.setCommunityAlbumPassword.mockResolvedValue({ locked: true, passwordSalt: "a".repeat(32) });
   firebaseMocks.publishScoreToAlbum.mockResolvedValue(undefined);
   firebaseMocks.deleteCommunityAlbum.mockResolvedValue(undefined);
@@ -208,7 +206,7 @@ describe("모두의 앨범", () => {
     expect(container?.querySelector('[role="status"]')?.textContent).toContain("인증코드나 로그인 상태를 확인해 주세요.");
   });
 
-  it("앨범을 만들 때 친구들과 쓸 암호를 함께 설정할 수 있다", async () => {
+  it("앨범을 만들 때 삭제할 때만 쓸 암호를 함께 설정할 수 있다", async () => {
     firebaseMocks.listCommunityAlbums.mockResolvedValue([]);
     mount(<CommunityAlbum configured user={user} onClose={() => undefined} onRequestLogin={() => undefined}
       onPlay={vi.fn().mockResolvedValue(true)} onOpenProject={() => undefined} />);
@@ -217,80 +215,61 @@ describe("모두의 앨범", () => {
     await act(async () => buttonNamed("앨범 만들기")?.click());
     await fillInput('input[placeholder="예: 우리 반 여름 노래"]', album.name);
     await fillInput('input[placeholder="인증코드를 입력해 주세요"]', "maeum");
-    await fillInput('input[placeholder="친구들과 나눌 암호, 4글자 이상"]', "우리반1234");
+    expect(container?.textContent).toContain("암호는 만든 사람이 앨범을 삭제할 때만 사용해요.");
+    await fillInput('input[placeholder="삭제할 때 쓸 암호, 4글자 이상"]', "우리반1234");
     await act(async () => container?.querySelector("form")?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
     await flush();
 
     expect(firebaseMocks.createCommunityAlbum).toHaveBeenCalledWith(user.uid, user.displayName, album.name, "maeum", "우리반1234");
   });
 
-  it("잠긴 앨범은 암호를 확인한 친구만 열 수 있다", async () => {
+  it.each([
+    { label: "일반 사용자", visitor: { uid: "user-2", email: "friend@example.com", displayName: "서연" } as User, manages: false },
+    { label: "로그인하지 않은 사용자", visitor: null, manages: false },
+    { label: "앨범 소유자", visitor: user, manages: true },
+    { label: "관리자", visitor: { uid: "admin-1", email: "inkun00@hanmail.net", displayName: "관리자" } as User, manages: true }
+  ])("$label도 기존에 암호를 설정한 앨범을 암호 없이 열고 음악을 재생한다", async ({ visitor, manages }) => {
     const lockedAlbum = { ...album, locked: true, passwordSalt: "a".repeat(32) };
-    const friend = { uid: "user-2", email: "friend@example.com", displayName: "서연" } as User;
+    const onPlay = vi.fn().mockResolvedValue(true);
+    const onRequestLogin = vi.fn();
     firebaseMocks.listCommunityAlbums.mockResolvedValue([lockedAlbum]);
-    mount(<CommunityAlbum configured user={friend} onClose={() => undefined} onRequestLogin={() => undefined}
-      onPlay={vi.fn().mockResolvedValue(true)} onOpenProject={() => undefined} />);
+    mount(<CommunityAlbum configured user={visitor} onClose={() => undefined} onRequestLogin={onRequestLogin}
+      onPlay={onPlay} onOpenProject={() => undefined} />);
     await flush();
 
+    if (!manages) {
+      expect(container?.querySelector(`[aria-label="${album.name} 앨범 삭제"]`)).toBeNull();
+      expect(container?.querySelector(`[aria-label="${album.name} 앨범 이름 수정"]`)).toBeNull();
+    }
+    expect(container?.querySelector(".album-lock-badge")).toBeNull();
     await act(async () => buttonContaining(album.name)?.click());
-    expect(firebaseMocks.listPublishedSongs).not.toHaveBeenCalled();
-    expect(container?.querySelector('[aria-label="우리 반 노래 앨범 입장"]')).not.toBeNull();
-    await fillInput('input[placeholder="앨범 암호를 입력해 주세요"]', "우리반1234");
-    await act(async () => buttonNamed("앨범 들어가기")?.click());
     await flush();
 
-    expect(firebaseMocks.enterCommunityAlbum).toHaveBeenCalledWith(album.id, friend.uid, "우리반1234", lockedAlbum.passwordSalt);
     expect(firebaseMocks.listPublishedSongs).toHaveBeenCalledWith(album.id);
     expect(container?.textContent).toContain(song.title);
+    expect(container?.querySelector('[aria-label="우리 반 노래 앨범 입장"]')).toBeNull();
+    expect(container?.querySelector('input[type="password"]')).toBeNull();
+    await act(async () => buttonContaining(song.title)?.click());
+    expect(buttonNamed("재생하기")?.disabled).toBe(false);
+    await act(async () => buttonNamed("재생하기")?.click());
+    expect(onPlay).toHaveBeenCalledWith(song);
+    expect(onRequestLogin).not.toHaveBeenCalled();
   });
 
-  it("틀린 앨범 암호로는 노래를 불러오지 않는다", async () => {
-    const lockedAlbum = { ...album, locked: true, passwordSalt: "a".repeat(32) };
-    const friend = { uid: "user-2", email: "friend@example.com", displayName: "서연" } as User;
-    firebaseMocks.listCommunityAlbums.mockResolvedValue([lockedAlbum]);
-    firebaseMocks.enterCommunityAlbum.mockRejectedValue({ code: "permission-denied" });
-    mount(<CommunityAlbum configured user={friend} onClose={() => undefined} onRequestLogin={() => undefined}
-      onPlay={vi.fn().mockResolvedValue(true)} onOpenProject={() => undefined} />);
-    await flush();
-
-    await act(async () => buttonContaining(album.name)?.click());
-    await fillInput('input[placeholder="앨범 암호를 입력해 주세요"]', "틀린암호");
-    await act(async () => buttonNamed("앨범 들어가기")?.click());
-    await flush();
-
-    expect(firebaseMocks.listPublishedSongs).not.toHaveBeenCalled();
-    expect(container?.querySelector('[aria-label="우리 반 노래 앨범 입장"] [role="status"]')?.textContent)
-      .toContain("암호가 맞지 않아요");
-  });
-
-  it("관리자도 다른 사람의 잠긴 앨범에는 암호를 입력해야 한다", async () => {
-    const lockedAlbum = { ...album, locked: true, passwordSalt: "a".repeat(32) };
-    const admin = { uid: "admin-1", email: "inkun00@hanmail.net", displayName: "관리자" } as User;
-    firebaseMocks.listCommunityAlbums.mockResolvedValue([lockedAlbum]);
-    mount(<CommunityAlbum configured user={admin} onClose={() => undefined} onRequestLogin={() => undefined}
-      onPlay={vi.fn().mockResolvedValue(true)} onOpenProject={() => undefined} />);
-    await flush();
-
-    await act(async () => buttonContaining(album.name)?.click());
-
-    expect(firebaseMocks.listPublishedSongs).not.toHaveBeenCalled();
-    expect(container?.querySelector('[aria-label="우리 반 노래 앨범 입장"]')).not.toBeNull();
-  });
-
-  it("앨범 소유자는 기존 앨범에 암호를 설정할 수 있다", async () => {
+  it("앨범 소유자는 기존 앨범에 삭제 암호를 설정할 수 있다", async () => {
     mount(<CommunityAlbum configured user={user} onClose={() => undefined} onRequestLogin={() => undefined}
       onPlay={vi.fn().mockResolvedValue(true)} onOpenProject={() => undefined} />);
     await flush();
 
     await act(async () => buttonContaining(album.name)?.click());
     await flush();
-    await act(async () => buttonNamed("암호 설정")?.click());
+    await act(async () => buttonNamed("삭제 암호 설정")?.click());
     await fillInput('input[placeholder="4글자 이상 적어 주세요"]', "새암호1234");
     await act(async () => buttonNamed("암호 저장")?.click());
     await flush();
 
     expect(firebaseMocks.setCommunityAlbumPassword).toHaveBeenCalledWith(album.id, user.uid, "새암호1234");
-    expect(buttonNamed("암호 바꾸기")).toBeDefined();
+    expect(buttonNamed("삭제 암호 바꾸기")).toBeDefined();
   });
 
   it("앨범 소유자는 암호를 해제할 수 있다", async () => {
@@ -303,12 +282,12 @@ describe("모두의 앨범", () => {
 
     await act(async () => buttonContaining(album.name)?.click());
     await flush();
-    await act(async () => buttonNamed("암호 바꾸기")?.click());
+    await act(async () => buttonNamed("삭제 암호 바꾸기")?.click());
     await act(async () => buttonNamed("암호 해제하기")?.click());
     await flush();
 
     expect(firebaseMocks.setCommunityAlbumPassword).toHaveBeenCalledWith(album.id, user.uid, "");
-    expect(buttonNamed("암호 설정")).toBeDefined();
+    expect(buttonNamed("삭제 암호 설정")).toBeDefined();
   });
 
   it("앨범 소유자가 앨범과 내부 음악을 삭제할 수 있다", async () => {
@@ -322,6 +301,94 @@ describe("모두의 앨범", () => {
     await flush();
 
     expect(firebaseMocks.deleteCommunityAlbum).toHaveBeenCalledWith(album.id);
+    expect(container?.querySelector(`[aria-label="${album.name} 앨범 삭제"]`)).toBeNull();
+  });
+
+  it("삭제 암호가 있는 앨범은 소유자가 암호를 입력한 뒤 삭제한다", async () => {
+    const lockedAlbum = { ...album, locked: true, passwordSalt: "a".repeat(32) };
+    firebaseMocks.listCommunityAlbums.mockResolvedValue([lockedAlbum]);
+    mount(<CommunityAlbum configured user={user} onClose={() => undefined} onRequestLogin={() => undefined}
+      onPlay={vi.fn().mockResolvedValue(true)} onOpenProject={() => undefined} />);
+    await flush();
+
+    await act(async () => container?.querySelector<HTMLButtonElement>(`[aria-label="${album.name} 앨범 삭제"]`)?.click());
+    expect(container?.querySelector(`[role="dialog"][aria-label="${album.name} 앨범 삭제"]`)).not.toBeNull();
+    expect(firebaseMocks.deleteCommunityAlbum).not.toHaveBeenCalled();
+    expect(buttonNamed("앨범 삭제")?.disabled).toBe(true);
+    await fillInput('input[placeholder="삭제 암호를 입력해 주세요"]', "우리반1234");
+    await act(async () => buttonNamed("앨범 삭제")?.click());
+    await flush();
+
+    expect(firebaseMocks.deleteCommunityAlbum).toHaveBeenCalledWith(album.id, {
+      userId: user.uid, password: "우리반1234", salt: lockedAlbum.passwordSalt
+    });
+    expect(container?.querySelector(`[aria-label="${album.name} 앨범 삭제"]`)).toBeNull();
+    expect(firebaseMocks.listPublishedSongs).not.toHaveBeenCalled();
+  });
+
+  it("삭제 암호가 틀리면 앨범과 삭제 창을 유지하고 다시 입력할 수 있다", async () => {
+    firebaseMocks.listCommunityAlbums.mockResolvedValue([{ ...album, locked: true, passwordSalt: "a".repeat(32) }]);
+    firebaseMocks.deleteCommunityAlbum.mockRejectedValue({ code: "permission-denied" });
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    mount(<CommunityAlbum configured user={user} onClose={() => undefined} onRequestLogin={() => undefined}
+      onPlay={vi.fn().mockResolvedValue(true)} onOpenProject={() => undefined} />);
+    await flush();
+
+    await act(async () => container?.querySelector<HTMLButtonElement>(`[aria-label="${album.name} 앨범 삭제"]`)?.click());
+    await fillInput('input[placeholder="삭제 암호를 입력해 주세요"]', "틀린암호");
+    await act(async () => buttonNamed("앨범 삭제")?.click());
+    await flush();
+
+    expect(container?.querySelector(`[role="dialog"][aria-label="${album.name} 앨범 삭제"] [role="status"]`)?.textContent)
+      .toContain("암호가 맞지 않아요");
+    expect(container?.querySelector(`button[aria-label="${album.name} 앨범 삭제"]`)).not.toBeNull();
+    expect(buttonNamed("앨범 삭제")?.disabled).toBe(false);
+    expect(firebaseMocks.deleteCommunityAlbum).toHaveBeenCalledOnce();
+  });
+
+  it("삭제 암호 창을 취소하면 앨범을 삭제하지 않는다", async () => {
+    firebaseMocks.listCommunityAlbums.mockResolvedValue([{ ...album, locked: true, passwordSalt: "a".repeat(32) }]);
+    mount(<CommunityAlbum configured user={user} onClose={() => undefined} onRequestLogin={() => undefined}
+      onPlay={vi.fn().mockResolvedValue(true)} onOpenProject={() => undefined} />);
+    await flush();
+
+    await act(async () => container?.querySelector<HTMLButtonElement>(`[aria-label="${album.name} 앨범 삭제"]`)?.click());
+    await act(async () => container?.querySelector<HTMLButtonElement>('[aria-label="암호 창 닫기"]')?.click());
+
+    expect(container?.querySelector(`[role="dialog"][aria-label="${album.name} 앨범 삭제"]`)).toBeNull();
+    expect(container?.querySelector(`button[aria-label="${album.name} 앨범 삭제"]`)).not.toBeNull();
+    expect(firebaseMocks.deleteCommunityAlbum).not.toHaveBeenCalled();
+  });
+
+  it("암호를 확인해 삭제하는 동안 중복 제출과 창 닫기를 막는다", async () => {
+    let finishDeletion: (() => void) | undefined;
+    firebaseMocks.listCommunityAlbums.mockResolvedValue([{ ...album, locked: true, passwordSalt: "a".repeat(32) }]);
+    firebaseMocks.deleteCommunityAlbum.mockImplementation(() => new Promise<void>((resolve) => { finishDeletion = resolve; }));
+    const onClose = vi.fn();
+    mount(<CommunityAlbum configured user={user} onClose={onClose} onRequestLogin={() => undefined}
+      onPlay={vi.fn().mockResolvedValue(true)} onOpenProject={() => undefined} />);
+    await flush();
+
+    await act(async () => container?.querySelector<HTMLButtonElement>(`[aria-label="${album.name} 앨범 삭제"]`)?.click());
+    await fillInput('input[placeholder="삭제 암호를 입력해 주세요"]', "우리반1234");
+    await act(async () => buttonNamed("앨범 삭제")?.click());
+    await flush();
+
+    const dialog = container?.querySelector(`[role="dialog"][aria-label="${album.name} 앨범 삭제"]`);
+    expect(buttonNamed("처리하는 중...")?.disabled).toBe(true);
+    expect(container?.querySelector<HTMLButtonElement>('[aria-label="암호 창 닫기"]')?.disabled).toBe(true);
+    await act(async () => {
+      dialog?.querySelector("form")?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+      dialog?.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      container?.querySelector<HTMLButtonElement>('[aria-label="암호 창 닫기"]')?.click();
+    });
+
+    expect(firebaseMocks.deleteCommunityAlbum).toHaveBeenCalledOnce();
+    expect(container?.querySelector(`[role="dialog"][aria-label="${album.name} 앨범 삭제"]`)).not.toBeNull();
+    expect(onClose).not.toHaveBeenCalled();
+    await act(async () => finishDeletion?.());
+    await flush();
     expect(container?.querySelector(`[aria-label="${album.name} 앨범 삭제"]`)).toBeNull();
   });
 
@@ -344,7 +411,7 @@ describe("모두의 앨범", () => {
 
     expect(firebaseMocks.renameCommunityAlbum).toHaveBeenCalledWith(album.id, "새로운 앨범");
     expect(container?.querySelector(`[aria-label="새로운 앨범 앨범 이름 수정"]`)).not.toBeNull();
-    expect(container?.textContent).toContain("암호 있는 앨범");
+    expect(container?.querySelector(".album-lock-badge")).toBeNull();
     expect(firebaseMocks.listPublishedSongs).not.toHaveBeenCalled();
   });
 
@@ -386,7 +453,6 @@ describe("모두의 앨범", () => {
     await act(async () => buttonNamed("이름 저장")?.click());
     await flush();
 
-    expect(firebaseMocks.enterCommunityAlbum).not.toHaveBeenCalled();
     expect(firebaseMocks.listPublishedSongs).not.toHaveBeenCalled();
     expect(firebaseMocks.renameCommunityAlbum).toHaveBeenCalledWith(album.id, "우리 반 합창");
   });
@@ -413,7 +479,6 @@ describe("모두의 앨범", () => {
     await act(async () => deleteButton?.click());
     await flush();
 
-    expect(firebaseMocks.enterCommunityAlbum).not.toHaveBeenCalled();
     expect(firebaseMocks.listPublishedSongs).not.toHaveBeenCalled();
     expect(firebaseMocks.deleteCommunityAlbum).toHaveBeenCalledWith(album.id);
     expect(container?.querySelector(`[aria-label="${album.name} 앨범 삭제"]`)).toBeNull();
@@ -435,7 +500,7 @@ describe("악보 앨범 공개", () => {
     expect(onPublished).toHaveBeenCalledWith(album, "project");
   });
 
-  it("잠긴 앨범에 노래를 공개할 때 암호를 확인한다", async () => {
+  it("삭제 암호가 있는 앨범에도 암호 없이 노래를 공개한다", async () => {
     const friend = { uid: "user-2", email: "friend@example.com", displayName: "서연" } as User;
     const lockedAlbum = { ...album, locked: true, passwordSalt: "a".repeat(32) };
     firebaseMocks.listCommunityAlbums.mockResolvedValue([lockedAlbum]);
@@ -443,12 +508,12 @@ describe("악보 앨범 공개", () => {
     await flush();
 
     await act(async () => buttonContaining(album.name)?.click());
-    expect(buttonNamed("이 범위로 공개하기")?.disabled).toBe(true);
-    await fillInput('input[placeholder="친구에게 받은 앨범 암호"]', "우리반1234");
+    expect(buttonNamed("이 범위로 공개하기")?.disabled).toBe(false);
+    expect(container?.querySelector('input[type="password"]')).toBeNull();
+    expect(container?.querySelector(".album-lock-badge")).toBeNull();
     await act(async () => buttonNamed("이 범위로 공개하기")?.click());
     await flush();
 
-    expect(firebaseMocks.enterCommunityAlbum).toHaveBeenCalledWith(album.id, friend.uid, "우리반1234", lockedAlbum.passwordSalt);
     expect(firebaseMocks.publishScoreToAlbum).toHaveBeenCalledWith(friend.uid, friend.displayName, album.id, score, "audio");
   });
 });

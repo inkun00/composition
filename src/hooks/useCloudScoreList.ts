@@ -55,5 +55,5 @@ export function useCloudScoreList(uid: string | null) {
   const upsert = useCallback((score: CloudScore) => {
     setScores((items) => [score, ...items.filter((item) => item.id !== score.id)]);
   }, []);
-  return { scores, status, retry, upsert };
+  return { scores, scoresUid: previousUid.current, status, retry, upsert };
 }

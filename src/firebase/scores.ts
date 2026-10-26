@@ -8,7 +8,9 @@ import {
   Timestamp
 } from "firebase/firestore";
 import { firestore } from "./client";
-import { isSavedDraft, type SavedDraft } from "../music/draft";
+import type { SavedDraft } from "../music/draft";
+import { decodeCloudDraft, decodeCloudScenes, encodeCloudDraft } from "./cloudDraft";
+import type { MusicVideoScene } from "../video/musicVideoModel";
 
 export type CloudScore = Readonly<{
   id: string;
@@ -28,6 +30,8 @@ export type UnavailableCloudScore = Readonly<{
   updatedAt: number;
   draft: null;
   unavailableReason: string;
+  recoveryScenes?: readonly MusicVideoScene[];
+  recoveryProjectId?: string;
 }>;
 
 export type CloudScoreListItem = CloudScore | UnavailableCloudScore;
@@ -54,15 +58,25 @@ export function cloudScoreListItem(id: string, data: Record<string, unknown>): C
     typeof rawDraft?.title === "string" ? rawDraft.title : "이름 없는 저장 자료";
   const creator = typeof data.creator === "string" ? data.creator :
     typeof rawDraft?.creator === "string" ? rawDraft.creator : "";
-  if (!isSavedDraft(data.draft)) return {
-    id, title, creator,
-    songLength: typeof data.songLength === "number" ? data.songLength :
-      typeof rawDraft?.songLength === "number" ? rawDraft.songLength : null,
-    updatedAt,
-    draft: null,
-    unavailableReason: "이전 버전에서 저장된 악보예요. 목록에는 보관되지만 지금은 열 수 없어요."
-  };
-  return { id, title, creator, songLength: data.draft.songLength, updatedAt, draft: data.draft };
+  const draft = decodeCloudDraft(data.draft);
+  if (!draft) {
+    const scenes = decodeCloudScenes(data.draft);
+    const recoveryScenes = scenes?.some((scene) => scene.elements.length > 0) ? scenes : undefined;
+    const projectId = rawDraft?.projectId;
+    const recoveryProjectId = recoveryScenes && typeof projectId === "string" && projectId.length > 0 &&
+      projectId.length <= 160 ? projectId : undefined;
+    return {
+      id, title, creator,
+      songLength: typeof data.songLength === "number" ? data.songLength :
+        typeof rawDraft?.songLength === "number" ? rawDraft.songLength : null,
+      updatedAt,
+      draft: null,
+      unavailableReason: "이전 버전에서 저장된 악보예요. 목록에는 보관되지만 지금은 열 수 없어요.",
+      ...(recoveryScenes ? { recoveryScenes } : {}),
+      ...(recoveryProjectId ? { recoveryProjectId } : {})
+    };
+  }
+  return { id, title, creator, songLength: draft.songLength, updatedAt, draft };
 }
 
 export async function listCloudScores(uid: string): Promise<CloudScoreListItem[]> {
@@ -88,7 +102,8 @@ export async function saveCloudScore(uid: string, draft: SavedDraft, scoreId?: s
   const scoreRef = scoreId
     ? doc(db, "users", uid, "scores", scoreId)
     : doc(collection(db, "users", uid, "scores"));
-  const savedDraft = cleanDraft({ ...draft, updatedAt: Date.now() });
+  // Retain the edit time: a slow network acknowledgement is not a newer edit.
+  const savedDraft = cleanDraft(draft);
   const scoreData = {
     ownerId: uid,
     title: savedDraft.title || "제목 없는 악보",
@@ -96,7 +111,7 @@ export async function saveCloudScore(uid: string, draft: SavedDraft, scoreId?: s
     songLength: savedDraft.songLength,
     updatedAt: Timestamp.fromMillis(savedDraft.updatedAt),
     ...(scoreId ? {} : { createdAt: Timestamp.fromMillis(savedDraft.updatedAt) }),
-    draft: savedDraft
+    draft: encodeCloudDraft(savedDraft)
   };
   // Replace the complete draft snapshot so removed tracks and their old mute
   // settings do not survive Firestore's recursive map merge.

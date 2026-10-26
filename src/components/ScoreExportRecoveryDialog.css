@@ -1,0 +1,117 @@
+.score-export-recovery-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 170;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(25, 35, 56, .56);
+  backdrop-filter: blur(5px);
+}
+
+.score-export-recovery-dialog {
+  width: min(560px, 100%);
+  max-height: calc(100dvh - 40px);
+  overflow: auto;
+  border: 1px solid #d6e1ef;
+  border-radius: 20px;
+  background: #fff;
+  color: #24384f;
+  box-shadow: 0 24px 80px rgba(23, 37, 62, .28);
+}
+
+.score-export-recovery-dialog header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: start;
+  gap: 13px;
+  padding: 24px 24px 20px;
+  border-bottom: 1px solid #e7edf5;
+  background: #f5f9ff;
+}
+
+.score-export-recovery-mark {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border: 1px solid #d7e5fa;
+  border-radius: 15px;
+  background: #eaf2ff;
+}
+
+.score-export-recovery-eyebrow { color: #647a98; font-size: 12px; font-weight: 700; }
+.score-export-recovery-dialog h2 { margin: 5px 0 0; font-size: 20px; line-height: 1.45; letter-spacing: -.5px; }
+.score-export-recovery-close {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid #dce5f0;
+  border-radius: 50%;
+  background: #fff;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.score-export-recovery-content { display: grid; gap: 14px; padding: 22px 24px; }
+.score-export-recovery-content p { margin: 0; font-size: 14px; line-height: 1.75; }
+.score-export-recovery-preserve { padding: 14px 16px; border: 1px solid #d9e9e8; border-radius: 12px; background: #f3faf9; color: #24615c; }
+.score-export-recovery-error { padding: 12px 14px; border: 1px solid #efc6be; border-radius: 10px; background: #fff4f1; color: #a23d2b; }
+.score-export-recovery-recording {
+  display: grid;
+  gap: 10px;
+  padding: 15px 16px;
+  border: 1px solid #ead0a1;
+  border-radius: 12px;
+  background: #fffbf1;
+  color: #735222;
+}
+.score-export-recovery-recording strong { font-size: 14px; }
+.score-export-recovery-recording a {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 12px;
+  border: 1px solid #dbc08e;
+  border-radius: 9px;
+  background: #fff;
+  color: #72501e;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.score-export-recovery-recording label { display: flex; align-items: center; gap: 9px; min-height: 34px; font-size: 14px; cursor: pointer; }
+.score-export-recovery-recording input { width: 18px; height: 18px; flex: 0 0 auto; accent-color: #167b99; }
+.score-export-recovery-recording :is(a, input):focus-visible { outline: 3px solid #748bff; outline-offset: 3px; }
+.score-export-recovery-dialog footer { display: flex; justify-content: flex-end; gap: 10px; padding: 0 24px 24px; }
+.score-export-recovery-dialog footer button {
+  display: inline-flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 1px solid #d4e0ed;
+  border-radius: 12px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 750;
+  cursor: pointer;
+}
+.score-export-recovery-secondary { background: #fff; color: #52657e; }
+.score-export-recovery-dialog footer .score-export-recovery-primary { border-color: #247f9c; background: #167b99; color: #fff; }
+.score-export-recovery-dialog button:focus-visible { outline: 3px solid #748bff; outline-offset: 3px; }
+.score-export-recovery-dialog button:disabled { cursor: wait; opacity: .65; }
+
+@media (max-width: 540px) {
+  .score-export-recovery-overlay { padding: 12px; }
+  .score-export-recovery-dialog { max-height: calc(100dvh - 24px); border-radius: 16px; }
+  .score-export-recovery-dialog header { gap: 10px; padding: 19px 16px 16px; }
+  .score-export-recovery-mark { width: 40px; height: 40px; border-radius: 12px; }
+  .score-export-recovery-dialog h2 { font-size: 18px; }
+  .score-export-recovery-content { padding: 18px 16px; }
+  .score-export-recovery-dialog footer { flex-direction: column-reverse; padding: 0 16px 18px; }
+  .score-export-recovery-dialog footer button { width: 100%; }
+}

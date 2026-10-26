@@ -1,7 +1,31 @@
+import {
+  AudioBufferSource, BufferTarget, CanvasSource, Mp4OutputFormat, Output, Quality,
+  canEncodeAudio, canEncodeVideo
+} from "mediabunny";
 import type { LyricVideoFrame, LyricVideoPlan } from "./lyricVideoPlan";
 
 const WIDTH = 1280;
 const HEIGHT = 720;
+
+export type LyricMp4Options = Readonly<{
+  allowEmptyLyrics?: boolean;
+  /** A custom scene renderer shares the same lyric boundaries and original audio. */
+  drawFrame?: (context: CanvasRenderingContext2D, frame: LyricVideoFrame, timeSeconds: number) => void;
+  /** Omit for still images; motion is sampled without moving any lyric boundaries. */
+  frameRate?: number;
+}>;
+
+function renderFrames(plan: LyricVideoPlan, frameRate?: number): readonly LyricVideoFrame[] {
+  if (!frameRate) return plan.frames;
+  return plan.frames.flatMap((frame) => {
+    const count = Math.ceil((frame.endSeconds - frame.startSeconds) * frameRate);
+    return Array.from({ length: count }, (_, index) => ({
+      ...frame,
+      startSeconds: frame.startSeconds + index / frameRate,
+      endSeconds: Math.min(frame.endSeconds, frame.startSeconds + (index + 1) / frameRate)
+    }));
+  });
+}
 
 function drawFrame(context: CanvasRenderingContext2D, title: string, frame: LyricVideoFrame): void {
   context.fillStyle = "#000";
@@ -49,7 +73,7 @@ export async function exportLyricMp4(
   plan: LyricVideoPlan,
   onProgress: (percent: number) => void,
   signal?: AbortSignal,
-  options: Readonly<{ allowEmptyLyrics?: boolean }> = {}
+  options: LyricMp4Options = {}
 ): Promise<Blob> {
   const checkAbort = () => {
     if (signal?.aborted) throw new DOMException("영상 만들기를 멈췄어요.", "AbortError");
@@ -63,14 +87,14 @@ export async function exportLyricMp4(
   checkAbort();
   onProgress(8);
 
-  const {
-    AudioBufferSource, BufferTarget, CanvasSource, Mp4OutputFormat, Output, Quality,
-    canEncodeAudio, canEncodeVideo
-  } = await import("mediabunny");
+  const frameRate = options.frameRate === undefined || !Number.isFinite(options.frameRate)
+    ? undefined : Math.max(1, Math.min(60, options.frameRate));
+  const frames = renderFrames(plan, frameRate);
+
   const videoQuality = new Quality({ bitrate: 1_200_000 });
   const audioQuality = new Quality({ bitrate: 192_000 });
   const [videoSupported, audioSupported] = await Promise.all([
-    canEncodeVideo("avc", { width: WIDTH, height: HEIGHT, frameRate: 10, quality: videoQuality }),
+    canEncodeVideo("avc", { width: WIDTH, height: HEIGHT, frameRate: frameRate ?? 10, quality: videoQuality }),
     canEncodeAudio("aac", {
       numberOfChannels: Math.min(2, audioBuffer.numberOfChannels),
       sampleRate: audioBuffer.sampleRate,
@@ -102,16 +126,17 @@ export async function exportLyricMp4(
     onProgress(18);
 
     let previousMeasure: number | null = null;
-    for (const [index, frame] of plan.frames.entries()) {
+    for (const [index, frame] of frames.entries()) {
       checkAbort();
       const endSeconds = Math.min(audioBuffer.duration, frame.endSeconds);
       if (frame.startSeconds >= endSeconds) continue;
-      drawFrame(context, plan.title, frame);
+      if (options.drawFrame) options.drawFrame(context, frame, frame.startSeconds);
+      else drawFrame(context, plan.title, frame);
       await video.add(frame.startSeconds, endSeconds - frame.startSeconds, {
         keyFrame: index === 0 || previousMeasure !== frame.measureIndex
       });
       previousMeasure = frame.measureIndex;
-      onProgress(18 + Math.round(77 * (index + 1) / plan.frames.length));
+      onProgress(18 + Math.round(77 * (index + 1) / frames.length));
       if (index % 8 === 0) await new Promise<void>((resolve) => setTimeout(resolve, 0));
     }
 

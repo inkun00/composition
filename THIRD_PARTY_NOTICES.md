@@ -1,4 +1,4 @@
-# Third-party audio notices
+# Third-party notices
 
 ## homr
 
@@ -186,3 +186,71 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+## Music video drawing and MP4 export
+
+- perfect-freehand 1.2.3 (Steve Ruiz / Stephen Ruiz Ltd): pressure-sensitive brush outlines in the scene painter and exported video. MIT License. Source: https://github.com/steveruizok/perfect-freehand. The installed package's complete copyright and license text is reproduced below and in `/third-party-music-video-licenses.txt`.
+- Mediabunny 1.61.3 (Vanilagy and contributors): the existing browser MP4 encoding path is also used to combine music-video Canvas frames and song audio. Mozilla Public License 2.0. Source: https://github.com/Vanilagy/mediabunny. The complete installed license is shipped at `/third-party-music-video-licenses.txt`. This app imports the package without modifying its source files. Corresponding source is included in the published npm package: https://registry.npmjs.org/mediabunny/-/mediabunny-1.61.3.tgz.
+- Paper.js 0.12.18 (Jürg Lehni and Jonathan Puckey): vector paths used for the browser's authored partial drawing deformation. MIT License. Source: https://github.com/paperjs/paper.js. The installed copyright and license text is preserved below and in `/third-party-music-video-licenses.txt`.
+- The app's lyric timing, thirty selectable whole-scene motion graphics, stroke-order drawing playback, and BPM-driven animation are application code. Legacy partial drawing animations remain readable. No generated video service or third-party artwork is included.
+- Anime.js, tsParticles and canvas-confetti are research references for entrance, sequencing and decorative effects. Their packages and source code are not included in this implementation.
+- Procreate Dreams (https://help.procreate.com/dreams/handbook/interface-and-gestures/interface) and DaVinci Resolve (https://www.blackmagicdesign.com/products/davinciresolve/edit) are visual references for the canvas, drawing tools, inspector, and scene timeline. Google Song Maker was a reference for the earlier editor grid and palette. No source code or assets from these products are copied into the application. The editor uses CSS and SVG; no generated bitmap UI assets are included. No AI model, inference runtime, model-weight download, or external inference service is included.
+
+### perfect-freehand 1.2.3
+
+```text
+MIT License
+
+Copyright (c) 2021 Stephen Ruiz Ltd
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+### Paper.js 0.12.18
+
+- 용도: 대상에 지정한 선의 경로를 준비하고 선 일부의 형태를 변형하는 브라우저 동작 렌더링. 이미지 인식이나 AI 모델은 포함하지 않음.
+- 출처: https://github.com/paperjs/paper.js
+- 라이선스: MIT. 설치 패키지의 원문을 아래와 /third-party-music-video-licenses.txt 에 보존하며 패키지 소스는 수정하지 않음.
+
+~~~text
+Copyright (c) 2011 - 2020, Jürg Lehni & Jonathan Puckey
+http://juerglehni.com/ & https://puckey.studio/
+All rights reserved.
+
+The MIT License (MIT)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+~~~

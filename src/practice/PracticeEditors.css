@@ -488,31 +488,6 @@
   margin-left: 72px;
 }
 
-.practice-pitch-navigation {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin: 12px 0;
-  font-size: 13px;
-}
-
-.practice-pitch-navigation > span {
-  margin-right: auto;
-  color: #657280;
-}
-
-.practice-pitch-navigation > button {
-  min-height: 44px;
-  padding: 7px 12px;
-  border: 1px solid #d6dce1;
-  border-radius: 8px;
-  background: #fff;
-  color: #485d70;
-  font-size: 13px;
-  font-weight: 700;
-}
-
 .practice-selected-duration {
   display: flex;
   align-items: center;

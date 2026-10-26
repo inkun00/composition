@@ -58,9 +58,38 @@ afterEach(() => {
   root = null;
   container = null;
   vi.clearAllMocks();
+  vi.useRealTimers();
 });
 
 describe("QR 악보 노래 재생", () => {
+  it("QR 화면에서만 브라우저 전체 스크롤을 잠그고 떠나면 복원한다", () => {
+    act(() => root?.render(<QrSongPlayback composition={composition} />));
+    expect(document.body.classList.contains("qr-playback-active")).toBe(true);
+    expect(container?.querySelector('.qr-playback-header [aria-label="QR 노래 연주 창 닫기"]')).not.toBeNull();
+    expect(container?.querySelector('.qr-lyrics-scroll')?.getAttribute("tabindex")).toBe("0");
+    act(() => root?.unmount());
+    root = null;
+    expect(document.body.classList.contains("qr-playback-active")).toBe(false);
+  });
+
+  it("재생 중인 마디는 가사 목록 안에서만 스크롤하고 문서 전체를 움직이지 않는다", async () => {
+    vi.useFakeTimers();
+    act(() => root?.render(<QrSongPlayback composition={composition} />));
+    const viewport = container!.querySelector<HTMLElement>(".qr-lyrics-scroll")!;
+    const target = container!.querySelector<HTMLElement>('[data-testid="qr-measure-5"]')!;
+    Object.defineProperty(viewport, "clientHeight", { configurable: true, value: 200 });
+    viewport.getBoundingClientRect = () => ({ top: 100, bottom: 300, height: 200 } as DOMRect);
+    target.getBoundingClientRect = () => ({ top: 450, bottom: 500, height: 50 } as DOMRect);
+    const scrollIntoView = vi.fn();
+    target.scrollIntoView = scrollIntoView;
+    await act(async () => container?.querySelector<HTMLButtonElement>('[data-testid="qr-create-play"]')?.click());
+    act(() => vi.advanceTimersByTime(23000));
+    expect(target.classList.contains("playing")).toBe(true);
+    expect(viewport.scrollTop).toBe(275);
+    expect(scrollIntoView).not.toHaveBeenCalled();
+    expect(window.scrollY).toBe(0);
+  });
+
   it("재생 버튼을 누르면 가락과 반주를 연주한다", async () => {
     act(() => root?.render(<QrSongPlayback composition={composition} />));
     await act(async () => container?.querySelector<HTMLButtonElement>('[data-testid="qr-create-play"]')?.click());

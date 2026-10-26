@@ -9,8 +9,13 @@ import { isValidBeatPattern, type BeatPatternEvent } from "./beatPattern";
 import { isSongStructureForLength, type SongStructureId } from "./songStructure";
 import { isSongLength, type SongLength } from "./songLength";
 import { isValidAccompanimentTrackMix, type AccompanimentTrackMixMap } from "./accompanimentMix";
+import { isMusicVideoScenes, type MusicVideoScene } from "../video/musicVideoModel";
+import { compressToUTF16, decompressFromUTF16 } from "lz-string";
 
 export const DRAFT_STORAGE_KEY = "maeum-melody:draft:v1";
+export const DRAFT_BACKUP_STORAGE_KEY = `${DRAFT_STORAGE_KEY}:backup`;
+export const DRAFT_RECOVERY_STORAGE_KEY = `${DRAFT_STORAGE_KEY}:recovery`;
+export const DRAFT_COMPRESSED_PREFIX = "lz16:";
 
 export type DraftMeasure = Readonly<{
   candidateId: string | null;
@@ -24,6 +29,9 @@ export type DraftMeasure = Readonly<{
 export type SavedDraft = Readonly<{
   version: 1;
   updatedAt: number;
+  projectId?: string;
+  cloudScoreId?: string;
+  cloudOwnerId?: string;
   sourceHash: string;
   title: string;
   description?: string;
@@ -43,6 +51,7 @@ export type SavedDraft = Readonly<{
   bpm?: number;
   lyrics: readonly string[];
   measures: readonly DraftMeasure[];
+  musicVideoScenes?: readonly MusicVideoScene[];
   showArrangement: boolean;
 }>;
 
@@ -76,6 +85,9 @@ export function isSavedDraft(value: unknown): value is SavedDraft {
   if (!value || typeof value !== "object") return false;
   const draft = value as Partial<SavedDraft>;
   if (draft.version !== 1 || !Number.isFinite(draft.updatedAt)) return false;
+  for (const id of [draft.projectId, draft.cloudScoreId, draft.cloudOwnerId]) {
+    if (id !== undefined && (typeof id !== "string" || id.length < 1 || id.length > 160)) return false;
+  }
   if (typeof draft.sourceHash !== "string" || draft.sourceHash.length > 50_000) return false;
   if (typeof draft.title !== "string" || draft.title.length > 60) return false;
   if (draft.description !== undefined && (typeof draft.description !== "string" || draft.description.length > 600)) return false;
@@ -100,6 +112,7 @@ export function isSavedDraft(value: unknown): value is SavedDraft {
   if (draft.beatVolume !== undefined && !isValidBeatVolume(draft.beatVolume)) return false;
   if (draft.bpm !== undefined && (!Number.isInteger(draft.bpm) || draft.bpm < 40 || draft.bpm > 220)) return false;
   if (typeof draft.showArrangement !== "boolean") return false;
+  if (draft.musicVideoScenes !== undefined && !isMusicVideoScenes(draft.musicVideoScenes)) return false;
   if (!Array.isArray(draft.lyrics) || draft.lyrics.length !== draft.songLength ||
     !draft.lyrics.every((lyric) => typeof lyric === "string" && lyric.length <= 30)) return false;
   if (!Array.isArray(draft.measures) || draft.measures.length !== draft.songLength) return false;
@@ -119,20 +132,42 @@ export function isSavedDraft(value: unknown): value is SavedDraft {
   });
 }
 
-export function readDraft(storage: Pick<Storage, "getItem">): SavedDraft | null {
+export function parseDraft(raw: string | null): SavedDraft | null {
   try {
-    const raw = storage.getItem(DRAFT_STORAGE_KEY);
     if (!raw) return null;
-    const parsed: unknown = JSON.parse(raw);
+    const json = raw.startsWith(DRAFT_COMPRESSED_PREFIX)
+      ? decompressFromUTF16(raw.slice(DRAFT_COMPRESSED_PREFIX.length)) : raw;
+    if (!json) return null;
+    const parsed: unknown = JSON.parse(json);
     return isSavedDraft(parsed) ? parsed : null;
   } catch {
     return null;
   }
 }
 
-export function writeDraft(storage: Pick<Storage, "setItem">, draft: SavedDraft): boolean {
+export function readDraft(storage: Pick<Storage, "getItem">): SavedDraft | null {
   try {
-    storage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+    return parseDraft(storage.getItem(DRAFT_STORAGE_KEY)) ?? parseDraft(storage.getItem(DRAFT_BACKUP_STORAGE_KEY));
+  } catch {
+    return null;
+  }
+}
+
+export function writeDraft(storage: Pick<Storage, "setItem"> & Partial<Pick<Storage, "getItem">>, draft: SavedDraft): boolean {
+  if (!isSavedDraft(draft)) return false;
+  try {
+    const json = JSON.stringify(draft);
+    const previous = storage.getItem?.(DRAFT_STORAGE_KEY);
+    if (previous === json || (previous?.startsWith(DRAFT_COMPRESSED_PREFIX) &&
+      decompressFromUTF16(previous.slice(DRAFT_COMPRESSED_PREFIX.length)) === json)) return true;
+    if (previous && !parseDraft(previous)) {
+      // Never replace the only copy of a draft we cannot currently decode.
+      storage.setItem(DRAFT_RECOVERY_STORAGE_KEY, previous);
+    } else if (previous) {
+      try { storage.setItem(DRAFT_BACKUP_STORAGE_KEY, previous); } catch { /* Primary and IndexedDB remain available. */ }
+    }
+    try { storage.setItem(DRAFT_STORAGE_KEY, json); }
+    catch { storage.setItem(DRAFT_STORAGE_KEY, DRAFT_COMPRESSED_PREFIX + compressToUTF16(json)); }
     return true;
   } catch {
     return false;
@@ -140,5 +175,10 @@ export function writeDraft(storage: Pick<Storage, "setItem">, draft: SavedDraft)
 }
 
 export function draftFingerprint(draft: SavedDraft): string {
-  return JSON.stringify({ ...draft, updatedAt: 0 });
+  const { projectId: _projectId, cloudScoreId: _cloudScoreId, cloudOwnerId: _cloudOwnerId, ...content } = draft;
+  return JSON.stringify({ ...content, updatedAt: 0 }, (_key, value: unknown) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+    const record = value as Record<string, unknown>;
+    return Object.fromEntries(Object.keys(record).sort().map((key) => [key, record[key]]));
+  });
 }

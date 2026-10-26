@@ -1,0 +1,122 @@
+/* Setting controls use the full card width, without illustration columns. */
+.composer-settings > summary::after,
+.composer-settings[open] > summary::after {
+  content: none;
+}
+
+.composer-settings-content > .composer-setting-card {
+  display: block;
+  min-width: 0;
+  min-height: 0;
+  padding: 20px;
+}
+
+.composer-setting-card > .compact-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 14px;
+}
+
+.composer-setting-card .song-mood-top-row,
+.composer-setting-card .preset-picker {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.composer-setting-card .tempo-mood-options button,
+.composer-setting-card .rhythm-mood-options button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 104px;
+  padding: 10px 6px;
+  text-align: center;
+}
+
+.composer-setting-card .preset-selection {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.composer-setting-card .preset-selection label {
+  min-width: 0;
+}
+
+.composer-setting-card .preset-picker select {
+  min-width: 0;
+  min-height: 48px;
+  font-size: 17px;
+}
+
+.composer-setting-card .preset-more-button {
+  min-height: 48px;
+  margin: 0;
+}
+
+.composer-setting-card .preset-summary {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-content: center;
+  gap: 12px;
+  min-width: 0;
+  min-height: 48px;
+  padding: 8px 12px;
+}
+
+.composer-setting-card .preset-preview-button {
+  min-height: 44px;
+}
+
+.composer-setting-card .preset-summary-copy {
+  word-break: keep-all;
+}
+
+.composer-setting-card .preset-score-import-bar {
+  min-height: 0;
+  margin-top: 12px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.composer-setting-card .meter-options {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 900px) {
+  .composer-setting-card .song-mood-top-row,
+  .composer-setting-card .preset-picker {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .composer-settings-content > .composer-setting-card {
+    padding: 16px 12px;
+  }
+
+  .composer-setting-card .tempo-mood-options button,
+  .composer-setting-card .rhythm-mood-options button {
+    min-height: 96px;
+    padding: 8px 4px;
+  }
+
+  .composer-setting-card .preset-selection {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .composer-setting-card .preset-more-button {
+    justify-self: start;
+    min-height: 44px;
+  }
+
+  .composer-setting-card .meter-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

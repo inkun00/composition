@@ -1,4 +1,4 @@
-import { Music2, Plus, Square, Trash2 } from "lucide-react";
+import { Music2, Plus, Square, Trash2 } from "../components/AppArtworkIcons";
 import PracticeRhythmInstrument from "./PracticeRhythmInstrument";
 import { INSTRUMENTS } from "../music/instruments";
 import type { usePracticeState } from "./usePracticeState";

@@ -1,0 +1,42 @@
+[
+  {
+    "key": "sparkles",
+    "prompt": "Use case: stylized-concept\nAsset type: one standalone raster control illustration for a polished Korean creative music-video studio, shown at 20–32px.\nStyle: sophisticated tactile 3D product illustration, softly rounded ceramic and colored paper, warm ivory and periwinkle with a restrained coral accent, subtle fine material texture, soft studio lighting, clean readable silhouette.\nComposition: one coherent centered object, fills 84% of a square, front or slight three-quarter view, safe edges. Genuinely transparent background with preserved alpha, only a delicate contact shadow.\nConstraints: no UI, no button tile, no enclosing card, no letters, no numbers, no branding, no watermark, no decorative props; a finished image, not a thin outline glyph.\nSubject: Two beautifully sculpted four-point sparkle stars, one larger periwinkle and one small ivory star with a tiny restrained coral glint; a clear automatic motion / magical enhancement visual.",
+    "source": "C:\\Users\\user\\.codex\\generated_images\\01a14a1f-9277-7182-bad5-3a49ad863aa5\\exec-7324351b-70c6-42dc-8284-d0d5a4385810.png",
+    "runtime": "public/studio-images/v1/sparkles.webp",
+    "tool": "built-in image_gen",
+    "transparent_background": true
+  },
+  {
+    "key": "chevron-down",
+    "prompt": "Use case: stylized-concept\nAsset type: one standalone raster control illustration for a polished Korean creative music-video studio, shown at 20–32px.\nStyle: sophisticated tactile 3D product illustration, softly rounded ceramic and colored paper, warm ivory and periwinkle with a restrained coral accent, subtle fine material texture, soft studio lighting, clean readable silhouette.\nComposition: one coherent centered object, fills 84% of a square, front or slight three-quarter view, safe edges. Genuinely transparent background with preserved alpha, only a delicate contact shadow.\nConstraints: no UI, no button tile, no enclosing card, no letters, no numbers, no branding, no watermark, no decorative props; a finished image, not a thin outline glyph.\nSubject: One thick rounded downward V-shaped chevron, an ivory ceramic object with a periwinkle bevel, facing directly forward; unmistakable downward direction and symmetric clean shape.",
+    "source": "C:\\Users\\user\\.codex\\generated_images\\01a14a1f-9277-7182-bad5-3a49ad863aa5\\exec-300cd177-6c5c-4ee2-bc5e-b9844839be8d.png",
+    "runtime": "public/studio-images/v1/chevron-down.webp",
+    "tool": "built-in image_gen",
+    "transparent_background": true
+  },
+  {
+    "key": "music",
+    "prompt": "Use case: stylized-concept\nAsset type: one standalone raster control illustration for a polished Korean creative music-video studio, shown at 20–32px.\nStyle: sophisticated tactile 3D product illustration, softly rounded ceramic and colored paper, warm ivory and periwinkle with a restrained coral accent, subtle fine material texture, soft studio lighting, clean readable silhouette.\nComposition: one coherent centered object, fills 84% of a square, front or slight three-quarter view, safe edges. Genuinely transparent background with preserved alpha, only a delicate contact shadow.\nConstraints: no UI, no button tile, no enclosing card, no letters, no numbers, no branding, no watermark, no decorative props; a finished image, not a thin outline glyph.\nSubject: One elegant joined pair of eighth musical notes made from glossy periwinkle ceramic with warm ivory edges; readable musical silhouette.",
+    "source": "C:\\Users\\user\\.codex\\generated_images\\01a14a1f-9277-7182-bad5-3a49ad863aa5\\exec-72d35981-8ae0-48c6-95f6-ffdae52e4219.png",
+    "runtime": "public/studio-images/v1/music.webp",
+    "tool": "built-in image_gen",
+    "transparent_background": true
+  },
+  {
+    "key": "save",
+    "prompt": "Use case: stylized-concept\nAsset type: one standalone raster control illustration for a polished Korean creative music-video studio, shown at 20–32px.\nStyle: sophisticated tactile 3D product illustration, softly rounded ceramic and colored paper, warm ivory and periwinkle with a restrained coral accent, subtle fine material texture, soft studio lighting, clean readable silhouette.\nComposition: one coherent centered object, fills 84% of a square, front or slight three-quarter view, safe edges. Genuinely transparent background with preserved alpha, only a delicate contact shadow.\nConstraints: no UI, no button tile, no enclosing card, no letters, no numbers, no branding, no watermark, no decorative props; a finished image, not a thin outline glyph.\nSubject: A small refined square periwinkle floppy disk with an ivory sliding metal inset and a small coral write tab, no text; recognizable save object with tactile real depth.",
+    "source": "C:\\Users\\user\\.codex\\generated_images\\01a14a1f-9277-7182-bad5-3a49ad863aa5\\exec-b79c05ae-0f02-4a24-9411-f35e4d524275.png",
+    "runtime": "public/studio-images/v1/save.webp",
+    "tool": "built-in image_gen",
+    "transparent_background": true
+  },
+  {
+    "key": "upload",
+    "prompt": "Use case: stylized-concept\nAsset type: one standalone raster control illustration for a polished Korean creative music-video studio, shown at 20–32px.\nStyle: sophisticated tactile 3D product illustration, softly rounded ceramic and colored paper, warm ivory and periwinkle with a restrained coral accent, subtle fine material texture, soft studio lighting, clean readable silhouette.\nComposition: one coherent centered object, fills 84% of a square, front or slight three-quarter view, safe edges. Genuinely transparent background with preserved alpha, only a delicate contact shadow.\nConstraints: no UI, no button tile, no enclosing card, no letters, no numbers, no branding, no watermark, no decorative props; a finished image, not a thin outline glyph.\nSubject: A compact warm-ivory open document folder with a single thick periwinkle arrow pointing vertically upward above the opening, a clear import/upload action; no writing on the folder.",
+    "source": "C:\\Users\\user\\.codex\\generated_images\\01a14a1f-9277-7182-bad5-3a49ad863aa5\\exec-bd1ab0f7-c8f0-4657-aaa8-30b62779adc7.png",
+    "runtime": "public/studio-images/v1/upload.webp",
+    "tool": "built-in image_gen",
+    "transparent_background": true
+  }
+]

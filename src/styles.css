@@ -782,9 +782,6 @@ h1 { font-size: clamp(30px, 4vw, 46px); letter-spacing: -.04em; margin: 8px 0 12
 .song-description-field small { position: absolute; right: 11px; bottom: 8px; color: #9a8d7e; font-size: 10px; font-weight: 700; pointer-events: none; }
 .publish-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; margin-top: 15px; }
 .publish-actions button, .publish-actions .samboard-share-button { min-height: 48px; padding: 0 18px; border: 1px solid transparent; border-radius: 14px; color: white; font-weight: 800; cursor: pointer; box-shadow: var(--shadow-button); text-decoration: none; }
-.project-save-button { background: linear-gradient(135deg,#6f5bc7,#5145a9); }
-.project-load-button { background: linear-gradient(135deg,#338b72,#21725c); }
-.project-file-input { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; }
 .samboard-share-button { background: linear-gradient(135deg,#326dcf,#2554a5); }
 .pdf-button { background: linear-gradient(135deg,#238366,#176d58); border-color: #17644f !important; }
 .backing-mp3-button { background: linear-gradient(135deg,#d18442,#ad5b25); border-color: #a95520 !important; }

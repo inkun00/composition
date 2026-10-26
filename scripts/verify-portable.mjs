@@ -155,17 +155,11 @@ async function verifyFileMode() {
     `Invalid portable share URL prefix: ${shareUrl.split("#")[0]}`);
   report.fileMode.sharedUrlUsesOnlineApp = true;
 
-  const downloadPromise = page.waitForEvent("download");
-  await page.getByTestId("save-project-file").click();
-  const download = await downloadPromise;
-  const savedProject = path.join(verification, "portable-project.txt");
-  await download.saveAs(savedProject);
-  const projectText = await readFile(savedProject, "utf8");
-  assert(projectText.includes("압축 해제 실행 검증"));
-  await page.locator("input.project-file-input").setInputFiles(savedProject);
-  await page.getByTestId("song-title").waitFor();
-  assert.equal(await page.getByTestId("song-title").inputValue(), "압축 해제 실행 검증");
-  report.fileMode.projectRoundTrip = true;
+  assert.equal(await page.getByTestId("save-project-file").count(), 0);
+  assert.equal(await page.getByTestId("load-project-file").count(), 0);
+  assert.equal(await page.locator("input.project-file-input,.publish-advanced-files").count(), 0);
+  assert.equal(await page.getByText("나중에 고칠 작품 파일", { exact: true }).count(), 0);
+  report.fileMode.projectFileToolsRemoved = true;
 
   const pdfPromise = page.waitForEvent("download", { timeout: 60000 });
   await page.getByTestId("export-pdf").click();
@@ -179,7 +173,7 @@ async function verifyFileMode() {
   report.fileMode.databaseWritesIntercepted = interceptedWrites;
 
   await page.getByRole("button", { name: "로그인", exact: true }).click();
-  await page.getByText("Google 로그인은 작품 파일을 저장한 뒤", { exact: false }).waitFor();
+  await page.getByText("Google 로그인을 사용하려면", { exact: false }).waitFor();
   assert.equal(await page.getByRole("button", { name: "Google로 계속하기" }).count(), 0);
   report.fileMode.googleLauncherGuidance = true;
 

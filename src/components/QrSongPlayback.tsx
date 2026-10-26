@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FileMusic, Music2, Square, X } from "lucide-react";
+import { FileMusic, Music2, Square, X } from "./AppArtworkIcons";
 import { compositionIntroDuration, playComposition, stopPlayback, type PlaybackMeasure } from "../audio/player";
 import { findHarmonyPreset } from "../music/harmonyPresets";
 import { findAccompanimentStyle } from "../music/accompaniment";
@@ -47,6 +47,13 @@ function QrPageCloseButton() {
   );
 }
 
+function QrPlaybackHeader() {
+  return <header className="qr-playback-header">
+    <span className="qr-playback-kicker"><Music2 size={17} /> 마음멜로디 악보</span>
+    <QrPageCloseButton />
+  </header>;
+}
+
 export default function QrSongPlayback({ composition, songId = "" }: Readonly<{
   composition: SharedComposition | null;
   songId?: string;
@@ -65,6 +72,11 @@ export default function QrSongPlayback({ composition, songId = "" }: Readonly<{
   const playbackTicker = useRef<number | null>(null);
   const completionTimer = useRef<number | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    document.body.classList.add("qr-playback-active");
+    return () => document.body.classList.remove("qr-playback-active");
+  }, []);
 
   const activeComposition = composition ?? storedComposition;
   const playable = useMemo<PlaybackMeasure[]>(() => {
@@ -154,8 +166,11 @@ export default function QrSongPlayback({ composition, songId = "" }: Readonly<{
     const container = scrollContainerRef.current;
     if (!container) return;
     const target = container.querySelector<HTMLElement>(`[data-measure-index="${playingMeasureIndex}"]`);
-    if (target) {
-      target.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    if (!target) return;
+    const viewport = container.getBoundingClientRect();
+    const row = target.getBoundingClientRect();
+    if (row.top < viewport.top || row.bottom > viewport.bottom) {
+      container.scrollTop += row.top - viewport.top - Math.max(0, (container.clientHeight - row.height) / 2);
     }
   }, [playingMeasureIndex]);
 
@@ -230,31 +245,40 @@ export default function QrSongPlayback({ composition, songId = "" }: Readonly<{
   }
 
   if (loadingSong) return (
-    <main className="qr-playback-page"><section className="qr-playback-card" role="status" aria-live="polite">
-      <QrPageCloseButton /><div className="qr-playback-disc" aria-hidden="true"><FileMusic size={42} /></div>
-      <h1>노래를 불러오고 있어요</h1>
+    <main className="qr-playback-page"><section className="qr-playback-card is-loading">
+      <QrPlaybackHeader />
+      <div className="qr-playback-message" role="status" aria-live="polite">
+        <div className="qr-playback-disc" aria-hidden="true"><FileMusic size={42} /></div>
+        <h1>노래를 불러오고 있어요</h1>
+      </div>
     </section></main>
   );
 
   if (!activeComposition) return (
     <main className="qr-playback-page"><section className="qr-playback-card is-error">
-      <QrPageCloseButton /><FileMusic size={42} aria-hidden="true" /><h1>노래 링크를 확인해 주세요</h1>
-      <p>악보의 QR 코드를 다시 스캔하면 노래를 열 수 있어요.</p>
+      <QrPlaybackHeader />
+      <div className="qr-playback-message">
+        <FileMusic size={42} aria-hidden="true" /><h1>노래 링크를 확인해 주세요</h1>
+        <p>악보의 QR 코드를 다시 스캔하면 노래를 열 수 있어요.</p>
+      </div>
     </section></main>
   );
 
   return (
     <main className="qr-playback-page">
       <section className="qr-playback-card" aria-label="QR 악보 노래 재생">
-        <QrPageCloseButton />
-        <span className="qr-playback-kicker"><Music2 size={17} /> 마음멜로디 악보</span>
-        <div className="qr-playback-disc" aria-hidden="true"><FileMusic size={42} /></div>
-        <h1>{activeComposition.title || "나의 노래"}</h1>
-        <p className="qr-playback-creator">{activeComposition.creator || "어린이 작곡가"} 작곡</p>
-        <div className="qr-playback-summary">
-          <span>{activeComposition.songLength}마디</span>
-          <span>{activeComposition.meter.beats}/{activeComposition.meter.beatUnit}박자</span>
-          <span>{activeComposition.bpm ?? 96} BPM</span>
+        <QrPlaybackHeader />
+        <div className="qr-playback-heading">
+          <div className="qr-playback-disc" aria-hidden="true"><FileMusic size={42} /></div>
+          <div className="qr-playback-song">
+            <h1>{activeComposition.title || "나의 노래"}</h1>
+            <p className="qr-playback-creator">{activeComposition.creator || "어린이 작곡가"} 작곡</p>
+            <div className="qr-playback-summary">
+              <span>{activeComposition.songLength}마디</span>
+              <span>{activeComposition.meter.beats}/{activeComposition.meter.beatUnit}박자</span>
+              <span>{activeComposition.bpm ?? 96} BPM</span>
+            </div>
+          </div>
         </div>
         <button type="button" className="qr-playback-start" disabled={phase === "loading"}
           data-testid="qr-create-play" onClick={() => void togglePlayback()}>
@@ -277,7 +301,7 @@ export default function QrSongPlayback({ composition, songId = "" }: Readonly<{
               <span className="qr-lyrics-badge">전체 {activeComposition.songLength}마디</span>
             )}
           </div>
-          <div className="qr-lyrics-scroll" ref={scrollContainerRef}>
+          <div className="qr-lyrics-scroll" ref={scrollContainerRef} tabIndex={0} aria-label="마디별 가사 목록">
             {parsedMeasures.map((measure) => {
               const isMeasurePlaying = phase === "playing" && playingMeasureIndex === measure.measureIndex;
               return (

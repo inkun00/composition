@@ -27,6 +27,13 @@ const audio = vi.hoisted(() => ({
 vi.mock("./usePracticeAudio", () => ({ usePracticeAudio: vi.fn(() => audio) }));
 vi.mock("../components/ScoreMeasure", () => ({ default: () => <div aria-label="연습 악보" /> }));
 
+function videoChoice(text: string): HTMLButtonElement {
+  const choice = [...document.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')]
+    .find((item) => item.getAttribute("aria-label") === text);
+  if (!choice) throw new Error(`${text} 영상 선택을 찾지 못했습니다.`);
+  return choice;
+}
+
 beforeEach(() => {
   localStorage.clear();
   vi.clearAllMocks();
@@ -226,11 +233,13 @@ describe("악보를 겹쳐 리듬 만들기", () => {
     expect(button("음악 영상(MP4)").disabled).toBe(false);
     click(button("소리 파일(MP3)"));
     click(button("음악 영상(MP4)"));
-    expect(audio.save.mock.calls).toEqual([["mp3"], ["mp4"]]);
+    expect(audio.save.mock.calls).toEqual([["mp3"]]);
+    click(videoChoice("리듬과 함께 재생"));
+    expect(audio.save.mock.calls).toEqual([["mp3"], ["mp4", { videoMode: "bars" }]]);
     expect(latestAudioInput().step).toBe("rhythm");
     expect(latestAudioInput().rhythmLayers).toHaveLength(2);
     click(melodyTab);
-    expect(measureCard(0).querySelectorAll(".practice-melody-row")).toHaveLength(8);
+    expect(measureCard(0).querySelectorAll(".practice-melody-row")).toHaveLength(15);
     expect(container?.querySelector('[data-testid="practice-score-workspace-1"]')).toBeNull();
     const primary = savedDraft().measures[0].notes;
     click(button("리듬 만들기로"));
@@ -400,7 +409,9 @@ describe("기능 연습하기 전체 흐름", () => {
     expect(button("음악 영상(MP4)").disabled).toBe(false);
     click(button("소리 파일(MP3)"));
     click(button("음악 영상(MP4)"));
-    expect(audio.save.mock.calls).toEqual([["mp3"], ["mp4"]]);
+    expect(audio.save.mock.calls).toEqual([["mp3"]]);
+    click(videoChoice("리듬과 함께 재생"));
+    expect(audio.save.mock.calls).toEqual([["mp3"], ["mp4", { videoMode: "bars" }]]);
     expect(latestAudioInput()).toMatchObject({ step: "rhythm", rhythmInstrumentId: "beat:shaker" });
     expect(savedDraft()).toEqual(before);
     expect(savedDraft().melodyInstrumentId).toBe(melodyInstrument);
@@ -418,8 +429,22 @@ describe("기능 연습하기 전체 흐름", () => {
     expect(button("소리 파일(MP3)").disabled).toBe(false);
     expect(button("음악 영상(MP4)").disabled).toBe(false);
     click(button("음악 영상(MP4)"));
-    expect(audio.save).toHaveBeenCalledWith("mp4");
+    expect(audio.save).not.toHaveBeenCalled();
+    click(videoChoice("리듬과 함께 재생"));
+    expect(audio.save).toHaveBeenCalledWith("mp4", { videoMode: "bars" });
     expect(latestAudioInput().step).toBe("rhythm");
+    expect(savedDraft()).toEqual(before);
+  });
+
+  it.each(["rhythm-melody", "melody"] as const)("%s에서 가사만 재생을 선택하면 가사 영상으로 저장한다", (mode) => {
+    mount(undefined, mode);
+    completeOneMeasure();
+    const before = savedDraft();
+    click(button("음악 영상(MP4)"));
+    expect(audio.save).not.toHaveBeenCalled();
+    click(videoChoice("가사만 재생"));
+    expect(audio.save.mock.calls).toEqual([["mp4", { videoMode: "lyrics" }]]);
+    expect(latestAudioInput().step).toBe(mode === "melody" ? "melody" : "rhythm");
     expect(savedDraft()).toEqual(before);
   });
 
@@ -544,9 +569,9 @@ describe("기능 연습하기 전체 흐름", () => {
     click(container?.querySelector<HTMLElement>("#practice-melody-tab") as HTMLElement);
     expect(container?.querySelector("#practice-melody-tab")?.getAttribute("aria-selected")).toBe("true");
     expect(savedDraft().measures[0].notes).toEqual(rhythmNotes);
-    expect(container?.querySelectorAll(".practice-melody-row")).toHaveLength(8);
-    expect(container?.querySelectorAll(".practice-pitch-row-label")[0]?.textContent).toBe("높은 도");
-    expect(container?.querySelectorAll(".practice-pitch-row-label")[7]?.textContent).toBe("낮은 도");
+    expect(container?.querySelectorAll(".practice-melody-row")).toHaveLength(15);
+    expect(container?.querySelectorAll(".practice-pitch-row-label")[0]?.textContent).toBe("더 높은 도");
+    expect(container?.querySelectorAll(".practice-pitch-row-label")[14]?.textContent).toBe("낮은 도");
     const firstId = rhythmNotes[0].id;
     click(testButton(`practice-melody-${firstId}-72`));
     const melodyNotes = savedDraft().measures[0].notes;
@@ -561,8 +586,10 @@ describe("기능 연습하기 전체 흐름", () => {
     click(button("가락 미리듣기"));
     click(button("소리 파일(MP3)"));
     click(button("음악 영상(MP4)"));
+    expect(audio.save.mock.calls).toEqual([["mp3"]]);
+    click(videoChoice("가락과 함께 재생"));
     expect(audio.preview).toHaveBeenCalledTimes(1);
-    expect(audio.save.mock.calls).toEqual([["mp3"], ["mp4"]]);
+    expect(audio.save.mock.calls).toEqual([["mp3"], ["mp4", { videoMode: "bars" }]]);
   });
 
   it("설정한 네 마디를 함께 보여 주고 리듬을 모두 완성한 뒤 가락 단계로 넘어간다", () => {
@@ -593,7 +620,7 @@ describe("기능 연습하기 전체 흐름", () => {
     click(melodyTab);
     expect(melodyTab.getAttribute("aria-selected")).toBe("true");
     expect(container?.querySelectorAll(".practice-measure-card")).toHaveLength(4);
-    expect(container?.querySelectorAll(".practice-melody-row")).toHaveLength(32);
+    expect(container?.querySelectorAll(".practice-melody-row")).toHaveLength(60);
   });
 
   it("박자 칸 아래 가사를 입력하고 모든 마디 아래에서 악기와 듣기를 설정한다", () => {

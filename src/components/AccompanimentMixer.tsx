@@ -1,10 +1,11 @@
-import { Headphones, SlidersHorizontal, Volume2, VolumeX, X } from "lucide-react";
+import { Headphones, SlidersHorizontal, Volume2, VolumeX, X } from "./AppArtworkIcons";
 import type { AccompanimentTrackState } from "../audio/accompanimentRuntime";
 import type { AccompanimentMixerController } from "../hooks/useAccompanimentMixer";
 import { assignEnsembleRoles, type EnsembleRole } from "../music/accompanimentEnsemble";
 import { accompanimentTrackSettings } from "../music/accompanimentMix";
 import { findInstrument, type InstrumentId } from "../music/instruments";
 import "./AccompanimentMixer.css";
+import MusicChoiceArtwork from "./MusicChoiceArtwork";
 
 const STATUS_LABELS: Record<AccompanimentTrackState["status"], string> = {
   loading: "악기 소리 준비 중",
@@ -53,7 +54,7 @@ export default function AccompanimentMixer({ instrumentIds, mixer, canListen, ed
           <div className={`accompaniment-mixer-track${solo ? " solo" : ""}`} key={instrument.id}
             data-testid={`mixer-track-${instrument.id}`}>
             <div className="accompaniment-mixer-identity">
-              <span className="accompaniment-mixer-icon" aria-hidden="true">{instrument.icon}</span>
+              <span className="accompaniment-mixer-icon" aria-hidden="true"><MusicChoiceArtwork symbol={instrument.icon} size={30} /></span>
               <div><strong>{instrument.name}</strong><small>{ROLE_LABELS[roles.find((role) =>
                 role.instrumentId === instrument.id)?.role ?? "pad"]}</small></div>
               <button type="button" className="accompaniment-mixer-remove" disabled={editingDisabled}

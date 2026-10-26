@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, CheckCircle2, ExternalLink, FileDown, FileUp, Library, Menu, Mic2, Music2, Plus, QrCode, Redo2, Smartphone, Square, Undo2, UserRound, Volume2, WandSparkles, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, Copy, FileDown, Headphones, Library, Menu, Mic2, Music2, Plus, QrCode, Redo2, Smartphone, Square, Trash2, Undo2, UserRound, Users, Volume2, VolumeX, WandSparkles, X } from "./components/AppArtworkIcons";
 import { QRCodeSVG } from "qrcode.react";
 import { pausePlayback, playComposition, playMeasure, practiceKaraokeComposition, recordKaraokeComposition, renderKaraokePreviewMix, renderProcessedKaraokeMp3, resumePlayback, stopPlayback,
   type AccompanimentOptions, type KaraokePostProcessPreset } from "./audio/player";
@@ -26,12 +26,17 @@ import QrSongPlayback from "./components/QrSongPlayback";
 import BeatInstrumentChooser from "./components/BeatInstrumentChooser";
 import AccompanimentEditor from "./components/AccompanimentEditor";
 import AccompanimentMixer from "./components/AccompanimentMixer";
-import CompositionFileExports from "./components/CompositionFileExports";
+import CompositionSaveFiles from "./components/CompositionSaveFiles";
+import MusicVideoFeature from "./musicVideo/MusicVideoFeature";
 import CompositionMediaExportDialog from "./components/CompositionMediaExportDialog";
 import SongStoryMap from "./components/SongStoryMap";
 import SongStructureChooser from "./components/SongStructureChooser";
 import SongLengthChooser from "./components/SongLengthChooser";
 import CandidateFeelingTabs from "./components/CandidateFeelingTabs";
+import ComposerCandidateHeading from "./components/ComposerCandidateHeading";
+import ComposerChildArtwork from "./components/ComposerChildArtwork";
+import CompositionPerformActions from "./components/CompositionPerformActions";
+import ComposerInstrumentPicker from "./components/ComposerInstrumentPicker";
 import MobileEditorDisclosure from "./components/MobileEditorDisclosure";
 import MobileMeasureRange from "./components/MobileMeasureRange";
 import { useBeatPatternState } from "./hooks/useBeatPatternState";
@@ -45,13 +50,27 @@ import type { User } from "./firebase/client";
 import type { PublishedSong } from "./firebase/communityAlbums";
 import type { CloudScore, CloudScoreListItem } from "./firebase/scores";
 import { useCloudScoreList } from "./hooks/useCloudScoreList";
-import { MAX_ACCOMPANIMENT_INSTRUMENTS, createAccompanimentPattern, findAccompanimentStyle, isAccompanimentInstrument,
+import { useCloudProjectAutosave } from "./hooks/useCloudProjectAutosave";
+import { useBrowserProjectAutosave } from "./hooks/useBrowserProjectAutosave";
+import { useDraftRevision } from "./hooks/useDraftRevision";
+import { useLostDrawingRecovery } from "./hooks/useLostDrawingRecovery";
+import { usePublishedSongPlayback } from "./hooks/usePublishedSongPlayback";
+import { useScorePdfExport } from "./hooks/useScorePdfExport";
+import ScoreExportRecoveryDialog from "./components/ScoreExportRecoveryDialog";
+import LostDrawingRecoveryDialog from "./components/LostDrawingRecoveryDialog";
+import { makeRecoveredDrawingProject } from "./music/lostDrawingRecoveryChoice";
+import type { LostDrawingRecoveryCandidate } from "./music/lostDrawingRecoveryModel";
+import { scanLostDrawingRecoveryRecords } from "./music/lostDrawingRecovery";
+import { checkpointBrowserProject, clearBrowserCurrentProject, readBrowserProject, saveBrowserProjectDraft } from "./music/projectStorage";
+import { recoverCloudProjectDraft } from "./music/projectRecovery";
+import { MAX_ACCOMPANIMENT_INSTRUMENTS, createAccompanimentPattern, findAccompanimentStyle,
   type AccompanimentStyleId } from "./music/accompaniment";
+import { uniqueAccompanimentInstrumentIds } from "./music/accompanimentSelection";
 import { getCandidates } from "./music/candidates";
 import { makeEndingCandidates } from "./music/endingCandidates";
 import { MELODY_FEELING_GROUPS, type MelodyFeelingId } from "./music/melodyFeelings";
 import { chordMidiPitches } from "./music/chord";
-import { DRAFT_STORAGE_KEY, draftFingerprint, isSavedDraft, readDraft, writeDraft, type SavedDraft } from "./music/draft";
+import { draftFingerprint, readDraft, type SavedDraft } from "./music/draft";
 import { cloudSaveIssue, findDraftSaveIssues, type SaveIssue } from "./music/draftValidation";
 import { findHarmonyPreset, HARMONY_PRESETS } from "./music/harmonyPresets";
 import { normalizeBeatPattern, type BeatPatternEvent } from "./music/beatPattern";
@@ -67,30 +86,13 @@ import ComposerSettings from "./components/ComposerSettings";
 import ComposerLyrics from "./components/ComposerLyrics";
 import { pitchName, positionNotes, withEditedPitch } from "./music/score";
 import { findSoundEffect, type SoundEffectId } from "./music/soundEffects";
-import { buildEmbeddedQrPlaybackUrl, buildQrPlaybackUrl, buildShareUrl, readCompositionFromHash, type SharedComposition } from "./music/share";
+import { buildShareUrl, readCompositionFromHash, type SharedComposition } from "./music/share";
 import type { HarmonyStory, MelodyCandidate, NoteEvent } from "./music/types";
 import { useKaraokeAutoFocus } from "./hooks/useKaraokeAutoFocus";
 import { useLyricVideoExport } from "./hooks/useLyricVideoExport";
-import { buildLyricVideoPlan, type LyricVideoPlan } from "./video/lyricVideoPlan";
-
-function uniqueAccompanimentInstrumentIds(ids: readonly InstrumentId[]): InstrumentId[] {
-  const unique: InstrumentId[] = [];
-  ids.forEach((id) => {
-    const canonicalId = findInstrument(id).id;
-    if (isAccompanimentInstrument(canonicalId) &&
-      !unique.includes(canonicalId) && unique.length < MAX_ACCOMPANIMENT_INSTRUMENTS) unique.push(canonicalId);
-  });
-  return unique.length > 0 ? unique : [findInstrument("piano").id];
-}
-
-async function waitForVexScoreRender(timeoutMs = 4000): Promise<void> {
-  const started = performance.now();
-  while (performance.now() - started < timeoutMs) {
-    const scores = Array.from(document.querySelectorAll<HTMLElement>("[data-vex-score='true']"));
-    if (scores.length === 0 || scores.every((score) => score.dataset.vexReady === "true")) return;
-    await new Promise((resolve) => window.setTimeout(resolve, 50));
-  }
-}
+import type { LyricVideoPlan } from "./video/lyricVideoPlan";
+import { buildRecordedMusicVideoPlan, matchingMusicVideoRecording } from "./video/musicVideoRecording";
+import type { MusicVideoScene } from "./video/musicVideoModel";
 
 // backingDisplayNotes & repeatFourMeasures moved to ./components/backingDisplayNotes
 
@@ -105,10 +107,7 @@ type KaraokeHighlight = Readonly<{
 type PlaybackSegment = Readonly<{ measureIndex: number; start: number; end: number }>;
 type PlaybackNoteSegment = Readonly<{ measureIndex: number; noteId: string; start: number; end: number }>;
 
-const PREVIEW_INSTRUMENT_LIMIT = 12;
 const QR_RENDER_LIMIT = 2400;
-const QUICK_PREVIEW_INSTRUMENTS = INSTRUMENTS.slice(0, PREVIEW_INSTRUMENT_LIMIT);
-const MORE_PREVIEW_INSTRUMENTS = INSTRUMENTS.slice(PREVIEW_INSTRUMENT_LIMIT);
 
 const storyInfo: Record<HarmonyStory, { label: string; description: string; icon: string }> = {
   home: { label: "우리 집 화음", description: "편안하고 제자리인 느낌", icon: "⌂" },
@@ -175,12 +174,6 @@ function isLocalHost(location: Pick<Location, "hostname">): boolean {
   return ["localhost", "127.0.0.1", "::1"].includes(location.hostname);
 }
 
-function qrPlaybackLocation(location: Location): Pick<Location, "origin" | "pathname"> {
-  return isLocalHost(location)
-    ? { origin: "https://maeum-melody.vercel.app", pathname: "/" }
-    : location;
-}
-
 function replaceNote(
   notes: readonly NoteEvent[],
   id: string,
@@ -201,13 +194,16 @@ function sanitizeNoteLinks(notes: readonly NoteEvent[]): NoteEvent[] {
   });
 }
 
-export default function App() {
+export default function App({ initialDraft, initialRecoveryCandidates = [], allowAutomaticRecovery = true,
+  recoveryPreserved = true }: Readonly<{ initialDraft?: SavedDraft | null;
+    initialRecoveryCandidates?: readonly LostDrawingRecoveryCandidate[]; allowAutomaticRecovery?: boolean;
+    recoveryPreserved?: boolean }> = {}) {
   const mobileRecordMode = isRecordingLink(window.location.search, window.location.hash);
   const qrPlaybackMode = new URLSearchParams(window.location.search).get("play") === "qr";
   const qrSongId = new URLSearchParams(window.location.search).get("song") ?? "";
   const [incomingShare] = useState(() => readCompositionFromHash(window.location.hash));
   const [savedDraft] = useState(() => {
-    try { return readDraft(window.localStorage); } catch { return null; }
+    try { return initialDraft ?? readDraft(window.localStorage); } catch { return null; }
   });
   const [showOpening, setShowOpening] = useState(() =>
     !mobileRecordMode && !qrPlaybackMode && new URLSearchParams(window.location.search).get("start") !== "new");
@@ -215,20 +211,33 @@ export default function App() {
   const [practiceOpen, setPracticeOpen] = useState(false);
   const [accountLibraryOpen, setAccountLibraryOpen] = useState(false);
   const [communityAlbumOpen, setCommunityAlbumOpen] = useState(false);
+  const publishedSongPlayback = usePublishedSongPlayback();
   const [publishingScore, setPublishingScore] = useState<CloudScore | null>(null);
   const [authUser, setAuthUser] = useState<User | null>(null);
+  const activeAuthUid = useRef<string | null>(null);
+  activeAuthUid.current = authUser?.uid ?? null;
   const [authReady, setAuthReady] = useState(!firebaseConfigured);
-  const { scores: cloudScores, status: cloudListStatus, retry: retryCloudScores,
+  const { scores: cloudScores, scoresUid: cloudScoresUid, status: cloudListStatus, retry: retryCloudScores,
     upsert: upsertCloudScore } = useCloudScoreList(authUser?.uid ?? null);
   const [cloudBusy, setCloudBusy] = useState(false);
   const [cloudError, setCloudError] = useState("");
   const [cloudSaveNotice, setCloudSaveNotice] = useState("");
   const [saveIssues, setSaveIssues] = useState<SaveIssue[]>([]);
   const [saveFailureOpen, setSaveFailureOpen] = useState(false);
-  const [activeCloudScoreId, setActiveCloudScoreId] = useState<string | null>(null);
   const [cloudSavedFingerprint, setCloudSavedFingerprint] = useState<string | null>(null);
   const resumableDraft = savedDraft && (!incomingShare || savedDraft.sourceHash === window.location.hash)
     ? savedDraft : null;
+  const [projectIdentity, setProjectIdentity] = useState(() => ({
+    projectId: resumableDraft?.projectId ?? crypto.randomUUID(),
+    cloudScoreId: resumableDraft?.cloudScoreId,
+    cloudOwnerId: resumableDraft?.cloudOwnerId
+  }));
+  const [leavingProject, setLeavingProject] = useState(false);
+  const [recoverySafe, setRecoverySafe] = useState(recoveryPreserved);
+  const recoverySafety = useRef(recoveryPreserved);
+  const [recoveredStudioRequest, setRecoveredStudioRequest] = useState(0);
+  const projectLoadRequest = useRef(0);
+  const activeCloudScoreId = projectIdentity.cloudOwnerId === authUser?.uid ? projectIdentity.cloudScoreId ?? null : null;
   const initialPreset = findHarmonyPreset(resumableDraft?.presetId ?? incomingShare?.presetId ?? HARMONY_PRESETS[0].id);
   const initialLength = resumableDraft?.songLength ?? incomingShare?.songLength ?? 8;
   const initialAccompanimentStyleId = resumableDraft?.accompanimentStyleId ?? incomingShare?.accompanimentStyleId ?? "children_song";
@@ -241,6 +250,8 @@ export default function App() {
     resumableDraft ? compositionFromDraft(resumableDraft, initialPreset) :
       incomingShare ? compositionFromShare(incomingShare, initialPreset) : emptyComposition(initialPreset, initialLength)
   );
+  const [musicVideoScenes, setMusicVideoScenes] = useState<readonly MusicVideoScene[]>(resumableDraft?.musicVideoScenes ?? []);
+  const [musicVideoBusy, setMusicVideoBusy] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [selectedNoteId, setSelectedNoteId] = useState("");
   const [selectedNoteIds, setSelectedNoteIds] = useState<string[]>([]);
@@ -275,7 +286,6 @@ export default function App() {
   const playbackSegments = useRef<readonly PlaybackSegment[]>([]);
   const playbackNoteSegments = useRef<readonly PlaybackNoteSegment[]>([]);
   const noteAnimationTimers = useRef<number[]>([]);
-  const projectFileInput = useRef<HTMLInputElement | null>(null);
   const recordingPreviewRef = useRef<HTMLAudioElement | null>(null);
   const mobileRecordingQrRef = useRef<SVGSVGElement | null>(null);
   const backingMixRequest = useRef(0);
@@ -310,13 +320,9 @@ export default function App() {
   const [songDescription, setSongDescription] = useState(
     resumableDraft?.description ?? incomingShare?.description ?? ""
   );
-  const [saveStatus, setSaveStatus] = useState(resumableDraft ? "이 기기에서 이어 불러옴 ✓" : "이 기기에 자동 저장됨 ✓");
   const [shareStatus, setShareStatus] = useState("");
   const [generatedShareUrl, setGeneratedShareUrl] = useState("");
   const [mobileRecordingUrl, setMobileRecordingUrl] = useState("");
-  const [exportingPdf, setExportingPdf] = useState(false);
-  const [pdfIncludeAccompaniment, setPdfIncludeAccompaniment] = useState(false);
-  const [pdfPlaybackUrl, setPdfPlaybackUrl] = useState("");
   const [recordingSong, setRecordingSong] = useState(false);
   const [practicingSong, setPracticingSong] = useState(false);
   const [karaokeMode, setKaraokeMode] = useState<KaraokeMode>("recording");
@@ -356,18 +362,34 @@ export default function App() {
 
   const activeMeasure = measures[activeIndex];
   const lyrics = useMemo(() => measures.map((measure) => lyricText(measure.notes)), [measures]);
-  const currentDraft = useMemo<SavedDraft>(() => ({
-    version: 1, updatedAt: Date.now(), sourceHash, title: songTitle, description: songDescription,
+  const draftState = useMemo<SavedDraft>(() => ({
+    version: 1, updatedAt: 0, ...projectIdentity, sourceHash, title: songTitle, description: songDescription,
     creator: creatorName, originalCreator, presetId: selectedPresetId, meter, songLength,
     structureTemplateId: structureTemplateId ?? undefined,
     instrumentId: selectedInstrumentId, accompanimentStyleId, accompanimentInstrumentIds, accompanimentTrackMix,
-    beatPattern, beatVolume, bpm, lyrics,
+    beatPattern, beatVolume, bpm, lyrics, musicVideoScenes,
     measures: measures.map(({ candidateId, candidateName, notes, chords, keyFifths, effects }) => ({ candidateId, candidateName, notes, chords, keyFifths, effects })),
     showArrangement
   }), [accompanimentInstrumentIds, accompanimentStyleId, accompanimentTrackMix, beatPattern, beatVolume, bpm, creatorName, lyrics, measures, meter,
     originalCreator, selectedInstrumentId, selectedPresetId, songDescription, sourceHash, showArrangement, songLength,
-    songTitle, structureTemplateId]);
-  const currentDraftFingerprint = useMemo(() => draftFingerprint(currentDraft), [currentDraft]);
+    songTitle, structureTemplateId, musicVideoScenes, projectIdentity]);
+  const { currentDraft, fingerprint: currentDraftFingerprint, adopt: adoptDraftRevision } = useDraftRevision(draftState, resumableDraft?.updatedAt);
+  const persistenceEnabled = !mobileRecordMode && !qrPlaybackMode && !leavingProject;
+  const browserSave = useBrowserProjectAutosave(currentDraft, persistenceEnabled && recoverySafe);
+  const saveStatus = recoverySafe ? browserSave.status : "이전 그림 기록 보관 실패 · 복구 확인 필요";
+  const cloudAutosave = useCloudProjectAutosave({ draft: currentDraft, fingerprint: currentDraftFingerprint, uid: authUser?.uid ?? null,
+    enabled: persistenceEnabled && recoverySafe && authReady && !cloudBusy, scores: cloudScores, listStatus: cloudListStatus,
+    onSaved: (score, fingerprint, projectId, uid) => {
+      const savedProjectId = score.draft.projectId ?? projectId;
+      setProjectIdentity((identity) => identity.projectId !== projectId || identity.projectId === savedProjectId &&
+        identity.cloudScoreId === score.id && identity.cloudOwnerId === uid ? identity :
+        { projectId: savedProjectId, cloudScoreId: score.id, cloudOwnerId: uid });
+      setCloudSavedFingerprint(fingerprint);
+      upsertCloudScore(score);
+    } });
+  const lostDrawingRecovery = useLostDrawingRecovery({ current: currentDraft, initialCandidates: initialRecoveryCandidates,
+    allowAutomatic: allowAutomaticRecovery, enabled: persistenceEnabled, uid: authUser?.uid ?? null,
+    scores: cloudScores, scoresUid: cloudScoresUid, onRestore: restoreLostDrawing, onPreserved: confirmRecoveryPreserved });
   const initialDraftFingerprint = useRef(currentDraftFingerprint);
   const currentAccompanimentOptions = useMemo<AccompanimentOptions>(() => ({
     styleId: accompanimentStyleId,
@@ -417,10 +439,10 @@ export default function App() {
     currentDraftFingerprint !== cloudSavedFingerprint;
   const localSaveFailed = saveStatus.includes("못했") || saveStatus.includes("실패");
   const cloudSaveIsCurrent = Boolean(authUser) && currentDraftFingerprint === cloudSavedFingerprint;
-  const cloudSaveFailed = saveIssues.length > 0 && !cloudSaveIsCurrent;
+  const cloudSaveFailed = (saveIssues.length > 0 || Boolean(cloudAutosave.error)) && !cloudSaveIsCurrent;
   const cloudSaveLabel = !firebaseConfigured ? "이 기기에만 저장" : !authReady ? "계정 확인 중" :
-    !authUser ? "계정 저장: 로그인 필요" : cloudSaveNotice.includes("저장 중") ? "계정 저장 중" :
-      cloudSaveIsCurrent ? "계정 저장 완료 ✓" : cloudSaveFailed ? "계정 저장 문제 확인" : "계정 저장 확인";
+    !authUser ? "계정 저장: 로그인 필요" : cloudAutosave.busy ? "프로젝트 저장 중" :
+      cloudSaveIsCurrent ? "계정 저장 완료 ✓" : cloudSaveFailed ? "프로젝트 저장 대기 · 복구본 보관 중" : cloudAutosave.status || "계정 저장 확인";
   const skipNextUnloadWarning = useUnsavedWorkWarning(
     !showOpening && !mobileRecordMode && !qrPlaybackMode && hasUnsavedWork
   );
@@ -430,9 +452,12 @@ export default function App() {
   // Completing every measure only unlocks the finish button.  Accompaniment is
   // deliberately held back until that button opens the arrangement stage.
   const accompanimentReady = showArrangement && allValid;
+  const scorePdf = useScorePdfExport({ title: songTitle, creator: creatorName, ready: accompanimentReady,
+    composition: makeSharedComposition, onStatus: setShareStatus });
+  const { exportingPdf, pdfIncludeAccompaniment, pdfPlaybackUrl, exportPdf } = scorePdf;
   const playingSong = songPlaybackState !== "idle" || songPlaybackLoading;
   const karaokeRunning = recordingSong || practicingSong;
-  const isAnyPlaying = playingId !== null || playingSong || playingMeasure || karaokeRunning || presetPreviewing || beatPreviewing;
+  const isAnyPlaying = playingId !== null || playingSong || playingMeasure || karaokeRunning || presetPreviewing || beatPreviewing || musicVideoBusy;
   useKaraokeAutoFocus(karaokeOpen, karaokeRunning, karaokeHighlight);
   const updateLyricNotePositions = useCallback((index: number, positions: Record<string, { x: number; y: number }>) => {
     setLyricNotePositions((current) => {
@@ -571,7 +596,6 @@ export default function App() {
       unsubscribe = observeAuth((user) => {
         setAuthUser(user);
         setAuthReady(true);
-        setActiveCloudScoreId(null);
         setCloudSavedFingerprint(null);
         setCloudError("");
         setCloudSaveNotice("");
@@ -624,14 +648,6 @@ export default function App() {
     setRedoStack([]);
     historyCurrent.current = next;
   }, [measures, meter, selectedPresetId, songLength, structureTemplateId, beatPattern]);
-
-  useEffect(() => {
-    setCloudSaveNotice("");
-    try {
-      setSaveStatus(writeDraft(window.localStorage, currentDraft)
-        ? "이 기기에 자동 저장됨 ✓" : "이 기기에 저장하지 못했어요");
-    } catch { setSaveStatus("이 기기에 저장하지 못했어요"); }
-  }, [currentDraft]);
 
   function restoreComposition(snapshot: CompositionSnapshot) {
     restoringHistory.current = true;
@@ -790,41 +806,6 @@ export default function App() {
             : <ArrowRight size={17} aria-hidden="true" />}</i>
         </button>
       </article>
-    );
-  }
-
-  function renderPreviewInstrumentPicker() {
-    return (
-      <div className="preview-instrument-picker measure-instrument-picker" aria-label="가락 미리듣기 악기 선택">
-        <div className="preview-instrument-intro">
-          <div className="preview-instrument-copy">
-            <strong>가락 악기</strong>
-          </div>
-        </div>
-        <div className="preview-instrument-options">
-          {QUICK_PREVIEW_INSTRUMENTS.map((instrument) => (
-            <button key={instrument.id} type="button" data-testid={`preview-instrument-${instrument.id}`}
-              className={selectedInstrumentId === instrument.id ? "active" : ""}
-              aria-pressed={selectedInstrumentId === instrument.id}
-              onClick={() => setSelectedInstrumentId(instrument.id)}>
-              <span>{instrument.icon}</span><strong>{instrument.name}</strong>
-            </button>
-          ))}
-          <label className="preview-instrument-more">
-            <span>더 많은 악기</span>
-            <select data-testid="preview-instrument-more-select"
-              aria-label="더 많은 악기 중에서 선택"
-              value={MORE_PREVIEW_INSTRUMENTS.some((instrument) => instrument.id === selectedInstrumentId)
-                ? selectedInstrumentId : ""}
-              onChange={(event) => event.target.value && setSelectedInstrumentId(event.target.value)}>
-              <option value="">악기를 골라 보세요.</option>
-              {MORE_PREVIEW_INSTRUMENTS.map((instrument) => (
-                <option key={instrument.id} value={instrument.id}>{instrument.icon} {instrument.name}</option>
-              ))}
-            </select>
-          </label>
-        </div>
-      </div>
     );
   }
 
@@ -1395,77 +1376,23 @@ export default function App() {
     }
   }
 
-  async function exportPdf(includeAccompaniment = false) {
-    if (!songTitle.trim() || !creatorName.trim()) {
-      setShareStatus("PDF에 넣을 곡 제목과 작곡가 이름을 먼저 적어 주세요.");
-      return;
-    }
-    const composition = makeSharedComposition();
-    if (!composition) {
-      setShareStatus("QR 재생 링크를 만들려면 모든 마디를 먼저 완성해 주세요.");
-      return;
-    }
-    setExportingPdf(true);
-    setPdfIncludeAccompaniment(includeAccompaniment);
-    setPdfPlaybackUrl("");
-    setShareStatus("QR 노래 링크를 준비하고 있어요...");
-    try {
-      const location = qrPlaybackLocation(window.location);
-      let playbackUrl = buildEmbeddedQrPlaybackUrl(composition, location);
-      try {
-        const { saveQrSong } = await import("./firebase/qrSongs");
-        playbackUrl = buildQrPlaybackUrl(await saveQrSong(composition), location);
-      } catch (qrError) {
-        console.warn("짧은 QR 링크를 만들지 못해 악보 데이터가 포함된 링크를 사용합니다.", qrError);
-      }
-      if (playbackUrl.length > QR_RENDER_LIMIT) throw new Error("qr-link-too-long");
-      setPdfPlaybackUrl(playbackUrl);
-      setShareStatus(includeAccompaniment ? "반주가 포함된 A4 악보를 만들고 있어요..." : "A4 악보를 만들고 있어요...");
-      // The hidden PDF sheet must re-render after the selected layout changes.
-      await new Promise<void>((resolve) => window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve())));
-      await document.fonts.ready;
-      await waitForVexScoreRender();
-      await document.fonts.ready;
-      const pages = Array.from(document.querySelectorAll<HTMLElement>("[data-pdf-page]"));
-      if (pages.length === 0) return;
-      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-        import("html2canvas"), import("jspdf")
-      ]);
-      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
-      for (let index = 0; index < pages.length; index += 1) {
-        const canvas = await html2canvas(pages[index], { scale: 2, backgroundColor: "#ffffff", logging: false });
-        if (index > 0) pdf.addPage("a4", "portrait");
-        pdf.addImage(canvas.toDataURL("image/jpeg", .94), "JPEG", 0, 0, 210, 297, undefined, "FAST");
-      }
-      const safeTitle = songTitle.trim().replace(/[\\/:*?"<>|]/g, "_").slice(0, 40) || "마음멜로디";
-      pdf.save(`${safeTitle}${includeAccompaniment ? "-반주포함" : ""}.pdf`);
-      setShareStatus(includeAccompaniment ? "반주 포함 A4 PDF 악보를 저장했어요!" : "A4 PDF 악보를 저장했어요!");
-    } catch (error) {
-      console.error(error);
-      setShareStatus("PDF를 만드는 중 문제가 생겼어요. 다시 시도해 주세요.");
-    } finally {
-      setExportingPdf(false);
-    }
-  }
-
-  function saveProjectFile() {
-    const blob = new Blob([JSON.stringify(currentDraft, null, 2)], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = safeSongFileName("maeum-melody.txt");
-    link.click();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-    setShareStatus("나중에 다시 고칠 수 있는 작품 파일을 저장했어요.");
-  }
-
   function applyProjectDraft(project: SavedDraft): boolean {
-    try {
-      if (!writeDraft(window.localStorage, project)) throw new Error("local-save-failed");
-    } catch {
-      window.alert("불러온 작품을 이 기기에 저장하지 못했어요. 저장 공간을 확인해 주세요.");
+    if (!recoverySafety.current) {
+      setShareStatus("이전 그림 기록을 먼저 보관해야 해요. 그림 복구에서 저장 공간을 확인해 주세요.");
       return false;
     }
+    projectLoadRequest.current += 1;
+    void saveBrowserProjectDraft(currentDraft);
+    const projectId = project.projectId ?? crypto.randomUUID();
+    project = { ...project, projectId };
+    // An old shared-song URL must not take precedence over the project on reload.
+    const projectUrl = new URL(window.location.href);
+    projectUrl.hash = project.sourceHash;
+    try { window.history.replaceState(window.history.state, "", projectUrl); }
+    catch { window.location.hash = project.sourceHash; }
+    checkpointBrowserProject(project);
+    adoptDraftRevision(project);
+    setProjectIdentity({ projectId, cloudScoreId: project.cloudScoreId, cloudOwnerId: project.cloudOwnerId });
     const preset = findHarmonyPreset(project.presetId);
     historyCurrent.current = null;
     setUndoStack([]);
@@ -1475,6 +1402,7 @@ export default function App() {
     setSongLength(project.songLength);
     setStructureTemplateId(project.structureTemplateId ?? null);
     setMeasures(compositionFromDraft(project, preset));
+    setMusicVideoScenes(project.musicVideoScenes ?? []);
     setRhythmChecks({});
     setSelectedInstrumentId(findInstrument(project.instrumentId).id);
     const nextAccompanimentStyle = findAccompanimentStyle(project.accompanimentStyleId ?? "arpeggio");
@@ -1495,6 +1423,47 @@ export default function App() {
     setSelectedNoteIds([]);
     setEditStatus("");
     return true;
+  }
+
+  function confirmRecoveryPreserved() {
+    recoverySafety.current = true;
+    setRecoverySafe(true);
+  }
+
+  async function ensureRecoveryPreserved() {
+    if (recoverySafety.current) return;
+    if (!(await scanLostDrawingRecoveryRecords()).preserved) {
+      throw new Error("이전 그림 원본을 보관할 공간이 부족해요. 저장 공간을 확보한 뒤 다시 확인해 주세요.");
+    }
+    confirmRecoveryPreserved();
+  }
+
+  async function restoreLostDrawing(candidate: LostDrawingRecoveryCandidate) {
+    if (cloudBusy || cloudAutosave.busy || musicVideoBusy) throw new Error("진행 중인 저장이나 영상 작업이 끝나면 복구해 주세요.");
+    await ensureRecoveryPreserved();
+    const sourceOwner = candidate.sourceKind === "cloud" ? activeAuthUid.current : undefined;
+    const checkAccount = () => {
+      if (candidate.sourceKind === "cloud" && (!sourceOwner || activeAuthUid.current !== sourceOwner ||
+        !candidate.source.startsWith(`cloud:${sourceOwner}:`))) throw new Error("그림을 보관한 계정이 바뀌었어요. 다시 로그인한 뒤 복구해 주세요.");
+    };
+    checkAccount();
+    // A successful primary checkpoint alone cannot protect the current drawing
+    // while replacing it when IndexedDB is unavailable and backup writes fail.
+    const currentDrawing = await scanLostDrawingRecoveryRecords([{ value: currentDraft,
+      source: `recovery-current:${currentDraft.projectId}`, sourceKind: "archive", currentPointer: false }]);
+    if (!currentDrawing.preserved) throw new Error("현재 그림의 별도 보관본을 저장하지 못했어요. 저장 공간을 확보한 뒤 복구해 주세요.");
+    checkAccount();
+    const preservedCurrent = await saveBrowserProjectDraft(currentDraft);
+    if (!preservedCurrent) throw new Error("현재 작품을 보관할 공간이 부족해요. 저장 공간을 확보한 뒤 복구해 주세요.");
+    const copy = makeRecoveredDrawingProject(candidate, currentDraft, crypto.randomUUID(), sourceOwner ?? undefined);
+    if (!await saveBrowserProjectDraft(copy)) throw new Error("복구 사본을 저장하지 못했어요. 원본 기록은 그대로 남아 있어요.");
+    checkAccount();
+    applyProjectDraft(copy);
+    setRecoverySafe(true);
+    setShowOpening(false);
+    setAccountLibraryOpen(false);
+    setRecoveredStudioRequest((value) => value + 1);
+    setShareStatus("남아 있던 그림을 새 프로젝트 사본으로 복구했어요. 이전 작품도 이 기기에 보관했어요.");
   }
 
   async function handleGoogleSignIn() {
@@ -1569,17 +1538,14 @@ export default function App() {
       setSaveFailureOpen(true);
       return;
     }
-    setCloudBusy(true);
     setCloudError("");
     setCloudSaveNotice("계정에 저장 중...");
     try {
-      const { saveCloudScore } = await import("./firebase/scores");
-      const savedScore = await saveCloudScore(authUser.uid, draft, asCopy ? undefined : activeCloudScoreId ?? undefined);
-      setActiveCloudScoreId(savedScore.id);
-      setCloudSavedFingerprint(draftFingerprint(draft));
-      upsertCloudScore(savedScore);
-      setCloudSaveNotice("계정 저장 완료 ✓ 다른 기기에서도 볼 수 있어요.");
-      setShareStatus(asCopy ? "현재 악보를 새 클라우드 악보로 저장했어요." : "내 악보함에 저장했어요.");
+      const savedScore = await cloudAutosave.save(asCopy);
+      if (savedScore) {
+        setCloudSaveNotice("계정 저장 완료 ✓ 다른 기기에서도 볼 수 있어요.");
+        setShareStatus(asCopy ? "현재 악보를 새 클라우드 악보로 저장했어요." : "내 악보함에 저장했어요.");
+      } else setCloudSaveNotice("브라우저에 보관했어요. 연결되면 프로젝트에 자동 저장해요.");
     } catch (error) {
       console.error(error);
       const issue = cloudSaveIssue(error);
@@ -1587,8 +1553,6 @@ export default function App() {
       setCloudSaveNotice("");
       setSaveIssues([issue]);
       setSaveFailureOpen(true);
-    } finally {
-      setCloudBusy(false);
     }
   }
 
@@ -1601,36 +1565,28 @@ export default function App() {
       ?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
   }
 
-  function handleCloudLoad(score: CloudScore) {
+  async function handleCloudLoad(score: CloudScore) {
     if (hasUnsavedWork && !window.confirm(`'${score.title}' 악보를 열까요?\n\n${UNSAVED_WORK_WARNING} 먼저 내 악보함에 저장해 주세요.`)) return;
-    if (!applyProjectDraft(score.draft)) return;
-    setActiveCloudScoreId(score.id);
-    setCloudSavedFingerprint(draftFingerprint(score.draft));
+    const request = ++projectLoadRequest.current;
+    const project = await recoverCloudProjectDraft(score, authUser?.uid ?? "", currentDraft);
+    if (request !== projectLoadRequest.current) return;
+    if (!applyProjectDraft(project)) return;
+    setCloudSavedFingerprint(draftFingerprint(project) === draftFingerprint(score.draft) ? draftFingerprint(project) : null);
     setAccountLibraryOpen(false);
-    setShareStatus("내 악보함에서 작품을 불러왔어요.");
+    setShareStatus(project === score.draft ? "내 악보함에서 작품을 불러왔어요." : "최신 그림을 포함해 프로젝트를 불러왔어요.");
   }
 
-  async function playPublishedSong(song: PublishedSong): Promise<boolean> {
-    const preset = findHarmonyPreset(song.draft.presetId);
-    const publishedMeasures = compositionFromDraft(song.draft, preset);
-    const playable = publishedMeasures.flatMap((measure, index) => measure.notes ? [{
-      notes: measure.notes,
-      harmony: measure.story,
-      chords: measure.chords,
-      effects: measure.effects,
-      measureIndex: index
-    }] : []);
-    if (playable.length !== song.draft.songLength) return false;
-    const duration = await playComposition(playable, findInstrument(song.draft.instrumentId).id,
-      song.draft.bpm ?? 96, song.draft.showArrangement ? {
-        styleId: findAccompanimentStyle(song.draft.accompanimentStyleId ?? "arpeggio").id,
-        instrumentIds: uniqueAccompanimentInstrumentIds(song.draft.accompanimentInstrumentIds ?? ["piano"]),
-        trackMix: song.draft.accompanimentTrackMix,
-        beatPattern: song.draft.beatPattern,
-        beatVolume: song.draft.beatVolume,
-        meter: song.draft.meter
-      } : undefined);
-    return duration !== null;
+  async function handleBrowserProjectLoad(project: SavedDraft) {
+    if (hasUnsavedWork && !window.confirm(`'${project.title || "이름 없는 프로젝트"}' 복구본을 열까요? 현재 그림도 이 기기에 보관됩니다.`)) return;
+    const request = ++projectLoadRequest.current;
+    const archived = project.projectId ? await readBrowserProject(project.projectId) : null;
+    if (request !== projectLoadRequest.current) return;
+    if (archived && archived.updatedAt >= project.updatedAt) project = archived;
+    if (currentDraft.projectId === project.projectId && currentDraft.updatedAt >= project.updatedAt) project = currentDraft;
+    if (!applyProjectDraft(project)) return;
+    setAccountLibraryOpen(false);
+    setShowOpening(false);
+    setShareStatus("이 기기에 자동 보관된 프로젝트와 그림을 불러왔어요.");
   }
 
   function openPublishedProjectCopy(song: PublishedSong) {
@@ -1639,6 +1595,7 @@ export default function App() {
     const copyTitle = `${song.title.trim().slice(0, 56) || "제목 없는 노래"} 사본`;
     const copy: SavedDraft = {
       ...JSON.parse(JSON.stringify(song.draft)) as SavedDraft,
+      projectId: crypto.randomUUID(), cloudScoreId: undefined, cloudOwnerId: undefined,
       updatedAt: Date.now(),
       sourceHash: "",
       title: copyTitle,
@@ -1646,7 +1603,6 @@ export default function App() {
       originalCreator: song.draft.originalCreator || song.draft.creator || song.creator
     };
     if (!applyProjectDraft(copy)) return;
-    setActiveCloudScoreId(null);
     setCommunityAlbumOpen(false);
     setShowOpening(false);
     setShareStatus(`'${song.title}' 프로젝트의 사본을 열었어요. 원본은 바뀌지 않아요.`);
@@ -1660,7 +1616,10 @@ export default function App() {
     try {
       const { deleteCloudScore } = await import("./firebase/scores");
       await deleteCloudScore(authUser.uid, score.id);
-      if (activeCloudScoreId === score.id) setActiveCloudScoreId(null);
+      if (activeCloudScoreId === score.id) {
+        cloudAutosave.pause();
+        setProjectIdentity((identity) => ({ ...identity, cloudScoreId: undefined, cloudOwnerId: undefined }));
+      }
       retryCloudScores();
     } catch (error) {
       console.error(error);
@@ -1670,34 +1629,16 @@ export default function App() {
     }
   }
 
-  function startNewProject() {
+  async function startNewProject() {
     if (hasUnsavedWork && !window.confirm(`새 곡을 시작할까요?\n\n${UNSAVED_WORK_WARNING} 먼저 내 악보함에 저장해 주세요.`)) return;
-    try { window.localStorage.removeItem(DRAFT_STORAGE_KEY); }
-    catch { window.alert("새 곡을 시작하지 못했어요. 기기 저장 공간을 확인해 주세요."); return; }
+    projectLoadRequest.current += 1;
+    try { await ensureRecoveryPreserved(); }
+    catch (error) { setShareStatus(error instanceof Error ? error.message : "이전 그림 기록을 먼저 확인해 주세요."); return; }
+    setLeavingProject(true);
+    try { await browserSave.flush(); await clearBrowserCurrentProject(); }
+    catch { setLeavingProject(false); window.alert("새 곡을 시작하지 못했어요. 기기 저장 공간을 확인해 주세요."); return; }
     skipNextUnloadWarning();
     window.location.assign(`${window.location.pathname}?start=new`);
-  }
-
-  async function loadProjectFile(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-    if (file.size > 1_500_000) {
-      setShareStatus("작품 파일이 너무 커요. 1.5MB 이하의 작품 파일을 골라 주세요.");
-      return;
-    }
-    try {
-      const parsed: unknown = JSON.parse(await file.text());
-      if (!isSavedDraft(parsed)) throw new Error("invalid-project");
-      if (hasUnsavedWork && !window.confirm(`불러온 작품을 열까요?\n\n${UNSAVED_WORK_WARNING} 먼저 내 악보함에 저장해 주세요.`)) return;
-      const project = parsed;
-      if (!applyProjectDraft(project)) return;
-      setActiveCloudScoreId(null);
-      setShareStatus("작품 파일을 불러왔어요. 이어서 고쳐 보세요!");
-    } catch (error) {
-      console.error(error);
-      setShareStatus("마음멜로디 작품 파일인지 확인해 주세요.");
-    }
   }
 
   function safeSongFileName(extension: string): string {
@@ -1767,7 +1708,7 @@ export default function App() {
       setRecordedAudioBuffer(result.audioBuffer);
       setRecordedVocalBuffer(result.vocalAudioBuffer);
       setRecordedBackingBuffer(result.backingAudioBuffer);
-      setRecordingVideoPlan(buildLyricVideoPlan(songTitle, playable, bpm, result.introSeconds, result.audioBuffer.duration));
+      setRecordingVideoPlan(buildRecordedMusicVideoPlan(songTitle, playable, bpm, selectedInstrumentId, currentAccompanimentOptions, result.introSeconds, result.audioBuffer.duration));
       setAnalyzingPitch(captureMode === "personal");
       // Run after the recording UI has settled so pitch checking never makes
       // the final recording feel slow. This is a gentle review, not a grade.
@@ -1943,8 +1884,6 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <input ref={projectFileInput} className="project-file-input" type="file" tabIndex={-1} aria-hidden="true"
-        accept="text/plain,.txt,application/json,.json" onChange={(event) => void loadProjectFile(event)} />
       {showOpening && <OpeningScreen hasDraft={Boolean(resumableDraft)} onStart={startNewProject}
         onContinue={() => setShowOpening(false)} onPractice={openPractice} />}
       {!mobileRecordMode && <header className="topbar" inert={showOpening} aria-hidden={showOpening}>
@@ -1960,12 +1899,10 @@ export default function App() {
             </button>
             {showAppMenu && <div className="app-menu-panel" role="menu">
               <button type="button" role="menuitem" onClick={startNewProject}><WandSparkles size={16} /> 새로 시작하기</button>
+              <button type="button" role="menuitem" onClick={() => { setShowAppMenu(false); void lostDrawingRecovery.scan(); }}>
+                <FileDown size={16} /> 사라진 그림 찾기</button>
               <button type="button" role="menuitem" disabled={isAnyPlaying || exportingBacking || exportingPdf || processingRecording || lyricVideoExport.exporting}
                 onClick={openPractice}><Music2 size={16} /> 기능 연습하기</button>
-              <button type="button" role="menuitem" onClick={() => {
-                setShowAppMenu(false);
-                projectFileInput.current?.click();
-              }}><FileUp size={16} /> 악보 불러오기</button>
               <button type="button" role="menuitem" onClick={() => {
                 setShowAppMenu(false);
                 setCommunityAlbumOpen(true);
@@ -1993,23 +1930,30 @@ export default function App() {
       {accountLibraryOpen && !mobileRecordMode && (
         <AccountLibrary configured={firebaseConfigured} user={authUser} authReady={authReady}
           scores={cloudScores} listStatus={cloudListStatus} onRetryList={retryCloudScores}
-          busy={cloudBusy} error={cloudError} saveNotice={cloudSaveNotice}
+          busy={cloudBusy || cloudAutosave.busy} error={cloudError || cloudAutosave.error} saveNotice={cloudSaveNotice || cloudAutosave.status}
           currentScoreId={activeCloudScoreId} onClose={() => setAccountLibraryOpen(false)}
           onGoogleSignIn={() => void handleGoogleSignIn()} onEmailAuth={handleEmailAuth}
           onPasswordReset={handlePasswordReset} onClearError={() => setCloudError("")}
           onSignOut={() => void handleFirebaseSignOut()}
-          onSave={(asCopy) => void handleCloudSave(asCopy)} onLoad={handleCloudLoad}
+          onSave={(asCopy) => void handleCloudSave(asCopy)} onLoad={handleCloudLoad} onLoadLocal={handleBrowserProjectLoad}
           onPublish={(score) => { setPublishingScore(score); setAccountLibraryOpen(false); }}
-          onDelete={(score) => void handleCloudDelete(score)} />
+          onDelete={(score) => void handleCloudDelete(score)} onFindLostDrawings={() => void lostDrawingRecovery.scan()} />
       )}
 
+      {lostDrawingRecovery.open && <LostDrawingRecoveryDialog {...lostDrawingRecovery}
+        onRestore={(candidate) => void lostDrawingRecovery.restore(candidate)} onDismiss={() => void lostDrawingRecovery.dismiss()}
+        onClose={lostDrawingRecovery.close} onScan={() => void lostDrawingRecovery.scan()} />}
       {saveFailureOpen && <SaveFailureDialog issues={saveIssues} onClose={() => setSaveFailureOpen(false)} onLocate={locateSaveIssue} />}
+      {scorePdf.recoveryOpen && <ScoreExportRecoveryDialog onSave={browserSave.flush}
+        onBeforeRefresh={skipNextUnloadWarning} onClose={scorePdf.closeRecovery}
+        recording={recordingDownloadUrl ? { url: recordingDownloadUrl, fileName: safeSongFileName("mp3") } : undefined} />}
 
       {communityAlbumOpen && !mobileRecordMode && (
         <CommunityAlbum configured={firebaseConfigured} user={authUser}
           onClose={() => setCommunityAlbumOpen(false)}
           onRequestLogin={() => { setCommunityAlbumOpen(false); setAccountLibraryOpen(true); }}
-          onPlay={playPublishedSong} onOpenProject={openPublishedProjectCopy} />
+          onPlay={publishedSongPlayback.play} onStop={publishedSongPlayback.stop}
+          playbackStore={publishedSongPlayback.store} onOpenProject={openPublishedProjectCopy} />
       )}
 
       {publishingScore && authUser && !mobileRecordMode && (
@@ -2044,9 +1988,9 @@ export default function App() {
                     </div>
                     <div className="recording-tips" aria-label="녹음 도움말">
                       {recordingCaptureMode === "choir" ? <>
-                        <span>👥 모두 함께 불러요</span><span>🎙️ 마이크는 앞 가운데</span><span>🔊 스피커와 마이크는 떨어뜨려요</span>
+                        <span><Users size={18} /> 모두 함께 불러요</span><span><Mic2 size={18} /> 마이크는 앞 가운데</span><span><Volume2 size={18} /> 스피커와 마이크는 떨어뜨려요</span>
                       </> : <>
-                        <span>🎧 이어폰을 써요</span><span>🎙️ 입에서 10~15cm</span><span>🤫 조용한 곳에서</span>
+                        <span><Headphones size={18} /> 이어폰을 써요</span><span><Mic2 size={18} /> 입에서 10~15cm</span><span><VolumeX size={18} /> 조용한 곳에서</span>
                       </>}
                     </div>
                   </>
@@ -2263,6 +2207,10 @@ export default function App() {
       )}
 
       {!mobileRecordMode && <main inert={showOpening} aria-hidden={showOpening}>
+        {!recoverySafe && <div className="recovery-storage-warning" role="alert">
+          이전 그림 기록을 보관할 공간이 부족해 자동 저장을 잠시 멈췄어요. 저장 공간을 확보한 뒤 다시 확인해 주세요.
+          <button type="button" onClick={() => void lostDrawingRecovery.scan()}>그림 기록 확인</button>
+        </div>}
         <ComposerSettings summary={`${songLength}마디 · ${meterKey(meter)}박자 · ${bpm} BPM`}>
         <SongMoodSetup bpm={bpm} rhythmStyleId={accompanimentStyleId} disabled={isAnyPlaying}
           onTempoChange={setBpm} onRhythmChange={setAccompanimentStyleId} />
@@ -2273,7 +2221,7 @@ export default function App() {
           onPlayingChange={setPresetPreviewing} onSelect={choosePreset}
           baseDraft={currentDraft} onImportScore={applyProjectDraft} />
 
-        <section className="meter-chooser meter-with-guide" aria-labelledby="meter-heading">
+        <section className="meter-chooser composer-setting-card" aria-labelledby="meter-heading">
           <div className="compact-heading">
             <span className="number-badge">3</span>
             <div><h2 id="meter-heading">박자</h2></div>
@@ -2383,48 +2331,16 @@ export default function App() {
           </div>
 
         <section className="candidate-section candidate-sidebar">
-          <div className="section-heading">
-            <div>
-              <span className={`dot ${activeMeasure.story}`} />
-              <h2>가락</h2>
-            </div>
-            <span className="count-pill">{activeIndex + 1}/{songLength} 마디</span>
-          </div>
-          <CandidateFeelingTabs
-            groups={candidateFeelingGroups.map((group) => ({ ...group, count: group.candidates.length }))}
-            activeId={selectedFeelingGroup.id}
-            onChange={setActiveMelodyFeeling} />
-          {activeIndex > 0 && measures[activeIndex - 1].notes?.some((note) => note.pitch !== null) &&
-            <p className="candidate-priority-note">앞마디와 자연스럽게 이어지는 가락부터 보여줘요.</p>}
+          <ComposerCandidateHeading current={activeIndex + 1} total={songLength} story={activeMeasure.story}>
+            <CandidateFeelingTabs
+              groups={candidateFeelingGroups.map((group) => ({ ...group, count: group.candidates.length }))}
+              activeId={selectedFeelingGroup.id}
+              onChange={setActiveMelodyFeeling} />
+            {activeIndex > 0 && measures[activeIndex - 1].notes?.some((note) => note.pitch !== null) &&
+              <p className="candidate-priority-note">앞마디와 자연스럽게 이어지는 가락부터 보여줘요.</p>}
+          </ComposerCandidateHeading>
 
-          <div className="preview-instrument-picker candidate-instrument-picker" aria-label="가락 미리듣기 악기 선택">
-            <div>
-              <strong>가락 악기</strong>
-            </div>
-            <div className="preview-instrument-options">
-              {QUICK_PREVIEW_INSTRUMENTS.map((instrument) => (
-                <button key={instrument.id} type="button" data-testid={`candidate-preview-instrument-${instrument.id}`}
-                  className={selectedInstrumentId === instrument.id ? "active" : ""}
-                  aria-pressed={selectedInstrumentId === instrument.id}
-                  onClick={() => setSelectedInstrumentId(instrument.id)}>
-                  <span>{instrument.icon}</span><strong>{instrument.name}</strong>
-                </button>
-              ))}
-              <label className="preview-instrument-more">
-                <span>더 많은 악기</span>
-                <select data-testid="candidate-preview-instrument-more-select"
-                  aria-label="더 많은 악기 중에서 선택"
-                  value={MORE_PREVIEW_INSTRUMENTS.some((instrument) => instrument.id === selectedInstrumentId)
-                    ? selectedInstrumentId : ""}
-                  onChange={(event) => event.target.value && setSelectedInstrumentId(event.target.value)}>
-                  <option value="">악기를 골라 보세요</option>
-                  {MORE_PREVIEW_INSTRUMENTS.map((instrument) => (
-                    <option key={instrument.id} value={instrument.id}>{instrument.icon} {instrument.name}</option>
-                  ))}
-                </select>
-              </label>
-            </div>
-          </div>
+          <ComposerInstrumentPicker context="candidate" value={selectedInstrumentId} onChange={setSelectedInstrumentId} />
 
           <div className="candidate-grid" id="melody-feeling-panel" role="tabpanel"
             aria-labelledby={`melody-feeling-${selectedFeelingGroup.id}`}>
@@ -2517,21 +2433,21 @@ export default function App() {
                     onClick={linkSelectedNotes}>⌒<span>음표 잇기</span></button>
                   <button type="button" data-testid="add-rest" onClick={addRestNote}>𝄽<span>쉼표</span></button>
                   <button type="button" data-testid="add-note" onClick={addMelodyNote}><Plus size={17} /><span>음표 추가</span></button>
-                  <button type="button" className="danger" onClick={deleteNote}>×<span>지우기</span></button>
-                  <button type="button" className="reset" data-testid="reset-measure" onClick={resetActiveMeasure}>↺<span>처음으로</span></button>
+                  <button type="button" className="danger" onClick={deleteNote}><Trash2 size={18} /><span>지우기</span></button>
+                  <button type="button" className="reset" data-testid="reset-measure" onClick={resetActiveMeasure}><Undo2 size={18} /><span>처음으로</span></button>
                   <button type="button" data-testid="copy-notes" disabled={selectedNoteIds.length === 0}
-                    onClick={copySelectedNotes}>⧉<span>복사</span></button>
+                    onClick={copySelectedNotes}><Copy size={18} /><span>복사</span></button>
                 </div>
                 {editStatus && <p className="edit-status" role="status">{editStatus}</p>}
               </>
             ) : (
-              <div className="empty-message"><span>♪</span><strong>먼저 가락을 하나 골라 주세요</strong></div>
+              <div className="empty-message"><Music2 size={44} /><strong>먼저 가락을 하나 골라 주세요</strong></div>
             )}
           </div>
           </MobileEditorDisclosure>
         </section>
 
-        {renderPreviewInstrumentPicker()}
+        <ComposerInstrumentPicker value={selectedInstrumentId} onChange={setSelectedInstrumentId} />
 
         <section className="story-focus">
           <div className="focus-index">{activeIndex + 1}</div>
@@ -2552,6 +2468,7 @@ export default function App() {
           <section className="arrangement-section" id="arrangement" data-testid="arrangement-section">
             {completionCelebration && (
               <div className="completion-celebration" role="status">
+                <ComposerChildArtwork kind="complete" />
                 <div>
                   <strong>{songLength}마디 가락을 완성했어요!</strong>
                 </div>
@@ -2576,7 +2493,7 @@ export default function App() {
                       songPlaybackState === "playing" ? `일시정지${playingMeasureIndex !== null ? ` · ${playingMeasureIndex + 1}마디` : ""}` : "전체 듣기"}
                   </button>
                   {playingSong && <button type="button" className="song-stop" data-testid="stop-arranged-playback"
-                    onClick={() => void stopWholeSong()}><span aria-hidden="true">■</span> 중지</button>}
+                    onClick={() => void stopWholeSong()}><Square size={18} /> 중지</button>}
                 </div>
               </div>
             </div>
@@ -2598,7 +2515,7 @@ export default function App() {
 
             <section className="accompaniment-builder" aria-labelledby="accompaniment-heading">
               <AccompanimentEditor styleId={accompanimentStyleId} instrumentIds={accompanimentInstrumentIds}
-                disabled={isAnyPlaying} playback={{ state: songPlaybackState, disabled: playingId !== null || playingMeasure,
+                disabled={isAnyPlaying} playback={{ state: songPlaybackState, disabled: playingId !== null || playingMeasure || musicVideoBusy,
                   onListen: () => toggleWholeSong(0) }}
                 onChange={(styleId, instrumentIds) => {
                   setAccompanimentStyleId(styleId);
@@ -2606,7 +2523,7 @@ export default function App() {
                 }} onToggleInstrument={toggleAccompanimentInstrument}>
                 <AccompanimentMixer instrumentIds={accompanimentInstrumentIds} mixer={accompanimentMixer}
                   canListen={accompanimentReady && !exportingBacking && (playingSong || !isAnyPlaying)} editingDisabled={isAnyPlaying}
-                  controlsDisabled={exportingBacking || karaokeRunning || processingRecording || lyricVideoExport.exporting}
+                  controlsDisabled={exportingBacking || karaokeRunning || processingRecording || lyricVideoExport.exporting || musicVideoBusy}
                   onSolo={(instrumentId) => void toggleAccompanimentSolo(instrumentId)}
                   onRemove={toggleAccompanimentInstrument} />
               </AccompanimentEditor>
@@ -2634,30 +2551,35 @@ export default function App() {
             </div>
 
             <div className="publish-section publish-with-guide">
-              <div className="publish-heading">
-                <div><h2>저장·공유</h2></div>
-              </div>
-              {originalCreator && (
-                <div className="original-credit" data-testid="original-credit">
-                  <span>원작자</span><strong data-testid="original-creator">{originalCreator}</strong>
-                  <p>리메이크 곡에서도 이 표시는 지울 수 없어요.</p>
+              <div className="publish-details-intro">
+                <div className="publish-details-content">
+                  <div className="publish-heading">
+                    <div><h2>저장·공유</h2></div>
+                  </div>
+                  {originalCreator && (
+                    <div className="original-credit" data-testid="original-credit">
+                      <span>원작자</span><strong data-testid="original-creator">{originalCreator}</strong>
+                      <p>리메이크 곡에서도 이 표시는 지울 수 없어요.</p>
+                    </div>
+                  )}
+                  <div className="publish-fields">
+                    <label className={saveIssues.some((issue) => issue.target === "title") ? "save-issue" : ""} data-save-target="title"><span>곡 제목</span><input data-testid="song-title" value={songTitle} maxLength={60}
+                      onChange={(event) => { setSongTitle(event.target.value); setShareStatus(""); }} /></label>
+                    <label className={saveIssues.some((issue) => issue.target === "creator") ? "save-issue" : ""} data-save-target="creator"><span>{originalCreator ? "리메이크 작곡가" : "작곡가"}</span>
+                      <input data-testid="creator-name" value={creatorName} maxLength={40}
+                        onChange={(event) => { setCreatorName(event.target.value); setShareStatus(""); }}
+                        placeholder="이름 또는 별명" /></label>
+                  </div>
+                  <label className={`song-description-field${saveIssues.some((issue) => issue.target === "description") ? " save-issue" : ""}`} data-save-target="description">
+                    <span>이 노래에 대한 이야기</span>
+                    <textarea data-testid="song-description" value={songDescription} maxLength={600} rows={4}
+                      onChange={(event) => { setSongDescription(event.target.value); setShareStatus(""); }}
+                      placeholder="노래 이야기" />
+                    <small>{songDescription.length}/600</small>
+                  </label>
                 </div>
-              )}
-              <div className="publish-fields">
-                <label className={saveIssues.some((issue) => issue.target === "title") ? "save-issue" : ""} data-save-target="title"><span>곡 제목</span><input data-testid="song-title" value={songTitle} maxLength={60}
-                  onChange={(event) => { setSongTitle(event.target.value); setShareStatus(""); }} /></label>
-                <label className={saveIssues.some((issue) => issue.target === "creator") ? "save-issue" : ""} data-save-target="creator"><span>{originalCreator ? "리메이크 작곡가" : "작곡가"}</span>
-                  <input data-testid="creator-name" value={creatorName} maxLength={40}
-                    onChange={(event) => { setCreatorName(event.target.value); setShareStatus(""); }}
-                    placeholder="이름 또는 별명" /></label>
+                <ComposerChildArtwork kind="recording" />
               </div>
-              <label className={`song-description-field${saveIssues.some((issue) => issue.target === "description") ? " save-issue" : ""}`} data-save-target="description">
-                <span>이 노래에 대한 이야기</span>
-                <textarea data-testid="song-description" value={songDescription} maxLength={600} rows={4}
-                  onChange={(event) => { setSongDescription(event.target.value); setShareStatus(""); }}
-                  placeholder="노래 이야기" />
-                <small>{songDescription.length}/600</small>
-              </label>
               <div className="publish-actions">
                 {firebaseConfigured && <div className="publish-action-group publish-action-group-cloud">
                   <h3>다른 기기에서도 이어 만들기</h3>
@@ -2666,45 +2588,12 @@ export default function App() {
                     <Library size={18} /> {cloudBusy ? "저장 중..." : authUser ? "내 악보함에 저장" : "로그인하고 저장"}
                   </button>
                 </div>}
-                <div className="publish-action-group publish-action-group-files">
-                  <h3>악보·음악 저장</h3>
-                  <CompositionFileExports media={compositionMediaExport} complete={allValid && exportMeasures.length === songLength}
-                    busy={mediaExportBusy} exportingPdf={exportingPdf} onPdf={(include) => void exportPdf(include)} />
-                  <details className="publish-advanced-files">
-                    <summary>나중에 고칠 작품 파일</summary>
-                    <div className="publish-action-group-buttons">
-                      <button type="button" className="project-save-button action-button" data-testid="save-project-file"
-                        onClick={saveProjectFile}><FileDown size={18} /> 작품 파일 저장</button>
-                      <button type="button" className="project-load-button action-button" data-testid="load-project-file"
-                        onClick={() => projectFileInput.current?.click()}><FileUp size={18} /> 작품 파일 불러오기</button>
-                    </div>
-                  </details>
-                </div>
-                <div className="publish-action-group publish-action-group-perform">
-                  <h3>듣고 노래하기</h3>
-                  <div className="publish-action-group-buttons">
-                    <button type="button" className="mobile-record-link-button action-button" data-testid="create-mobile-recording-link"
-                      disabled={!allValid} onClick={() => void createMobileRecordingLink()}>
-                      <QrCode size={18} /> 스마트폰 녹음 링크
-                    </button>
-                    <div className="publish-share-pair">
-                      <button type="button" className="practice-song-button action-button" data-testid="practice-song"
-                        disabled={isAnyPlaying || !allValid} onClick={() => void practiceSong()}>
-                        <Music2 size={18} /> {practicingSong ? "연습 중..." : "노래 연습하기"}
-                      </button>
-                      <button type="button" className="record-mp3-button action-button" data-testid="record-song-mp3"
-                        disabled={isAnyPlaying || !allValid} onClick={() => setRecordingGuidePromptOpen(true)}>
-                        <Mic2 size={18} /> {recordingSong ? "녹음 중..." : "노래 녹음"}
-                      </button>
-                      <a className="samboard-share-button action-button" data-testid="open-samboard-share"
-                        href="https://samboard.vivasam.com/studentEntry/?brdId=brd-0QZ60VWZ56TNW"
-                        target="_blank" rel="noopener noreferrer">
-                        <ExternalLink size={18} /> 공유 게시판 열기
-                      </a>
-                    </div>
-                    <p className="publish-board-help">파일을 먼저 저장하고, 게시판에서 첨부해 주세요.</p>
-                  </div>
-                </div>
+                <CompositionSaveFiles media={compositionMediaExport} complete={allValid && exportMeasures.length === songLength}
+                  busy={mediaExportBusy} exportingPdf={exportingPdf} onPdf={(include) => void exportPdf(include)} />
+                <CompositionPerformActions complete={allValid} playing={isAnyPlaying}
+                  practicing={practicingSong} recording={recordingSong}
+                  onMobileLink={() => void createMobileRecordingLink()} onPractice={() => void practiceSong()}
+                  onRecord={() => setRecordingGuidePromptOpen(true)} />
               </div>
               {recordingStatus && <p className="recording-status" role="status">{recordingStatus}</p>}
               {recordingDownloadUrl && (
@@ -2740,6 +2629,16 @@ export default function App() {
                 </div>
               )}
             </div>
+            <section className="composition-music-video" aria-label="뮤직비디오 만들기">
+              <MusicVideoFeature scenes={musicVideoScenes} onScenesChange={setMusicVideoScenes}
+                openRequest={recoveredStudioRequest} onFindLostDrawings={() => void lostDrawingRecovery.scan()}
+                saveStatus={saveStatus} projectSaveStatus={cloudSaveLabel} saveError={localSaveFailed ? saveStatus : cloudAutosave.error}
+                onBusyChange={setMusicVideoBusy} complete={allValid && exportMeasures.length === songLength}
+                busy={mediaExportBusy || exportingBacking || exportingPdf}
+                recording={matchingMusicVideoRecording(recordingDownloadUrl, recordingVideoPlan, exportMeasures, bpm, selectedInstrumentId, currentAccompanimentOptions)}
+                measures={exportMeasures} title={songTitle} composer={creatorName} instrumentId={selectedInstrumentId}
+                bpm={bpm} accompaniment={currentAccompanimentOptions} />
+            </section>
             <p className="audio-credit">
               음원: FluidR3 SoundFont(CC BY 3.0) · 국립국악원 디지털 음원(공공누리 제1유형) · THIRD_PARTY_NOTICES.md
             </p>

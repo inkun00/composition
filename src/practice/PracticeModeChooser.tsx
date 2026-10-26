@@ -1,9 +1,10 @@
-import { ArrowRight, Check, Drum, Heart, Layers3, Music2, Sparkles, X } from "lucide-react";
+import { ArrowRight, Check, Drum, Heart, Layers3, Music2, Sparkles, X } from "../components/AppArtworkIcons";
 import type { RefObject } from "react";
 import { publicAssetUrl } from "../platform/portable";
 import { PRACTICE_CREATION_MODES, type PracticeCreationMode } from "./practiceCreationMode";
 import { usePracticeModeDialog } from "./usePracticeModeDialog";
 import "./PracticeModeChooser.css";
+import "../components/AppExperienceArtwork.css";
 
 type PracticeModeChooserProps = {
   currentMode: PracticeCreationMode | null;

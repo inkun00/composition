@@ -87,4 +87,39 @@ describe("브라우저 임시 저장", () => {
     expect(writeDraft({ setItem: () => { throw new Error("quota"); } }, draft)).toBe(false);
     expect(DRAFT_STORAGE_KEY).toContain("draft");
   });
+
+  it("뮤직비디오의 그림과 가사 끝 위치를 작품에 함께 저장하고 복원한다", () => {
+    const scenes: SavedDraft["musicVideoScenes"] = [{
+      id: "scene-one", background: "#ffffff", motion: "auto",
+      endLyric: { measureIndex: 0, noteId: "note-0" },
+      elements: [{ id: "sun", tool: "ellipse", color: "#ffcc00", width: 5,
+        points: [[120, 80, .5], [240, 180, .5]] }]
+    }];
+    let saved = "";
+    const storage = { getItem: () => saved, setItem: (_key: string, value: string) => { saved = value; } };
+    expect(writeDraft(storage, { ...draft, musicVideoScenes: scenes })).toBe(true);
+    expect(readDraft(storage)?.musicVideoScenes).toEqual(scenes);
+    expect(readDraft({ getItem: () => JSON.stringify(draft) })?.musicVideoScenes).toBeUndefined();
+  });
+
+  it("잘못된 그림이나 지나치게 많은 장면이 포함된 작품 파일은 거부한다", () => {
+    const scene = { id: "scene-one", background: "#ffffff", motion: "auto", endLyric: null,
+      elements: [{ id: "stroke", tool: "brush", color: "#123456", width: 4, points: [[-1, 30, .5]] }] };
+    expect(readDraft({ getItem: () => JSON.stringify({ ...draft, musicVideoScenes: [scene] }) })).toBeNull();
+    const manyScenes = Array.from({ length: 25 }, (_, index) => ({ ...scene, id: `scene-${index}`, elements: [] }));
+    expect(readDraft({ getItem: () => JSON.stringify({ ...draft, musicVideoScenes: manyScenes }) })).toBeNull();
+  });
+
+  it("부분 동작의 대상·제어점·가사 박자를 브라우저 저장에서 복원한다", () => {
+    const scene = { id: "scene", background: "#ffffff", motion: "auto", endLyric: null, endMeasureIndex: 0,
+      elements: [{ id: "hand", tool: "brush", color: "#123456", width: 4, points: [[10, 30, .5]] }],
+      choreography: { version: 1, description: "손으로 누르기", actors: [{ id: "actor", name: "손", elementIds: ["hand"],
+        fixedPoint: [10, 30], movingPoint: [20, 40], endPoint: [30, 50] }], actions: [{ id: "action", actorId: "actor",
+        kind: "press", startMeasureIndex: 0, startBeat: .5, durationBeats: 1, strength: .8 }] } };
+    const stored = { ...draft, musicVideoScenes: [scene] };
+    expect(readDraft({ getItem: () => JSON.stringify(stored) })?.musicVideoScenes).toEqual([scene]);
+    const invalid = { ...scene, choreography: { ...scene.choreography,
+      actors: [{ ...scene.choreography.actors[0], elementIds: ["deleted"] }] } };
+    expect(readDraft({ getItem: () => JSON.stringify({ ...stored, musicVideoScenes: [invalid] }) })).toBeNull();
+  });
 });

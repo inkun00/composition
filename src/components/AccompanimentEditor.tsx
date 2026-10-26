@@ -8,6 +8,7 @@ import {
 } from "../music/accompaniment";
 import { findInstrument, INSTRUMENTS, type InstrumentId } from "../music/instruments";
 import PlayIcon from "./PlayIcon";
+import MusicChoiceArtwork from "./MusicChoiceArtwork";
 
 const ACCOMPANIMENT_INSTRUMENTS = INSTRUMENTS.filter((instrument) => isAccompanimentInstrument(instrument.id));
 
@@ -39,7 +40,7 @@ export default function AccompanimentEditor({ styleId, instrumentIds, disabled, 
           <strong>{activeMode?.name ?? "내가 만든 반주"}</strong>
           <span>{instrumentIds.length}개 악기 선택됨</span>
         </div>
-        <p>악기를 고르면 내 가락과 다른 악기의 역할에 맞춰 반주가 만들어져요.</p>
+        <p className="accompaniment-guide-description">악기를 고르면 내 가락과 다른 악기의 역할에 맞춰 반주가 만들어져요.</p>
         <div className="accompaniment-style-content">
           <div className="accompaniment-style-tabs" role="tablist" aria-label="반주 선택 모드">
             <button type="button" role="tab" id="accompaniment-mode-tab" aria-controls="accompaniment-style-panel"
@@ -59,7 +60,7 @@ export default function AccompanimentEditor({ styleId, instrumentIds, disabled, 
                     <button key={mode.id} type="button" data-testid={`accompaniment-mode-${mode.id}`}
                       className={activeMode?.id === mode.id ? "active" : ""} aria-pressed={activeMode?.id === mode.id}
                       disabled={disabled} onClick={() => onChange(mode.styleId, mode.instrumentIds)}>
-                      <span>{mode.icon}</span><strong>{mode.name}</strong>
+                      <span><MusicChoiceArtwork symbol={mode.icon} size={32} /></span><strong>{mode.name}</strong>
                     </button>
                   ))}
                 </div>
@@ -68,11 +69,11 @@ export default function AccompanimentEditor({ styleId, instrumentIds, disabled, 
                   {showAllModes ? "자주 쓰는 6가지만 보기" : "다른 느낌 4개 더 보기"}
                 </button>
                 <div className="easy-accompaniment-result">
-                  <div><strong>{activeMode ? `${activeMode.icon} ${activeMode.name} 반주를 골랐어요` : "카드를 눌러 반주를 골라 보세요"}</strong></div>
+                  <div><strong>{activeMode ? <><MusicChoiceArtwork symbol={activeMode.icon} size={22} /> {activeMode.name} 반주를 골랐어요</> : "카드를 눌러 반주를 골라 보세요"}</strong></div>
                   <div className="easy-accompaniment-instruments" aria-label="함께 연주하는 악기">
                     {instrumentIds.map((id) => {
                       const instrument = findInstrument(id);
-                      return <span key={instrument.id}>{instrument.icon} {instrument.name}</span>;
+                      return <span key={instrument.id}><MusicChoiceArtwork symbol={instrument.icon} size={20} /> {instrument.name}</span>;
                     })}
                   </div>
                   <button type="button" className="easy-accompaniment-listen" data-testid="listen-selected-accompaniment"
@@ -106,7 +107,7 @@ export default function AccompanimentEditor({ styleId, instrumentIds, disabled, 
             <button key={instrument.id} type="button" data-testid={`accompaniment-instrument-${instrument.id}`}
               className={active ? "accompaniment-instrument active" : "accompaniment-instrument"}
               aria-pressed={active} disabled={blocked || disabled} onClick={() => onToggleInstrument(instrument.id)}>
-              <span>{instrument.icon}</span><strong>{instrument.name}</strong>
+              <span><MusicChoiceArtwork symbol={instrument.icon} size={30} /></span><strong>{instrument.name}</strong>
             </button>
           );
         })}
