@@ -37,7 +37,12 @@ import ComposerCandidateHeading from "./components/ComposerCandidateHeading";
 import ComposerChildArtwork from "./components/ComposerChildArtwork";
 import CompositionPerformActions from "./components/CompositionPerformActions";
 import ComposerInstrumentPicker from "./components/ComposerInstrumentPicker";
-import MobileEditorDisclosure from "./components/MobileEditorDisclosure";
+import ComposerWorkspaceTabs from "./components/ComposerWorkspaceTabs";
+import ComposerWorkspacePanel from "./components/ComposerWorkspacePanel";
+import ComposerWorkspaceEmpty from "./components/ComposerWorkspaceEmpty";
+import ComposerMeasureNavigator from "./components/ComposerMeasureNavigator";
+import ComposerInstrumentLibrary from "./components/ComposerInstrumentLibrary";
+import { useComposerWorkspace } from "./hooks/useComposerWorkspace";
 import MobileMeasureRange from "./components/MobileMeasureRange";
 import { useBeatPatternState } from "./hooks/useBeatPatternState";
 import { useAccompanimentMixer } from "./hooks/useAccompanimentMixer";
@@ -74,14 +79,16 @@ import { draftFingerprint, readDraft, type SavedDraft } from "./music/draft";
 import { cloudSaveIssue, findDraftSaveIssues, type SaveIssue } from "./music/draftValidation";
 import { findHarmonyPreset, HARMONY_PRESETS } from "./music/harmonyPresets";
 import { normalizeBeatPattern, type BeatPatternEvent } from "./music/beatPattern";
-import { findInstrument, INSTRUMENTS, type InstrumentId } from "./music/instruments";
-import { measureCapacity, meterKey, SUPPORTED_METERS, validateMeasure, type Meter } from "./music/meter";
+import { findInstrument, type InstrumentId } from "./music/instruments";
+import { measureCapacity, meterKey, validateMeasure, type Meter } from "./music/meter";
 import { rational, toNumber } from "./music/rational";
 import { fillStructuredRepeats, songStructurePlan, type SongStructureId } from "./music/songStructure";
 import type { SongLength } from "./music/songLength";
 import { changeCompositionHarmony, compositionFromDraft, compositionFromShare, emptyComposition, lyricText,
   resizeComposition, shortenedMeasuresContainWork, type MeasureDraft } from "./music/composerDraft";
 import { noteHarmonyFit } from "./music/noteHarmonyFit";
+import ComposerMeterChooser from "./components/ComposerMeterChooser";
+import ComposerPlaybackControls from "./components/ComposerPlaybackControls";
 import ComposerSettings from "./components/ComposerSettings";
 import ComposerLyrics from "./components/ComposerLyrics";
 import { pitchName, positionNotes, withEditedPitch } from "./music/score";
@@ -153,12 +160,6 @@ type CompositionSnapshot = Readonly<{
   beatPattern: readonly BeatPatternEvent[];
 }>;
 
-const meterDetails: Record<string, { name: string; clap: string }> = {
-  "2/4": { name: "두 박자", clap: "강 · 약" },
-  "3/4": { name: "세 박자", clap: "강 · 약 · 약" },
-  "4/4": { name: "네 박자", clap: "강 · 약 · 중강 · 약" },
-  "6/8": { name: "두 덩어리 박자", clap: "하나둘셋 · 넷다섯여섯" }
-};
 
 function isRecordingLink(search: string, hash: string): boolean {
   return new URLSearchParams(search).get("record") === "1" || /(?:^#|&)record=1(?:&|$)/.test(hash);
@@ -236,6 +237,7 @@ export default function App({ initialDraft, initialRecoveryCandidates = [], allo
   const [recoverySafe, setRecoverySafe] = useState(recoveryPreserved);
   const recoverySafety = useRef(recoveryPreserved);
   const [recoveredStudioRequest, setRecoveredStudioRequest] = useState(0);
+  const workspace = useComposerWorkspace();
   const projectLoadRequest = useRef(0);
   const activeCloudScoreId = projectIdentity.cloudOwnerId === authUser?.uid ? projectIdentity.cloudScoreId ?? null : null;
   const initialPreset = findHarmonyPreset(resumableDraft?.presetId ?? incomingShare?.presetId ?? HARMONY_PRESETS[0].id);
@@ -1270,6 +1272,7 @@ export default function App({ initialDraft, initialRecoveryCandidates = [], allo
   }
 
   function openArrangement() {
+    workspace.changeView("arrange");
     setShowArrangement(true);
     setCompletionCelebration(true);
     window.setTimeout(() => document.querySelector("#arrangement")?.scrollIntoView({ behavior: "smooth" }), 50);
@@ -1462,6 +1465,7 @@ export default function App({ initialDraft, initialRecoveryCandidates = [], allo
     setRecoverySafe(true);
     setShowOpening(false);
     setAccountLibraryOpen(false);
+    workspace.changeView("publish");
     setRecoveredStudioRequest((value) => value + 1);
     setShareStatus("남아 있던 그림을 새 프로젝트 사본으로 복구했어요. 이전 작품도 이 기기에 보관했어요.");
   }
@@ -1561,8 +1565,7 @@ export default function App({ initialDraft, initialRecoveryCandidates = [], allo
     setAccountLibraryOpen(false);
     if (issue.measureIndex !== undefined) setActiveIndex(issue.measureIndex);
     if (["title", "creator", "description"].includes(issue.target)) setShowArrangement(true);
-    window.setTimeout(() => document.querySelector<HTMLElement>(`[data-save-target="${issue.measureIndex !== undefined ? `measure-${issue.measureIndex}` : issue.target}"]`)
-      ?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
+    workspace.revealSaveIssue(issue);
   }
 
   async function handleCloudLoad(score: CloudScore) {
@@ -2206,7 +2209,7 @@ export default function App({ initialDraft, initialRecoveryCandidates = [], allo
         </main>
       )}
 
-      {!mobileRecordMode && <main inert={showOpening} aria-hidden={showOpening}>
+      {!mobileRecordMode && <main className="composer-studio" inert={showOpening} aria-hidden={showOpening}>
         {!recoverySafe && <div className="recovery-storage-warning" role="alert">
           이전 그림 기록을 보관할 공간이 부족해 자동 저장을 잠시 멈췄어요. 저장 공간을 확보한 뒤 다시 확인해 주세요.
           <button type="button" onClick={() => void lostDrawingRecovery.scan()}>그림 기록 확인</button>
@@ -2221,68 +2224,173 @@ export default function App({ initialDraft, initialRecoveryCandidates = [], allo
           onPlayingChange={setPresetPreviewing} onSelect={choosePreset}
           baseDraft={currentDraft} onImportScore={applyProjectDraft} />
 
-        <section className="meter-chooser composer-setting-card" aria-labelledby="meter-heading">
-          <div className="compact-heading">
-            <span className="number-badge">3</span>
-            <div><h2 id="meter-heading">박자</h2></div>
-          </div>
-          <div className="meter-options">
-            {SUPPORTED_METERS.map((item) => {
-              const key = meterKey(item);
-              const detail = meterDetails[key];
-              const active = key === meterKey(meter);
-              return (
-                <button key={key} type="button" data-testid={`meter-${item.beats}-${item.beatUnit}`}
-                  className={active ? "meter-option active" : "meter-option"}
-                  aria-pressed={active} onClick={() => chooseMeter(item)}>
-                  <strong>{key}</strong><span>{detail.name}</span>
-                </button>
-              );
-            })}
-          </div>
-        </section>
+        <ComposerMeterChooser meter={meter} onSelect={chooseMeter} />
 
         <SongLengthChooser length={songLength} onSelect={chooseLength} />
 
         <SongStructureChooser length={songLength} selectedId={structureTemplateId} onSelect={chooseStructure} />
         </ComposerSettings>
 
+        <ComposerWorkspaceTabs value={workspace.view} onChange={workspace.changeView} arrangementAvailable={showArrangement} />
+        <ComposerPlaybackControls bpm={bpm} onTempoChange={setBpm} songLength={songLength} completedCount={completedCount}
+          tempoDisabled={isAnyPlaying} canStart={completedCount > 0 && !isAnyPlaying}
+          canToggle={completedCount > 0 && playingId === null && !playingMeasure && (songPlaybackState !== "idle" || Boolean(activeMeasure.notes))}
+          state={songPlaybackState} playingIndex={playingMeasureIndex} canStop={playingSong}
+          onStart={() => void playWholeSong(0)} onToggle={() => toggleWholeSong()} onStop={() => void stopWholeSong()} />
+        {workspace.view !== "publish" && (recordingStatus || shareStatus) &&
+          <p className="workspace-activity" role="status">{recordingStatus || shareStatus}</p>}
+        <ComposerWorkspacePanel view="melody" active={workspace.view}>
+        <ComposerMeasureNavigator measures={measures} activeIndex={activeIndex}
+          playingIndex={playingMeasureIndex} onSelect={selectMeasure} />
         <div className="composition-workspace">
-          <div className="score-workspace-column score-timeline-column">
-        <section className="composition-section" aria-labelledby="composition-heading">
-          <div className="compact-heading timeline-heading">
-            <div><h2 id="composition-heading">{songLength}마디</h2></div>
-            <div className="timeline-actions">
-              <label className="tempo-control">
-                <span>빠르기</span>
-                <input type="range" min="40" max="200" step="2" value={bpm}
-                  data-testid="tempo-slider" disabled={isAnyPlaying}
-                  onChange={(event) => setBpm(Number(event.target.value))} />
-                <span className="tempo-number-wrap">
-                  <input type="number" min="40" max="200" step="2" value={bpm} data-testid="tempo-number"
-                    aria-label="빠르기 BPM 숫자 입력" disabled={isAnyPlaying}
-                    onChange={(event) => setBpm(Math.max(40, Math.min(200, Number(event.target.value) || 40)))} />
-                  <strong>BPM</strong>
-                </span>
-              </label>
-              <button type="button" className="ghost-button action-button" data-testid="play-song-from-start"
-                disabled={completedCount === 0 || isAnyPlaying}
-                onClick={() => void playWholeSong(0)}>
-                <PlayIcon /> 처음부터 듣기
+        <section className="candidate-section candidate-sidebar">
+          <ComposerCandidateHeading current={activeIndex + 1} total={songLength} story={activeMeasure.story}>
+            <CandidateFeelingTabs
+              groups={candidateFeelingGroups.map((group) => ({ ...group, count: group.candidates.length }))}
+              activeId={selectedFeelingGroup.id}
+              onChange={setActiveMelodyFeeling} />
+            {activeIndex > 0 && measures[activeIndex - 1].notes?.some((note) => note.pitch !== null) &&
+              <p className="candidate-priority-note">앞마디와 자연스럽게 이어지는 가락부터 보여줘요.</p>}
+          </ComposerCandidateHeading>
+
+          <details className="workspace-disclosure preview-instrument-disclosure candidate-instrument-disclosure">
+            <summary>가락 악기 <small>{selectedInstrument.name}</small></summary>
+            <ComposerInstrumentPicker context="candidate" value={selectedInstrumentId} onChange={setSelectedInstrumentId} />
+          </details>
+
+          <div className="candidate-grid" id="melody-feeling-panel" role="tabpanel"
+            aria-labelledby={`melody-feeling-${selectedFeelingGroup.id}`}>
+            {selectedFeelingGroup.candidates.slice(0, 3).map(renderCandidateCard)}
+            {selectedFeelingGroup.candidates.length > 3 && <details className="workspace-disclosure more-candidates" key={selectedFeelingGroup.id}>
+              <summary>다른 가락 {selectedFeelingGroup.candidates.length - 3}개 더 보기</summary>
+              <div className="candidate-grid">{selectedFeelingGroup.candidates.slice(3).map(renderCandidateCard)}</div>
+            </details>}
+          </div>
+        </section>
+
+          <div className="score-workspace-column score-editor-column">
+
+        <section className="editor-section">
+          <div className="editor-copy">
+            <div className="editor-copy-text">
+              <h2>{activeIndex + 1}마디 편집</h2>
+              <details className="editor-help"><summary>편집 도움말</summary>
+                <p>위아래로 끌어 음높이를 바꿔요. 여러 음 선택을 켜면 음표를 하나씩 골라 함께 고칠 수 있어요.</p>
+              </details>
+            </div>
+            <div className="editor-copy-actions">
+              <button className="measure-sound-open" type="button"
+                disabled={!activeMeasure.notes || validation?.state !== "exact" || isAnyPlaying}
+                onClick={() => setSoundEffectDialogOpen(true)}>
+                <Volume2 size={17} /> 소리 추가
+                {activeMeasure.effects.length > 0 && <span className="measure-sound-count">{activeMeasure.effects.length}</span>}
               </button>
-              <button type="button" className="song-play action-button" data-testid="toggle-song-playback"
-                disabled={completedCount === 0 || playingId !== null || playingMeasure ||
-                  (songPlaybackState === "idle" && !activeMeasure.notes)}
-                onClick={() => toggleWholeSong()}>
-                <PlayIcon playing={songPlaybackState === "playing"} />
-                {songPlaybackState === "paused" ? "다시 재생" :
-                  songPlaybackState === "playing" ? `일시정지${playingMeasureIndex !== null ? ` · ${playingMeasureIndex + 1}마디` : ""}` : "이어 듣기"}
+              <button className="listen-all action-button" type="button" disabled={!activeMeasure.notes || isAnyPlaying}
+                onClick={() => void playActiveMeasure()}>
+                <PlayIcon playing={playingMeasure} /> 이 마디 듣기
               </button>
-              {playingSong && <button type="button" className="song-stop action-button" data-testid="stop-song-playback"
-                onClick={() => void stopWholeSong()}><Square size={14} fill="currentColor" aria-hidden="true" /> 중지</button>}
+              <div className="history-actions" aria-label="작곡 되돌리기">
+                <button type="button" disabled={undoStack.length === 0} onClick={undoCompositionChange}><Undo2 size={16} /> 되돌리기</button>
+                <button type="button" disabled={redoStack.length === 0} onClick={redoCompositionChange}><Redo2 size={16} /> 다시 하기</button>
+              </div>
             </div>
           </div>
 
+          <div className="focused-measure-editor">
+          <div className={activeMeasure.notes ? "editor-card" : "editor-card empty-editor"}>
+            {activeMeasure.notes ? (
+              <>
+                <ScoreMeasure notes={activeNotes} meter={meter} keyFifths={activeMeasure.keyFifths}
+                  playingNoteId={playingMeasure || playingMeasureIndex === activeIndex ? playingNoteId : null}
+                  selectedNoteId={selectedNoteId} selectedNoteIds={selectedNoteIds}
+                  onSelectNote={selectNote} onMoveNote={selectMultipleNotes ? undefined : moveNotePitch}
+                  onMovePosition={selectMultipleNotes ? undefined : moveNotePosition}
+                  onNoteLayout={(positions) => updateEditorLyricNotePositions(activeIndex, positions)} />
+                <ComposerLyrics key={activeIndex} notes={activeNotes} meter={meter} measureIndex={activeIndex}
+                  selectedNoteId={selectedNoteId} notePositions={editorLyricNotePositions[activeIndex]}
+                  onFocusNote={(noteId) => selectNote(noteId)}
+                  onChange={(notes) => setMeasures((current) => current.map((measure, index) =>
+                    index === activeIndex ? { ...measure, notes } : measure))} />
+                <div className="beat-meter">
+                  <div className="beat-meter-label">
+                    <span>이 마디에 채운 길이</span>
+                    <strong>{usedBeats} / {capacity}</strong>
+                  </div>
+                  <div className="beat-track"><span style={{ width: `${Math.min(usedBeats / capacity, 1) * 100}%` }} /></div>
+                  <p className={`validation ${validation?.state ?? ""}`}>
+                    {validation?.state === "exact" ? "✓" : "!"} {validation?.message}
+                  </p>
+                </div>
+                <div className="harmony-guide" aria-live="polite">
+                  <span className="harmony-guide-title">화음 어울림</span>
+                  <span className="fit-chord">● 화음에 있는 음</span>
+                  <span className="fit-color">○ 화음 밖의 음</span>
+                  {selectedNote && selectedHarmonyFit && <strong className={`fit-${selectedHarmonyFit}`}>
+                    {selectedHarmonyFit === "chord" ? "화음을 이루는 음이에요." :
+                      "화음 밖의 음이에요. 앞뒤 음과 함께 듣고 마음에 드는지 골라요."}
+                  </strong>}
+                </div>
+                <details className="workspace-disclosure note-tools-disclosure">
+                  <summary>음표 다듬기 <span>높이 · 길이 · 쉼표 · 복사</span></summary>
+                <div className="note-tools" onMouseDown={keepEditorFocus} onClickCapture={preserveViewportAfterButtonClick}>
+                  <div><span>고른 음표</span><strong>{selectedNoteIds.length > 1 ? `${selectedNoteIds.length}개 선택` : selectedNote ? pitchName(selectedNote.pitch, selectedNote.accidental) : "음표를 골라 주세요"}</strong></div>
+                  <button type="button" aria-pressed={selectMultipleNotes}
+                    onClick={() => setSelectMultipleNotes((current) => !current)}>
+                    ☑<span>여러 음 선택</span></button>
+                  <button type="button" onClick={() => changePitch(1)}
+                    disabled={selectedNoteIds.length === 0 || selectedNotes.every((note) => note.pitch === null)}>↑<span>높게</span></button>
+                  <button type="button" onClick={() => changePitch(-1)}
+                    disabled={selectedNoteIds.length === 0 || selectedNotes.every((note) => note.pitch === null)}>↓<span>낮게</span></button>
+                  <button type="button" data-testid="split-note" disabled={selectedNoteIds.length !== 1}
+                    onClick={splitSelectedNote}>½<span>쪼개기</span></button>
+                  <button type="button" onClick={lengthenSelectedNote} disabled={selectedNoteIds.length !== 1}>2×<span>길게</span></button>
+                  <button type="button" data-testid="dot-note" disabled={selectedNoteIds.length !== 1 || selectedNote?.dotted}
+                    onClick={dotSelectedNote}>•<span>점 붙이기</span></button>
+                  <button type="button" data-testid="beam-notes" disabled={selectedNoteIds.length < 2}
+                    onClick={beamSelectedNotes}>▰<span>기둥 묶기</span></button>
+                  <button type="button" data-testid="unbeam-notes" disabled={selectedNoteIds.length === 0}
+                    onClick={unbeamSelectedNotes}>▯<span>분리</span></button>
+                  <button type="button" data-testid="link-notes" disabled={selectedNoteIds.length !== 2}
+                    onClick={linkSelectedNotes}>⌒<span>음표 잇기</span></button>
+                  <button type="button" data-testid="add-rest" onClick={addRestNote}>𝄽<span>쉼표</span></button>
+                  <button type="button" data-testid="add-note" onClick={addMelodyNote}><Plus size={17} /><span>음표 추가</span></button>
+                  <button type="button" className="danger" onClick={deleteNote}><Trash2 size={18} /><span>지우기</span></button>
+                  <button type="button" className="reset" data-testid="reset-measure" onClick={resetActiveMeasure}><Undo2 size={18} /><span>처음으로</span></button>
+                  <button type="button" data-testid="copy-notes" disabled={selectedNoteIds.length === 0}
+                    onClick={copySelectedNotes}><Copy size={18} /><span>복사</span></button>
+                </div>
+                </details>
+                {editStatus && <p className="edit-status" role="status">{editStatus}</p>}
+              </>
+            ) : (
+              <div className="empty-message"><Music2 size={44} /><strong>먼저 가락을 하나 골라 주세요</strong></div>
+            )}
+          </div>
+          </div>
+        </section>
+
+        <details className="workspace-disclosure preview-instrument-disclosure measure-instrument-disclosure">
+          <summary>가락 악기 <small>{selectedInstrument.name}</small></summary>
+          <ComposerInstrumentPicker value={selectedInstrumentId} onChange={setSelectedInstrumentId} />
+        </details>
+
+        <section className="story-focus">
+          <div className="focus-index">{activeIndex + 1}</div>
+          <div>
+            <span>지금 만드는 마디</span>
+            <h2>{activeIndex + 1}마디 · {activeMeasure.storyHint}</h2>
+          </div>
+          <div className={`focus-story ${activeMeasure.story}`}>
+            <span>{storyInfo[activeMeasure.story].icon}</span>
+            <div><strong>{storyInfo[activeMeasure.story].label}</strong></div>
+          </div>
+        </section>
+          </div>
+
+          <div className="score-workspace-column score-timeline-column">
+        <details className="workspace-disclosure full-score-disclosure">
+          <summary id="composition-heading">전체 악보 보기 <span>{songLength}마디 · 가사 함께 보기</span></summary>
+        <section className="composition-section" aria-labelledby="composition-heading">
           {structurePlan && <SongStoryMap plan={structurePlan} activeIndex={activeIndex}
             completed={measures.map((measure) => measure.notes !== null)} onSelect={selectMeasure} />}
           <MobileMeasureRange total={songLength} activeIndex={activeIndex}>
@@ -2327,144 +2435,20 @@ export default function App({ initialDraft, initialRecoveryCandidates = [], allo
             ))}
           </MobileMeasureRange>
         </section>
+        </details>
 
-          </div>
-
-        <section className="candidate-section candidate-sidebar">
-          <ComposerCandidateHeading current={activeIndex + 1} total={songLength} story={activeMeasure.story}>
-            <CandidateFeelingTabs
-              groups={candidateFeelingGroups.map((group) => ({ ...group, count: group.candidates.length }))}
-              activeId={selectedFeelingGroup.id}
-              onChange={setActiveMelodyFeeling} />
-            {activeIndex > 0 && measures[activeIndex - 1].notes?.some((note) => note.pitch !== null) &&
-              <p className="candidate-priority-note">앞마디와 자연스럽게 이어지는 가락부터 보여줘요.</p>}
-          </ComposerCandidateHeading>
-
-          <ComposerInstrumentPicker context="candidate" value={selectedInstrumentId} onChange={setSelectedInstrumentId} />
-
-          <div className="candidate-grid" id="melody-feeling-panel" role="tabpanel"
-            aria-labelledby={`melody-feeling-${selectedFeelingGroup.id}`}>
-            {selectedFeelingGroup.candidates.map(renderCandidateCard)}
-          </div>
-        </section>
-
-          <div className="score-workspace-column score-editor-column">
-
-        <section className="editor-section">
-          <div className="editor-copy">
-            <div className="editor-copy-text">
-              <span className="section-kicker">선택 사항 · 직접 다듬기</span>
-              <h2>{activeIndex + 1}마디 편집</h2>
-              <details className="editor-help"><summary>편집 도움말</summary>
-                <p>위아래로 끌어 음높이를 바꿔요. 여러 음 선택을 켜면 음표를 하나씩 골라 함께 고칠 수 있어요.</p>
-              </details>
-            </div>
-            <div className="editor-copy-actions">
-              <button className="measure-sound-open" type="button"
-                disabled={!activeMeasure.notes || validation?.state !== "exact" || isAnyPlaying}
-                onClick={() => setSoundEffectDialogOpen(true)}>
-                <Volume2 size={17} /> 소리 추가
-                {activeMeasure.effects.length > 0 && <span className="measure-sound-count">{activeMeasure.effects.length}</span>}
-              </button>
-              <button className="listen-all action-button" type="button" disabled={!activeMeasure.notes || isAnyPlaying}
-                onClick={() => void playActiveMeasure()}>
-                <PlayIcon playing={playingMeasure} /> 이 마디 듣기
-              </button>
-              <div className="history-actions" aria-label="작곡 되돌리기">
-                <button type="button" disabled={undoStack.length === 0} onClick={undoCompositionChange}><Undo2 size={16} /> 되돌리기</button>
-                <button type="button" disabled={redoStack.length === 0} onClick={redoCompositionChange}><Redo2 size={16} /> 다시 하기</button>
-              </div>
-            </div>
-          </div>
-
-          <MobileEditorDisclosure enabled={Boolean(activeMeasure.notes)}>
-          <div className={activeMeasure.notes ? "editor-card" : "editor-card empty-editor"}>
-            {activeMeasure.notes ? (
-              <>
-                <ScoreMeasure notes={activeNotes} meter={meter} keyFifths={activeMeasure.keyFifths}
-                  playingNoteId={playingMeasure || playingMeasureIndex === activeIndex ? playingNoteId : null}
-                  selectedNoteId={selectedNoteId} selectedNoteIds={selectedNoteIds}
-                  onSelectNote={selectNote} onMoveNote={selectMultipleNotes ? undefined : moveNotePitch}
-                  onMovePosition={selectMultipleNotes ? undefined : moveNotePosition}
-                  onNoteLayout={(positions) => updateEditorLyricNotePositions(activeIndex, positions)} />
-                <ComposerLyrics key={activeIndex} notes={activeNotes} meter={meter} measureIndex={activeIndex}
-                  selectedNoteId={selectedNoteId} notePositions={editorLyricNotePositions[activeIndex]}
-                  onFocusNote={(noteId) => selectNote(noteId)}
-                  onChange={(notes) => setMeasures((current) => current.map((measure, index) =>
-                    index === activeIndex ? { ...measure, notes } : measure))} />
-                <div className="beat-meter">
-                  <div className="beat-meter-label">
-                    <span>이 마디에 채운 길이</span>
-                    <strong>{usedBeats} / {capacity}</strong>
-                  </div>
-                  <div className="beat-track"><span style={{ width: `${Math.min(usedBeats / capacity, 1) * 100}%` }} /></div>
-                  <p className={`validation ${validation?.state ?? ""}`}>
-                    {validation?.state === "exact" ? "✓" : "!"} {validation?.message}
-                  </p>
-                </div>
-                <div className="harmony-guide" aria-live="polite">
-                  <span className="harmony-guide-title">화음 어울림</span>
-                  <span className="fit-chord">● 화음에 있는 음</span>
-                  <span className="fit-color">○ 화음 밖의 음</span>
-                  {selectedNote && selectedHarmonyFit && <strong className={`fit-${selectedHarmonyFit}`}>
-                    {selectedHarmonyFit === "chord" ? "화음을 이루는 음이에요." :
-                      "화음 밖의 음이에요. 앞뒤 음과 함께 듣고 마음에 드는지 골라요."}
-                  </strong>}
-                </div>
-                <div className="note-tools" onMouseDown={keepEditorFocus} onClickCapture={preserveViewportAfterButtonClick}>
-                  <div><span>고른 음표</span><strong>{selectedNoteIds.length > 1 ? `${selectedNoteIds.length}개 선택` : selectedNote ? pitchName(selectedNote.pitch, selectedNote.accidental) : "음표를 골라 주세요"}</strong></div>
-                  <button type="button" aria-pressed={selectMultipleNotes}
-                    onClick={() => setSelectMultipleNotes((current) => !current)}>
-                    ☑<span>여러 음 선택</span></button>
-                  <button type="button" onClick={() => changePitch(1)}
-                    disabled={selectedNoteIds.length === 0 || selectedNotes.every((note) => note.pitch === null)}>↑<span>높게</span></button>
-                  <button type="button" onClick={() => changePitch(-1)}
-                    disabled={selectedNoteIds.length === 0 || selectedNotes.every((note) => note.pitch === null)}>↓<span>낮게</span></button>
-                  <button type="button" data-testid="split-note" disabled={selectedNoteIds.length !== 1}
-                    onClick={splitSelectedNote}>½<span>쪼개기</span></button>
-                  <button type="button" onClick={lengthenSelectedNote} disabled={selectedNoteIds.length !== 1}>2×<span>길게</span></button>
-                  <button type="button" data-testid="dot-note" disabled={selectedNoteIds.length !== 1 || selectedNote?.dotted}
-                    onClick={dotSelectedNote}>•<span>점 붙이기</span></button>
-                  <button type="button" data-testid="beam-notes" disabled={selectedNoteIds.length < 2}
-                    onClick={beamSelectedNotes}>▰<span>기둥 묶기</span></button>
-                  <button type="button" data-testid="unbeam-notes" disabled={selectedNoteIds.length === 0}
-                    onClick={unbeamSelectedNotes}>▯<span>분리</span></button>
-                  <button type="button" data-testid="link-notes" disabled={selectedNoteIds.length !== 2}
-                    onClick={linkSelectedNotes}>⌒<span>음표 잇기</span></button>
-                  <button type="button" data-testid="add-rest" onClick={addRestNote}>𝄽<span>쉼표</span></button>
-                  <button type="button" data-testid="add-note" onClick={addMelodyNote}><Plus size={17} /><span>음표 추가</span></button>
-                  <button type="button" className="danger" onClick={deleteNote}><Trash2 size={18} /><span>지우기</span></button>
-                  <button type="button" className="reset" data-testid="reset-measure" onClick={resetActiveMeasure}><Undo2 size={18} /><span>처음으로</span></button>
-                  <button type="button" data-testid="copy-notes" disabled={selectedNoteIds.length === 0}
-                    onClick={copySelectedNotes}><Copy size={18} /><span>복사</span></button>
-                </div>
-                {editStatus && <p className="edit-status" role="status">{editStatus}</p>}
-              </>
-            ) : (
-              <div className="empty-message"><Music2 size={44} /><strong>먼저 가락을 하나 골라 주세요</strong></div>
-            )}
-          </div>
-          </MobileEditorDisclosure>
-        </section>
-
-        <ComposerInstrumentPicker value={selectedInstrumentId} onChange={setSelectedInstrumentId} />
-
-        <section className="story-focus">
-          <div className="focus-index">{activeIndex + 1}</div>
-          <div>
-            <span>지금 만드는 마디</span>
-            <h2>{activeIndex + 1}마디 · {activeMeasure.storyHint}</h2>
-          </div>
-          <div className={`focus-story ${activeMeasure.story}`}>
-            <span>{storyInfo[activeMeasure.story].icon}</span>
-            <div><strong>{storyInfo[activeMeasure.story].label}</strong></div>
-          </div>
-        </section>
           </div>
 
         </div>
 
-        {showArrangement && (
+        </ComposerWorkspacePanel>
+        {!showArrangement && (["arrange", "publish"] as const).map((view) => (
+          <ComposerWorkspacePanel key={view} view={view} active={workspace.view}>
+            <ComposerWorkspaceEmpty complete={allValid} onReturn={() => workspace.changeView("melody")} onComplete={openArrangement} />
+          </ComposerWorkspacePanel>
+        ))}
+        {showArrangement && (<>
+          <ComposerWorkspacePanel view="arrange" active={workspace.view}>
           <section className="arrangement-section" id="arrangement" data-testid="arrangement-section">
             {completionCelebration && (
               <div className="completion-celebration" role="status">
@@ -2479,8 +2463,7 @@ export default function App({ initialDraft, initialRecoveryCandidates = [], allo
             )}
             <div className="arrangement-heading">
               <div className="arrangement-heading-copy">
-                <span className="section-kicker">M3 · 악기와 가사</span>
-                <h2>악기·가사</h2>
+                <h2>반주·가사</h2>
               </div>
               <div className="selected-instrument">
                 <span>{selectedInstrument.icon}</span>
@@ -2498,20 +2481,7 @@ export default function App({ initialDraft, initialRecoveryCandidates = [], allo
               </div>
             </div>
 
-            <div className="instrument-library-heading">
-              <div><Music2 size={18} aria-hidden="true" /><strong>가락을 연주할 악기</strong></div>
-            </div>
-            <div className="instrument-grid" aria-label="악기 선택">
-              {INSTRUMENTS.map((instrument) => (
-                <button key={instrument.id} type="button" data-testid={`instrument-${instrument.id}`}
-                  className={selectedInstrumentId === instrument.id ? "instrument-card active" : "instrument-card"}
-                  aria-pressed={selectedInstrumentId === instrument.id}
-                  onClick={() => setSelectedInstrumentId(instrument.id)}>
-                  <span className="instrument-icon">{instrument.icon}</span>
-                  <span><strong>{instrument.name}</strong></span>
-                </button>
-              ))}
-            </div>
+            <ComposerInstrumentLibrary value={selectedInstrumentId} onChange={setSelectedInstrumentId} />
 
             <section className="accompaniment-builder" aria-labelledby="accompaniment-heading">
               <AccompanimentEditor styleId={accompanimentStyleId} instrumentIds={accompanimentInstrumentIds}
@@ -2521,18 +2491,26 @@ export default function App({ initialDraft, initialRecoveryCandidates = [], allo
                   setAccompanimentStyleId(styleId);
                   if (instrumentIds) setAccompanimentInstrumentIds(uniqueAccompanimentInstrumentIds(instrumentIds));
                 }} onToggleInstrument={toggleAccompanimentInstrument}>
+                <details className="workspace-disclosure mixer-disclosure">
+                  <summary>반주 소리 조절 <span>악기별 음량 · 따로 듣기</span></summary>
                 <AccompanimentMixer instrumentIds={accompanimentInstrumentIds} mixer={accompanimentMixer}
                   canListen={accompanimentReady && !exportingBacking && (playingSong || !isAnyPlaying)} editingDisabled={isAnyPlaying}
                   controlsDisabled={exportingBacking || karaokeRunning || processingRecording || lyricVideoExport.exporting || musicVideoBusy}
                   onSolo={(instrumentId) => void toggleAccompanimentSolo(instrumentId)}
                   onRemove={toggleAccompanimentInstrument} />
+                </details>
               </AccompanimentEditor>
+              <details className="workspace-disclosure beat-disclosure">
+                <summary>비트 만들기 <span>타악기 · 리듬 직접 넣기</span></summary>
               <BeatInstrumentChooser events={beatPattern}
                 meter={meter} bpm={bpm} volume={beatVolume} disabled={isAnyPlaying} playing={beatPreviewing}
                 onChange={setBeatPattern} onVolumeChange={setBeatVolume}
                 onPlayingChange={setBeatPreviewing} />
+              </details>
             </section>
 
+            <details className="workspace-disclosure all-lyrics-disclosure">
+              <summary>전체 가사 쓰기 <span>{lyrics.filter((lyric) => lyric.trim()).length}/{songLength}마디 입력</span></summary>
             <div className="lyrics-heading">
               <div><span className="number-badge">♪</span><div><h2>가사</h2></div></div>
               <strong>{lyrics.filter((lyric) => lyric.trim()).length}/{songLength}마디 입력</strong>
@@ -2550,11 +2528,15 @@ export default function App({ initialDraft, initialRecoveryCandidates = [], allo
               ))}
             </div>
 
+            </details>
+          </section>
+          </ComposerWorkspacePanel>
+          <ComposerWorkspacePanel view="publish" active={workspace.view}>
             <div className="publish-section publish-with-guide">
               <div className="publish-details-intro">
                 <div className="publish-details-content">
                   <div className="publish-heading">
-                    <div><h2>저장·공유</h2></div>
+                    <div><h2>저장·발표</h2></div>
                   </div>
                   {originalCreator && (
                     <div className="original-credit" data-testid="original-credit">
@@ -2570,6 +2552,8 @@ export default function App({ initialDraft, initialRecoveryCandidates = [], allo
                         onChange={(event) => { setCreatorName(event.target.value); setShareStatus(""); }}
                         placeholder="이름 또는 별명" /></label>
                   </div>
+                  <details className="workspace-disclosure song-story-disclosure">
+                    <summary>노래 이야기 적기 <span>선택 사항</span></summary>
                   <label className={`song-description-field${saveIssues.some((issue) => issue.target === "description") ? " save-issue" : ""}`} data-save-target="description">
                     <span>이 노래에 대한 이야기</span>
                     <textarea data-testid="song-description" value={songDescription} maxLength={600} rows={4}
@@ -2577,6 +2561,7 @@ export default function App({ initialDraft, initialRecoveryCandidates = [], allo
                       placeholder="노래 이야기" />
                     <small>{songDescription.length}/600</small>
                   </label>
+                  </details>
                 </div>
                 <ComposerChildArtwork kind="recording" />
               </div>
@@ -2642,22 +2627,24 @@ export default function App({ initialDraft, initialRecoveryCandidates = [], allo
             <p className="audio-credit">
               음원: FluidR3 SoundFont(CC BY 3.0) · 국립국악원 디지털 음원(공공누리 제1유형) · THIRD_PARTY_NOTICES.md
             </p>
+          </ComposerWorkspacePanel>
             {allValid && printableMeasures.length === songLength && (
               <PdfScoreSheet title={songTitle} description={songDescription} creator={creatorName} originalCreator={originalCreator}
                 meter={meter}
                 measures={printableMeasures} includeAccompaniment={pdfIncludeAccompaniment}
                 playbackUrl={pdfPlaybackUrl} />
             )}
-          </section>
-        )}
+        </>)}
       </main>}
 
-      {!mobileRecordMode && <footer className="bottom-bar" inert={showOpening} aria-hidden={showOpening} onMouseDown={keepEditorFocus}
-        onClickCapture={preserveViewportAfterButtonClick}>
+      {!mobileRecordMode && <footer className="bottom-bar" inert={showOpening} aria-hidden={showOpening}
+        onMouseDown={workspace.view === "melody" ? keepEditorFocus : undefined}
+        onClickCapture={workspace.view === "melody" ? preserveViewportAfterButtonClick : undefined}>
         <div className="save-status-row" role="status" aria-live="polite">
           <span className={localSaveFailed ? "save-status-local failed" : "save-status-local saved"}>{saveStatus}</span>
           <span className={`save-status-cloud${cloudSaveIsCurrent ? " saved" : cloudSaveFailed ? " failed" : ""}`}>{cloudSaveLabel}</span>
         </div>
+        {workspace.view === "melody" ? <>
         <div>
           <span className="mini-label">{activeIndex + 1}번째 마디 · {meterKey(meter)}</span>
           <strong>{validation && validation.state !== "exact" ? validation.message :
@@ -2677,6 +2664,12 @@ export default function App({ initialDraft, initialRecoveryCandidates = [], allo
             {songLength}마디 완성 <CheckCircle2 size={18} />
           </button>
         )}
+        </> : <div className="workspace-footer-actions">
+          <button type="button" className="secondary action-button" onClick={() => workspace.changeView("melody")}><ArrowLeft size={18} /> 가락 만들기</button>
+          <button type="button" className="primary action-button" onClick={() => workspace.changeView(workspace.view === "arrange" ? "publish" : "arrange")}>
+            {workspace.view === "arrange" ? "저장·발표로" : "반주·가사로"}<ArrowRight size={18} />
+          </button>
+        </div>}
       </footer>}
     </div>
   );

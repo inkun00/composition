@@ -37,9 +37,12 @@ afterEach(() => {
 });
 
 describe("반주 편집기", () => {
-  it("쉬운 반주에서도 믹서와 악기 선택을 바로 이용한다", () => {
+  it("쉬운 반주에서도 악기 선택을 펼쳐 추가할 수 있다", () => {
     expect(container.querySelector('[data-testid="accompaniment-mode-tab"]')?.getAttribute("aria-selected")).toBe("true");
     expect(container.querySelector('[data-testid="mixer-visible"]')).not.toBeNull();
+    const tracks = container.querySelector<HTMLDetailsElement>(".accompaniment-tracks-disclosure")!;
+    expect(tracks.open).toBe(false);
+    act(() => { tracks.open = true; });
     act(() => container.querySelector<HTMLButtonElement>('[data-testid="accompaniment-instrument-flute"]')?.click());
     expect(toggleInstrument).toHaveBeenCalledWith("flute");
   });

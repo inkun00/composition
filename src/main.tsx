@@ -30,6 +30,7 @@ import "./styles/studio-refresh-foundation.css";
 import "./styles/studio-refresh-opening.css";
 import "./styles/studio-refresh-composer.css";
 import "./styles/studio-refresh-workspaces.css";
+import "./styles/composer-workspaces.css";
 
 preloadVexFlow();
 

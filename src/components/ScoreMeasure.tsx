@@ -235,6 +235,7 @@ export default function ScoreMeasure({
     if (!host) return;
     let cancelled = false;
     let layoutFrame: number | null = null;
+    let resizeObserver: ResizeObserver | null = null;
     host.dataset.vexScore = "true";
     host.dataset.vexReady = "false";
     host.innerHTML = "";
@@ -357,12 +358,7 @@ export default function ScoreMeasure({
         svgElement.style.height = "100%";
       }
 
-      // SVG의 CSS 크기가 계산된 다음 프레임에 실제 음표 머리 좌표를 읽는다.
-      // 렌더링 직후에는 getBoundingClientRect()가 0이어서 상대 좌표가 될 수 있다.
-      layoutFrame = window.requestAnimationFrame(() => {
-        if (cancelled) return;
-        // 상위 그리드와 절대 위치 SVG가 확정되는 한 프레임을 더 기다린다.
-        layoutFrame = window.requestAnimationFrame(() => {
+      const measureNotePositions = () => {
         if (cancelled) return;
         const renderedSvg = host.querySelector<SVGSVGElement>("svg");
         const svgBox = renderedSvg?.getBoundingClientRect();
@@ -395,8 +391,31 @@ export default function ScoreMeasure({
         });
         onNoteLayout?.(nextPositions);
         host.dataset.vexReady = "true";
+      };
+
+      function scheduleNoteLayout() {
+        if (cancelled) return;
+        if (layoutFrame !== null) window.cancelAnimationFrame(layoutFrame);
+        // SVG와 상위 그리드의 CSS 크기가 확정되는 두 프레임을 기다린다.
+        layoutFrame = window.requestAnimationFrame(() => {
+          if (cancelled) return;
+          layoutFrame = window.requestAnimationFrame(() => {
+            layoutFrame = null;
+            measureNotePositions();
+          });
         });
-      });
+      }
+
+      // 접힌 패널에서 계산한 대체 좌표는 펼친 뒤 실제 음표 위치로 갱신한다.
+      if (renderBackend === "svg" && typeof ResizeObserver !== "undefined") {
+        resizeObserver = new ResizeObserver((entries) => {
+          if (entries.some((entry) => entry.contentRect.width > 0 && entry.contentRect.height > 0)) {
+            scheduleNoteLayout();
+          }
+        });
+        resizeObserver.observe(host);
+      }
+      scheduleNoteLayout();
     }).catch((error) => {
       console.warn("악보 렌더링을 완료하지 못했습니다.", error);
       host.innerHTML = "";
@@ -404,6 +423,7 @@ export default function ScoreMeasure({
     });
     return () => {
       cancelled = true;
+      resizeObserver?.disconnect();
       if (layoutFrame !== null) window.cancelAnimationFrame(layoutFrame);
     };
   }, [connectedSystem, endBarline, expandedStaff, meter.beatUnit, meter.beats, notationScale, signatureNoteStartX, renderBackend, reviewIssueNoteIds, scoreHeight, showSignature, systemMeasure, useVexLayer, vexRenderKey, width]);

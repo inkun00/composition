@@ -98,6 +98,8 @@ export default function AccompanimentEditor({ styleId, instrumentIds, disabled, 
         </div>
       </div>
       {children}
+      <details className="workspace-disclosure accompaniment-tracks-disclosure">
+        <summary>반주 악기 더하기 <span>{instrumentIds.length}/{MAX_ACCOMPANIMENT_INSTRUMENTS}개 선택</span></summary>
       <div className="instrument-bank-heading"><strong>반주 트랙 추가</strong><span>최대 {MAX_ACCOMPANIMENT_INSTRUMENTS}개</span></div>
       <div className="accompaniment-instruments" aria-label="반주 악기 여러 개 선택">
         {ACCOMPANIMENT_INSTRUMENTS.map((instrument) => {
@@ -112,6 +114,7 @@ export default function AccompanimentEditor({ styleId, instrumentIds, disabled, 
           );
         })}
       </div>
+      </details>
       {instrumentIds.length === 0 && <p className="accompaniment-warning">반주 악기 없음 · 가락만 연주</p>}
     </>
   );
