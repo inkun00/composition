@@ -256,6 +256,8 @@ export function scheduleMeasure(
     accompanimentLayers: readonly AccompanimentLayer[];
     includeMelody: boolean;
     includeEffects: boolean;
+    /** false면 반주·기본 화음 패드·비트 없이 가락만 재생한다. */
+    includeBacking?: boolean;
     backingVolumeMultiplier?: number;
     melodyVolumeMultiplier?: number;
     melodyDestination?: AudioNode;
@@ -280,13 +282,16 @@ export function scheduleMeasure(
   const measureBeats = measure.notes.reduce((total, note) => total + toNumber(note.duration), 0);
   const chordSymbols = measure.chords && measure.chords.length > 0 ? measure.chords : [""];
   const chordBeats = measureBeats / chordSymbols.length;
-  if (!solo && options.accompaniment?.beatPattern && options.accompaniment.beatPattern.length > 0) {
+  const includeBacking = options.includeBacking ?? true;
+  if (includeBacking && !solo && options.accompaniment?.beatPattern && options.accompaniment.beatPattern.length > 0) {
     scheduleBeatPattern(context, destination, absoluteStart, secondsPerBeat, measureBeats,
       measure.measureIndex ?? 0, options.accompaniment.beatPattern,
       options.accompaniment.beatVolume ?? 100, arrangementEnergy);
   }
 
-  if (!options.accompaniment) {
+  if (!includeBacking) {
+    // 가락만 듣는 모드: 배경 화음을 깔지 않는다.
+  } else if (!options.accompaniment) {
     chordSymbols.forEach((chord, chordIndex) => {
       const pitches = chord ? chordMidiPitches(chord) : chordPitches[measure.harmony];
       pitches.forEach((pitch) => {

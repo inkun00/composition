@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { noteHarmonyFit } from "./noteHarmonyFit";
+import { chordToneNames, noteHarmonyFit } from "./noteHarmonyFit";
 import type { NoteEvent } from "./types";
 
 const meter = { beats: 4, beatUnit: 4 } as const;
@@ -24,5 +24,12 @@ describe("단정하지 않는 화음 안내", () => {
     expect(noteHarmonyFit(notes[0], notes, ["C", "G"], meter)).toBe("chord");
     expect(noteHarmonyFit(notes[1], notes, ["C", "G"], meter)).toBe("chord");
     expect(noteHarmonyFit(notes[2], notes, ["C", "G"], meter)).toBeNull();
+  });
+
+  it("화음별 어울리는 음(계이름)을 반환한다", () => {
+    expect(chordToneNames("C")).toEqual(["도", "미", "솔"]);
+    expect(chordToneNames("G")).toEqual(["솔", "시", "레"]);
+    expect(chordToneNames("F")).toEqual(["파", "라", "도"]);
+    expect(chordToneNames("Am")).toEqual(["라", "도", "미"]);
   });
 });

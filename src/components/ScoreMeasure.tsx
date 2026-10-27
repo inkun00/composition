@@ -578,7 +578,7 @@ export default function ScoreMeasure({
         const stemX = displayX + (stemUp ? 6 : -6);
         const stemEndY = beamYById.get(note.id) ?? (stemUp ? y - 27 : y + 27);
         return (
-          <g key={note.id} className={`${onSelectNote ? "note-button " : ""}${playing ? "note-playing" : ""}`.trim() || undefined}
+          <g key={note.id} className={`${onSelectNote ? "note-button " : ""}${selected ? "note-selected " : ""}${playing ? "note-playing" : ""}`.trim() || undefined}
             onPointerDown={selectOnPointerDown} onPointerMove={moveOnPointer}
             onPointerUp={endPointerDrag} onPointerCancel={endPointerDrag}
             role={onSelectNote ? "button" : undefined}

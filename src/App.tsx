@@ -86,7 +86,7 @@ import { fillStructuredRepeats, songStructurePlan, type SongStructureId } from "
 import type { SongLength } from "./music/songLength";
 import { changeCompositionHarmony, compositionFromDraft, compositionFromShare, emptyComposition, lyricText,
   resizeComposition, shortenedMeasuresContainWork, type MeasureDraft } from "./music/composerDraft";
-import { noteHarmonyFit } from "./music/noteHarmonyFit";
+import MeasureHarmonyGuide from "./components/MeasureHarmonyGuide";
 import ComposerMeterChooser from "./components/ComposerMeterChooser";
 import ComposerPlaybackControls from "./components/ComposerPlaybackControls";
 import ComposerSettings from "./components/ComposerSettings";
@@ -435,7 +435,6 @@ export default function App({ initialDraft, initialRecoveryCandidates = [], allo
   const capacity = toNumber(measureCapacity(meter));
   const selectedNote = activeNotes.find((note) => note.id === selectedNoteId);
   const selectedNotes = activeNotes.filter((note) => selectedNoteIds.includes(note.id));
-  const selectedHarmonyFit = selectedNote ? noteHarmonyFit(selectedNote, activeNotes, activeMeasure.chords, meter) : null;
   const completedCount = measures.filter((measure) => measure.notes !== null).length;
   const hasUnsavedWork = (completedCount > 0 || currentDraftFingerprint !== initialDraftFingerprint.current) &&
     currentDraftFingerprint !== cloudSavedFingerprint;
@@ -826,7 +825,7 @@ export default function App({ initialDraft, initialRecoveryCandidates = [], allo
       duration = await playComposition(playable, selectedInstrumentId, bpm,
         accompanimentReady ? { ...currentAccompanimentOptions, soloInstrumentId,
           onTrackState: (state) => { if (request === songPlaybackRequest.current) onTrackState(state); }
-        } : undefined);
+        } : undefined, false, workspace.view === "melody" && !soloInstrumentId ? { melodyOnly: true } : undefined);
     } catch (error) {
       console.error(error);
       if (request === songPlaybackRequest.current) resetPlaybackUi();
@@ -915,7 +914,7 @@ export default function App({ initialDraft, initialRecoveryCandidates = [], allo
       effects: activeMeasure.effects,
       measureIndex: activeIndex,
       isSongEnding: activeIndex === measures.length - 1
-    }], selectedInstrumentId, bpm, accompanimentReady ? currentAccompanimentOptions : undefined);
+    }], selectedInstrumentId, bpm, accompanimentReady ? currentAccompanimentOptions : undefined, false, workspace.view === "melody" ? { melodyOnly: true } : undefined);
     if (duration === null) return;
     setPlayingMeasure(true);
     animateSingleMeasureNotes(notes, bpm);
@@ -2240,7 +2239,7 @@ export default function App({ initialDraft, initialRecoveryCandidates = [], allo
         {workspace.view !== "publish" && (recordingStatus || shareStatus) &&
           <p className="workspace-activity" role="status">{recordingStatus || shareStatus}</p>}
         <ComposerWorkspacePanel view="melody" active={workspace.view}>
-        <ComposerMeasureNavigator measures={measures} activeIndex={activeIndex}
+        <ComposerMeasureNavigator measures={measures} activeIndex={activeIndex} meter={meter}
           playingIndex={playingMeasureIndex} onSelect={selectMeasure} />
         <div className="composition-workspace">
         <section className="candidate-section candidate-sidebar">
@@ -2300,7 +2299,7 @@ export default function App({ initialDraft, initialRecoveryCandidates = [], allo
           <div className={activeMeasure.notes ? "editor-card" : "editor-card empty-editor"}>
             {activeMeasure.notes ? (
               <>
-                <ScoreMeasure notes={activeNotes} meter={meter} keyFifths={activeMeasure.keyFifths}
+                <ScoreMeasure notes={activeNotes} meter={meter} keyFifths={activeMeasure.keyFifths} showPitchNames
                   playingNoteId={playingMeasure || playingMeasureIndex === activeIndex ? playingNoteId : null}
                   selectedNoteId={selectedNoteId} selectedNoteIds={selectedNoteIds}
                   onSelectNote={selectNote} onMoveNote={selectMultipleNotes ? undefined : moveNotePitch}
@@ -2321,15 +2320,8 @@ export default function App({ initialDraft, initialRecoveryCandidates = [], allo
                     {validation?.state === "exact" ? "✓" : "!"} {validation?.message}
                   </p>
                 </div>
-                <div className="harmony-guide" aria-live="polite">
-                  <span className="harmony-guide-title">화음 어울림</span>
-                  <span className="fit-chord">● 화음에 있는 음</span>
-                  <span className="fit-color">○ 화음 밖의 음</span>
-                  {selectedNote && selectedHarmonyFit && <strong className={`fit-${selectedHarmonyFit}`}>
-                    {selectedHarmonyFit === "chord" ? "화음을 이루는 음이에요." :
-                      "화음 밖의 음이에요. 앞뒤 음과 함께 듣고 마음에 드는지 골라요."}
-                  </strong>}
-                </div>
+                <MeasureHarmonyGuide chords={activeMeasure.chords} notes={activeNotes}
+                  meter={meter} selectedNote={selectedNote} />
                 <details className="workspace-disclosure note-tools-disclosure">
                   <summary>음표 다듬기 <span>높이 · 길이 · 쉼표 · 복사</span></summary>
                 <div className="note-tools" onMouseDown={keepEditorFocus} onClickCapture={preserveViewportAfterButtonClick}>

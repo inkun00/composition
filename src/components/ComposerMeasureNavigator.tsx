@@ -1,14 +1,17 @@
 import type { MeasureDraft } from "../music/composerDraft";
+import type { Meter } from "../music/meter";
+import ScoreMeasure from "./ScoreMeasure";
 
 type ComposerMeasureNavigatorProps = Readonly<{
   measures: readonly MeasureDraft[];
   activeIndex: number;
   playingIndex: number | null;
   onSelect: (index: number) => void;
+  meter?: Meter;
 }>;
 
 export default function ComposerMeasureNavigator({
-  measures, activeIndex, playingIndex, onSelect
+  measures, activeIndex, playingIndex, onSelect, meter = { beats: 4, beatUnit: 4 }
 }: ComposerMeasureNavigatorProps) {
   const completedCount = measures.filter((measure) => measure.notes !== null).length;
 
@@ -33,8 +36,16 @@ export default function ComposerMeasureNavigator({
               data-testid={`select-measure-${index + 1}`}
               onClick={() => onSelect(index)}
             >
-              <span className="composer-measure-nav-number">{index + 1}</span>
-              <span className="composer-measure-nav-status" aria-hidden="true">{completed ? "✓" : "·"}</span>
+              <span className="composer-measure-nav-label">
+                <span className="composer-measure-nav-number">{index + 1}</span>
+                <span className="composer-measure-nav-status" aria-hidden="true">{completed ? "✓" : "·"}</span>
+              </span>
+              <span className="composer-measure-nav-score" aria-hidden="true">
+                {measure.notes
+                  ? <ScoreMeasure notes={measure.notes} meter={meter} keyFifths={measure.keyFifths}
+                      compact showSignature={false} />
+                  : <span className="composer-measure-nav-empty">가락 고르기 전</span>}
+              </span>
             </button>
           );
         })}

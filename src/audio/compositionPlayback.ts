@@ -21,6 +21,8 @@ export type CompositionPlaybackControl = Readonly<{
   signal?: AbortSignal;
   onEnded?: () => void;
   onStarted?: (clock: CompositionPlaybackClock) => void;
+  /** 가락 만들기 화면처럼 반주·배경 화음 없이 가락만 들려줄 때 사용한다. */
+  melodyOnly?: boolean;
 }>;
 
 /** Prepare and schedule one composition without owning another playback's lifetime. */
@@ -46,7 +48,8 @@ export async function renderCompositionPlayback(
     console.warn("악기 샘플을 불러오지 못해 합성 음색을 사용합니다.", error);
   }
   if (!isCurrent() || (context.state as string) === "closed") return null;
-  const accompanimentLayers = await loadAccompanimentLayers(context, master, accompaniment);
+  const melodyOnly = control?.melodyOnly === true;
+  const accompanimentLayers = await loadAccompanimentLayers(context, master, melodyOnly ? undefined : accompaniment);
   if (!isCurrent() || (context.state as string) === "closed") return null;
   const voiceState = createArrangementVoiceState();
   const start = context.currentTime + 0.08;
@@ -82,6 +85,7 @@ export async function renderCompositionPlayback(
         accompanimentLayers,
         includeMelody: true,
         includeEffects: true,
+        includeBacking: !melodyOnly,
         arrangementSection: "song",
         voiceState,
         arrangementLayerCount: plan.layerCount,
