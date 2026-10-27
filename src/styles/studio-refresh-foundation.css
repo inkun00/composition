@@ -1,0 +1,185 @@
+/* Visual sources and licenses: docs/ui-refresh-sources.md. */
+@font-face {
+  font-family: "SUITE Variable";
+  src: url("../assets/fonts/SUITE-Variable.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 300 900;
+  font-display: swap;
+}
+
+:root {
+  --refresh-font: "SUITE Variable", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --refresh-accent: #008573;
+  --refresh-accent-strong: #0d6b60;
+  --refresh-accent-ink: #0d3d38;
+  --refresh-accent-soft: #e0f8f3;
+  --refresh-accent-border: #83cdc1;
+  --refresh-paper: #ffffff;
+  --refresh-background: #f3f8f7;
+  --refresh-ink: #1c2024;
+  --refresh-muted: #60646c;
+  --refresh-line: #d9e4e1;
+  --refresh-shadow: 0 4px 20px rgb(13 61 56 / 5%);
+  --lab-ink: var(--refresh-ink);
+  --lab-muted: var(--refresh-muted);
+  --lab-border: var(--refresh-line);
+  --lab-surface: #f9f9fb;
+  --lab-cyan: #40b4a3;
+  --lab-cyan-dark: var(--refresh-accent-strong);
+  --lab-cyan-soft: #f0faf7;
+  --lab-yellow: #ffc53d;
+  --lab-yellow-soft: #fff8dc;
+  --lab-blue: #6556b7;
+  --lab-blue-soft: #f2effa;
+  --lab-pink: #d54572;
+  --lab-pink-dark: #b32958;
+  --app-surface-radius: 18px;
+  --app-card-radius: 12px;
+  --app-dialog-radius: 22px;
+  --app-surface-shadow: var(--refresh-shadow);
+  --app-card-shadow: 0 2px 8px rgb(13 61 56 / 4%);
+  --app-dialog-shadow: 0 24px 80px rgb(13 40 37 / 22%);
+  --action-compose: var(--refresh-accent-strong);
+  --action-compose-hover: var(--refresh-accent-ink);
+  --action-compose-soft: var(--refresh-accent-soft);
+  --action-compose-border: var(--refresh-accent-border);
+  --action-save: var(--refresh-accent-strong);
+  --action-save-hover: var(--refresh-accent-ink);
+  --action-save-soft: #f0faf7;
+  --action-save-border: var(--refresh-accent-border);
+  --action-listen: var(--refresh-accent-strong);
+  --action-listen-hover: var(--refresh-accent-ink);
+  --action-listen-soft: #f0faf7;
+  --action-listen-border: #a7d7cc;
+  font-family: var(--refresh-font);
+}
+
+body {
+  background: var(--refresh-background);
+}
+
+.app-shell {
+  font-family: var(--refresh-font);
+  background: var(--refresh-background);
+}
+
+.app-shell :is(.brand, .intro h1, .compact-heading h2, .section-heading h2),
+.opening-screen.opening-with-children,
+.opening-content h1 {
+  font-family: var(--refresh-font);
+}
+
+.app-shell .topbar {
+  border-bottom-color: var(--refresh-line);
+  background: rgb(255 255 255 / 96%);
+  box-shadow: 0 2px 12px rgb(13 61 56 / 3%);
+}
+
+.app-shell .brand {
+  color: var(--refresh-accent-ink);
+  font-weight: 900;
+  letter-spacing: -.04em;
+}
+
+.app-shell .brand-mark {
+  border: 1px solid #b9dfd2;
+  border-radius: 12px 12px 12px 4px;
+  background: var(--refresh-accent-soft);
+  box-shadow: 0 3px 0 #d4ece5;
+}
+
+.app-shell :is(.app-menu-trigger, .account-trigger) {
+  border-color: var(--refresh-line);
+  border-radius: 10px;
+  color: var(--refresh-ink);
+}
+
+.app-shell .app-menu-panel {
+  padding: 8px;
+  border-color: var(--refresh-line);
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgb(13 61 56 / 14%);
+}
+
+.app-shell .app-menu-panel button {
+  border-radius: 9px;
+  color: var(--refresh-accent-ink);
+}
+
+.app-shell .app-menu-panel button:hover {
+  background: var(--refresh-accent-soft);
+}
+
+.app-shell .topbar :is(.save-button, .topbar-cloud-status) {
+  border-radius: 8px;
+}
+
+.app-shell .topbar-song strong {
+  color: var(--refresh-accent-ink);
+}
+
+.app-shell .action-button {
+  border-radius: 10px;
+  font-family: var(--refresh-font);
+  font-weight: 800;
+  transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease;
+}
+
+.app-shell :is(button, a, input, select, textarea, summary):focus-visible {
+  outline: 3px solid var(--refresh-accent);
+  outline-offset: 3px;
+}
+
+.app-shell .bottom-bar {
+  border-top-color: var(--refresh-line);
+  background: rgb(255 255 255 / 97%);
+  box-shadow: 0 -4px 24px rgb(13 61 56 / 5%);
+}
+
+.app-shell .bottom-bar .primary:not(:disabled) {
+  border-color: var(--refresh-accent-strong);
+  background: var(--refresh-accent-strong);
+  box-shadow: 0 3px 0 var(--refresh-accent-ink);
+}
+
+.app-shell .bottom-bar .primary:hover:not(:disabled) {
+  background: var(--refresh-accent-ink);
+}
+
+.app-shell .bottom-bar .secondary:hover:not(:disabled) {
+  border-color: var(--refresh-accent-border);
+  background: var(--refresh-accent-soft);
+}
+
+/* Overlay shells only: playback, notation and export surfaces keep their styles. */
+:is(.account-library, .album-subdialog, .score-image-import-dialog,
+  .homr-setup-dialog, .recording-guide-dialog, .measure-sound-dialog,
+  .save-failure-dialog, .backing-export-dialog) {
+  border-color: var(--refresh-line);
+  border-radius: var(--app-dialog-radius);
+  font-family: var(--refresh-font);
+  box-shadow: var(--app-dialog-shadow);
+}
+
+:is(.account-library-header, .album-subdialog-header, .score-image-import-header,
+  .measure-sound-header, .backing-export-header) {
+  border-radius: 21px 21px 0 0;
+  border-bottom-color: var(--refresh-line);
+}
+
+@media (max-width: 620px) {
+  .app-shell > main {
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+
+  :is(.account-library, .album-subdialog, .save-failure-dialog, .homr-setup-dialog) {
+    border-radius: 20px 20px 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell .action-button {
+    transition: none;
+  }
+}

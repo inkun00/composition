@@ -1,0 +1,259 @@
+/* Shared visual finish for learning and drawing workspaces.
+   Editor geometry, playback surfaces and visibility stay with their owners. */
+.practice-shell {
+  --practice-ink: #1c2024;
+  --practice-line: #d9d9e0;
+  --practice-cyan: #60c8ba;
+  --practice-yellow: #ffc53d;
+  font-family: var(--refresh-font, "SUITE Variable"), "Malgun Gothic", sans-serif;
+  color: var(--practice-ink);
+  background: #f9f9fb;
+}
+
+.practice-shell .practice-topbar {
+  border-bottom-color: #e4e4e9;
+  background: #fff;
+  box-shadow: 0 2px 12px rgb(28 32 36 / 3%);
+}
+
+.practice-shell .practice-brand {
+  font-weight: 800;
+  letter-spacing: -.035em;
+}
+
+.practice-shell .practice-brand svg,
+.practice-shell .practice-eyebrow {
+  color: #008573;
+}
+
+.practice-shell .practice-intro h1 {
+  letter-spacing: -.04em;
+  font-weight: 850;
+}
+
+.practice-shell .practice-intro p,
+.practice-shell .practice-save-state:not(.failed) {
+  color: #60646c;
+}
+
+.practice-shell :is(.practice-back, .practice-help-button),
+.practice-shell .practice-mode-actions button,
+.practice-shell .practice-settings :is(input, select) {
+  border-color: var(--practice-line);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.practice-shell .practice-mode-current .practice-start-new {
+  border-color: #a9ded3;
+  background: #e0f8f3;
+  color: #0d6b60;
+}
+
+.practice-shell .practice-settings-disclosure {
+  border-color: var(--practice-line);
+  border-radius: 16px;
+  background: #fff;
+}
+
+.practice-shell .practice-composition-stages :is(button, .practice-share-stage) {
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgb(28 32 36 / 3%);
+}
+
+.practice-shell .practice-composition-stages button[aria-selected="true"] {
+  border-color: #008573;
+  color: #0d6b60;
+  background: #e0f8f3;
+}
+
+.practice-shell #practice-melody-tab[aria-selected="true"] {
+  border-color: #c94376;
+  color: #9f2f5c;
+  background: #ffedf3;
+}
+
+.practice-shell #practice-save-tab[aria-selected="true"] {
+  border-color: #c19018;
+  color: #77520c;
+  background: #fff5d6;
+}
+
+.practice-shell .practice-workspace,
+.practice-shell .practice-listen-card {
+  border-color: var(--practice-line);
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 4px 20px rgb(28 32 36 / 4%);
+}
+
+.practice-shell .practice-score-option {
+  border-radius: 12px;
+}
+
+.practice-shell .practice-score-option.is-active {
+  border-color: #008573;
+  background: #effaf7;
+}
+
+.practice-shell .practice-measure-card {
+  border-radius: 12px;
+}
+
+.practice-shell .practice-measure-card.is-active {
+  border-color: #008573;
+  box-shadow: 0 0 0 2px rgb(0 133 115 / 8%);
+}
+
+.practice-shell .practice-duration-palette .practice-duration-buttons > button,
+.practice-shell .practice-history button,
+.practice-shell .practice-note-kind button,
+.practice-shell .practice-note-actions > button,
+.practice-shell .practice-score-workspace-heading button,
+.practice-shell .practice-measure-card-heading button {
+  border-radius: 9px;
+}
+
+.practice-shell .practice-input-toggle {
+  border-radius: 10px;
+}
+
+.practice-shell .practice-input-toggle button:first-child {
+  border-radius: 9px 0 0 9px;
+}
+
+.practice-shell .practice-input-toggle button:last-child {
+  border-radius: 0 9px 9px 0;
+}
+
+.practice-shell .practice-workspace-footer .practice-primary {
+  border-color: #0d6b60;
+  border-radius: 10px;
+  background: #0d6b60;
+  color: #fff;
+}
+
+.practice-shell .practice-lesson {
+  border-color: #d7e7e2;
+  border-radius: 16px;
+  background: #f2faf7;
+}
+
+.practice-mode-overlay .practice-mode-chooser {
+  font-family: var(--refresh-font, "SUITE Variable"), "Malgun Gothic", sans-serif;
+  border-color: #e4e4e9;
+  background: #f9f9fb;
+  box-shadow: 0 24px 80px rgb(28 32 36 / 24%);
+}
+
+.practice-mode-chooser .practice-mode-hero {
+  border-top-color: #ffc53d;
+  border-bottom-color: #e8e5dc;
+}
+
+.practice-mode-chooser .practice-mode-choice {
+  box-shadow: 0 3px 12px rgb(28 32 36 / 5%);
+}
+
+.practice-mode-chooser .practice-mode-choice[aria-pressed="true"] {
+  box-shadow: 0 0 0 2px var(--mode-accent);
+}
+
+.practice-mode-chooser .practice-mode-choice:hover {
+  box-shadow: 0 8px 24px rgb(28 32 36 / 10%);
+}
+
+.mv-overlay {
+  --mv-ink: #eef1f5;
+  --mv-muted: #a4adbd;
+  --mv-line: #354252;
+  --mv-accent: #80d8c5;
+  --mv-surface: #26303e;
+  --mv-panel: #1d2734;
+  --mv-stage: #141b24;
+  font-family: var(--refresh-font, "SUITE Variable"), "Malgun Gothic", sans-serif;
+}
+
+.mv-overlay .mv-studio {
+  border-color: #455366;
+  border-radius: 16px;
+  background: var(--mv-stage);
+  box-shadow: 0 24px 80px rgb(0 0 0 / 45%), inset 0 1px 0 rgb(255 255 255 / 6%);
+}
+
+.mv-overlay .mv-header,
+.mv-overlay .mv-footer,
+.mv-overlay .mv-timeline {
+  background: #1d2734;
+}
+
+.mv-overlay .mv-scene-toolbar,
+.mv-overlay .mv-brush-controls {
+  background: #232e3c;
+}
+
+.mv-overlay .mv-tool-dock,
+.mv-overlay .mv-scene-settings {
+  background: #1d2734;
+}
+
+.mv-overlay .mv-header h2,
+.mv-overlay .mv-inspector-heading h3 {
+  font-weight: 750;
+  letter-spacing: -.025em;
+}
+
+.mv-overlay .mv-brand-mark {
+  border-color: #42776e;
+  border-radius: 11px;
+  background: #24443f;
+}
+
+.mv-overlay .mv-icon-button,
+.mv-overlay .mv-scene-save,
+.mv-overlay .mv-scene-reset,
+.mv-overlay .mv-range-summary {
+  border-radius: 10px;
+}
+
+.mv-overlay .mv-tool-dock .mv-dock-button.is-selected {
+  border-color: #77c7b8;
+  background: #28534c;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 10%);
+}
+
+.mv-overlay .mv-tool-dock .mv-dock-button:hover:enabled:not(.is-selected) {
+  border-color: #5d7286;
+  background: #2c3c4d;
+}
+
+.mv-overlay :focus-visible {
+  outline-color: #80d8c5;
+}
+
+@media (max-width: 620px) {
+  .practice-shell .practice-workspace,
+  .practice-shell .practice-listen-card {
+    border-radius: 16px;
+  }
+
+  .practice-shell .practice-composition-stages :is(button, .practice-share-stage) {
+    border-radius: 10px;
+  }
+}
+
+@media (max-width: 820px) {
+  .mv-overlay .mv-studio {
+    border-radius: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .practice-mode-chooser .practice-mode-choice {
+    transition: none;
+  }
+
+  .practice-mode-chooser .practice-mode-choice:hover {
+    transform: none;
+  }
+}

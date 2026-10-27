@@ -26,6 +26,10 @@ import "./practice/PracticeUsability.css";
 import "./components/ComposerSideLayout.css";
 import "./components/ComposerSettingsSideArtwork.css";
 import "./components/ComposerSettingsLayout.css";
+import "./styles/studio-refresh-foundation.css";
+import "./styles/studio-refresh-opening.css";
+import "./styles/studio-refresh-composer.css";
+import "./styles/studio-refresh-workspaces.css";
 
 preloadVexFlow();
 

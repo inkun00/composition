@@ -1,0 +1,213 @@
+/* Keep the original music-room illustration and all three entry actions. */
+.opening-screen.opening-with-children {
+  --action-compose: var(--refresh-accent-strong);
+  --action-compose-hover: var(--refresh-accent-ink);
+  align-items: safe center;
+}
+
+.opening-screen .opening-content {
+  width: min(510px, 41vw);
+  padding: 36px;
+  margin-left: clamp(28px, 4.5vw, 88px);
+  border: 1px solid rgb(255 255 255 / 82%);
+  border-radius: 28px;
+  background: rgb(255 253 246 / 86%);
+  box-shadow: 0 16px 60px rgb(72 60 32 / 9%);
+}
+
+.opening-screen .opening-brand-lockup {
+  gap: 12px;
+}
+
+.opening-screen .opening-mark {
+  width: 48px;
+  height: 48px;
+  border: 1px solid #bad6c3;
+  border-radius: 15px 15px 15px 5px;
+  background: #e0f0dc;
+  box-shadow: 0 3px 0 #c7dfc2;
+  transform: none;
+}
+
+.opening-screen .opening-kicker {
+  color: var(--refresh-accent-strong);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.opening-screen .opening-content h1 {
+  margin: 24px 0 18px;
+  color: var(--refresh-accent-ink);
+  font-size: clamp(44px, 4.6vw, 66px);
+  font-weight: 900;
+  letter-spacing: -.065em;
+  line-height: 1.15;
+  text-shadow: none;
+}
+
+.opening-screen .opening-content p {
+  color: #56645c;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.85;
+  word-break: keep-all;
+  text-shadow: none;
+}
+
+.opening-screen .opening-content p strong {
+  color: #324b42;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.opening-screen .opening-actions {
+  width: 100%;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.opening-screen .opening-actions button {
+  min-height: 56px;
+  padding: 0 12px;
+  border-radius: 12px;
+  font-size: 15px;
+}
+
+.opening-screen .opening-start {
+  border-color: var(--refresh-accent-strong);
+  background: var(--refresh-accent-strong);
+  box-shadow: 0 4px 0 #084c44, 0 8px 16px rgb(13 107 96 / 12%);
+}
+
+.opening-screen .opening-start:hover:not(:disabled) {
+  border-color: var(--refresh-accent-ink);
+  background: var(--refresh-accent-ink);
+}
+
+.opening-screen .opening-continue {
+  border-color: #c7d5c9;
+  background: #fffef9;
+  color: var(--refresh-accent-ink);
+  box-shadow: 0 3px 0 #e6e9de;
+}
+
+.opening-screen .opening-continue:disabled {
+  color: #79867e;
+  background: #eeefe8;
+  opacity: .72;
+  box-shadow: none;
+}
+
+.opening-screen .opening-practice {
+  gap: 12px;
+  margin-top: 6px;
+  border-color: #c5ded0;
+  background: #f2f8ed;
+  color: var(--refresh-accent-ink);
+  box-shadow: none;
+}
+
+.opening-screen .opening-practice:hover:not(:disabled) {
+  border-color: var(--refresh-accent-border);
+  background: #e8f4e6;
+  box-shadow: 0 5px 14px rgb(13 61 56 / 7%);
+}
+
+.opening-screen .opening-practice small {
+  color: #526a5c;
+  font-weight: 500;
+}
+
+.opening-screen .opening-status {
+  display: block;
+  margin-top: 20px;
+  color: #637166;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.opening-screen button:focus-visible {
+  outline: 3px solid var(--refresh-accent-strong);
+  outline-offset: 4px;
+}
+
+@media (min-width: 701px) and (max-width: 1050px) {
+  .opening-screen .opening-content {
+    width: 46vw;
+    margin-left: 24px;
+    padding: 26px;
+  }
+
+  .opening-screen .opening-content p strong {
+    font-size: 18px;
+  }
+
+  .opening-screen .opening-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .opening-screen.opening-with-children {
+    padding: 0 16px max(20px, env(safe-area-inset-bottom));
+    background: #f5ead1;
+  }
+
+  .opening-screen .opening-visual {
+    height: max(100svh, 150vw);
+  }
+
+  .opening-screen.opening-with-children .opening-content {
+    width: 100%;
+    margin: max(48svh, 106vw) 0 0;
+    padding: 24px;
+    border-radius: 24px;
+    background: rgb(255 253 246 / 95%);
+  }
+
+  .opening-screen .opening-content h1 {
+    margin: 18px 0 12px;
+    font-size: clamp(40px, 11vw, 56px);
+  }
+
+  .opening-screen .opening-content p {
+    font-size: 14px;
+  }
+
+  .opening-screen .opening-content p strong {
+    font-size: 17px;
+  }
+
+  .opening-screen .opening-actions {
+    gap: 10px;
+    margin-top: 22px;
+  }
+
+  .opening-screen .opening-actions button {
+    min-height: 52px;
+    padding: 0 8px;
+    font-size: 13px;
+  }
+
+  .opening-screen .app-opening-practice-art {
+    width: 72px;
+    height: 72px;
+    flex-basis: 72px;
+  }
+
+  .opening-screen .opening-status {
+    margin-top: 16px;
+  }
+}
+
+@media (max-width: 360px) {
+  .opening-screen .opening-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .opening-screen .opening-content {
+    animation: none;
+  }
+}
