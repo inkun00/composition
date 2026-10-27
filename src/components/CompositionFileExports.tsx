@@ -36,8 +36,15 @@ export default function CompositionFileExports({ media, complete, busy, exportin
         </button>
       </div>
       <p id="composition-lyrics-video-help" className="composition-lyrics-video-help">
-        {media.hasLyrics ? "검은 배경에 가사가 나오고 반주에 맞춰 현재 가사가 강조돼요."
-          : "가사를 한 글자 이상 입력하면 가사 포함 MP4를 저장할 수 있어요."}
+        {locked ? (
+          <strong className="export-locked-hint">
+            음악이 재생 중일 때는 파일 저장이 잠시 비활성화돼요. 상단의 ■ 정지 버튼을 누르면 활성화돼요.
+          </strong>
+        ) : media.hasLyrics ? (
+          "검은 배경에 가사가 나오고 반주에 맞춰 현재 가사가 강조돼요."
+        ) : (
+          "가사를 한 글자 이상 입력하면 가사 포함 MP4를 저장할 수 있어요."
+        )}
       </p>
     </div>
   </div>;

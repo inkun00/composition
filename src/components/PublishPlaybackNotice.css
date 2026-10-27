@@ -1,0 +1,83 @@
+.publish-playback-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 0 0 18px;
+  padding: 14px 18px;
+  border: 1px solid #fed7aa;
+  border-left: 5px solid #f97316;
+  border-radius: 12px;
+  background: #fffaf5;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.08);
+}
+
+.publish-playback-notice-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 260px;
+}
+
+.publish-playback-notice-icon {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.publish-playback-notice-text strong {
+  display: block;
+  color: #9a3412;
+  font-size: 14px;
+  font-weight: 800;
+  margin-bottom: 2px;
+}
+
+.publish-playback-notice-text p {
+  margin: 0;
+  color: #7c2d12;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.publish-stop-shortcut-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border: 1px solid #ea580c;
+  border-radius: 8px;
+  background: #ea580c;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+  white-space: nowrap;
+}
+
+.publish-stop-shortcut-button:hover {
+  background: #c2410c;
+  border-color: #c2410c;
+}
+
+.publish-stop-shortcut-button:active {
+  transform: translateY(1px);
+}
+
+.stop-square-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+@media (max-width: 680px) {
+  .publish-playback-notice {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .publish-stop-shortcut-button {
+    justify-content: center;
+  }
+}

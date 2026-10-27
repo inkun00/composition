@@ -87,6 +87,7 @@ import type { SongLength } from "./music/songLength";
 import { changeCompositionHarmony, compositionFromDraft, compositionFromShare, emptyComposition, lyricText,
   resizeComposition, shortenedMeasuresContainWork, type MeasureDraft } from "./music/composerDraft";
 import MeasureHarmonyGuide from "./components/MeasureHarmonyGuide";
+import PublishPlaybackNotice from "./components/PublishPlaybackNotice";
 import ComposerMeterChooser from "./components/ComposerMeterChooser";
 import ComposerPlaybackControls from "./components/ComposerPlaybackControls";
 import ComposerSettings from "./components/ComposerSettings";
@@ -2557,6 +2558,7 @@ export default function App({ initialDraft, initialRecoveryCandidates = [], allo
                 </div>
                 <ComposerChildArtwork kind="recording" />
               </div>
+              <PublishPlaybackNotice isAnyPlaying={isAnyPlaying} onStop={() => void stopWholeSong()} />
               <div className="publish-actions">
                 {firebaseConfigured && <div className="publish-action-group publish-action-group-cloud">
                   <h3>다른 기기에서도 이어 만들기</h3>

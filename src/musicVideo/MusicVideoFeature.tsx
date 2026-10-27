@@ -45,7 +45,11 @@ export default function MusicVideoFeature(props: MusicVideoFeatureProps) {
   return <div className="mv-feature">
     <div className="mv-entry">
       <span className="mv-entry-icon" aria-hidden="true"><StudioArtwork name="video" size={44} /></span>
-      <div><strong>내 그림으로 뮤직비디오</strong><small>장면을 그리고, 가사와 음악을 이어 붙여요.</small></div>
+      <div>
+        <strong>내 그림으로 뮤직비디오</strong>
+        <small>장면을 그리고, 가사와 음악을 이어 붙여요.</small>
+        {props.busy && <small className="mv-busy-hint">음악 재생 중에는 장면 그리기가 잠시 비활성화돼요. 상단의 ■ 정지 버튼을 눌러주세요.</small>}
+      </div>
       <button type="button" className="action-button mv-open-button" data-testid="draw-music-video-scene"
         disabled={props.busy || video.working} onClick={enter}><StudioArtwork name="brush" size={25} /> 장면 그리기</button>
     </div>

@@ -44,6 +44,12 @@
   line-height: 1.5;
 }
 
+.mv-entry .mv-busy-hint {
+  color: #c2410c;
+  font-weight: 700;
+  margin-top: 3px;
+}
+
 .mv-open-button {
   display: flex;
   align-items: center;
