@@ -6,6 +6,8 @@ export type VideoCanvasCommand = Readonly<{
   fillStyle: string;
   strokeStyle: string;
   globalAlpha: number;
+  font: string;
+  shadowBlur: number;
   path: readonly Readonly<{ name: string; args: readonly unknown[] }>[];
 }>;
 
@@ -25,7 +27,8 @@ export class VideoTestCanvas {
       this.commands.push({
         name, args, path: path.map((part) => ({ ...part, args: [...part.args] })),
         fillStyle: String(state.fillStyle), strokeStyle: String(state.strokeStyle),
-        globalAlpha: Number(state.globalAlpha)
+        globalAlpha: Number(state.globalAlpha),
+        font: String(state.font ?? ""), shadowBlur: Number(state.shadowBlur ?? 0)
       });
     };
     const pathMethods = new Set(["arc", "ellipse", "roundRect", "rect", "moveTo", "lineTo", "bezierCurveTo"]);

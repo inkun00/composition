@@ -29,30 +29,52 @@ async function inspectMp4(filePath) {
       video.onloadeddata = resolve;
       video.onerror = reject;
     });
-    await new Promise((resolve, reject) => {
-      video.onseeked = resolve;
-      video.onerror = reject;
-      video.currentTime = .2;
-    });
     const canvas = document.createElement("canvas");
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     const ctx = canvas.getContext("2d");
-    ctx.drawImage(video, 0, 0);
-    const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-    let black = 0;
-    let white = 0;
-    let colored = 0;
-    let topVisible = 0;
-    for (let y = 0; y < canvas.height; y += 1) {
-      for (let x = 0; x < canvas.width; x += 1) {
-        const offset = (y * canvas.width + x) * 4;
-        const [r, g, b] = data.subarray(offset, offset + 3);
-        if (Math.max(r, g, b) < 15) black += 1;
-        if (Math.min(r, g, b) > 220) white += 1;
-        if (Math.max(r, g, b) - Math.min(r, g, b) > 20) colored += 1;
-        if (y < 140 && Math.max(r, g, b) > 30) topVisible += 1;
+    const frames = [];
+    let previousPixels;
+    for (const seconds of [.08, .2, .48, .9]) {
+      await new Promise((resolve, reject) => {
+        video.onseeked = resolve;
+        video.onerror = reject;
+        video.currentTime = seconds;
+      });
+      ctx.drawImage(video, 0, 0);
+      const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      let black = 0;
+      let white = 0;
+      let colored = 0;
+      let cyan = 0;
+      let cyanX = 0;
+      let underline = 0;
+      let topVisible = 0;
+      let changedPixels = 0;
+      for (let y = 0; y < canvas.height; y += 1) {
+        for (let x = 0; x < canvas.width; x += 1) {
+          const offset = (y * canvas.width + x) * 4;
+          const [r, g, b] = data.subarray(offset, offset + 3);
+          if (Math.max(r, g, b) < 15) black += 1;
+          if (Math.min(r, g, b) > 220) white += 1;
+          if (Math.max(r, g, b) - Math.min(r, g, b) > 20) colored += 1;
+          if (g - r > 15 && b - r > 15 && Math.max(g, b) > 40) {
+            cyan += 1;
+            cyanX += x;
+            if (y > canvas.height / 2 + 20 && y < canvas.height / 2 + 90) underline += 1;
+          }
+          if (y < 140 && Math.max(r, g, b) > 30) topVisible += 1;
+          if (previousPixels && Math.max(
+            Math.abs(r - previousPixels[offset]),
+            Math.abs(g - previousPixels[offset + 1]),
+            Math.abs(b - previousPixels[offset + 2])
+          ) > 30) changedPixels += 1;
+        }
       }
+      frames.push({ seconds, blackRatio: black / (canvas.width * canvas.height), white, colored,
+        cyan, cyanCenterX: cyan ? cyanX / cyan : null, underline, topVisible, changedPixels,
+        png: canvas.toDataURL("image/png") });
+      previousPixels = data;
     }
     let power = 0;
     const audioContext = new AudioContext();
@@ -60,9 +82,8 @@ async function inspectMp4(filePath) {
     await audioContext.close();
     const samples = audio.getChannelData(0);
     for (const value of samples) power += value * value;
-    const result = { width: canvas.width, height: canvas.height, blackRatio: black / (canvas.width * canvas.height),
-      white, colored, topVisible, rms: Math.sqrt(power / samples.length), duration: video.duration,
-      png: canvas.toDataURL("image/png") };
+    const result = { width: canvas.width, height: canvas.height,
+      rms: Math.sqrt(power / samples.length), duration: video.duration, frames };
     video.removeAttribute("src");
     video.load();
     URL.revokeObjectURL(url);
@@ -114,17 +135,30 @@ try {
       const filePath = path.join(outputDir, `${stage}-${choice}.mp4`);
       await download.saveAs(filePath);
       const media = await inspectMp4(filePath);
-      await writeFile(path.join(outputDir, `${stage}-${choice}.png`), Buffer.from(media.png.split(",")[1], "base64"));
-      delete media.png;
+      for (const [index, frame] of media.frames.entries()) {
+        const suffix = index ? `-${index + 1}` : "";
+        await writeFile(path.join(outputDir, `${stage}-${choice}${suffix}.png`),
+          Buffer.from(frame.png.split(",")[1], "base64"));
+        delete frame.png;
+      }
       assert.equal(media.width, 1280);
       assert.equal(media.height, 720);
       assert.ok(media.rms > .001, "Both choices must retain the original music audio");
       if (choice === "lyrics") {
-        assert.ok(media.blackRatio > .95, "Lyrics-only background must be black");
-        assert.ok(media.white > 500, "Lyrics must be white and visible");
-        assert.ok(media.colored < 20, "Lyrics-only must have no colored bars or highlights");
-        assert.equal(media.topVisible, 0, "Lyrics-only must omit the header and other decorations");
-      } else assert.ok(media.colored > 100, "Together mode must keep the music visualization");
+        for (const frame of media.frames) {
+          assert.ok(frame.blackRatio > .95, "Lyrics-only background must stay black");
+          assert.ok(frame.white > 500, "Lyrics must stay white and readable during the effect");
+          assert.ok(frame.cyan > 30, "The current syllable must have a visible cyan glow");
+          assert.ok(frame.underline > 10, "The current syllable must have a luminous progress underline");
+          assert.equal(frame.topVisible, 0, "Lyrics-only must omit the header and other decorations");
+        }
+        assert.ok(media.frames[1].changedPixels > 20,
+          "The highlight must animate within a syllable instead of only changing its color");
+        assert.ok(media.frames[2].cyanCenterX > media.frames[1].cyanCenterX + 10,
+          "The highlight must follow the second lyric syllable");
+        assert.ok(media.frames[3].cyanCenterX > media.frames[2].cyanCenterX + 10,
+          "The highlight must follow the third lyric syllable");
+      } else assert.ok(media.frames[0].colored > 100, "Together mode must keep the music visualization");
       report.exports.push({ stage, choice, ...media });
       await mp4.waitFor({ state: "visible" });
       assert.equal(await mp4.isEnabled(), true);

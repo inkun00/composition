@@ -1,9 +1,13 @@
 import { PRACTICE_VIDEO_FONT, PRACTICE_VIDEO_HEIGHT, PRACTICE_VIDEO_WIDTH } from "./practiceVideoLayout";
 import { practiceVideoMeasureAtTime } from "./practiceVideoPlan";
 import type { PracticeVideoNote, PracticeVideoPlan } from "./practiceVideoTypes";
+import { drawPracticeLyricGlyph, type PracticeLyricGlyph } from "./practiceVideoLyricHighlight";
 
-type LyricGlyph = Readonly<{ text: string; startSeconds: number; endSeconds: number }>;
-type LyricLine = Readonly<{ text: string; startSeconds: number; endSeconds: number }>;
+type LyricGlyph = PracticeLyricGlyph;
+type PositionedGlyph = LyricGlyph & Readonly<{ x: number; width: number }>;
+type LyricLine = Readonly<{
+  glyphs: readonly PositionedGlyph[]; startSeconds: number; endSeconds: number;
+}>;
 type LyricTrack = Readonly<{ size: number; lines: readonly LyricLine[]; visibleRows: number }>;
 
 const SIDE_MARGIN = 80;
@@ -13,13 +17,23 @@ const MAX_FONT_SIZE = 56;
 const MIN_FONT_SIZE = 24;
 
 function lyricGlyphs(notes: readonly PracticeVideoNote[]): LyricGlyph[] {
-  return notes.flatMap((event) => {
+  return notes.flatMap((event, eventIndex) => {
     if (event.rest) return [];
     const characters = Array.from(event.note.lyric?.trim() ?? "");
+    let endSeconds = event.endSeconds;
+    // A tied note with no new words continues the previous sung syllable.
+    let previous = event;
+    for (const next of notes.slice(eventIndex + 1)) {
+      if (!previous.note.linkToNext || next.rest || next.note.pitch !== previous.note.pitch ||
+          next.note.lyric?.trim() || Math.abs(next.startSeconds - previous.endSeconds) > 0.000001) break;
+      endSeconds = next.endSeconds;
+      previous = next;
+    }
     return characters.map((text, index) => ({
       text,
       startSeconds: event.startSeconds + (event.endSeconds - event.startSeconds) * index / characters.length,
-      endSeconds: event.startSeconds + (event.endSeconds - event.startSeconds) * (index + 1) / characters.length
+      endSeconds: index === characters.length - 1 ? endSeconds :
+        event.startSeconds + (event.endSeconds - event.startSeconds) * (index + 1) / characters.length
     }));
   });
 }
@@ -30,8 +44,16 @@ function wrapLyrics(context: CanvasRenderingContext2D, glyphs: readonly LyricGly
   let current: LyricGlyph[] = [];
   const flush = () => {
     if (!current.length) return;
+    const text = current.map((glyph) => glyph.text).join("");
+    const left = (PRACTICE_VIDEO_WIDTH - context.measureText(text).width) / 2;
+    let prefix = "";
     lines.push({
-      text: current.map((glyph) => glyph.text).join(""),
+      glyphs: current.map((glyph) => {
+        const start = context.measureText(prefix).width;
+        prefix += glyph.text;
+        const width = context.measureText(prefix).width - start;
+        return { ...glyph, x: left + start + width / 2, width };
+      }),
       startSeconds: current[0].startSeconds,
       endSeconds: current[current.length - 1].endSeconds
     });
@@ -67,8 +89,7 @@ function visibleLyrics(track: LyricTrack, seconds: number): readonly LyricLine[]
   return track.lines.slice(first, first + track.visibleRows);
 }
 
-/** Keep the measure's words visible through held notes and rests, using the same
- * authoritative note times as the soundtrack when exceptionally long text pages. */
+/** Keep words visible through rests and animate each sung syllable on audio time. */
 export function preparePracticeVideoLyrics(
   context: CanvasRenderingContext2D, plan: PracticeVideoPlan
 ): (seconds: number) => void {
@@ -95,8 +116,10 @@ export function preparePracticeVideoLyrics(
       const firstY = center - (lines.length - 1) * lineHeight / 2;
       context.font = `600 ${track.size}px ${PRACTICE_VIDEO_FONT}`;
       for (const [row, line] of lines.entries()) {
-        context.fillText(line.text, PRACTICE_VIDEO_WIDTH / 2, firstY + row * lineHeight,
-          PRACTICE_VIDEO_WIDTH - SIDE_MARGIN * 2);
+        for (const glyph of line.glyphs) {
+          drawPracticeLyricGlyph(context, glyph, glyph.x, firstY + row * lineHeight,
+            glyph.width, track.size, seconds);
+        }
       }
     }
     context.restore();
