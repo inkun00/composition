@@ -48,7 +48,7 @@ async function inspectMp4(filePath) {
       let colored = 0;
       let cyan = 0;
       let cyanX = 0;
-      let underline = 0;
+      let lowerDecorationPixels = 0;
       let topVisible = 0;
       let changedPixels = 0;
       for (let y = 0; y < canvas.height; y += 1) {
@@ -61,7 +61,11 @@ async function inspectMp4(filePath) {
           if (g - r > 15 && b - r > 15 && Math.max(g, b) > 40) {
             cyan += 1;
             cyanX += x;
-            if (y > canvas.height / 2 + 20 && y < canvas.height / 2 + 90) underline += 1;
+          }
+          // This band catches the former progress underline and moving dot while
+          // allowing the soft glow immediately around the lyric glyph itself.
+          if (y > canvas.height / 2 + 35 && y < canvas.height / 2 + 90 && Math.max(r, g, b) > 80) {
+            lowerDecorationPixels += 1;
           }
           if (y < 140 && Math.max(r, g, b) > 30) topVisible += 1;
           if (previousPixels && Math.max(
@@ -72,7 +76,7 @@ async function inspectMp4(filePath) {
         }
       }
       frames.push({ seconds, blackRatio: black / (canvas.width * canvas.height), white, colored,
-        cyan, cyanCenterX: cyan ? cyanX / cyan : null, underline, topVisible, changedPixels,
+        cyan, cyanCenterX: cyan ? cyanX / cyan : null, lowerDecorationPixels, topVisible, changedPixels,
         png: canvas.toDataURL("image/png") });
       previousPixels = data;
     }
@@ -149,7 +153,7 @@ try {
           assert.ok(frame.blackRatio > .95, "Lyrics-only background must stay black");
           assert.ok(frame.white > 500, "Lyrics must stay white and readable during the effect");
           assert.ok(frame.cyan > 30, "The current syllable must have a visible cyan glow");
-          assert.ok(frame.underline > 10, "The current syllable must have a luminous progress underline");
+          assert.equal(frame.lowerDecorationPixels, 0, "Lyrics-only must have no underline or moving dot below the lyrics");
           assert.equal(frame.topVisible, 0, "Lyrics-only must omit the header and other decorations");
         }
         assert.ok(media.frames[1].changedPixels > 20,

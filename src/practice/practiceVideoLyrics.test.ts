@@ -118,7 +118,7 @@ describe("검정 화면의 흰 가사 영상", () => {
     expect(highlighted(canvases[0].commands)).toEqual(["봄", "짝", "쿵"]);
     expect(new Set(labels.map((command) => command.args[2])).size).toBe(3);
     expect(labels.every((command) => command.fillStyle === "#fff")).toBe(true);
-    expect(canvases[0].commands.filter((command) => command.name === "stroke").length).toBe(6);
+    expect(canvases[0].commands.every((command) => ["fillRect", "fillText"].includes(command.name))).toBe(true);
   });
 
   it("256개 음절은 잘라 버리지 않고 화면 안의 여러 줄로 나눈다", async () => {
@@ -175,7 +175,7 @@ describe("검정 화면의 흰 가사 영상", () => {
     }
   });
 
-  it("진행 밑줄과 살짝 떠오르는 효과를 시간으로 계산해 탐색 후에도 같은 프레임을 그린다", async () => {
+  it("밑줄 없이 광채와 떠오르는 효과를 유지하고 탐색 후에도 같은 프레임을 그린다", async () => {
     const canvases = recordVideoCanvases();
     const renderer = await preparePracticeVideoRenderer(buildPracticeVideoPreviewPlan(input()), "lyrics");
     const frame = (seconds: number) => {
@@ -189,7 +189,7 @@ describe("검정 화면의 흰 가사 영상", () => {
     const active = text(middle).find((command) => command.shadowBlur > 0)!;
     expect(Number(active.args[2])).toBeLessThan(360);
     expect(parseFloat(active.font.split(" ")[1])).toBeGreaterThan(56);
-    expect(middle.some((command) => command.name === "stroke" && command.strokeStyle === "#7ce8ed")).toBe(true);
+    expect(middle.every((command) => ["fillRect", "fillText"].includes(command.name))).toBe(true);
     frame(2);
     expect(frame(0.5)).toEqual(middle);
     expect(highlighted(frame(1))).toEqual(["날"]);

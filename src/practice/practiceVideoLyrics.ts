@@ -4,7 +4,7 @@ import type { PracticeVideoNote, PracticeVideoPlan } from "./practiceVideoTypes"
 import { drawPracticeLyricGlyph, type PracticeLyricGlyph } from "./practiceVideoLyricHighlight";
 
 type LyricGlyph = PracticeLyricGlyph;
-type PositionedGlyph = LyricGlyph & Readonly<{ x: number; width: number }>;
+type PositionedGlyph = LyricGlyph & Readonly<{ x: number }>;
 type LyricLine = Readonly<{
   glyphs: readonly PositionedGlyph[]; startSeconds: number; endSeconds: number;
 }>;
@@ -52,7 +52,7 @@ function wrapLyrics(context: CanvasRenderingContext2D, glyphs: readonly LyricGly
         const start = context.measureText(prefix).width;
         prefix += glyph.text;
         const width = context.measureText(prefix).width - start;
-        return { ...glyph, x: left + start + width / 2, width };
+        return { ...glyph, x: left + start + width / 2 };
       }),
       startSeconds: current[0].startSeconds,
       endSeconds: current[current.length - 1].endSeconds
@@ -118,7 +118,7 @@ export function preparePracticeVideoLyrics(
       for (const [row, line] of lines.entries()) {
         for (const glyph of line.glyphs) {
           drawPracticeLyricGlyph(context, glyph, glyph.x, firstY + row * lineHeight,
-            glyph.width, track.size, seconds);
+            track.size, seconds);
         }
       }
     }
