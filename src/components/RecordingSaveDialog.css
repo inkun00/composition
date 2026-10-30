@@ -1,0 +1,206 @@
+.recording-save-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 160;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: rgb(23 45 42 / 55%);
+}
+
+.recording-save-dialog {
+  box-sizing: border-box;
+  width: min(720px, 100%);
+  max-height: calc(100dvh - 48px);
+  padding: 28px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--refresh-line, #d9e4e1);
+  border-radius: var(--app-dialog-radius, 22px);
+  background: var(--refresh-paper, #fff);
+  box-shadow: var(--app-dialog-shadow, 0 24px 80px rgb(13 40 37 / 22%));
+  color: var(--refresh-ink, #1c2024);
+  font-family: var(--refresh-font, "SUITE Variable", sans-serif);
+}
+
+.recording-save-dialog header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.recording-save-dialog h2 {
+  margin: 0;
+  font-size: 25px;
+  font-weight: 850;
+  line-height: 1.3;
+  letter-spacing: -.03em;
+}
+
+.recording-save-dialog header + p {
+  margin: 12px 0 22px;
+  color: var(--refresh-muted, #60646c);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.recording-save-close {
+  flex: 0 0 44px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 6px;
+  border: 1px solid var(--refresh-line, #d9e4e1);
+  border-radius: 50%;
+  background: var(--refresh-background, #f3f8f7);
+  cursor: pointer;
+}
+
+.recording-save-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.recording-save-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+  padding: 18px;
+  border: 2px solid var(--refresh-line, #d9e4e1);
+  border-radius: 16px;
+  background: var(--refresh-paper, #fff);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.recording-save-art {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: 104px;
+  margin-bottom: 4px;
+  border-radius: 10px;
+  background: var(--refresh-accent-soft, #e0f8f3);
+}
+
+.recording-save-video-art {
+  background: var(--refresh-background, #f3f8f7);
+}
+
+.recording-save-option strong {
+  font-size: 19px;
+  line-height: 1.4;
+}
+
+.recording-save-option > span:last-child {
+  color: var(--refresh-muted, #60646c);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.recording-save-dialog button:disabled {
+  cursor: not-allowed;
+  opacity: .55;
+}
+
+.recording-save-dialog button:focus-visible {
+  outline: 3px solid var(--refresh-accent, #008573);
+  outline-offset: 4px;
+}
+
+.recording-save-help,
+.recording-save-status {
+  margin: 16px 0 0;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.recording-save-help {
+  color: var(--refresh-muted, #60646c);
+}
+
+.recording-save-status {
+  color: var(--refresh-accent-strong, #0d6b60);
+}
+
+.recording-save-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.recording-save-progress progress {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--refresh-accent, #008573);
+}
+
+.recording-save-dialog footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+
+.recording-save-dialog footer button {
+  min-height: 44px;
+  padding: 0 20px;
+  border: 1px solid var(--refresh-line, #d9e4e1);
+  border-radius: 10px;
+  background: var(--refresh-background, #f3f8f7);
+  color: var(--refresh-accent-ink, #0d3d38);
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .recording-save-option:not(:disabled):hover {
+    border-color: var(--refresh-accent-border, #83cdc1);
+    box-shadow: 0 4px 16px rgb(13 61 56 / 8%);
+  }
+}
+
+@media (max-width: 560px) {
+  .recording-save-overlay {
+    padding: 12px;
+  }
+
+  .recording-save-dialog {
+    padding: 20px;
+    max-height: calc(100dvh - 24px);
+  }
+
+  .recording-save-dialog h2 {
+    font-size: 22px;
+  }
+
+  .recording-save-options {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .recording-save-art {
+    min-height: 64px;
+  }
+
+  .recording-save-option {
+    padding: 14px;
+    gap: 7px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recording-save-option {
+    transition: none;
+  }
+}

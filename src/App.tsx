@@ -8,6 +8,7 @@ import { reviewRecordedPitch, type RecordingPitchReview } from "./audio/pitchRev
 import PlayIcon from "./components/PlayIcon";
 import PdfScoreSheet from "./components/PdfScoreSheet";
 import RecordingGuideDialog from "./components/RecordingGuideDialog";
+import RecordingSaveDialog from "./components/RecordingSaveDialog";
 import LyricVideoExportButton from "./components/LyricVideoExportButton";
 import ScoreMeasure from "./components/ScoreMeasure";
 import OpeningScreen from "./components/OpeningScreen";
@@ -98,6 +99,7 @@ import { buildShareUrl, readCompositionFromHash, type SharedComposition } from "
 import type { HarmonyStory, MelodyCandidate, NoteEvent } from "./music/types";
 import { useKaraokeAutoFocus } from "./hooks/useKaraokeAutoFocus";
 import { useLyricVideoExport } from "./hooks/useLyricVideoExport";
+import { useRecordingFileExport } from "./hooks/useRecordingFileExport";
 import type { LyricVideoPlan } from "./video/lyricVideoPlan";
 import { buildRecordedMusicVideoPlan, matchingMusicVideoRecording } from "./video/musicVideoRecording";
 import type { MusicVideoScene } from "./video/musicVideoModel";
@@ -459,7 +461,7 @@ export default function App({ initialDraft, initialRecoveryCandidates = [], allo
   const { exportingPdf, pdfIncludeAccompaniment, pdfPlaybackUrl, exportPdf } = scorePdf;
   const playingSong = songPlaybackState !== "idle" || songPlaybackLoading;
   const karaokeRunning = recordingSong || practicingSong;
-  const isAnyPlaying = playingId !== null || playingSong || playingMeasure || karaokeRunning || presetPreviewing || beatPreviewing || musicVideoBusy;
+  const songAudioBusy = playingId !== null || playingSong || playingMeasure || karaokeRunning || presetPreviewing || beatPreviewing || musicVideoBusy;
   useKaraokeAutoFocus(karaokeOpen, karaokeRunning, karaokeHighlight);
   const updateLyricNotePositions = useCallback((index: number, positions: Record<string, { x: number; y: number }>) => {
     setLyricNotePositions((current) => {
@@ -512,6 +514,14 @@ export default function App({ initialDraft, initialRecoveryCandidates = [], allo
     notes: measure.notes, harmony: measure.story, chords: measure.chords, effects: measure.effects,
     measureIndex, isSongEnding: measureIndex === measures.length - 1
   }] : []), [measures]);
+  const recordingFileExport = useRecordingFileExport({
+    audioUrl: recordingDownloadUrl, plan: recordingVideoPlan, scenes: musicVideoScenes,
+    measures: exportMeasures, title: songTitle, composer: creatorName, instrumentId: selectedInstrumentId,
+    bpm, accompaniment: currentAccompanimentOptions, complete: allValid && exportMeasures.length === songLength,
+    disabled: songAudioBusy || exportingPdf || processingRecording || mixingPreview || lyricVideoExport.exporting,
+    fileName: safeSongFileName("mp3"), onStatus: setRecordingStatus
+  });
+  const isAnyPlaying = songAudioBusy || recordingFileExport.busy;
   const mediaExportBusy = isAnyPlaying || exportingPdf || processingRecording || mixingPreview || lyricVideoExport.exporting;
   const compositionMediaExport = useCompositionMediaExport({
     measures: exportMeasures, complete: allValid && exportMeasures.length === songLength,
@@ -1846,12 +1856,9 @@ export default function App({ initialDraft, initialRecoveryCandidates = [], allo
   }
 
   function saveProcessedRecording() {
-    if (!recordingDownloadUrl) return;
-    const link = document.createElement("a");
-    link.href = recordingDownloadUrl;
-    link.download = safeSongFileName("mp3");
-    link.click();
-    setRecordingStatus("MP3 파일을 저장했어요.");
+    if (exportingBacking) return;
+    recordingPreviewRef.current?.pause();
+    recordingFileExport.show();
   }
 
   function karaokePhaseLabel(): string {
@@ -1865,7 +1872,7 @@ export default function App({ initialDraft, initialRecoveryCandidates = [], allo
   }
 
   const lyricVideoButton = <LyricVideoExportButton hasLyrics={recordingVideoPlan?.hasLyrics ?? false}
-    busy={processingRecording || mixingPreview} exporting={lyricVideoExport.exporting}
+    busy={processingRecording || mixingPreview || recordingFileExport.busy} exporting={lyricVideoExport.exporting}
     progress={lyricVideoExport.progress} status={lyricVideoExport.status}
     onSave={() => void lyricVideoExport.save(recordingDownloadUrl, recordingVideoPlan, safeSongFileName("mp4"))} />;
 
@@ -2098,7 +2105,7 @@ export default function App({ initialDraft, initialRecoveryCandidates = [], allo
                 <label className="backing-preview-volume">
                   <span><strong>미리듣기 반주 크기</strong><b>{Math.round(previewBackingVolume * 100)}%</b></span>
                   <input type="range" min="0.05" max="1.5" step="0.05" value={previewBackingVolume}
-                    disabled={!recordedVocalBuffer || !recordedBackingBuffer || mixingPreview}
+                    disabled={!recordedVocalBuffer || !recordedBackingBuffer || mixingPreview || recordingFileExport.busy}
                     onChange={(event) => void updatePreviewBackingVolume(Number(event.target.value))} />
                   {mixingPreview && <small role="status">반주 크기 조절 중...</small>}
                 </label>
@@ -2135,23 +2142,18 @@ export default function App({ initialDraft, initialRecoveryCandidates = [], allo
                   ].map(([id, label]) => (
                     <button key={id} type="button"
                       className={postProcessPreset === id ? "active" : ""}
-                      disabled={processingRecording}
+                      disabled={processingRecording || recordingFileExport.busy}
                       onClick={() => void applyPostProcessPreset(id as KaraokePostProcessPreset)}>
                       {label}
                     </button>
                   ))}
                 </div>
-                <button type="button" className="karaoke-download" disabled={processingRecording}
+                <button type="button" className="karaoke-download" disabled={mediaExportBusy || exportingBacking}
                   onClick={saveProcessedRecording}>
-                  {processingRecording ? "보정 중..." : "이 느낌으로 MP3 저장"}
+                  {processingRecording ? "보정 중..." : "이 느낌으로 파일 저장"}
                 </button>
                 {lyricVideoButton}
               </div>
-            )}
-            {false && recordingDownloadUrl && (
-              <a className="karaoke-download" href={recordingDownloadUrl} download={safeSongFileName("mp3")}>
-                완성된 MP3 다시 저장하기
-              </a>
             )}
           </section>
         </div>
@@ -2164,6 +2166,12 @@ export default function App({ initialDraft, initialRecoveryCandidates = [], allo
             setRecordingGuidePromptOpen(false); void recordSongMp3(guideMode, captureMode);
           }} />
       )}
+
+      {recordingFileExport.open && <RecordingSaveDialog
+        videoUnavailableReason={recordingFileExport.videoUnavailableReason} busy={recordingFileExport.busy}
+        progress={recordingFileExport.progress} status={recordingFileExport.status}
+        onSaveMp3={recordingFileExport.saveMp3} onSaveMp4={() => void recordingFileExport.saveMp4()}
+        onClose={recordingFileExport.close} onCancel={recordingFileExport.cancel} />}
 
       {soundEffectDialogOpen && activeMeasure.notes && (
         <MeasureSoundEffectDialog measureIndex={activeIndex} notes={activeMeasure.notes} meter={meter}
@@ -2194,14 +2202,15 @@ export default function App({ initialDraft, initialRecoveryCandidates = [], allo
                 이 주소는 localhost라서 스마트폰에서 데스크탑 앱에 접근하지 못할 수 있어요. 배포된 HTTPS 주소에서 만든 QR을 쓰면 가장 안정적입니다.
               </p>
             )}
-            <button type="button" className="mobile-record-start action-button" disabled={karaokeRunning || !allValid}
+            <button type="button" className="mobile-record-start action-button" disabled={mediaExportBusy || exportingBacking || !allValid}
               onClick={() => setRecordingGuidePromptOpen(true)}>
               <Mic2 size={24} /> {recordingSong ? "녹음 중..." : "녹음 시작"}
             </button>
             {recordingStatus && <p className="mobile-record-status" role="status">{recordingStatus}</p>}
             {recordingDownloadUrl && (
-              <><button type="button" className="mobile-record-save action-button" onClick={saveProcessedRecording}>
-                MP3 저장
+              <><button type="button" className="mobile-record-save action-button" disabled={mediaExportBusy || exportingBacking}
+                onClick={saveProcessedRecording}>
+                녹음 파일 저장
               </button>
               {lyricVideoButton}</>
             )}
@@ -2576,9 +2585,8 @@ export default function App({ initialDraft, initialRecoveryCandidates = [], allo
               </div>
               {recordingStatus && <p className="recording-status" role="status">{recordingStatus}</p>}
               {recordingDownloadUrl && (
-                <><a className="recording-download" href={recordingDownloadUrl} download={safeSongFileName("mp3")}>
-                  MP3 다시 저장하기
-                </a>
+                <><button type="button" className="recording-download" disabled={mediaExportBusy || exportingBacking}
+                  onClick={saveProcessedRecording}>녹음 파일 저장</button>
                 {lyricVideoButton}</>
               )}
               {shareStatus && <p className="share-status" role="status">{shareStatus}</p>}
