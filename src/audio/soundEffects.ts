@@ -1,7 +1,13 @@
 import { findSoundEffect, SOUND_EFFECTS, type SoundEffectId, type SoundEffectCategory } from "../music/soundEffects";
 import { publicAssetUrl } from "../platform/portable";
 
-const sampleBufferCache = new Map<string, Promise<AudioBuffer>>();
+type SampleBufferEntry = {
+  promise: Promise<AudioBuffer>;
+  buffer?: AudioBuffer;
+  failed?: boolean;
+};
+
+const sampleBufferCache = new WeakMap<BaseAudioContext, Map<string, SampleBufferEntry>>();
 
 function noiseBuffer(context: BaseAudioContext, seconds: number): AudioBuffer {
   const buffer = context.createBuffer(1, Math.max(1, Math.floor(context.sampleRate * seconds)), context.sampleRate);
@@ -110,36 +116,94 @@ function queueSyntheticEffect(context: BaseAudioContext, destination: AudioNode,
 }
 
 function loadSampleBuffer(context: BaseAudioContext, source: string): Promise<AudioBuffer> {
-  const cached = sampleBufferCache.get(source);
-  if (cached) return cached;
+  let cache = sampleBufferCache.get(context);
+  if (!cache) {
+    cache = new Map();
+    sampleBufferCache.set(context, cache);
+  }
+  const cached = cache.get(source);
+  if (cached) return cached.promise;
   const request = fetch(publicAssetUrl(source))
     .then((response) => {
       if (!response.ok) throw new Error(`Cannot load sound effect sample: ${source}`);
       return response.arrayBuffer();
     })
-    .then((buffer) => context.decodeAudioData(buffer.slice(0)));
-  sampleBufferCache.set(source, request);
+    .then((buffer) => context.decodeAudioData(buffer.slice(0)))
+    .then((buffer) => {
+      entry.buffer = buffer;
+      return buffer;
+    }).catch((error: unknown) => {
+      entry.failed = true;
+      throw error;
+    });
+  const entry: SampleBufferEntry = { promise: request };
+  cache.set(source, entry);
   return request;
+}
+
+/** Prepare samples (or their existing synthetic fallback) before offline rendering. */
+export async function preloadSoundEffects(context: BaseAudioContext,
+  effectIds: readonly SoundEffectId[], signal?: AbortSignal): Promise<void> {
+  const abortError = () => new DOMException("효과음 준비를 중단했어요.", "AbortError");
+  if (signal?.aborted) throw abortError();
+  const sources = [...new Set(effectIds.map((id) => findSoundEffect(id).source)
+    .filter((source): source is string => Boolean(source)))];
+  const ready = Promise.all(sources.map((source) =>
+    loadSampleBuffer(context, source).catch(() => undefined))).then(() => undefined);
+  if (!signal) return ready;
+  await new Promise<void>((resolve, reject) => {
+    const onAbort = () => {
+      signal.removeEventListener("abort", onAbort);
+      reject(abortError());
+    };
+    signal.addEventListener("abort", onAbort, { once: true });
+    if (signal.aborted) onAbort();
+    void ready.then(() => {
+      signal.removeEventListener("abort", onAbort);
+      if (signal.aborted) reject(abortError());
+      else resolve();
+    });
+  });
+}
+
+function sampleStart(context: BaseAudioContext, start: number): number {
+  const offline = typeof OfflineAudioContext !== "undefined" && context instanceof OfflineAudioContext;
+  return Math.max(start, context.currentTime + (offline ? 0 : 0.01));
+}
+
+function queueDecodedSample(context: BaseAudioContext, destination: AudioNode,
+  buffer: AudioBuffer, start: number): void {
+  if (context.state === "closed") return;
+  const playableStart = sampleStart(context, start);
+  const audio = context.createBufferSource();
+  const gain = context.createGain();
+  audio.buffer = buffer;
+  gain.gain.setValueAtTime(0.0001, playableStart);
+  gain.gain.exponentialRampToValueAtTime(0.75, playableStart + 0.01);
+  gain.gain.setValueAtTime(0.75, playableStart + Math.min(buffer.duration, 1.8));
+  gain.gain.exponentialRampToValueAtTime(0.0001, playableStart + Math.min(buffer.duration, 2.2));
+  audio.connect(gain).connect(destination);
+  audio.start(playableStart);
+  audio.stop(playableStart + Math.min(buffer.duration, 2.3));
 }
 
 function queueSampleEffect(context: BaseAudioContext, destination: AudioNode,
   source: string, start: number): void {
-  void loadSampleBuffer(context, source).then((buffer) => {
-    const playableStart = Math.max(start, context.currentTime + 0.01);
-    const audio = context.createBufferSource();
-    const gain = context.createGain();
-    audio.buffer = buffer;
-    gain.gain.setValueAtTime(0.0001, playableStart);
-    gain.gain.exponentialRampToValueAtTime(0.75, playableStart + 0.01);
-    gain.gain.setValueAtTime(0.75, playableStart + Math.min(buffer.duration, 1.8));
-    gain.gain.exponentialRampToValueAtTime(0.0001, playableStart + Math.min(buffer.duration, 2.2));
-    audio.connect(gain).connect(destination);
-    audio.start(playableStart);
-    audio.stop(playableStart + Math.min(buffer.duration, 2.3));
-  }).catch(() => {
+  if (context.state === "closed") return;
+  const fallback = () => {
+    if (context.state === "closed") return;
     const effect = SOUND_EFFECTS.find((item) => item.source === source) ?? SOUND_EFFECTS[0];
-    queueSyntheticEffect(context, destination, effect.category, indexForEffect(effect.id), Math.max(start, context.currentTime + 0.01));
-  });
+    queueSyntheticEffect(context, destination, effect.category, indexForEffect(effect.id), sampleStart(context, start));
+  };
+  const ready = sampleBufferCache.get(context)?.get(source);
+  if (ready?.buffer) {
+    queueDecodedSample(context, destination, ready.buffer, start);
+  } else if (ready?.failed) {
+    fallback();
+  } else {
+    void loadSampleBuffer(context, source)
+      .then((buffer) => queueDecodedSample(context, destination, buffer, start)).catch(fallback);
+  }
 }
 
 export function queueSoundEffect(context: BaseAudioContext, destination: AudioNode,

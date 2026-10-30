@@ -10,24 +10,43 @@ export type PcmStreamCapture = Readonly<{
   stop: () => Promise<Float32Array>;
 }>;
 
-const WORKLET_PROCESSOR_CODE = `
+export const PCM_CAPTURE_WORKLET_CODE = `
 class PcmCaptureProcessor extends AudioWorkletProcessor {
   constructor() {
     super();
     this.isRecording = true;
+    this.samples = new Float32Array(2048);
+    this.length = 0;
     this.port.onmessage = (event) => {
-      if (event.data === "stop") {
+      if (event.data === "stop" && this.isRecording) {
         this.isRecording = false;
+        this.flush();
+        this.port.postMessage({ type: "stopped" });
       }
     };
   }
 
+  flush() {
+    if (!this.length) return;
+    const samples = this.length === this.samples.length ? this.samples : this.samples.slice(0, this.length);
+    this.port.postMessage({ type: "chunk", samples }, [samples.buffer]);
+    this.samples = new Float32Array(2048);
+    this.length = 0;
+  }
+
   process(inputs) {
     if (!this.isRecording) return false;
-    const input = inputs[0];
-    if (input && input.length > 0 && input[0].length > 0) {
-      // Float32Array 청크를 슬라이스하여 메인 스레드로 무손실 전달
-      this.port.postMessage(input[0].slice());
+    const input = inputs[0]?.[0];
+    if (input) {
+      let offset = 0;
+      while (offset < input.length) {
+        const count = Math.min(input.length - offset, this.samples.length - this.length);
+        const block = offset === 0 && count === input.length ? input : input.subarray(offset, offset + count);
+        this.samples.set(block, this.length);
+        this.length += count;
+        offset += count;
+        if (this.length === this.samples.length) this.flush();
+      }
     }
     return true;
   }
@@ -39,7 +58,29 @@ try {
 }
 `;
 
-const registeredWorkletContexts = new WeakSet<BaseAudioContext>();
+const registeredWorkletContexts = new WeakMap<BaseAudioContext, Promise<void>>();
+
+function ensureCaptureWorklet(context: AudioContext): Promise<void> {
+  const existing = registeredWorkletContexts.get(context);
+  if (existing) return existing;
+  const url = URL.createObjectURL(new Blob([PCM_CAPTURE_WORKLET_CODE], { type: "application/javascript" }));
+  const pending = Promise.resolve().then(() => context.audioWorklet.addModule(url))
+    .finally(() => URL.revokeObjectURL(url));
+  registeredWorkletContexts.set(context, pending);
+  void pending.catch(() => {
+    if (registeredWorkletContexts.get(context) === pending) registeredWorkletContexts.delete(context);
+  });
+  return pending;
+}
+
+function disconnectNode(node: AudioNode, destination?: AudioNode): void {
+  try {
+    if (destination) node.disconnect(destination);
+    else node.disconnect();
+  } catch {
+    // The AudioContext may already have closed during cancellation.
+  }
+}
 
 
 /**
@@ -165,49 +206,75 @@ export async function startPcmStreamCapture(
   let isStopped = false;
 
   // AudioWorklet 등록 및 초기화 시도
-  if (typeof AudioWorkletNode !== "undefined" && context.audioWorklet?.addModule) {
+  if (typeof AudioWorkletNode !== "undefined" && typeof context.audioWorklet?.addModule === "function") {
+    let workletNode: AudioWorkletNode | undefined;
+    let dummyGain: GainNode | undefined;
     try {
-      if (!registeredWorkletContexts.has(context)) {
-        const blob = new Blob([WORKLET_PROCESSOR_CODE], { type: "application/javascript" });
-        const workletUrl = URL.createObjectURL(blob);
-        await context.audioWorklet.addModule(workletUrl);
-        URL.revokeObjectURL(workletUrl);
-        registeredWorkletContexts.add(context);
-      }
-
-      const workletNode = new AudioWorkletNode(context, "pcm-capture-processor");
-      workletNode.port.onmessage = (event: MessageEvent<Float32Array>) => {
-        if (!isStopped && event.data instanceof Float32Array) {
-          chunks.push(event.data);
-        }
-      };
-
-      source.connect(workletNode);
+      await ensureCaptureWorklet(context);
+      const node = new AudioWorkletNode(context, "pcm-capture-processor");
+      workletNode = node;
       // 크롬/사파리에서 Worklet 노드가 context.destination 연결 없이도 지속적으로 동작하도록 더미 노드 연결
-      const dummyGain = context.createGain();
-      dummyGain.gain.value = 0;
-      workletNode.connect(dummyGain);
-      try {
-        dummyGain.connect(context.destination);
-      } catch {
-        /* ignore */
-      }
+      const dummy = context.createGain();
+      dummyGain = dummy;
+      dummy.gain.value = 0;
+      let finishStop: (() => void) | null = null;
+      let stopPromise: Promise<Float32Array> | null = null;
+      let stopTimeout: number | undefined;
+      const onClosed = () => {
+        if (context.state === "closed") finishStop?.();
+      };
+      const disconnect = () => {
+        disconnectNode(source, node);
+        disconnectNode(node);
+        disconnectNode(dummy);
+        node.port.onmessage = null;
+        node.port.close();
+        context.removeEventListener("statechange", onClosed);
+      };
+      node.port.onmessage = (event: MessageEvent<{ type: string; samples?: Float32Array }>) => {
+        if (isStopped) return;
+        if (event.data.type === "chunk" && event.data.samples instanceof Float32Array) chunks.push(event.data.samples);
+        if (event.data.type === "stopped") finishStop?.();
+      };
+      source.connect(node);
+      node.connect(dummy);
+      dummy.connect(context.destination);
+      context.addEventListener("statechange", onClosed);
 
       return {
-        stop: async () => {
-          isStopped = true;
-          workletNode.port.postMessage("stop");
-          try {
-            source.disconnect(workletNode);
-            workletNode.disconnect();
-            dummyGain.disconnect();
-          } catch {
-            /* ignore */
-          }
-          return flattenPcmChunks(chunks);
+        stop: () => {
+          if (stopPromise) return stopPromise;
+          stopPromise = new Promise<Float32Array>((resolve) => {
+            finishStop = () => {
+              if (isStopped) return;
+              isStopped = true;
+              if (stopTimeout !== undefined) window.clearTimeout(stopTimeout);
+              disconnect();
+              resolve(flattenPcmChunks(chunks));
+              chunks.length = 0;
+            };
+            // An already closed context cannot send a final worklet response.
+            if (context.state === "closed") {
+              finishStop();
+              return;
+            }
+            // Normal shutdown waits for flushed samples, then the ordered ack.
+            // Only a suspended/broken processor uses this bounded fallback.
+            stopTimeout = window.setTimeout(() => finishStop?.(), 1000);
+            try { node.port.postMessage("stop"); }
+            catch { finishStop(); }
+          });
+          return stopPromise;
         }
       };
     } catch (error) {
+      if (workletNode) {
+        disconnectNode(source, workletNode);
+        disconnectNode(workletNode);
+        workletNode.port.onmessage = null;
+        workletNode.port.close();
+      }
+      if (dummyGain) disconnectNode(dummyGain);
       console.warn("AudioWorklet 초기화 실패, ScriptProcessorNode로 폴백합니다.", error);
     }
   }
@@ -231,17 +298,18 @@ export async function startPcmStreamCapture(
     /* ignore */
   }
 
+  let stoppedData: Promise<Float32Array> | null = null;
   return {
-    stop: async () => {
+    stop: () => {
+      if (stoppedData) return stoppedData;
       isStopped = true;
-      try {
-        source.disconnect(scriptNode);
-        scriptNode.disconnect();
-        dummy.disconnect();
-      } catch {
-        /* ignore */
-      }
-      return flattenPcmChunks(chunks);
+      scriptNode.onaudioprocess = null;
+      disconnectNode(source, scriptNode);
+      disconnectNode(scriptNode);
+      disconnectNode(dummy);
+      stoppedData = Promise.resolve(flattenPcmChunks(chunks));
+      chunks.length = 0;
+      return stoppedData;
     }
   };
 }

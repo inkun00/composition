@@ -121,7 +121,12 @@ export async function preloadInstrument(id: InstrumentId): Promise<void> {
       kit: "FluidR3_GM",
       ...soundfontSustainOptions(tempContext, mapInstrumentId(id))
     });
-    await player.ready;
+    try {
+      await player.ready;
+    } finally {
+      // Preloading warms the asset cache; it must not retain another live player.
+      player.dispose?.();
+    }
   } catch (error) {
     console.warn(`${id} 악기 프리로드 실패:`, error);
   }

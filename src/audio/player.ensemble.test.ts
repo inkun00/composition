@@ -12,7 +12,7 @@ vi.mock("./samplePlayer", () => ({ loadSampleInstrument: loadSample, queueSample
   releaseSampleInstrument: vi.fn(), releaseSampleContext: vi.fn() }));
 vi.mock("./drumGroove", () => ({ scheduleBeatPattern: scheduleDrums }));
 vi.mock("./beatSamples", () => ({ preloadBeatSamples: vi.fn(async () => {}) }));
-vi.mock("./soundEffects", () => ({ queueSoundEffect: queueEffect }));
+vi.mock("./soundEffects", () => ({ queueSoundEffect: queueEffect, preloadSoundEffects: vi.fn(async () => {}) }));
 vi.mock("./audioExport", () => ({ encodeAudioBufferToMp3: () => new Blob(["mp3"], { type: "audio/mpeg" }),
   renderedAudioPeak: () => .03, renderProcessedKaraokeMp3: vi.fn(),
   renderKaraokePreviewMix: async () => ({ audioBuffer, blob: new Blob(["mp3"]) }) }));

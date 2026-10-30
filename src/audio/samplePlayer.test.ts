@@ -1,7 +1,7 @@
 import { Scheduler, type NoteEvent, type SmplrOptions, type SoundfontOptions } from "smplr";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { INSTRUMENTS } from "../music/instruments";
-import { isSampleBackedInstrument, loadSampleInstrument, queueSampleNote, releaseSampleContext,
+import { isSampleBackedInstrument, loadSampleInstrument, preloadInstrument, queueSampleNote, releaseSampleContext,
   releaseSampleInstrument, resetSampleInstrumentCache } from "./samplePlayer";
 
 const { soundfontMock, dispatched } = vi.hoisted(() => ({ soundfontMock: vi.fn(), dispatched: vi.fn() }));
@@ -37,6 +37,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   schedulers.splice(0).forEach((scheduler) => scheduler.stop());
   vi.clearAllTimers();
   vi.useRealTimers();
@@ -45,6 +46,22 @@ afterEach(() => {
 });
 
 describe("실제 악기 샘플 연결", () => {
+  it("프리로드를 마치면 임시 플레이어와 scheduler를 남기지 않는다", async () => {
+    vi.stubGlobal("AudioContext", class { currentTime = 0; });
+    const dispose = vi.fn();
+    soundfontMock.mockReturnValueOnce({ ready: Promise.resolve(), dispose });
+    await preloadInstrument("piano");
+    expect(dispose).toHaveBeenCalledOnce();
+  });
+
+  it("프리로드 실패 때에도 임시 플레이어를 정리한다", async () => {
+    vi.stubGlobal("AudioContext", class { currentTime = 0; });
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const dispose = vi.fn();
+    soundfontMock.mockReturnValueOnce({ ready: Promise.reject(new Error("sample failed")), dispose });
+    await preloadInstrument("violin");
+    expect(dispose).toHaveBeenCalledOnce();
+  });
   it("화면의 모든 악기가 샘플 재생을 지원한다", () => {
     expect(INSTRUMENTS.every((instrument) => isSampleBackedInstrument(instrument.id))).toBe(true);
   });
