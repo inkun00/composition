@@ -37,7 +37,7 @@ function videoUnavailable(options: Options): string | null {
   if (!options.audioUrl) return "먼저 노래를 녹음해 주세요.";
   if (!options.complete) return "모든 마디의 박자를 완성하면 뮤직비디오를 저장할 수 있어요.";
   if (!match(options)) return "녹음한 뒤 곡이 바뀌었어요. 현재 곡으로 다시 녹음해 주세요.";
-  if (!options.scenes.length) return "뮤직비디오 장면을 먼저 만들어 주세요.";
+  if (!options.scenes.length) return "‘장면 그리기’에서 그림 뮤직비디오를 먼저 만들어 주세요.";
   try {
     return validateMusicVideoScenes(options.scenes, getMusicVideoMeasures(options.measures, options.bpm), options.bpm);
   } catch (error) {

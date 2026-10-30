@@ -147,7 +147,7 @@ describe("녹음 후 MP3 또는 뮤직비디오 MP4 파일 선택", () => {
 
   it.each([
     { patch: { complete: false }, reason: "모든 마디" },
-    { patch: { scenes: [] }, reason: "장면을 먼저" },
+    { patch: { scenes: [] }, reason: "그림 뮤직비디오를 먼저" },
     { patch: { bpm: 96 }, reason: "곡이 바뀌었어요" },
     { patch: { plan: null }, reason: "다시 녹음" }
   ] satisfies { patch: Partial<Options>; reason: string }[])("MP4 불가 이유를 보여주고 반주로 대체하지 않는다: $reason", async ({ patch, reason }) => {

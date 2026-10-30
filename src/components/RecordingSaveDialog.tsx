@@ -2,9 +2,12 @@ import { useId } from "react";
 import { createPortal } from "react-dom";
 import { useDialogFocus } from "../hooks/useDialogFocus";
 import { FileVideo, Headphones, X } from "./AppArtworkIcons";
+import SceneArt from "../musicVideo/SceneArt";
+import type { MusicVideoScene } from "../video/musicVideoModel";
 import "./RecordingSaveDialog.css";
 
 export type RecordingSaveDialogProps = Readonly<{
+  scenes: readonly MusicVideoScene[];
   videoUnavailableReason: string | null;
   busy: boolean;
   progress: number;
@@ -15,10 +18,12 @@ export type RecordingSaveDialogProps = Readonly<{
   onCancel: () => void;
 }>;
 
-export default function RecordingSaveDialog({ videoUnavailableReason, busy, progress, status,
+export default function RecordingSaveDialog({ scenes, videoUnavailableReason, busy, progress, status,
   onSaveMp3, onSaveMp4, onClose, onCancel }: RecordingSaveDialogProps) {
   const id = useId();
   const ref = useDialogFocus<HTMLElement>();
+  const drawing = scenes.find((scene) => scene.section !== "intro" && scene.elements.length > 0) ??
+    scenes.find((scene) => scene.elements.length > 0);
   return createPortal(
     <div className="recording-save-overlay" role="presentation"
       onMouseDown={(event) => { if (!busy && event.target === event.currentTarget) onClose(); }}>
@@ -43,12 +48,17 @@ export default function RecordingSaveDialog({ videoUnavailableReason, busy, prog
             <strong>MP3로 저장</strong>
             <span>녹음한 노래를 소리 파일로</span>
           </button>
-          <button type="button" className="recording-save-option" aria-label="뮤직비디오와 MP4로 저장"
+          <button type="button" className="recording-save-option" aria-label="내 그림 뮤직비디오 MP4로 저장"
+            data-testid="recording-save-mp4"
             disabled={busy || Boolean(videoUnavailableReason)} onClick={onSaveMp4}
             aria-describedby={videoUnavailableReason ? `${id}-video-reason` : undefined}>
-            <span className="recording-save-art recording-save-video-art" aria-hidden="true"><FileVideo size={48} /></span>
-            <strong>뮤직비디오와 MP4로 저장</strong>
-            <span>녹음한 노래 + 만들어 둔 장면</span>
+            <span className={`recording-save-art recording-save-video-art${drawing ? " has-drawing" : ""}`}
+              data-testid="recording-save-drawing-preview" role={drawing ? "img" : undefined}
+              aria-label={drawing ? "장면 그리기에서 만든 그림 미리보기" : undefined} aria-hidden={!drawing || undefined}>
+              {drawing ? <SceneArt scene={drawing} /> : <FileVideo size={48} />}
+            </span>
+            <strong>내 그림 뮤직비디오 MP4로 저장</strong>
+            <span>직접 그린 그림·움직임 + 녹음한 노래</span>
           </button>
         </div>
         {videoUnavailableReason && <p className="recording-save-help" id={`${id}-video-reason`}>

@@ -24,7 +24,7 @@ afterEach(() => {
 });
 
 function render(overrides: Partial<RecordingSaveDialogProps> = {}) {
-  act(() => root.render(<RecordingSaveDialog videoUnavailableReason={null} busy={false} progress={0} status=""
+  act(() => root.render(<RecordingSaveDialog scenes={[]} videoUnavailableReason={null} busy={false} progress={0} status=""
     {...callbacks} {...overrides} />));
 }
 
@@ -36,6 +36,17 @@ function button(label: string) {
 }
 
 describe("녹음 저장 파일 선택", () => {
+  it("MP4 선택에 장면 그리기에서 만든 실제 그림을 표시한다", () => {
+    render({ scenes: [{ id: "my-drawing", background: "#c2efda", endLyric: null,
+      endMeasureIndex: 0, motion: "bounce", elements: [{ id: "line", tool: "line", color: "#cf3c55", width: 8,
+        points: [[10, 20, .5], [200, 300, .5]] }] }] });
+    const preview = document.querySelector('[data-testid="recording-save-drawing-preview"]')!;
+    expect(preview.getAttribute("aria-label")).toBe("장면 그리기에서 만든 그림 미리보기");
+    expect(preview.querySelector("path")?.getAttribute("stroke")).toBe("#cf3c55");
+    expect(preview.querySelector("svg")?.style.background).toBe("rgb(194, 239, 218)");
+    expect(button("내 그림 뮤직비디오 MP4로 저장").textContent).toContain("직접 그린 그림·움직임");
+  });
+
   it("열기만 해서는 저장하지 않고 선택한 형식만 실행한다", () => {
     render();
     expect(container.childElementCount).toBe(0);
@@ -46,14 +57,14 @@ describe("녹음 저장 파일 선택", () => {
     act(() => button("MP3로 저장").click());
     expect(callbacks.onSaveMp3).toHaveBeenCalledOnce();
     expect(callbacks.onSaveMp4).not.toHaveBeenCalled();
-    act(() => button("뮤직비디오와 MP4로 저장").click());
+    act(() => button("내 그림 뮤직비디오 MP4로 저장").click());
     expect(callbacks.onSaveMp4).toHaveBeenCalledOnce();
   });
 
   it("뮤직비디오가 없으면 MP3는 허용하고 MP4 제한 이유를 연결한다", () => {
     const reason = "장면 그리기에서 뮤직비디오를 먼저 만들어 주세요.";
     render({ videoUnavailableReason: reason });
-    const video = button("뮤직비디오와 MP4로 저장");
+    const video = button("내 그림 뮤직비디오 MP4로 저장");
     expect(video.disabled).toBe(true);
     expect(button("MP3로 저장").disabled).toBe(false);
     const description = document.getElementById(video.getAttribute("aria-describedby")!);
@@ -64,7 +75,7 @@ describe("녹음 저장 파일 선택", () => {
 
   it("제작 중에는 선택과 닫기를 막고 진행률과 취소를 제공한다", () => {
     render({ busy: true, progress: 42, status: "녹음과 장면을 합치고 있어요." });
-    for (const label of ["MP3로 저장", "뮤직비디오와 MP4로 저장", "녹음 파일 저장 닫기"]) {
+    for (const label of ["MP3로 저장", "내 그림 뮤직비디오 MP4로 저장", "녹음 파일 저장 닫기"]) {
       expect(button(label).disabled).toBe(true);
       act(() => button(label).click());
     }
@@ -104,6 +115,6 @@ describe("녹음 저장 파일 선택", () => {
     render({ status: "영상을 만들지 못했어요. 다시 시도해 주세요." });
     expect(document.querySelector('[role="status"]')?.textContent).toContain("영상을 만들지 못했어요");
     expect(button("MP3로 저장").disabled).toBe(false);
-    expect(button("뮤직비디오와 MP4로 저장").disabled).toBe(false);
+    expect(button("내 그림 뮤직비디오 MP4로 저장").disabled).toBe(false);
   });
 });

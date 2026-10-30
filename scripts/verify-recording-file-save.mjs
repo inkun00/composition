@@ -53,7 +53,7 @@ const server = await createServer({
       return code.replace(original, "export async function originalRecordKaraokeComposition(") + syntheticRecording;
     }
   }],
-  server: { host: "127.0.0.1", port: 0 }
+  server: { host: "127.0.0.1", port: 0, watch: { ignored: ["**/public/homr-helper.generated.mjs"] } }
 });
 await server.listen();
 const baseUrl = server.resolvedUrls.local[0];
@@ -80,7 +80,7 @@ async function seedPage(withVideo) {
         lyric, duration: { numerator: 1, denominator: 1 } }))
     }));
     const scenes = ["#c2efda", "#bed5ff"].map((background, index) => ({
-      id: `record-scene-${index}`, background, motion: "still", endLyric: null,
+      id: `record-scene-${index}`, background, motion: index === 0 ? "bounce" : "sway", endLyric: null,
       startMeasureIndex: index * 4, endMeasureIndex: index * 4 + 3,
       elements: [{ id: `record-shape-${index}`, tool: "rectangle", color: "#cf3c55", width: 24,
         points: [[200, 140, .5], [650, 400, .5]] }]
@@ -101,6 +101,8 @@ async function seedPage(withVideo) {
   await next.getByRole("button", { name: "합창 녹음 시작", exact: true }).click();
   await next.locator(".karaoke-post-panel audio").waitFor();
   await next.getByRole("button", { name: "이 느낌으로 파일 저장", exact: true }).waitFor({ state: "visible" });
+  assert.equal(await next.getByTestId("export-lyric-mp4").count(), 0,
+    "Recorded-song saving must not expose a separate lyrics-only MP4 shortcut");
   return next;
 }
 
@@ -138,7 +140,8 @@ async function inspectVideo(bytes) {
     await new Promise((resolve, reject) => { video.onloadeddata = resolve; video.onerror = reject; });
     const captures = [];
     const fixture = window.__recordingFixture;
-    for (const seconds of [fixture.introSeconds + .4, fixture.introSeconds + fixture.songSeconds / 2 + .4]) {
+    for (const seconds of [fixture.introSeconds + .36,
+      fixture.introSeconds + fixture.songSeconds / 2 + .4, fixture.introSeconds + .5]) {
       await new Promise((resolve, reject) => { video.onseeked = resolve; video.onerror = reject; video.currentTime = seconds; });
       const canvas = document.createElement("canvas");
       canvas.width = video.videoWidth;
@@ -148,14 +151,19 @@ async function inspectVideo(bytes) {
       const data = context.getImageData(0, 0, canvas.width, canvas.height).data;
       const offset = (200 * canvas.width + 1200) * 4;
       let paintedPixels = 0;
+      let paintedY = 0;
       for (let y = 90; y < 600; y += 1) {
         for (let x = 100; x < 1000; x += 1) {
           const at = (y * canvas.width + x) * 4;
-          if (data[at] > data[at + 1] + 60 && data[at] > data[at + 2] + 20) paintedPixels += 1;
+          if (data[at] > data[at + 1] + 60 && data[at] > data[at + 2] + 20) {
+            paintedPixels += 1;
+            paintedY += y;
+          }
         }
       }
       captures.push({ seconds, background: Array.from(data.slice(offset, offset + 3)),
-        paintedPixels, png: canvas.toDataURL("image/png") });
+        paintedPixels, paintedCenterY: paintedPixels ? paintedY / paintedPixels : null,
+        png: canvas.toDataURL("image/png") });
     }
     const result = { width: video.videoWidth, height: video.videoHeight, duration: video.duration, captures };
     video.removeAttribute("src");
@@ -181,7 +189,13 @@ try {
   const dialog = page.getByRole("dialog", { name: "녹음 파일로 저장", exact: true });
   await dialog.waitFor();
   assert.equal(downloads, 0, "Opening the popup must not download a file");
-  assert.equal(await dialog.getByRole("button", { name: "뮤직비디오와 MP4로 저장", exact: true }).isEnabled(), true);
+  assert.equal(await dialog.getByTestId("recording-save-mp4").isEnabled(), true);
+  const drawingPreview = dialog.getByTestId("recording-save-drawing-preview");
+  await drawingPreview.waitFor();
+  assert.equal(await drawingPreview.locator("svg path").first().getAttribute("stroke"), "#cf3c55",
+    "The MP4 choice must preview the authored drawing, not a generic video icon or lyrics");
+  assert.equal(await drawingPreview.locator("svg").evaluate((svg) => getComputedStyle(svg).backgroundColor), "rgb(194, 239, 218)");
+  report.drawnPreview = { authoredPath: true, background: "#c2efda" };
   await dialog.screenshot({ path: path.join(outputDir, "format-choice-desktop.png") });
   await page.setViewportSize({ width: 390, height: 844 });
   const bounds = await dialog.boundingBox();
@@ -207,7 +221,7 @@ try {
 
   await save.click();
   downloading = page.waitForEvent("download", { timeout: 180_000 });
-  await dialog.getByRole("button", { name: "뮤직비디오와 MP4로 저장", exact: true }).click();
+  await dialog.getByTestId("recording-save-mp4").click();
   await dialog.getByRole("progressbar", { name: "녹음 뮤직비디오 만들기 진행률", exact: true }).waitFor();
   const mp4 = await downloading;
   const mp4Path = path.join(outputDir, "recording-music-video.mp4");
@@ -224,6 +238,8 @@ try {
   assert.ok(Math.abs(media.duration - mp3Audio.duration) < .15);
   assert.ok(media.captures[0].background[1] > media.captures[0].background[2] + 10);
   assert.ok(media.captures[1].background[2] > media.captures[1].background[0] + 20);
+  assert.ok(Math.abs(media.captures[2].paintedCenterY - media.captures[0].paintedCenterY) > 3,
+    "The authored drawing must retain its bounce animation inside the exported recording MP4");
   for (const [index, capture] of media.captures.entries()) {
     assert.ok(capture.paintedPixels > 500, "The video must contain the authored drawing");
     await writeFile(path.join(outputDir, `recording-scene-${index + 1}.png`), Buffer.from(capture.png.split(",")[1], "base64"));
@@ -236,9 +252,11 @@ try {
   page = await seedPage(false);
   await page.getByRole("button", { name: "이 느낌으로 파일 저장", exact: true }).click();
   const unavailable = page.getByRole("dialog", { name: "녹음 파일로 저장", exact: true });
-  assert.equal(await unavailable.getByRole("button", { name: "뮤직비디오와 MP4로 저장", exact: true }).isEnabled(), false);
+  assert.equal(await unavailable.getByTestId("recording-save-mp4").isEnabled(), false);
+  assert.equal(await unavailable.getByTestId("recording-save-drawing-preview").getAttribute("aria-hidden"), "true");
+  assert.equal(await unavailable.getByTestId("recording-save-drawing-preview").locator('svg path[stroke="#cf3c55"]').count(), 0);
   assert.equal(await unavailable.getByRole("button", { name: "MP3로 저장", exact: true }).isEnabled(), true);
-  assert.ok((await unavailable.textContent()).includes("장면을 먼저 만들어"));
+  assert.ok((await unavailable.textContent()).includes("그림 뮤직비디오를 먼저 만들어"));
   await unavailable.screenshot({ path: path.join(outputDir, "no-video-choice.png") });
   assert.ok(mockedModules > 0);
   assert.deepEqual(report.errors, []);
