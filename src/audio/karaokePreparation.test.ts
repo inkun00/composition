@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AccompanimentOptions, PlaybackMeasure } from "./accompanimentScore";
 import { prepareKaraokeAudio } from "./karaokePreparation";
+import { karaokePreparationCache } from "./karaokePreparationCache";
 
 const mocks = vi.hoisted(() => ({
   loadLayers: vi.fn(), loadMelody: vi.fn(), queueSample: vi.fn(), drums: vi.fn(), effect: vi.fn(),
@@ -62,6 +63,7 @@ function deferred<T>() {
 }
 
 beforeEach(() => {
+  karaokePreparationCache.clear();
   contexts.splice(0);
   vi.clearAllMocks();
   vi.stubGlobal("OfflineAudioContext", OfflineContextMock);
@@ -70,9 +72,32 @@ beforeEach(() => {
   mocks.loadMelody.mockImplementation(async (_context, _destination, id) => ({ id }));
   mocks.preloadEffects.mockResolvedValue(undefined);
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(async () => {
+  karaokePreparationCache.clear();
+  await Promise.resolve();
+  await Promise.resolve();
+  vi.unstubAllGlobals();
+});
 
 describe("노래 연습·녹음용 사전 렌더링", () => {
+  it("악기와 효과음을 함께 준비하고 둘 다 준비된 뒤 렌더링한다", async () => {
+    const layers = deferred<[]>();
+    const effects = deferred<void>();
+    mocks.loadLayers.mockReturnValueOnce(layers.promise);
+    mocks.preloadEffects.mockReturnValueOnce(effects.promise);
+    const pending = prepareKaraokeAudio(measures, "flute", 120, accompaniment,
+      { sampleRate: 48000, mode: "practice" });
+    await vi.waitFor(() => expect(mocks.preloadEffects).toHaveBeenCalledOnce());
+    expect(mocks.loadLayers).toHaveBeenCalledOnce();
+    expect(contexts[0].startRendering).not.toHaveBeenCalled();
+    layers.resolve([]);
+    await Promise.resolve();
+    expect(contexts[0].startRendering).not.toHaveBeenCalled();
+    effects.resolve();
+    await pending;
+    expect(contexts[0].startRendering).toHaveBeenCalledOnce();
+  });
+
   it("선택한 네 반주 악기·비트·효과와 도움 가락을 서로 다른 버퍼로 준비한다", async () => {
     const result = await prepareKaraokeAudio(measures, "flute", 120, accompaniment,
       { sampleRate: 48000, mode: "practice" });
@@ -88,7 +113,7 @@ describe("노래 연습·녹음용 사전 렌더링", () => {
     expect(mocks.drums.mock.calls.every((call) => call[0] === contexts[0] && call[6] === accompaniment.beatPattern)).toBe(true);
     expect(mocks.effect).toHaveBeenCalledTimes(2);
     expect(mocks.effect.mock.calls.every((call) => call[0] === contexts[0])).toBe(true);
-    expect(mocks.preloadEffects).toHaveBeenCalledWith(contexts[0], ["bell", "bell"], undefined);
+    expect(mocks.preloadEffects).toHaveBeenCalledWith(contexts[0], ["bell", "bell"], expect.any(AbortSignal));
     expect(mocks.loadLayers).toHaveBeenCalledOnce();
     for (const context of contexts) {
       expect(mocks.releaseRuntime).toHaveBeenCalledWith(context);
@@ -105,7 +130,8 @@ describe("노래 연습·녹음용 사전 렌더링", () => {
     expect(result.outroSeconds).toBe(8);
     expect(result.durationSeconds).toBe(20 + (mode === "practice" ? .55 : .8));
     expect(contexts.every((context) => context.channels === 2 && context.sampleRate === 48000 &&
-      context.length === Math.ceil(result.durationSeconds * 48000))).toBe(true);
+      context.length === Math.ceil(20.8 * 48000))).toBe(true);
+    expect(result.backing.duration).toBeCloseTo(20.8);
     expect(Math.min(...mocks.drums.mock.calls.map((call) => call[2]))).toBe(0);
     const melody = mocks.queueSample.mock.calls.filter((call) => call[0].id === "flute");
     expect(melody.every((call) => call[4] >= result.introSeconds && call[4] < 12)).toBe(true);
@@ -169,12 +195,13 @@ describe("노래 연습·녹음용 사전 렌더링", () => {
     const pending = prepareKaraokeAudio(measures, "flute", 120, accompaniment,
       { sampleRate: 48000, mode: "practice", signal: controller.signal });
     const rejection = expect(pending).rejects.toMatchObject({ name: "AbortError" });
+    if (stage === "layers") await vi.waitFor(() => expect(mocks.loadLayers).toHaveBeenCalledOnce());
     if (stage === "effects") await vi.waitFor(() => expect(mocks.preloadEffects).toHaveBeenCalledOnce());
     if (stage === "render") await vi.waitFor(() => expect(contexts[0].startRendering).toHaveBeenCalledOnce());
     controller.abort();
     await rejection;
     expect(contexts).toHaveLength(1);
-    expect(mocks.releaseRuntime).toHaveBeenCalledWith(contexts[0]);
+    await vi.waitFor(() => expect(mocks.releaseRuntime).toHaveBeenCalledWith(contexts[0]));
     expect(mocks.releaseSamples).toHaveBeenCalledWith(contexts[0]);
   });
 
@@ -188,7 +215,7 @@ describe("노래 연습·녹음용 사전 렌더링", () => {
     controller.abort();
     await rejection;
     expect(contexts[1].createOscillator).not.toHaveBeenCalled();
-    expect(mocks.releaseSamples).toHaveBeenCalledTimes(2);
+    await vi.waitFor(() => expect(mocks.releaseSamples).toHaveBeenCalledTimes(2));
   });
 
   it("렌더링 실패에도 리소스를 정리하고 재시도에서 새 컨텍스트를 사용한다", async () => {
@@ -217,5 +244,126 @@ describe("노래 연습·녹음용 사전 렌더링", () => {
     await expect(prepareKaraokeAudio(measures, "flute", 120, accompaniment,
       { sampleRate: 48000, mode: "practice" })).rejects.toThrow("최신 크롬");
     expect(contexts).toHaveLength(0);
+  });
+});
+
+describe("노래 연습·녹음 준비 결과 재사용", () => {
+  const options = { sampleRate: 48000, mode: "practice" as const };
+
+  it("같은 곡을 다시 시작할 때 두 버퍼를 그대로 쓰고 새 컨텍스트를 만들지 않는다", async () => {
+    const first = await prepareKaraokeAudio(measures, "flute", 120, accompaniment, options);
+    const second = await prepareKaraokeAudio(measures, "flute", 120, accompaniment, options);
+    expect(second.backing).toBe(first.backing);
+    expect(second.guide).toBe(first.guide);
+    expect(contexts).toHaveLength(2);
+    expect(mocks.loadLayers).toHaveBeenCalledOnce();
+    expect(mocks.loadMelody).toHaveBeenCalledOnce();
+    expect(contexts.every((context) => context.startRendering.mock.calls.length === 1)).toBe(true);
+  });
+
+  it("연습에서 녹음으로 바꾸거나 도움 방식을 바꿔도 반주는 다시 만들지 않는다", async () => {
+    const practice = await prepareKaraokeAudio(measures, "flute", 120, accompaniment, options);
+    const soft = await prepareKaraokeAudio(measures, "flute", 120, accompaniment,
+      { ...options, mode: "recording", guideMode: "soft" });
+    const firstNote = await prepareKaraokeAudio(measures, "flute", 120, accompaniment,
+      { ...options, mode: "recording", guideMode: "first-note" });
+    const off = await prepareKaraokeAudio(measures, "flute", 120, accompaniment,
+      { ...options, mode: "recording", guideMode: "off" });
+    for (const result of [soft, firstNote, off]) expect(result.backing).toBe(practice.backing);
+    expect(soft.guide).not.toBe(practice.guide);
+    expect(firstNote.guide).not.toBe(soft.guide);
+    expect(off.guide).toBeNull();
+    expect(practice.durationSeconds).toBe(20.55);
+    expect(soft.durationSeconds).toBe(20.8);
+    expect(contexts).toHaveLength(4);
+    expect(mocks.loadLayers).toHaveBeenCalledOnce();
+    expect(mocks.loadMelody).toHaveBeenCalledTimes(3);
+  });
+
+  it("가사·메모 식별자·화면 콜백만 바뀌면 준비한 소리를 유지한다", async () => {
+    const first = await prepareKaraokeAudio(measures, "flute", 120, accompaniment, options);
+    const edited = measures.map((measure) => ({ ...measure,
+      notes: measure.notes.map((note) => ({ ...note, id: `new-${note.id}`, lyric: "새 가사" })),
+      effects: measure.effects?.map((effect) => ({ ...effect, id: `new-${effect.id}` }))
+    }));
+    const second = await prepareKaraokeAudio(edited, "flute", 120, { ...accompaniment,
+      onTrackState: vi.fn(), beatPattern: accompaniment.beatPattern?.map((event) => ({ ...event, id: `new-${event.id}` }))
+    }, options);
+    expect(second.backing).toBe(first.backing);
+    expect(second.guide).toBe(first.guide);
+    expect(contexts).toHaveLength(2);
+  });
+
+  it("메인 악기만 바꾸면 반주를 유지하고 도움 가락만 새로 준비한다", async () => {
+    const first = await prepareKaraokeAudio(measures, "flute", 120, accompaniment, options);
+    const changed = await prepareKaraokeAudio(measures, "violin", 120, accompaniment, options);
+    expect(changed.backing).toBe(first.backing);
+    expect(changed.guide).not.toBe(first.guide);
+    expect(contexts).toHaveLength(3);
+    expect(mocks.loadLayers).toHaveBeenCalledOnce();
+    expect(mocks.loadMelody.mock.calls.map((call) => call[2])).toEqual(["flute", "violin"]);
+  });
+
+  it.each(["pitch", "bpm", "sample-rate", "mix", "beat", "effect", "chord", "meter"] as const)(
+    "%s 변경은 이전 반주를 재사용하지 않는다", async (change) => {
+      const first = await prepareKaraokeAudio(measures, "flute", 120, accompaniment, options);
+      let nextMeasures = measures;
+      let nextAccompaniment = accompaniment;
+      let bpm = 120;
+      let sampleRate = 48000;
+      if (change === "pitch") nextMeasures = measures.map((measure) => ({ ...measure,
+        notes: measure.notes.map((note) => ({ ...note, pitch: note.pitch === null ? null : note.pitch + 1 })) }));
+      if (change === "bpm") bpm = 96;
+      if (change === "sample-rate") sampleRate = 44100;
+      if (change === "mix") nextAccompaniment = { ...accompaniment,
+        trackMix: { [ids[0]]: { volume: 80, muted: false } } };
+      if (change === "beat") nextAccompaniment = { ...accompaniment,
+        beatPattern: accompaniment.beatPattern?.map((event) => ({ ...event, offsetBeats: event.offsetBeats + .25 })) };
+      if (change === "effect") nextMeasures = measures.map((measure) => ({ ...measure,
+        effects: measure.effects?.map((effect) => ({ ...effect, offsetBeats: 1.5 })) }));
+      if (change === "chord") nextMeasures = measures.map((measure) => ({ ...measure, chords: ["F"] }));
+      if (change === "meter") nextAccompaniment = { ...accompaniment, meter: { beats: 3, beatUnit: 4 } };
+      const changed = await prepareKaraokeAudio(nextMeasures, "flute", bpm, nextAccompaniment,
+        { ...options, sampleRate });
+      expect(changed.backing).not.toBe(first.backing);
+      expect(mocks.loadLayers).toHaveBeenCalledTimes(2);
+      if (["mix", "beat", "effect", "chord", "meter"].includes(change)) expect(changed.guide).toBe(first.guide);
+      else expect(changed.guide).not.toBe(first.guide);
+    }
+  );
+
+  it("같은 준비를 기다리는 한 요청만 취소하면 다른 요청의 소리는 완성한다", async () => {
+    const waiting = deferred<[]>();
+    mocks.loadLayers.mockReturnValueOnce(waiting.promise);
+    const controller = new AbortController();
+    const canceled = prepareKaraokeAudio(measures, "flute", 120, accompaniment,
+      { ...options, signal: controller.signal });
+    const retained = prepareKaraokeAudio(measures, "flute", 120, accompaniment, options);
+    const rejection = expect(canceled).rejects.toMatchObject({ name: "AbortError" });
+    await vi.waitFor(() => expect(mocks.loadLayers).toHaveBeenCalledOnce());
+    controller.abort();
+    await rejection;
+    expect(mocks.releaseRuntime).not.toHaveBeenCalled();
+    waiting.resolve([]);
+    const result = await retained;
+    const next = await prepareKaraokeAudio(measures, "flute", 120, accompaniment, options);
+    expect(next.backing).toBe(result.backing);
+    expect(next.guide).toBe(result.guide);
+    expect(contexts).toHaveLength(2);
+  });
+
+  it("준비 중 마지막 요청을 취소해도 같은 곡의 다음 시도는 성공한다", async () => {
+    mocks.loadLayers.mockReturnValueOnce(new Promise(() => undefined));
+    const controller = new AbortController();
+    const pending = prepareKaraokeAudio(measures, "flute", 120, accompaniment,
+      { ...options, signal: controller.signal });
+    const rejection = expect(pending).rejects.toMatchObject({ name: "AbortError" });
+    await vi.waitFor(() => expect(mocks.loadLayers).toHaveBeenCalledOnce());
+    controller.abort();
+    await rejection;
+    await vi.waitFor(() => expect(mocks.releaseRuntime).toHaveBeenCalledWith(contexts[0]));
+    const next = await prepareKaraokeAudio(measures, "flute", 120, accompaniment, options);
+    expect(next.backing).toBe(contexts[1].result);
+    expect(contexts).toHaveLength(3);
   });
 });

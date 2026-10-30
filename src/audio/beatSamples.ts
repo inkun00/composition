@@ -3,6 +3,7 @@ import {
   type BeatInstrumentId
 } from "../music/beatInstruments";
 import { publicAssetUrl } from "../platform/portable";
+import { BEAT_SAMPLE_RATES, preparedBeatLeadSeconds, preparedBeatSampleBytes, prepareBeatSampleVariants } from "./beatSamplePreparation";
 
 export const BEAT_SAMPLE_URLS: Readonly<Record<BeatInstrumentId, string>> = {
   kick: "/beat-samples/kick.wav",
@@ -31,6 +32,40 @@ export const BEAT_SAMPLE_URLS: Readonly<Record<BeatInstrumentId, string>> = {
 
 const sampleBuffers = new WeakMap<BaseAudioContext, Map<BeatInstrumentId, AudioBuffer>>();
 const pendingLoads = new WeakMap<BaseAudioContext, Map<BeatInstrumentId, Promise<AudioBuffer | null>>>();
+const MAX_PREPARED_BYTES = 24 * 1024 * 1024;
+type PreparedSamples = {
+  bytes: number;
+  variants: Map<BeatInstrumentId, readonly AudioBuffer[]>;
+  pending: Map<BeatInstrumentId, Promise<void>>;
+};
+const preparedSamples = new WeakMap<BaseAudioContext, PreparedSamples>();
+
+async function prepareLoadedBeat(context: BaseAudioContext, instrumentId: BeatInstrumentId,
+  buffer: AudioBuffer): Promise<void> {
+  if (typeof OfflineAudioContext === "undefined" || context.state === "closed") return;
+  let prepared = preparedSamples.get(context);
+  if (!prepared) {
+    prepared = { bytes: 0, variants: new Map(), pending: new Map() };
+    preparedSamples.set(context, prepared);
+  }
+  if (prepared.variants.has(instrumentId)) return;
+  const current = prepared.pending.get(instrumentId);
+  if (current) return current;
+  const bytes = preparedBeatSampleBytes(buffer, context.sampleRate);
+  if (!Number.isFinite(bytes) || bytes <= 0 || prepared.bytes + bytes > MAX_PREPARED_BYTES) return;
+  prepared.bytes += bytes;
+  const cache = prepared;
+  const pending = prepareBeatSampleVariants(buffer, BEAT_SAMPLE_MIX_PROFILES[instrumentId], context.sampleRate)
+    .then((variants) => {
+      if (context.state === "closed") cache.bytes -= bytes;
+      else cache.variants.set(instrumentId, variants);
+    }).catch((error: unknown) => {
+      cache.bytes -= bytes;
+      console.warn(`${instrumentId} 비트 사전 보정에 실패해 실시간 보정을 사용합니다.`, error);
+    }).finally(() => cache.pending.delete(instrumentId));
+  cache.pending.set(instrumentId, pending);
+  return pending;
+}
 
 function contextBuffers(context: BaseAudioContext): Map<BeatInstrumentId, AudioBuffer> {
   const existing = sampleBuffers.get(context);
@@ -82,7 +117,10 @@ export async function preloadBeatSamples(
   instrumentIds: readonly BeatInstrumentId[]
 ): Promise<void> {
   await Promise.all([...new Set(instrumentIds.filter(isBeatInstrumentId))]
-    .map((instrumentId) => loadBeatSample(context, instrumentId)));
+    .map(async (instrumentId) => {
+      const buffer = await loadBeatSample(context, instrumentId);
+      if (buffer) await prepareLoadedBeat(context, instrumentId, buffer);
+    }));
 }
 
 export type BeatSampleMixProfile = Readonly<{
@@ -181,24 +219,33 @@ export function scheduleLoadedBeatSample(
   if (!buffer) return false;
   const source = context.createBufferSource();
   const gain = context.createGain();
-  const tone = context.createBiquadFilter();
-  const compressor = context.createDynamicsCompressor();
   const profile = BEAT_SAMPLE_MIX_PROFILES[instrumentId];
-  source.buffer = buffer;
-  source.playbackRate.value = 1 + ((variationSeed % 5) - 2) * .006;
-  tone.type = profile.filterType;
-  tone.frequency.value = profile.frequency;
-  tone.gain.value = profile.filterGain;
-  if (profile.q !== undefined) tone.Q.value = profile.q;
-  compressor.threshold.value = -12;
-  compressor.knee.value = 8;
-  compressor.ratio.value = 2;
-  compressor.attack.value = .006;
-  compressor.release.value = .09;
+  const variantIndex = ((variationSeed % BEAT_SAMPLE_RATES.length) + BEAT_SAMPLE_RATES.length) % BEAT_SAMPLE_RATES.length;
+  // A newly created processor needs its normal coefficient startup for immediate
+  // hits. Prepared variants model a future hit whose processor already settled.
+  const prepared = time - context.currentTime >= preparedBeatLeadSeconds(context.sampleRate)
+    ? preparedSamples.get(context)?.variants.get(instrumentId)?.[variantIndex] : undefined;
+  source.buffer = prepared ?? buffer;
+  source.playbackRate.value = prepared ? 1 : BEAT_SAMPLE_RATES[variantIndex];
   gain.gain.setValueAtTime(Math.max(.0001, volume * profile.outputGain), time);
   const tailSeconds = sampleTailSeconds[instrumentId];
   if (tailSeconds) gain.gain.exponentialRampToValueAtTime(.0001, time + tailSeconds);
-  source.connect(tone).connect(compressor).connect(gain).connect(destination);
+  if (prepared) {
+    source.connect(gain).connect(destination);
+  } else {
+    const tone = context.createBiquadFilter();
+    const compressor = context.createDynamicsCompressor();
+    tone.type = profile.filterType;
+    tone.frequency.value = profile.frequency;
+    tone.gain.value = profile.filterGain;
+    if (profile.q !== undefined) tone.Q.value = profile.q;
+    compressor.threshold.value = -12;
+    compressor.knee.value = 8;
+    compressor.ratio.value = 2;
+    compressor.attack.value = .006;
+    compressor.release.value = .09;
+    source.connect(tone).connect(compressor).connect(gain).connect(destination);
+  }
   source.start(time);
   if (tailSeconds) source.stop(time + tailSeconds + .01);
   return true;

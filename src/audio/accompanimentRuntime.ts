@@ -125,9 +125,8 @@ export async function loadAccompanimentLayers(
   const runtime: Runtime = { context, options: accompaniment, layers: [], analysers: [],
     disposed: false, states: new Map() };
   runtimes.set(context, runtime);
-  if (accompaniment?.beatPattern?.length && !accompaniment.soloInstrumentId) {
-    await preloadBeatSamples(context, beatPatternInstrumentIds(accompaniment.beatPattern));
-  }
+  const preparingBeats = accompaniment?.beatPattern?.length && !accompaniment.soloInstrumentId
+    ? preloadBeatSamples(context, beatPatternInstrumentIds(accompaniment.beatPattern)) : Promise.resolve();
   if (runtime.disposed || context.state === "closed") return [];
   runtime.layers = [...new Set(accompaniment?.instrumentIds ?? [])].map((id) => {
     const bus = context.createGain();
@@ -138,7 +137,7 @@ export async function loadAccompanimentLayers(
     return { id, sample: null, destination: bus, muted: false };
   });
   applyMix(runtime);
-  await Promise.all(runtime.layers.map(async (layer) => {
+  await Promise.all([preparingBeats, ...runtime.layers.map(async (layer) => {
     emit(runtime, { instrumentId: layer.id, status: "loading", level: 0 });
     for (let attempt = 0; attempt < 2; attempt += 1) {
       if (runtime.disposed || context.state === "closed") return;
@@ -163,7 +162,8 @@ export async function loadAccompanimentLayers(
         }
       }
     }
-  }));
+  })]);
+  if (runtime.disposed || (context.state as string) === "closed") return [];
   if (!runtime.disposed) startMeter(runtime);
   return runtime.layers;
 }

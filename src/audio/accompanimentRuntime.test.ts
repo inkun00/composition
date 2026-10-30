@@ -109,7 +109,7 @@ describe("반주 악기별 실제 오디오 버스", () => {
     vi.restoreAllMocks();
   });
 
-  it("드럼 준비 중 정지하면 뒤늦게 오디오 버스나 준비 중 상태를 생성하지 않는다", async () => {
+  it("드럼과 악기를 동시에 준비하고 정지 후에는 새 버스나 상태를 만들지 않는다", async () => {
     let finishPreload = () => {};
     preloadBeats.mockImplementationOnce(() => new Promise<void>((resolve) => { finishPreload = resolve; }));
     const states = vi.fn();
@@ -117,11 +117,16 @@ describe("반주 악기별 실제 오디오 버스", () => {
       ...options, onTrackState: states,
       beatPattern: [{ id: "kick", instrumentId: "kick", offsetBeats: 0, measureIndex: 0 }]
     });
+    expect(loadSample).toHaveBeenCalledTimes(2);
+    const buses = mock.createGain.mock.results.map((result) => result.value);
+    const count = mock.createGain.mock.calls.length;
     releaseAccompanimentRuntime(context);
+    const emitted = states.mock.calls.length;
     finishPreload();
     expect(await preparation).toEqual([]);
-    expect(mock.createGain).not.toHaveBeenCalled();
-    expect(states).not.toHaveBeenCalled();
+    expect(mock.createGain).toHaveBeenCalledTimes(count);
+    expect(states).toHaveBeenCalledTimes(emitted);
+    expect(buses.every((bus) => bus.disconnect.mock.calls.length === 1)).toBe(true);
   });
 
   it("저장 중인 오프라인 반주에는 다른 화면의 실시간 음량 변경을 적용하지 않는다", async () => {

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { exportBackingCompositionMp3Offline, playComposition, practiceKaraokeComposition,
   recordKaraokeComposition, stopPlayback, type AccompanimentOptions, type PlaybackMeasure } from "./player";
 import * as performanceModule from "./accompanimentPerformance";
+import { karaokePreparationCache } from "./karaokePreparationCache";
 
 const { loadSample, queueSample, scheduleDrums, queueEffect, audioBuffer } = vi.hoisted(() => ({
   loadSample: vi.fn(), queueSample: vi.fn(), scheduleDrums: vi.fn(), queueEffect: vi.fn(),
@@ -72,6 +73,7 @@ const measuresFor = (count: number): PlaybackMeasure[] => Array.from({ length: c
 }));
 
 beforeEach(() => {
+  karaokePreparationCache.clear();
   vi.useFakeTimers();
   vi.setSystemTime(0);
   vi.clearAllMocks();
@@ -174,6 +176,7 @@ describe("선택한 반주 악기의 편성 일관성", () => {
     await practice;
     expect(backingNotes()).toEqual(fullScore);
     queueSample.mockClear();
+    karaokePreparationCache.clear();
     const recording = recordKaraokeComposition(measures, "oboe", 120, options, { guideMelodyMode: "off" });
     await vi.advanceTimersByTimeAsync((count + 10) * 2000);
     expect(await recording).not.toBe(null);

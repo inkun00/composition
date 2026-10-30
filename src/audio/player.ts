@@ -158,7 +158,7 @@ export async function practiceKaraokeComposition(
   activePlaybackContext = context;
   try {
     return await runKaraokePractice(context, measures, instrumentId, bpm,
-      prepareAccompaniment(accompaniment, measures), callbacks, countIn, signal);
+      accompaniment, callbacks, countIn, signal);
   } finally {
     if (activePlaybackContext === context) activePlaybackContext = null;
   }
@@ -178,7 +178,7 @@ export async function recordKaraokeComposition(
   activePlaybackContext = context;
   try {
     return await runKaraokeRecording(context, measures, instrumentId, bpm,
-      prepareAccompaniment(accompaniment, measures), callbacks, countIn, signal);
+      accompaniment, callbacks, countIn, signal);
   } finally {
     if (activePlaybackContext === context) activePlaybackContext = null;
   }

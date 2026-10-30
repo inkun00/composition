@@ -9,6 +9,7 @@ import { isSoundEffectId } from "../music/soundEffects";
 import { karaokeGuideSettings, type KaraokeGuideMode } from "./karaokeGuide";
 import { releaseSampleContext } from "./samplePlayer";
 import { preloadSoundEffects } from "./soundEffects";
+import { karaokePreparationCache, karaokePreparationKeys } from "./karaokePreparationCache";
 
 export type PreparedKaraokeAudio = Readonly<{
   backing: AudioBuffer;
@@ -61,39 +62,42 @@ export async function prepareKaraokeAudio(
   const songSeconds = compositionSeconds(measures, secondsPerBeat);
   const outroSeconds = compositionSeconds(outro, secondsPerBeat);
   const durationSeconds = introSeconds + songSeconds + outroSeconds + (options.mode === "practice" ? .55 : .8);
+  // A shared tail lets practice and recording reuse the same backing. Playback
+  // still stops at each caller's original duration, including practice's .55s.
+  const renderedSeconds = introSeconds + songSeconds + outroSeconds + .8;
   if (!Number.isFinite(durationSeconds) || durationSeconds <= 0 || durationSeconds > 600 || songSeconds <= 0) {
     throw new Error("노래 길이를 확인한 뒤 다시 시작해 주세요. 10분 안의 곡을 사용할 수 있어요.");
   }
-  const prepared = prepareAccompaniment(accompaniment, measures);
   const instrument = findInstrument(instrumentId);
   const guideSettings = options.mode === "practice"
     ? { includeMelody: true, melodyMode: "all" as const, volume: .82 }
     : karaokeGuideSettings(options.guideMode ?? "first-note");
+  const keys = karaokePreparationKeys(measures, bpm, options.sampleRate, instrumentId, accompaniment, guideSettings);
 
-  async function renderStem(isGuide: boolean): Promise<AudioBuffer> {
-    checkAbort(options.signal);
-    const context = new OfflineAudioContext(2, Math.ceil(durationSeconds * options.sampleRate), options.sampleRate);
+  async function renderStem(isGuide: boolean, signal: AbortSignal): Promise<AudioBuffer> {
+    checkAbort(signal);
+    const prepared = isGuide ? accompaniment : prepareAccompaniment(accompaniment, measures);
+    const context = new OfflineAudioContext(2, Math.ceil(renderedSeconds * options.sampleRate), options.sampleRate);
     const destination = context.createGain();
     destination.gain.value = 1;
     destination.connect(context.destination);
     try {
-      const layers = isGuide ? [] : await abortable(
-        loadAccompanimentLayers(context, destination, prepared), options.signal
-      );
-      checkAbort(options.signal);
+      const layers = isGuide ? [] : (await abortable(Promise.all([
+        loadAccompanimentLayers(context, destination, prepared),
+        preloadSoundEffects(context, measures.flatMap((measure) =>
+          (measure.effects ?? []).map((effect) => effect.effectId).filter(isSoundEffectId)), signal)
+      ]), signal))[0];
+      checkAbort(signal);
       let sampledInstrument: Awaited<ReturnType<typeof loadSampleWithTimeout>> | null = null;
       if (isGuide) {
         try {
-          sampledInstrument = await abortable(loadSampleWithTimeout(context, destination, instrumentId), options.signal);
+          sampledInstrument = await abortable(loadSampleWithTimeout(context, destination, instrumentId), signal);
         } catch (error) {
-          checkAbort(options.signal);
+          checkAbort(signal);
           console.warn("가락 도움 샘플을 불러오지 못해 합성 음색을 사용합니다.", error);
         }
-      } else {
-        await abortable(preloadSoundEffects(context, measures.flatMap((measure) =>
-          (measure.effects ?? []).map((effect) => effect.effectId).filter(isSoundEffectId)), options.signal), options.signal);
       }
-      checkAbort(options.signal);
+      checkAbort(signal);
       const voiceState = createArrangementVoiceState();
       let cursor = 0;
       if (!isGuide) {
@@ -127,9 +131,9 @@ export async function prepareKaraokeAudio(
           });
         });
       }
-      checkAbort(options.signal);
-      const buffer = await abortable(context.startRendering(), options.signal);
-      checkAbort(options.signal);
+      checkAbort(signal);
+      const buffer = await abortable(context.startRendering(), signal);
+      checkAbort(signal);
       return buffer;
     } finally {
       releaseAccompanimentRuntime(context);
@@ -138,8 +142,10 @@ export async function prepareKaraokeAudio(
     }
   }
 
-  const backing = await renderStem(false);
-  const guide = guideSettings.includeMelody ? await renderStem(true) : null;
+  const backing = await karaokePreparationCache.load(keys.backing, "backing",
+    (signal) => renderStem(false, signal), options.signal);
+  const guide = guideSettings.includeMelody ? await karaokePreparationCache.load(keys.guide, "guide",
+    (signal) => renderStem(true, signal), options.signal) : null;
   checkAbort(options.signal);
   return { backing, guide, introSeconds, songSeconds, outroSeconds, durationSeconds };
 }
