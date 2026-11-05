@@ -44,8 +44,24 @@ describe("그림 장면 뮤직비디오 렌더링", () => {
     expect(context.translate).not.toHaveBeenCalled();
     expect(context.rotate).not.toHaveBeenCalled();
     expect(context.scale.mock.calls).toEqual([[1280 / 960, 720 / 540]]);
-    expect(context.fillText.mock.calls.map((call) => call[0])).toEqual(["우리 노래", "나", "비"]);
-    expect(colors).toEqual(["#ffffff", "#ffffff", "#ffd34f"]);
+    expect(context.fillText.mock.calls.map((call) => call[0])).toEqual(["나", "비"]);
+    expect(colors).toEqual(["#ffffff", "#ffd34f"]);
+    expect(context.font).toContain("40.6px");
+    expect(context.fillRect).not.toHaveBeenCalledWith(0, 0, 1280, 66);
+  });
+
+  it("긴 가사도 기존에 맞춘 크기에서 30% 줄여 가운데 정렬한다", () => {
+    const context = canvasContext();
+    context.measureText.mockImplementation(() => ({ width: Number.parseFloat(context.font.split(" ")[1]) * 1.3 }));
+    const original = buildMusicVideoPlan("노래", measures, 120, 0, 2, [scene]);
+    const plan = { ...original, lyrics: { ...original.lyrics, frames: [
+      { ...original.lyrics.frames[0], syllables: Array.from({ length: 20 }, () => "가") }
+    ] } };
+    drawMusicVideoFrame(context as unknown as CanvasRenderingContext2D, plan, .1, false);
+    expect(context.font).toContain("26.6px");
+    const firstX = context.fillText.mock.calls[0][1] as number;
+    const lastX = context.fillText.mock.calls.at(-1)![1] as number;
+    expect(firstX + lastX + 26.6 * 1.3).toBeCloseTo(1280);
   });
 
   it("떨어진 해를 포함한 전체 그림에 공통 중심의 모션을 한 번 적용한다", () => {
@@ -112,13 +128,13 @@ describe("그림 장면 뮤직비디오 렌더링", () => {
     drawMusicVideoFrame(context as unknown as CanvasRenderingContext2D, plan, 2, false);
     expect(context.fillRect).toHaveBeenCalledWith(0, 0, 1280, 720);
     expect(backgrounds[0]).toBe("#abcdef");
-    expect(context.fillText.mock.calls.map((call) => call[0])).toEqual(["노래", "나", "비"]);
+    expect(context.fillText.mock.calls.map((call) => call[0])).toEqual(["나", "비"]);
     context.fillText.mockClear();
     drawMusicVideoFrame(context as unknown as CanvasRenderingContext2D, plan, .5, false);
     expect(context.fillText.mock.calls.map((call) => call[0])).toEqual(["노래", "작곡가 미입력"]);
     context.fillText.mockClear();
     drawMusicVideoFrame(context as unknown as CanvasRenderingContext2D, plan, 3, false);
-    expect(context.fillText.mock.calls.map((call) => call[0])).toEqual(["노래"]);
+    expect(context.fillText.mock.calls).toEqual([]);
   });
 
   it.each([false, true])("가사 프레임과 마디 시계의 반올림 차이가 있어도 새 장면 첫 음절에 그림을 바꾼다 (애니메이션 %s)", (animated) => {
@@ -143,7 +159,7 @@ describe("그림 장면 뮤직비디오 렌더링", () => {
     drawMusicVideoFrame(context as unknown as CanvasRenderingContext2D, plan, frame.startSeconds, animated);
     expect(backgrounds[0]).toBe("#abcdef");
     expect(context.stroke).toHaveBeenCalledOnce();
-    expect(context.fillText.mock.calls.slice(1).map((call) => call[0]).join("")).toBe(words[4]);
+    expect(context.fillText.mock.calls.map((call) => call[0]).join("")).toBe(words[4]);
   });
 
   it("붓의 압력 윤곽선은 채우고 도형은 테두리로 그려 편집 그림과 일치시킨다", () => {
