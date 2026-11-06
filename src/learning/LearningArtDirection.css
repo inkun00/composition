@@ -1,0 +1,297 @@
+/* Generated storybook art carries the world; HTML carries labels, notation and controls. */
+.music-learning {
+  --learn-ink: #213e37;
+  --learn-muted: #586b61;
+  --learn-teal: #236452;
+  --learn-paper: #fffdf6;
+  background: #f5f3e9;
+}
+
+.music-learning .learn-header {
+  background: #fffdf8;
+  border-bottom: 1px solid #dadfd1;
+}
+
+.music-learning .learn-header-progress {
+  padding: 9px 14px;
+  border: 1px solid #e8d8a3;
+  border-radius: 100px;
+  background: #fcf3d7;
+  color: #70551f;
+}
+
+.arcade-home {
+  max-width: 1280px;
+  padding: 24px 32px 48px;
+}
+
+.arcade-home .arcade-intro {
+  margin-bottom: 24px;
+}
+
+.arcade-welcome {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+
+.arcade-guide-bird {
+  width: 125px;
+  height: 126px;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 5px rgb(63 75 45 / 12%));
+}
+
+.arcade-home .game-kicker {
+  margin: 0 0 5px;
+  font-size: 13px;
+  letter-spacing: 0;
+  color: #62705d;
+}
+
+.arcade-welcome h1 {
+  margin: 0 0 8px;
+  color: #214a3d;
+  font-size: clamp(32px, 4vw, 46px);
+  line-height: 1.2;
+}
+
+.arcade-welcome > div > p:last-child {
+  color: #586b61;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.arcade-home .arcade-player {
+  min-width: 220px;
+  padding: 14px 20px;
+  border-color: #e1dbc5;
+  background: #fffcf2;
+  border-radius: 16px;
+  box-shadow: 0 3px 0 #e5dfc9;
+}
+
+.arcade-home .arcade-world {
+  height: 480px;
+  border: 1px solid #9aa98a;
+  border-radius: 24px;
+  background: #c3d5b4;
+  box-shadow: 0 6px 0 #d5d6be, 0 18px 38px rgb(45 71 46 / 9%);
+}
+
+.arcade-home .arcade-map-art {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 40%;
+}
+
+.arcade-home .arcade-world-tag {
+  top: 18px;
+  left: 20px;
+  padding: 10px 16px;
+  background: #fffbed;
+  box-shadow: 0 4px 14px rgb(38 62 31 / 15%);
+  font-size: 13px;
+}
+
+.arcade-home .arcade-island {
+  min-width: 172px;
+  gap: 7px;
+  padding: 14px 16px 12px;
+  border: 1px solid #e9e0bc;
+  border-radius: 16px;
+  background: #fff9e8;
+  color: #254a3a;
+  box-shadow: 0 5px 0 #8f6e3e, 0 9px 20px rgb(20 44 26 / 24%);
+  transition: background-color .16s, box-shadow .16s;
+}
+
+.arcade-home .arcade-island:hover {
+  background: #fff0bd;
+  box-shadow: 0 5px 0 #8f6e3e, 0 12px 25px rgb(20 44 26 / 30%);
+}
+
+.arcade-home .arcade-island:active {
+  translate: 0 3px;
+  box-shadow: 0 2px 0 #8f6e3e;
+}
+
+.arcade-home .arcade-island-number {
+  left: -13px;
+  top: -13px;
+  width: 32px;
+  height: 32px;
+  border: 2px solid #fff5d4;
+  background: #28624d;
+  font-family: inherit;
+}
+
+.arcade-island-enter {
+  position: absolute;
+  top: -12px;
+  right: -10px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid #bca56c;
+  border-radius: 50%;
+  background: #f7d577;
+  color: #35513b;
+}
+
+.arcade-home .arcade-island.island-bridge { left: 19%; top: 70%; }
+.arcade-home .arcade-island.island-train { left: 51%; top: 57%; }
+.arcade-home .arcade-island.island-memory { left: 81%; top: 42%; }
+
+.arcade-home .arcade-world-caption {
+  bottom: 15px;
+  left: auto;
+  right: 17px;
+  padding: 8px 13px;
+  border-radius: 30px;
+  background: #284c3fea;
+  color: #fff8e4;
+  text-shadow: none;
+  font-size: 12px;
+}
+
+.arcade-home .arcade-missions {
+  gap: 20px;
+  margin-top: 32px;
+}
+
+.arcade-home .arcade-mission {
+  display: block;
+  padding: 0;
+  overflow: hidden;
+  border-color: #d9decc;
+  border-radius: 18px;
+  background: #fffdf7;
+}
+
+.arcade-mission-art {
+  display: block;
+  width: 100%;
+  height: 165px;
+  object-fit: cover;
+}
+
+.arcade-mission-body {
+  padding: 20px;
+}
+
+.arcade-mission-body > p {
+  min-height: 44px;
+  font-size: 13px;
+  color: #586b61;
+}
+
+.arcade-home .arcade-mission-heading {
+  font-size: 11px;
+}
+
+.arcade-home .arcade-field-guide {
+  padding: 24px;
+  border-color: #dce1d0;
+  background: #eaf0e0;
+}
+
+.arcade-create-bird {
+  width: 80px;
+  height: 82px;
+  object-fit: contain;
+}
+
+.learn-lesson-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+
+.learn-lesson-bird {
+  width: 115px;
+  height: 120px;
+  object-fit: contain;
+}
+
+.learn-guide-bird {
+  width: 95px;
+  height: 95px;
+  object-fit: contain;
+}
+
+.learn-workspace .learn-demonstration,
+.learn-workspace .learn-quiz,
+.learn-workspace .learn-tap-game {
+  border-color: #d8dfcd;
+  background: #fffdf7;
+  box-shadow: 0 5px 0 #e6e9da;
+}
+
+.learn-workspace button:active:not(:disabled),
+.arcade-mission button:active:not(:disabled) {
+  translate: 0 2px;
+}
+
+@media (max-width: 850px) {
+  .arcade-guide-bird { width: 95px; height: 100px; }
+  .arcade-home .arcade-world { height: 420px; }
+  .arcade-home .arcade-island { min-width: 148px; padding: 12px; }
+  .arcade-mission-art { height: 135px; }
+  .arcade-mission-body { padding: 16px; }
+  .arcade-home .arcade-player { min-width: 190px; }
+}
+
+@media (max-width: 600px) {
+  .arcade-home { padding: 20px 16px 32px; }
+  .arcade-home .arcade-intro { gap: 16px; }
+  .arcade-welcome { gap: 14px; }
+  .arcade-guide-bird { width: 80px; height: 100px; }
+  .arcade-welcome h1 { font-size: 31px; }
+  .arcade-welcome > div > p:last-child { font-size: 12px; }
+  .arcade-home .arcade-player { width: 100%; min-width: 0; padding: 12px 16px; }
+  .arcade-home .arcade-world { height: 450px; border-radius: 18px; background: #e7e9d9; }
+  .arcade-home .arcade-map-art { height: 260px; object-position: center; }
+  .arcade-home .arcade-world-tag { left: 10px; top: 10px; padding: 8px 10px; font-size: 11px; }
+  .arcade-home .arcade-islands { inset: auto 14px 38px; display: grid; gap: 8px; }
+  .arcade-home .arcade-island {
+    position: relative;
+    inset: auto;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding: 9px 12px;
+    border-radius: 10px;
+    transform: none;
+    box-shadow: 0 3px 0 #c5b68a;
+  }
+  .arcade-home .arcade-island.island-bridge,
+  .arcade-home .arcade-island.island-train,
+  .arcade-home .arcade-island.island-memory {
+    inset: auto;
+  }
+  .arcade-home .arcade-island-number { position: static; width: 23px; height: 23px; flex: 0 0 23px; font-size: 12px; border: 0; }
+  .arcade-home .arcade-island-enter { display: none; }
+  .arcade-home .arcade-island strong { flex: 1; text-align: left; font-size: 13px; }
+  .arcade-home .arcade-world-caption { inset: auto 0 8px; padding: 0; color: #4a6653; background: transparent; font-size: 10px; }
+  .arcade-home .arcade-mission { display: grid; grid-template-columns: 92px minmax(0, 1fr); }
+  .arcade-home .arcade-mission-art { height: 100%; min-height: 260px; }
+  .arcade-mission-body { padding: 16px 13px; }
+  .arcade-home .arcade-mission h2 { font-size: 19px; }
+  .arcade-home .arcade-mission .learn-primary { width: 100%; margin-top: 15px; padding: 9px 12px; }
+  .arcade-home .arcade-mission-record { margin-top: 12px; }
+  .arcade-home .arcade-field-guide { padding: 20px 16px; }
+  .arcade-create-bird { width: 64px; height: 66px; }
+  .learn-lesson-bird { width: 76px; height: 85px; }
+  .learn-lesson-heading { gap: 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .music-learning button { transition: none; }
+}

@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowRight, Check, Eye, RotateCcw, Sparkles, Star, Volume2, 
 import MusicSymbol from "../MusicSymbol";
 import { NoteSymbol } from "../LearningScore";
 import { useLearningPlayback } from "../useLearningPlayback";
+import { publicAssetUrl } from "../../platform/portable";
 import GameStars from "./GameStars";
 import { createMemoryDeck, MEMORY_STAGES, memoryReward, memoryStars, type MemoryCard } from "./memoryGameModel";
 import type { GameResult } from "./gameProgress";
@@ -28,6 +29,7 @@ export default function MemoryConstellationGame({ onExit, onComplete }: {
   const current = MEMORY_STAGES[stage];
   const cleared = matched.length === current.items.length;
   const mismatch = flipped.length === 2;
+  const hasMatchFeedback = matched.length > 0 && combo > 0;
 
   useEffect(() => { heading.current?.focus({ preventScroll: true }); }, [stage]);
   useEffect(() => {
@@ -80,14 +82,24 @@ export default function MemoryConstellationGame({ onExit, onComplete }: {
     <div className="memory-heading"><p className="game-kicker">MISSION 03 · 기억의 관측소</p>
       <h1 ref={heading} tabIndex={-1}>기호 별자리 맞추기</h1><p>{current.tip}</p></div>
     <section className="memory-sky" aria-label={`${current.name}, ${matched.length}개 별 발견`}>
-      <svg className="memory-constellation" viewBox="0 0 800 150" aria-hidden="true">
-        <path d="M70 110 200 35 340 90 470 28 610 80 740 40" fill="none" stroke="#8191c5" strokeWidth="2" strokeDasharray="5 9" />
-        {current.items.map((item, index) => <g key={item.id} className={matched.includes(item.id) ? "lit" : ""}
-          transform={`translate(${70 + index * (670 / Math.max(1, current.items.length - 1))}, ${index % 2 ? 40 : 100})`}>
-          <circle r="20" /><path d="m0-13 4 9 10 1-8 7 3 10-9-5-9 5 3-10-8-7 10-1Z" />
-        </g>)}
-      </svg>
-      <div className="memory-sky-caption"><strong>{current.name}</strong><span>{matched.length} / {current.items.length}개 별이 깨어났어요</span></div>
+      <img className="memory-observatory" src={publicAssetUrl("/learning-art/observatory.webp")}
+        alt="" aria-hidden="true" draggable={false} />
+      <div className="memory-sky-progress">
+        <div className="memory-sky-caption"><strong>{current.name}</strong>
+          <span>{matched.length} / {current.items.length}개 별이 깨어났어요</span></div>
+        <ol className="memory-progress-stars" aria-label="별 발견 진행">
+          {current.items.map((item, index) => <li key={item.id}
+            className={matched.includes(item.id) ? "lit" : ""}
+            aria-label={`${index + 1}번째 별, ${matched.includes(item.id) ? "발견 완료" : "아직 발견하지 못함"}`}>
+            <Star size={25} aria-hidden="true" />
+          </li>)}
+        </ol>
+      </div>
+      <img className={`memory-guide${hasMatchFeedback ? " is-celebrating" : ""}`} key={`guide-${stage}-${matched.length}`}
+        src={publicAssetUrl("/learning-art/guide-bird.webp")} alt="" aria-hidden="true" draggable={false} />
+      {hasMatchFeedback && <span className="memory-match-reward" key={`reward-${stage}-${matched.length}`} aria-hidden="true">
+        <Star size={19} /> 짝 발견! <strong>+{memoryReward(combo)}점</strong>
+      </span>}
     </section>
     <div className="memory-round-stats"><span><Eye size={16} /> {moves}번 뒤집기</span><span><Sparkles size={16} /> {combo}콤보</span>
       <button aria-pressed={muted} onClick={() => { audio.stop(); setMuted(!muted); }}>{muted ? <VolumeX size={18} /> : <Volume2 size={18} />}{muted ? "소리 켜기" : "소리 끄기"}</button></div>
@@ -95,22 +107,30 @@ export default function MemoryConstellationGame({ onExit, onComplete }: {
       {deck.map((card, index) => {
         const found = matched.includes(card.item.id);
         const open = found || flipped.includes(card.key);
-        return <button key={card.key} className={`memory-card ${open ? "face-up" : "face-down"}${found ? " matched" : ""}`}
+        return <button key={card.key} className={`memory-card ${open ? "face-up" : "face-down"}${found ? " matched" : ""}${mismatch && open && !found ? " is-mismatch" : ""}`}
           data-pair={card.item.id} data-side={card.side} aria-pressed={open}
           aria-label={open ? `${card.side === "sign" ? card.item.label : card.item.meaning}${found ? ", 짝 완성" : ""}` : `뒷면 카드 ${index + 1}`}
           disabled={found || mismatch || cleared} onClick={() => flip(card)}>
-          {!open ? <><span className="memory-card-number">{index + 1}</span><Star size={33} aria-hidden="true" /><span>뒤집기</span></>
-            : card.side === "meaning" ? <><span className="memory-card-type">뜻 카드</span><strong className="memory-meaning">{card.item.meaning}</strong></>
-              : <><span className="memory-card-type">기호 카드</span>
-                {card.item.dynamic && <strong className="memory-dynamic">{card.item.dynamic}</strong>}
-                {card.item.note && <NoteSymbol id={card.item.note} size={54} />}
-                {card.item.symbol && <MusicSymbol id={card.item.symbol} size={65} />}
-                <span className="memory-sign-label">{card.item.label}</span></>}
-          {found && <Check className="memory-found-check" size={17} aria-hidden="true" />}
+          <span className="memory-card-motion"><span className="memory-card-inner">
+            <span className="memory-card-face memory-card-back" aria-hidden={open}>
+              <span className="memory-card-number">{index + 1}</span>
+              <span className="memory-card-turn-mark" aria-hidden="true">?</span><span>뒤집기</span>
+            </span>
+            <span className="memory-card-face memory-card-front" aria-hidden={!open}>
+              {card.side === "meaning" ? <><span className="memory-card-type">뜻 카드</span>
+                <strong className="memory-meaning">{card.item.meaning}</strong></>
+                : <><span className="memory-card-type">기호 카드</span>
+                  {card.item.dynamic && <strong className="memory-dynamic">{card.item.dynamic}</strong>}
+                  {card.item.note && <NoteSymbol id={card.item.note} size={54} />}
+                  {card.item.symbol && <MusicSymbol id={card.item.symbol} size={65} />}
+                  <span className="memory-sign-label">{card.item.label}</span></>}
+              {found && <span className="memory-found-check" aria-hidden="true"><Check size={17} /></span>}
+            </span>
+          </span></span>
         </button>;
       })}
     </div>
-    <p className="memory-notice" role="status">{notice}</p>
+    <p className={`memory-notice${mismatch ? " is-mismatch" : hasMatchFeedback ? " is-match" : ""}`} role="status">{notice}</p>
     {mismatch && <button className="learn-primary memory-retry" onClick={() => { setFlipped([]); setNotice("위치를 기억하고, 다른 짝을 찾아볼까요?"); }}><RotateCcw size={18} /> 기억했어요, 다시 뒤집기</button>}
     {cleared && <section className="memory-clear" aria-label="별자리 완성">
       <Sparkles size={32} /><h2 ref={resultHeading} tabIndex={-1}>{complete ? "모든 별자리를 밝혔어요!" : "별자리 완성!"}</h2>

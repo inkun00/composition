@@ -25,6 +25,10 @@ async function shot(name) {
 
 async function layout(name) {
   await page.evaluate(() => document.fonts.ready);
+  await page.locator(".music-learning img").evaluateAll((images) => Promise.all(images.map((image) => {
+    image.loading = "eager";
+    return image.decode();
+  })));
   const measured = await page.evaluate(() => ({ width: innerWidth, scrollWidth: document.documentElement.scrollWidth }));
   const overflow = measured.scrollWidth > measured.width + 1;
   const offenders = overflow ? await page.evaluate(() => [...document.querySelectorAll(".music-learning *")]
@@ -32,6 +36,17 @@ async function layout(name) {
       right: Math.round(element.getBoundingClientRect().right) }))
     .filter((element) => element.right > innerWidth + 1).slice(0, 15)) : [];
   report.layouts.push({ name, ...measured, overflow, ...(overflow ? { offenders } : {}) });
+  if (await page.locator(".arcade-world").count()) {
+    const markers = await page.locator(".arcade-island").evaluateAll((buttons) => buttons.map((button) => {
+      const rect = button.getBoundingClientRect();
+      const map = button.closest(".arcade-world").getBoundingClientRect();
+      return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom,
+        height: rect.height, mapLeft: map.left, mapRight: map.right, mapTop: map.top, mapBottom: map.bottom };
+    }));
+    assert.ok(markers.every((marker) => marker.left >= marker.mapLeft && marker.right <= marker.mapRight &&
+      marker.top >= marker.mapTop && marker.bottom <= marker.mapBottom && marker.height >= 44),
+    `${name} mission controls must remain fully visible and touchable inside the map`);
+  }
   await shot(name);
   assert.equal(overflow, false, `${name} has horizontal page overflow`);
 }

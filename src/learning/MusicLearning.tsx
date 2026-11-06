@@ -11,15 +11,19 @@ import { LESSONS, type LessonId } from "./learningModel";
 import { useLearningPlayback } from "./useLearningPlayback";
 import { useLearningProgress } from "./useLearningProgress";
 import MusicGameScreen from "./games/MusicGameScreen";
+import LearningArt from "./LearningArt";
+import { useLearningButtonFeel } from "./useLearningButtonFeel";
 import { useGameProgress, type GameId } from "./games/gameProgress";
 import "./MusicLearning.css";
 import "./LearningLabs.css";
+import "./LearningArtDirection.css";
 
 export default function MusicLearning({ onClose, onCreate }: { onClose: () => void; onCreate: () => void }) {
   const [lessonId, setLessonId] = useState<LessonId | null>(null);
   const [gameId, setGameId] = useState<GameId | null>(null);
   const [tab, setTab] = useState<"explore" | "quiz">("explore");
   const titleRef = useRef<HTMLHeadingElement>(null);
+  const interactionRoot = useLearningButtonFeel();
   const audio = useLearningPlayback();
   const progress = useLearningProgress();
   const games = useGameProgress();
@@ -54,7 +58,7 @@ export default function MusicLearning({ onClose, onCreate }: { onClose: () => vo
     select(LESSONS[index + 1]?.id ?? null);
   }
 
-  return <div className="music-learning">
+  return <div className="music-learning" ref={interactionRoot}>
     <a className="learn-skip" href="#learn-main">학습 내용으로 건너뛰기</a>
     <header className="learn-header"><div className="learn-header-inner">
       <button className="learn-back" onClick={lesson || gameId ? () => select(null) : onClose}><ArrowLeft size={18} />{lesson || gameId ? "탐험 지도" : "마음멜로디로"}</button>
@@ -70,11 +74,12 @@ export default function MusicLearning({ onClose, onCreate }: { onClose: () => vo
           <p className="learn-eyebrow">나의 탐험 지도</p>
           {LESSONS.map((item, index) => <button key={item.id} aria-current={item.id === lessonId ? "step" : undefined}
             onClick={() => select(item.id)}><span>{progress.completed.includes(item.id) ? <Check size={16} /> : `0${index + 1}`}</span><strong>{item.title}</strong></button>)}
-          <div className="learn-nav-note"><Compass size={25} /><p>천천히, 여러 번 해 봐도 괜찮아요.</p><small>모든 단원은 자유롭게 열려 있어요.</small></div>
+          <div className="learn-nav-note"><LearningArt name="guide-bird" className="learn-guide-bird" /><p>천천히, 여러 번 해 봐도 괜찮아요.</p><small>모든 단원은 자유롭게 열려 있어요.</small></div>
         </nav>
         <main className="learn-lesson-main" id="learn-main">
-          <div className="learn-lesson-heading"><span className="learn-eyebrow">놀이터 0{LESSONS.indexOf(lesson) + 1}</span>
+          <div className="learn-lesson-heading"><div><span className="learn-eyebrow">음악 도감 {LESSONS.indexOf(lesson) + 1} / 5</span>
             <h1 ref={titleRef} tabIndex={-1}>{lesson.title}</h1><p>{lesson.subtitle}</p></div>
+            <LearningArt name="guide-bird" className="learn-lesson-bird" eager /></div>
           <div className="learn-tab-list" role="tablist" aria-label="학습 방법">
             <button id="learn-explore-tab" role="tab" aria-selected={tab === "explore"} aria-controls="learn-explore-panel"
               tabIndex={tab === "explore" ? 0 : -1} onClick={() => changeTab("explore")}

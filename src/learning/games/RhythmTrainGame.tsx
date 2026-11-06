@@ -4,25 +4,36 @@ import { NoteSymbol } from "../LearningScore";
 import { getNote } from "../learningModel";
 import { TRAIN_BPM, TRAIN_ROUNDS, judgeTrainTap, trainResult, trainTimeline, type TrainHit, type TrainResult } from "./rhythmTrainModel";
 import { TrainAudio } from "./trainAudio";
+import { publicAssetUrl } from "../../platform/portable";
 import "./RhythmTrainGame.css";
 
 type Phase = "ready" | "loading" | "demo" | "countin" | "playing" | "result";
 type Props = { onExit: () => void; onComplete: (result: { stars: number; score: number }) => void };
+type TrainReaction = { kind: "hit" | "miss"; combo: number; sequence: number };
 
-function TrainEngine({ glow }: { glow: boolean }) {
-  return <svg viewBox="0 0 160 100" aria-hidden="true" className={glow ? "train-engine lit" : "train-engine"}>
-    <path d="M11 71h137l-8 12H8Z" fill="#263d55" />
-    <rect x="38" y="26" width="82" height="49" rx="12" fill="#ed8f52" />
-    <path d="M93 15h37l9 14H88Z" fill="#3f7971" />
-    <rect x="94" y="27" width="37" height="47" rx="6" fill="#4d998e" />
-    <rect x="102" y="33" width="22" height="22" rx="4" fill="#d9f1df" />
-    <rect x="34" y="15" width="17" height="25" rx="4" fill="#425a65" />
-    <ellipse cx="22" cy="57" rx="14" ry="16" fill="#ffc966" />
-    <circle className="train-headlight" cx="18" cy="53" r="8" fill="#fff4b5" />
-    <path d="M9 14c-9-7 7-17 15-9 14-6 22 7 11 13-10 6-17-4-26-4" fill="#f5f0d6" />
-    {[43, 87, 121].map((x) => <g key={x}><circle cx={x} cy="80" r="13" fill="#2e4a55" /><circle cx={x} cy="80" r="6" fill="#f4dc91" /></g>)}
-    <path d="M43 80h78" stroke="#d0dbc9" strokeWidth="4" strokeLinecap="round" />
-  </svg>;
+function TrainEngine({ glow, reaction }: { glow: boolean; reaction?: TrainReaction | null }) {
+  const body = useRef<HTMLImageElement>(null);
+
+  useEffect(() => {
+    if (!reaction || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    const lift = Math.min(8, 3 + reaction.combo);
+    const frames = reaction.kind === "hit" ? [
+      { transform: "translateY(2px) scale(1.025, .97)", offset: 0 },
+      { transform: `translate(5px, -${lift}px) rotate(-1deg) scale(.99, 1.02)`, offset: .35 },
+      { transform: "translateY(1px) scale(1.01, .99)", offset: .75 },
+      { transform: "none", offset: 1 }
+    ] : [
+      { transform: "none", offset: 0 },
+      { transform: "translateX(-4px) rotate(-1deg) scale(.985, 1.015)", offset: .3 },
+      { transform: "translateX(1px)", offset: .7 },
+      { transform: "none", offset: 1 }
+    ];
+    const motion = body.current?.animate?.(frames, { duration: 280, easing: "cubic-bezier(.22, .68, .2, 1)" });
+    return () => motion?.cancel();
+  }, [reaction]);
+
+  return <img ref={body} src={publicAssetUrl("/learning-art/star-train.webp")} alt="" draggable={false}
+    className={glow ? "train-engine lit" : "train-engine"} />;
 }
 
 export default function RhythmTrainGame({ onExit, onComplete }: Props) {
@@ -34,12 +45,14 @@ export default function RhythmTrainGame({ onExit, onComplete }: Props) {
   const [hits, setHits] = useState<TrainHit[]>([]);
   const [extras, setExtras] = useState(0);
   const [combo, setCombo] = useState(0);
+  const [reaction, setReaction] = useState<TrainReaction | null>(null);
   const [feedback, setFeedback] = useState("먼저 리듬을 듣고, 열차를 출발시켜 주세요!");
   const [error, setError] = useState("");
   const [accepted, setAccepted] = useState<TrainResult[]>([]);
   const [expeditionComplete, setExpeditionComplete] = useState<{ stars: number; score: number } | null>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const pad = useRef<HTMLButtonElement>(null);
+  const padMotion = useRef<Animation | null>(null);
   const audio = useRef<TrainAudio | null>(null);
   const animation = useRef(0);
   const generation = useRef(0);
@@ -70,6 +83,8 @@ export default function RhythmTrainGame({ onExit, onComplete }: Props) {
     audio.current?.stop();
     updatePhase("ready");
     setBeat(-4);
+    setReaction(null);
+    padMotion.current?.cancel();
     if (message) setFeedback(message);
   }
 
@@ -85,9 +100,21 @@ export default function RhythmTrainGame({ onExit, onComplete }: Props) {
       cancelAnimationFrame(animation.current);
       audio.current?.dispose();
       audio.current = null;
+      padMotion.current?.cancel();
       document.removeEventListener("visibilitychange", hidden);
     };
   }, []);
+
+  function respondToTap(kind: TrainReaction["kind"], streak: number) {
+    setReaction((previous) => ({ kind, combo: streak, sequence: (previous?.sequence ?? 0) + 1 }));
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    padMotion.current?.cancel();
+    padMotion.current = pad.current?.animate?.([
+      { transform: "translateY(4px) scale(.985, .97)", offset: 0 },
+      { transform: "translateY(-1px) scale(1.005, 1.015)", offset: .65 },
+      { transform: "none", offset: 1 }
+    ], { duration: 190, easing: "cubic-bezier(.22, .68, .2, 1)" }) ?? null;
+  }
 
   function tap() {
     if (phaseRef.current !== "playing") return;
@@ -100,6 +127,7 @@ export default function RhythmTrainGame({ onExit, onComplete }: Props) {
       setHits(hitsRef.current);
       comboRef.current++;
       setCombo(comboRef.current);
+      respondToTap("hit", comboRef.current);
       setFeedback(hit.quality === "perfect" ? "딱 맞았어요! 반짝, 열차에 불이 켜졌어요." : hit.offsetMs < 0
         ? "잘했어요! 조금 빠르게 눌렀어요." : "잘했어요! 조금 늦게 눌렀어요.");
     } else {
@@ -107,6 +135,7 @@ export default function RhythmTrainGame({ onExit, onComplete }: Props) {
       setExtras(extrasRef.current);
       comboRef.current = 0;
       setCombo(0);
+      respondToTap("miss", 0);
       setFeedback("잠깐! 음표가 빛나는 선에 닿을 때 눌러요. 쉼표에서는 기다려요.");
     }
   }
@@ -241,21 +270,21 @@ export default function RhythmTrainGame({ onExit, onComplete }: Props) {
       <button disabled={active} aria-pressed={gentle} onClick={() => setGentle(true)}>느긋하게</button>
       <button disabled={active} aria-pressed={!gentle} onClick={() => setGentle(false)}>정확하게</button>
     </div><span>♩ = {TRAIN_BPM} · 4/4박자</span></div>
-    <div className={`train-scene phase-${phase}`}>
-      <div className="train-sky-stars" aria-hidden="true"><i /><i /><i /><i /><i /></div>
-      <div className="train-mountain back" aria-hidden="true" /><div className="train-mountain front" aria-hidden="true" />
-      <div className="train-destination"><span>다음 역</span><strong>{roundIndex + 1}</strong></div>
+    <div className={`train-scene phase-${phase}`} data-response={reaction?.kind}>
+      <img className="train-scene-art" src={publicAssetUrl("/learning-art/train-scene.webp")} alt="" draggable={false} />
+      <div className="train-destination"><span>도착까지</span><strong>{hits.length}<small> / {targetCount}</small></strong></div>
       <div className="train-light-row" aria-label={`${targetCount}개 도착등 중 ${hits.length}개 켜짐`}>
         {Array.from({ length: targetCount }, (_, index) => <span key={index} className={index < hits.length ? "on" : ""}><Star size={16} /></span>)}
       </div>
-      <div className="train-world-engine" style={{ "--train-progress": `${Math.min(65, hits.length / targetCount * 65)}%` } as CSSProperties}>
-        <TrainEngine glow={hits.length > 0} />
+      <div className="train-world-engine" style={{ "--train-progress": `${Math.min(100, hits.length / targetCount * 100)}%`,
+        "--train-travel-duration": `${Math.max(210, 430 - combo * 45)}ms` } as CSSProperties}>
+        <TrainEngine glow={hits.length > 0} reaction={reaction} />
       </div>
-      <div className="train-world-track" aria-hidden="true" />
       {phase === "countin" && <div className="train-countdown"><span>준비 박</span><strong>{Math.max(1, Math.min(4, Math.floor(beat + 4) + 1))}</strong><small>아직 누르지 않고 기다려요</small></div>}
       {phase === "ready" && <div className="train-scene-invitation"><span>리듬으로 달리는 열차</span><strong>{heard ? "이제 기관사가 되어 볼까요?" : "귀를 기울이면 길이 보여요"}</strong></div>}
       <div className="train-rhythm-lane" aria-hidden="true">
         <div className="train-hit-line"><span>여기서 톡!</span></div>
+        <span className="train-static-guidance">빛나는 음표에 맞춰 톡! 쉼표는 기다려요.</span>
         {cues.map((cue) => {
           const hit = hits.some((item) => item.index === cue.index);
           const missed = !cue.rest && !hit && beat > cue.beat + (gentle ? 240 : 150) / 750 && phase !== "demo";
@@ -269,7 +298,7 @@ export default function RhythmTrainGame({ onExit, onComplete }: Props) {
       <div className="train-beat-lights" aria-label="진행 박 표시">{[0, 1, 2, 3].map((value) => <span key={value}
         className={active && beat >= 0 && Math.floor(beat) % 4 === value ? "active" : ""}>{value + 1}</span>)}</div>
     </div>
-    <div className="train-live-feedback" role="status" aria-live="polite"><span>{feedback}</span>{combo > 1 && <strong>{combo} 콤보!</strong>}</div>
+    <div className="train-live-feedback" data-response={reaction?.kind} role="status" aria-live="polite"><span>{feedback}</span>{combo > 1 && <strong key={combo}>{combo} 콤보!</strong>}</div>
     {phase === "result" ? <div className="train-round-result">
       <div className="train-result-stars" aria-label={`${result.stars}개 별`}>{[1, 2, 3].map((value) => <Star key={value} size={33} fill={value <= result.stars ? "currentColor" : "none"} />)}</div>
       <h2>{result.hits === result.total && !result.extras ? "모든 도착등이 반짝!" : result.hits ? "음악을 타고 한 역 도착!" : "한 번 더 연습해 볼까요?"}</h2>
@@ -280,6 +309,7 @@ export default function RhythmTrainGame({ onExit, onComplete }: Props) {
         <button className="train-primary" disabled={!result.hits} onClick={next}>{roundIndex === TRAIN_ROUNDS.length - 1 ? "탐험 도장 받기" : "다음 역으로"}<ArrowRight size={17} /></button></div>
     </div> : <>
       <button ref={pad} className={`train-tap-pad${phase === "playing" ? " enabled" : ""}`} aria-disabled={phase !== "playing"}
+        data-response={reaction?.kind}
         onPointerDown={(event) => { if (event.button === 0) { event.preventDefault(); pad.current?.focus({ preventScroll: true }); tap(); } }}
         onClick={(event) => { if (event.detail === 0) tap(); }}
         onKeyDown={(event) => { if (event.key === "Enter" && event.repeat) event.preventDefault(); }}
