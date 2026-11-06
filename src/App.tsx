@@ -11,7 +11,7 @@ import RecordingGuideDialog from "./components/RecordingGuideDialog";
 import RecordingSaveDialog from "./components/RecordingSaveDialog";
 import ScoreMeasure from "./components/ScoreMeasure";
 import OpeningScreen from "./components/OpeningScreen";
-import PracticeMode from "./practice/PracticeMode";
+import MusicActivityScreen, { MusicActivityMenuItems, type MusicActivity } from "./learning/MusicActivityScreen";
 import type { KaraokeGuideMode } from "./audio/karaokeGuide";
 import type { RecordingCaptureMode } from "./audio/vocalCapture";
 import NoteLyrics from "./components/NoteLyrics";
@@ -210,7 +210,7 @@ export default function App({ initialDraft, initialRecoveryCandidates = [], allo
   const [showOpening, setShowOpening] = useState(() =>
     !mobileRecordMode && !qrPlaybackMode && new URLSearchParams(window.location.search).get("start") !== "new");
   const [showAppMenu, setShowAppMenu] = useState(false);
-  const [practiceOpen, setPracticeOpen] = useState(false);
+  const [musicActivity, setMusicActivity] = useState<MusicActivity | null>(null);
   const [accountLibraryOpen, setAccountLibraryOpen] = useState(false);
   const [communityAlbumOpen, setCommunityAlbumOpen] = useState(false);
   const publishedSongPlayback = usePublishedSongPlayback();
@@ -1869,7 +1869,7 @@ export default function App({ initialDraft, initialRecoveryCandidates = [], allo
 
   if (qrPlaybackMode) return <QrSongPlayback composition={incomingShare} songId={qrSongId} />;
 
-  function openPractice() {
+  function openMusicActivity(activity: MusicActivity) {
     void stopPlayback();
     resetPlaybackUi();
     clearNoteAnimationTimers();
@@ -1878,15 +1878,15 @@ export default function App({ initialDraft, initialRecoveryCandidates = [], allo
     setPlayingMeasure(false);
     setPlayingId(null);
     setShowAppMenu(false);
-    setPracticeOpen(true);
+    setMusicActivity(activity);
   }
 
-  if (practiceOpen) return <PracticeMode onClose={() => setPracticeOpen(false)} />;
+  if (musicActivity) return <MusicActivityScreen activity={musicActivity} onClose={() => setMusicActivity(null)} onChange={setMusicActivity} />;
 
   return (
     <div className="app-shell">
       {showOpening && <OpeningScreen hasDraft={Boolean(resumableDraft)} onStart={startNewProject}
-        onContinue={() => setShowOpening(false)} onPractice={openPractice} />}
+        onContinue={() => setShowOpening(false)} onPractice={() => openMusicActivity("practice")} onLearn={() => openMusicActivity("learning")} />}
       {!mobileRecordMode && <header className="topbar" inert={showOpening} aria-hidden={showOpening}>
         <div className="brand-menu-wrap">
           <a className="brand" href="#" aria-label="마음멜로디 홈">
@@ -1902,8 +1902,7 @@ export default function App({ initialDraft, initialRecoveryCandidates = [], allo
               <button type="button" role="menuitem" onClick={startNewProject}><WandSparkles size={16} /> 새로 시작하기</button>
               <button type="button" role="menuitem" onClick={() => { setShowAppMenu(false); void lostDrawingRecovery.scan(); }}>
                 <FileDown size={16} /> 사라진 그림 찾기</button>
-              <button type="button" role="menuitem" disabled={isAnyPlaying || exportingBacking || exportingPdf || processingRecording}
-                onClick={openPractice}><Music2 size={16} /> 기능 연습하기</button>
+              <MusicActivityMenuItems disabled={isAnyPlaying || exportingBacking || exportingPdf || processingRecording} onOpen={openMusicActivity} />
               <button type="button" role="menuitem" onClick={() => {
                 setShowAppMenu(false);
                 setCommunityAlbumOpen(true);

@@ -3,15 +3,17 @@ import AppArtwork from "./AppArtwork";
 import { publicAssetUrl } from "../platform/portable";
 import "../practice/PracticeMode.css";
 import "./AppExperienceArtwork.css";
+import "../learning/LearningEntry.css";
 
 type OpeningScreenProps = {
   hasDraft: boolean;
   onStart: () => void;
   onContinue: () => void;
   onPractice: () => void;
+  onLearn: () => void;
 };
 
-export default function OpeningScreen({ hasDraft, onStart, onContinue, onPractice }: OpeningScreenProps) {
+export default function OpeningScreen({ hasDraft, onStart, onContinue, onPractice, onLearn }: OpeningScreenProps) {
   return (
     <section className="opening-screen opening-with-children" aria-label="마음멜로디 시작 화면">
       <picture className="opening-visual" aria-hidden="true">
@@ -24,7 +26,7 @@ export default function OpeningScreen({ hasDraft, onStart, onContinue, onPractic
           <span className="opening-kicker">나만의 멜로디 놀이터</span>
         </div>
         <h1>마음멜로디</h1>
-        <p><strong>네 마음속 장면이 노래가 되는 곳</strong><br />친구들과 함께 첫 멜로디를 만들어 봐요.</p>
+        <p><strong>마음속 장면이 노래가 되는 곳</strong><br />친구들과 함께 첫 멜로디를 만들어 봐요.</p>
         <div className="opening-actions">
           <button type="button" className="opening-start action-button" onClick={onStart}>
             <WandSparkles size={20} /> 새로 시작하기 <ArrowRight size={18} />
@@ -35,6 +37,11 @@ export default function OpeningScreen({ hasDraft, onStart, onContinue, onPractic
           <button type="button" className="opening-practice action-button" onClick={onPractice}>
             <AppArtwork name="rhythm-stage" size={96} className="app-opening-practice-art" />
             <span><strong>리듬·가락 직접 만들기</strong><small>한 마디씩 연습해요</small></span>
+            <ArrowRight size={18} />
+          </button>
+          <button type="button" className="opening-learn action-button" onClick={onLearn}>
+            <AppArtwork name="book" size={68} />
+            <span><strong>음악 학습하기</strong><small>음표·박자·악보 기호를 게임으로 배워요</small></span>
             <ArrowRight size={18} />
           </button>
         </div>

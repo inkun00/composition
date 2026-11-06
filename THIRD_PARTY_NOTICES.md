@@ -390,3 +390,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 ~~~
+
+## VexFlow music learning notation
+
+- VexFlow 5.0.0: existing music-notation renderer reused for the elementary music learning activities. MIT License. Source: https://github.com/vexflow/vexflow.
+- The installed package copyright and full license text are preserved verbatim in [music learning licenses](public/third-party-learning-licenses.txt), shipped at `/third-party-learning-licenses.txt`.
+- Tone.js, Phaser and Chrome Music Lab are research references only. Their code, images and audio assets are not included in this feature.

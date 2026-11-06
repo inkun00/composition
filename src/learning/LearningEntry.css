@@ -1,0 +1,25 @@
+.opening-actions > .opening-learn {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr) 20px;
+  align-items: center;
+  gap: 12px;
+  min-height: 90px;
+  padding: 10px 18px;
+  border: 1px solid #c9bd92;
+  background: #faf2da;
+  color: #244f49;
+  text-align: left;
+}
+
+.opening-actions > .opening-learn:hover { background: #f4e8c4; border-color: #9e883e; }
+.opening-learn > .app-artwork:first-child { width: 58px; height: 58px; }
+.opening-learn > span { display: flex; flex-direction: column; gap: 6px; }
+.opening-learn strong { font-size: 16px; font-weight: 900; }
+.opening-learn small { color: #5b6859; font-size: 12px; font-weight: 500; line-height: 1.5; }
+
+@media (max-width: 480px) {
+  .opening-actions > .opening-learn { padding: 9px 14px; gap: 9px; }
+  .opening-learn strong { font-size: 15px; }
+  .opening-learn small { font-size: 11px; }
+}
