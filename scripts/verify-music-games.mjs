@@ -3,6 +3,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { chromium } from "playwright-core";
 import { preview } from "vite";
+import { observeDynamicsAudio, verifyDynamics } from "./dynamics-game-checks.mjs";
 
 // Build first. The game inputs below use the real UI and native Web Audio.
 // Audio probes observe calls, never replace audio with simulated success.
@@ -53,7 +54,7 @@ async function layout(name) {
 
 async function startGame(id) {
   await page.locator(`.arcade-island.island-${id}`).click();
-  await page.locator(id === "bridge" ? ".bridge-game" : id === "train" ? ".rhythm-train-game" : ".memory-game").waitFor();
+  await page.locator(id === "bridge" ? ".bridge-game" : id === "train" ? ".rhythm-train-game" : ".dynamics-game").waitFor();
 }
 
 async function returnToMap() {
@@ -107,48 +108,9 @@ async function verifyBridge() {
   report.checks.push("bridge: five beat-constrained missions, incomplete bridge rejection, actual bird crossing, stars and score saved");
 }
 
-async function pressMatchingPair(id) {
-  await page.locator(`.memory-card[data-pair='${id}'][data-side='sign']`).click();
-  await page.locator(`.memory-card[data-pair='${id}'][data-side='meaning']`).click();
-}
-
-async function verifyMemory() {
-  stage = "memory-signs-and-dynamics";
-  await startGame("memory");
-  await layout("desktop-memory-start");
-  await page.locator(".memory-card[data-pair='p'][data-side='sign']").click();
-  await page.locator(".memory-card[data-pair='mf'][data-side='meaning']").click();
-  assert.equal(await page.locator(".memory-card.face-up").count(), 2);
-  assert.equal(await page.locator(".memory-card.matched").count(), 0);
-  await shot("desktop-memory-mismatch");
-  await page.getByRole("button", { name: "기억했어요, 다시 뒤집기", exact: true }).click();
-  assert.equal(await page.locator(".memory-card.face-up").count(), 0);
-  await page.setViewportSize({ width: 375, height: 812 });
-  await layout("mobile-memory");
-  await page.setViewportSize({ width: 667, height: 375 });
-  await layout("landscape-memory");
-  await page.setViewportSize({ width: 1440, height: 1000 });
-  for (let index = 0; index < 3; index++) {
-    const ids = await page.locator(".memory-card[data-side='sign']").evaluateAll((cards) => cards.map((card) => card.dataset.pair));
-    const before = await page.evaluate(() => window.__gameAudioProbe.peaks.length);
-    for (const id of ids) {
-      const peaksBefore = await page.evaluate(() => window.__gameAudioProbe.peaks.length);
-      await pressMatchingPair(id);
-      if (id === "mf") {
-        const peaks = await page.evaluate((start) => window.__gameAudioProbe.peaks.slice(start), peaksBefore);
-        assert.ok(peaks.includes(0.115), "mf pair uses a real native gain envelope at the intended relative loudness");
-      }
-    }
-    assert.equal(await page.locator(".memory-card.matched").count(), ids.length * 2);
-    assert.ok(await page.evaluate((start) => window.__gameAudioProbe.peaks.length > start, before));
-    if (index === 2) await shot("desktop-memory-complete");
-    else await page.getByRole("button", { name: "다음 별자리로", exact: true }).click();
-  }
-  await page.getByRole("heading", { name: "모든 별자리를 밝혔어요!", exact: true }).waitFor();
-  assert.ok((await records()).memory?.score > 0);
-  await page.getByRole("button", { name: "탐험 지도 돌아가기", exact: true }).click();
-  await page.getByRole("heading", { name: "리듬별 구조대", exact: true }).waitFor();
-  report.checks.push("memory: mismatch/retry, all three constellations, thirteen symbol/meaning pairs, real mf gain, saved score");
+async function verifyDynamicsGame() {
+  stage = "dynamics-performance";
+  await verifyDynamics(page, report, outputDir);
 }
 
 async function performTrainRound(index, beats) {
@@ -219,6 +181,7 @@ async function verifyTrain() {
 
 try {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+  await observeDynamicsAudio(context);
   await context.addInitScript(() => {
     window.__gameAudioProbe = { peaks: [] };
     const native = AudioParam.prototype.linearRampToValueAtTime;
@@ -241,11 +204,11 @@ try {
   await layout("landscape-game-map");
   await page.setViewportSize({ width: 1440, height: 1000 });
   await verifyBridge();
-  await verifyMemory();
+  await verifyDynamicsGame();
   await verifyTrain();
   stage = "all-game-records-survive-reload";
   const before = await records();
-  assert.deepEqual(Object.keys(before).sort(), ["bridge", "memory", "train"]);
+  assert.deepEqual(Object.keys(before).sort(), ["bridge", "dynamics", "train"]);
   await shot("desktop-all-games-recorded");
   await page.reload();
   await page.locator(".opening-learn").click();

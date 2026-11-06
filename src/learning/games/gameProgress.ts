@@ -1,11 +1,14 @@
 import { useRef, useState } from "react";
 
-export type GameId = "bridge" | "train" | "memory";
+export type GameId = "bridge" | "train" | "dynamics";
 export type GameResult = { stars: number; score: number };
-export type GameRecords = Partial<Record<GameId, GameResult>>;
+type StoredGameId = GameId | "memory";
+export type GameRecords = Partial<Record<StoredGameId, GameResult>>;
 
 export const GAME_PROGRESS_KEY = "maeum-melody:games:v1";
-const GAME_IDS: GameId[] = ["bridge", "train", "memory"];
+const GAME_IDS: GameId[] = ["bridge", "train", "dynamics"];
+// Keep retired game records in storage without counting them as current missions.
+const STORED_GAME_IDS: StoredGameId[] = [...GAME_IDS, "memory"];
 
 function isGameId(id: unknown): id is GameId {
   return typeof id === "string" && GAME_IDS.includes(id as GameId);
@@ -24,7 +27,7 @@ function cleanRecords(value: unknown): GameRecords {
   const records: GameRecords = {};
   if (!value || typeof value !== "object" || Array.isArray(value)) return records;
   const source = value as Record<string, unknown>;
-  for (const id of GAME_IDS) {
+  for (const id of STORED_GAME_IDS) {
     if (!Object.prototype.hasOwnProperty.call(source, id) || !validResult(source[id])) continue;
     const result = source[id];
     records[id] = { stars: result.stars, score: result.score };
@@ -81,9 +84,9 @@ export function useGameProgress() {
     setSaved(writeGameProgress(next));
   }
 
-  const totals = Object.values(records).reduce((sum, result) => ({
-    stars: sum.stars + result.stars,
-    score: sum.score + result.score
+  const totals = GAME_IDS.reduce((sum, id) => ({
+    stars: sum.stars + (records[id]?.stars ?? 0),
+    score: sum.score + (records[id]?.score ?? 0)
   }), { stars: 0, score: 0 });
 
   return { records, saved, recordResult, totalStars: totals.stars, totalScore: totals.score };

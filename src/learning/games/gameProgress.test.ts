@@ -39,6 +39,7 @@ describe("music game records", () => {
       bridge: { stars: 3, score: 1250, extra: "ignored" },
       train: { stars: 4, score: 500 },
       memory: { stars: 2, score: -1 },
+      dynamics: { stars: 1, score: 50.5 },
       unknown: { stars: 3, score: 90_000 }
     }));
     expect(readGameProgress()).toEqual({ records: { bridge: { stars: 3, score: 1250 } }, saved: true });
@@ -98,12 +99,53 @@ describe("music game records", () => {
   it("persists canonical records across visits and does not write rejected results", () => {
     const write = vi.spyOn(Storage.prototype, "setItem");
     mount();
-    act(() => current.recordResult("memory", { stars: 2, score: 750 }));
+    act(() => current.recordResult("dynamics", { stars: 2, score: 750 }));
     expect(current.saved).toBe(true);
-    expect(readGameProgress().records).toEqual({ memory: { stars: 2, score: 750 } });
+    expect(readGameProgress().records).toEqual({ dynamics: { stars: 2, score: 750 } });
     expect(write).toHaveBeenCalledTimes(1);
-    act(() => current.recordResult("memory", { stars: 0, score: 1000 }));
+    act(() => current.recordResult("dynamics", { stars: 0, score: 1000 }));
     expect(write).toHaveBeenCalledTimes(1);
-    expect(current.records.memory).toEqual({ stars: 2, score: 750 });
+    expect(current.records.dynamics).toEqual({ stars: 2, score: 750 });
+  });
+
+  it("preserves retired memory records through new results without crediting current missions", () => {
+    const previous = {
+      bridge: { stars: 3, score: 1250 },
+      train: { stars: 2, score: 600 },
+      memory: { stars: 3, score: 9999 }
+    };
+    localStorage.setItem(GAME_PROGRESS_KEY, JSON.stringify(previous));
+    mount();
+    expect(current.records).toEqual(previous);
+    expect(current.records.dynamics).toBeUndefined();
+    expect(current.totalStars).toBe(5);
+    expect(current.totalScore).toBe(1850);
+
+    act(() => current.recordResult("dynamics", { stars: 2, score: 450 }));
+    expect(readGameProgress().records).toEqual({ ...previous, dynamics: { stars: 2, score: 450 } });
+    expect(current.totalStars).toBe(7);
+    expect(current.totalScore).toBe(2300);
+
+    act(() => current.recordResult("bridge", { stars: 1, score: 1500 }));
+    expect(readGameProgress().records).toEqual({
+      ...previous, bridge: { stars: 3, score: 1500 }, dynamics: { stars: 2, score: 450 }
+    });
+    expect(current.totalStars).toBe(7);
+    expect(current.totalScore).toBe(2550);
+  });
+
+  it("keeps legacy-only storage but rejects attempts to record new memory results", () => {
+    const legacy = { memory: { stars: 2, score: 750 } };
+    expect(writeGameProgress(legacy)).toBe(true);
+    mount();
+    expect(current.records).toEqual(legacy);
+    expect(current.totalStars).toBe(0);
+    expect(current.totalScore).toBe(0);
+
+    const write = vi.spyOn(Storage.prototype, "setItem");
+    act(() => current.recordResult("memory" as GameId, { stars: 3, score: 1000 }));
+    expect(write).not.toHaveBeenCalled();
+    expect(mergeGameResult(legacy, "memory" as GameId, { stars: 3, score: 1000 })).toEqual(legacy);
+    expect(readGameProgress().records).toEqual(legacy);
   });
 });
