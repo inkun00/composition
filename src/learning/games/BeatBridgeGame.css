@@ -1,0 +1,118 @@
+.bridge-game {
+  --bridge-ink: #24443e;
+  --bridge-teal: #17675b;
+  --bridge-gold: #efc657;
+  color: var(--bridge-ink);
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 24px 28px 36px;
+}
+
+.bridge-game button { cursor: pointer; font: inherit; }
+.bridge-game button:focus-visible, .bridge-game summary:focus-visible { outline: 3px solid #17675b; outline-offset: 4px; }
+.bridge-game-header { display: flex; align-items: center; justify-content: space-between; gap: 15px; }
+.bridge-back { display: flex; align-items: center; gap: 7px; min-height: 44px; border: 0; background: transparent; font-size: 13px !important; }
+.bridge-game-header > div { display: flex; flex-direction: column; align-items: center; line-height: 1.4; }
+.bridge-game-header > div > span { font-size: 13px; font-weight: 800; }
+.bridge-game-header > div > strong { font-size: 12px; color: #63736b; }
+.bridge-score { display: inline-flex; align-items: center; gap: 6px; color: #946b11; font-size: 16px; font-weight: 900; }
+.bridge-mission { text-align: center; margin: 20px 0 22px; }
+.bridge-mission-number { font-size: 11px; letter-spacing: .12em; font-weight: 900; color: #47786a; }
+.bridge-mission h1 { margin: 5px 0 7px; font-size: clamp(24px, 3vw, 34px); letter-spacing: -.04em; }
+.bridge-mission p { margin: 0 auto; max-width: 700px; font-size: 15px; line-height: 1.7; }
+.bridge-scene { height: 320px; position: relative; overflow: hidden; border: 3px solid #b3cbbc; border-radius: 28px; background: #dff2ef; box-shadow: inset 0 -6px #547a6230; }
+.bridge-landscape { position: absolute; inset: 0; width: 100%; height: 100%; }
+.bridge-traveler, .bridge-friend { width: 82px; position: absolute; top: 37%; z-index: 3; display: flex; flex-direction: column; align-items: center; }
+.bridge-traveler { left: 12%; transition: left 1500ms cubic-bezier(.33,.08,.4,1); }
+.bridge-friend { left: 78%; }
+.bridge-scene.is-cleared .bridge-traveler { left: 67%; }
+.bridge-bird-art { width: 80px; height: 88px; overflow: visible; }
+.bridge-traveler > span, .bridge-friend > span { position: absolute; bottom: 90px; white-space: nowrap; border: 1px solid #afc4a3; background: #fffdf0; border-radius: 12px 12px 12px 0; padding: 5px 9px; font-size: 11px; font-weight: 800; }
+.bridge-gap-sign { position: absolute; top: 17px; left: 50%; transform: translateX(-50%); padding: 7px 17px; border-radius: 10px; border: 2px solid #ac8d4c; background: #fff2c5; color: #655022; font-size: 13px; font-weight: 900; box-shadow: 0 3px 0 #a48a5850; white-space: nowrap; }
+.bridge-plank-track { position: absolute; left: 28%; top: 65%; width: 44%; height: 63px; display: flex; z-index: 2; border-radius: 8px; }
+.bridge-plank { min-width: 0; display: flex; align-items: center; justify-content: center; gap: 6px; position: relative; border: 2px solid #946834; border-bottom-width: 7px; border-radius: 8px; background: repeating-linear-gradient(0deg,#e4bb74 0 19px,#d8a85d 19px 21px); color: #563f27; }
+.bridge-plank::before { content: ""; width: 4px; height: 4px; position: absolute; left: 6px; top: 6px; border-radius: 50%; background: #99723b; box-shadow: 0 37px #99723b; }
+.bridge-plank small { font-size: 11px; font-weight: 900; }
+.bridge-plank.is-rest { background: repeating-linear-gradient(0deg,#b3d0bc 0 19px,#98bca4 19px 21px); border-color: #5e856e; }
+.bridge-plank.is-playing { background: #ffe794; outline: 3px solid #fffbe7; z-index: 2; }
+.bridge-empty-plank { display: flex; align-items: center; justify-content: center; border: 2px dashed #508f89; border-radius: 8px; color: #215b5b; background: #c0e5dc66; font-size: 12px; font-weight: 900; }
+.bridge-empty-plank > span { white-space: nowrap; }
+.bridge-level-flags { position: absolute; bottom: 15px; left: 20px; display: flex; gap: 7px; }
+.bridge-level-flags > span { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: #fffdf0bd; color: #5c806b; }
+.bridge-level-flags > span.complete { background: #ffdf7c; color: #86601a; }
+.bridge-feedback { text-align: center; min-height: 57px; padding: 15px 12px; font-size: 14px; font-weight: 800; color: #547064; }
+.bridge-feedback.is-clear { color: #17675b; }
+.bridge-build-panel { padding: 22px; border: 1px solid #cdd8c6; border-radius: 22px; background: #fffdf5; }
+.bridge-inventory-heading { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 16px; }
+.bridge-inventory-heading h2 { font-size: 17px; margin: 0; }
+.bridge-inventory-heading > span { font-size: 12px; color: #627466; }
+.bridge-inventory { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; }
+.bridge-inventory > button { min-height: 126px; min-width: 120px; position: relative; padding: 13px 22px; border: 2px solid #b69a68; border-bottom-width: 5px; border-radius: 15px; background: #fae8b8; display: flex; flex-direction: column; align-items: center; transition: background-color 120ms; }
+.bridge-inventory > button:hover:not(:disabled) { background: #f9d98d; border-color: #7d683c; }
+.bridge-inventory > button:active:not(:disabled) { background: #f1ca78; }
+.bridge-inventory > button strong { font-size: 14px; margin-top: 5px; }
+.bridge-inventory > button small { font-size: 12px; color: #6e5c36; }
+.bridge-piece-count { position: absolute; right: 8px; top: 7px; min-width: 23px; height: 23px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; background: #fff9df; color: #735c27; font-weight: 900; }
+.bridge-controls { display: flex; justify-content: center; flex-wrap: wrap; gap: 11px; margin-top: 22px; }
+.bridge-primary, .bridge-light-button { min-height: 48px; padding: 11px 20px; border-radius: 12px; font-weight: 900 !important; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px !important; }
+.bridge-primary { background: #17675b; color: #fffef2; border: 1px solid #135449; box-shadow: 0 4px 0 #103f38; }
+.bridge-primary:hover { background: #10594e; }
+.bridge-light-button { background: #fffdf3; border: 1px solid #adbda8; color: #355e4d; }
+.bridge-light-button:hover:not(:disabled) { background: #e9f0df; }
+.bridge-clear-panel { text-align: center; padding: 8px 24px 25px; }
+.bridge-earned-stars { color: #bd8619; display: flex; justify-content: center; gap: 8px; }
+.bridge-clear-panel h2 { font-size: 23px; margin: 9px 0; }
+.bridge-clear-panel p { font-size: 14px; margin: 0 auto 20px; max-width: 650px; line-height: 1.7; }
+.bridge-clear-panel > div:last-child { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.bridge-score-details { margin: 18px auto 0; max-width: 650px; color: #516a5a; font-size: 13px; }
+.bridge-score-details summary { min-height: 44px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-weight: 800; }
+.bridge-score-details summary::before { content: "+"; margin-right: 9px; font-size: 20px; }
+.bridge-score-details[open] summary::before { content: "−"; }
+.bridge-score-details > button { display: flex; margin: 0 auto; }
+.bridge-score-details > p { text-align: center; font-size: 12px; margin-top: 12px; }
+.bridge-audio-error { font-size: 13px; color: #8f442c; background: #fae8d4; padding: 12px; border-radius: 10px; }
+
+@media (max-width: 700px) {
+  .bridge-game { padding: 16px 15px 28px; }
+  .bridge-game-header { gap: 7px; }
+  .bridge-game-header > div > span { font-size: 11px; }
+  .bridge-game-header > div > strong { font-size: 10px; }
+  .bridge-back { font-size: 11px !important; gap: 4px; }
+  .bridge-score { font-size: 13px; gap: 3px; }
+  .bridge-score svg { width: 15px; }
+  .bridge-mission { margin: 15px 0 19px; }
+  .bridge-mission p { font-size: 13px; }
+  .bridge-scene { height: 265px; border-radius: 19px; }
+  .bridge-traveler, .bridge-friend { width: 57px; top: 39%; }
+  .bridge-traveler { left: 6%; }
+  .bridge-friend { left: 80%; }
+  .bridge-bird-art { width: 57px; height: 68px; }
+  .bridge-traveler > span, .bridge-friend > span { bottom: 70px; font-size: 9px; padding: 4px 6px; }
+  .bridge-scene.is-cleared .bridge-traveler { left: 65%; }
+  .bridge-plank-track { left: 24%; width: 53%; height: 58px; }
+  .bridge-plank { flex-direction: column; gap: 0; }
+  .bridge-plank > svg { width: 25px; height: 28px; }
+  .bridge-plank small { font-size: 9px; }
+  .bridge-empty-plank { font-size: 10px; }
+  .bridge-gap-sign { top: 16px; font-size: 11px; padding: 6px 10px; }
+  .bridge-level-flags { left: 12px; bottom: 11px; gap: 5px; }
+  .bridge-level-flags > span { width: 23px; height: 23px; }
+  .bridge-level-flags svg { width: 14px; }
+  .bridge-feedback { font-size: 12px; min-height: 58px; }
+  .bridge-build-panel { padding: 18px 13px; }
+  .bridge-inventory { gap: 8px; }
+  .bridge-inventory > button { min-width: 82px; padding: 13px 10px; min-height: 117px; flex: 1; max-width: 150px; }
+  .bridge-inventory > button strong { font-size: 12px; }
+  .bridge-inventory > button small { font-size: 10px; }
+  .bridge-inventory > button > svg { width: 36px; height: 40px; }
+  .bridge-inventory-heading > span { font-size: 10px; }
+  .bridge-controls > .bridge-primary { flex: 1 1 100%; }
+  .bridge-controls > .bridge-light-button { flex: 1; padding-inline: 8px; font-size: 12px !important; }
+  .bridge-clear-panel { padding: 5px 12px 22px; }
+  .bridge-clear-panel h2 { font-size: 20px; }
+  .bridge-clear-panel p { font-size: 13px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bridge-game *, .bridge-game *::before, .bridge-game *::after { transition: none !important; animation: none !important; }
+}

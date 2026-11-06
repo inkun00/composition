@@ -108,8 +108,8 @@ describe("music learning navigation and progress", () => {
     act(() => root.unmount());
     root = createRoot(container);
     mount();
-    expect(get(".learn-header-progress").textContent).toContain("1 / 5");
-    expect(get(".learn-lesson-card").textContent).toContain("발견 완료");
+    expect(get(".arcade-guide-caption").textContent).toContain("1 / 5");
+    expect(get(".learn-lesson-card").getAttribute("aria-label")).toContain("도감 완료");
   });
 
   it("resets a partial tap game when its experiment is hidden by the quiz", () => {

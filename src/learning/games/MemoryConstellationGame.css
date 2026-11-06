@@ -1,0 +1,63 @@
+.memory-game { max-width: 1050px; margin: auto; padding: 24px 32px 50px; }
+.music-game-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 28px; }
+.music-game-top > span { font-size: 14px; font-weight: 800; }
+.music-game-top > strong { display: flex; align-items: center; gap: 8px; font-size: 18px; }
+.music-game-top > strong svg { color: #a16c0f; }
+.game-kicker { color: #17675b; font-size: 12px; font-weight: 900; letter-spacing: .08em; }
+.memory-heading h1 { font-size: 34px; font-weight: 900; letter-spacing: -.04em; margin: 4px 0 8px; }
+.memory-heading > p:last-child { font-size: 15px; color: #5e706a; }
+.memory-sky { margin-top: 24px; padding: 14px 22px 18px; border-radius: 24px; background: #233858; box-shadow: inset 0 0 60px #10264060; color: #fff8db; overflow: hidden; }
+.memory-constellation { width: 100%; height: 130px; display: block; }
+.memory-constellation circle { fill: #485b7c; opacity: .5; }
+.memory-constellation g > path { fill: #69809b; transition: fill 300ms; }
+.memory-constellation .lit circle { fill: #ffd263; opacity: .2; }
+.memory-constellation .lit > path { fill: #ffd263; filter: drop-shadow(0 0 8px #ffd263); }
+.memory-sky-caption { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; }
+.memory-sky-caption > span { font-size: 12px; color: #ced8e6; }
+.memory-round-stats { display: flex; gap: 22px; align-items: center; margin: 17px 0; color: #486256; font-size: 13px; }
+.memory-round-stats > span { display: flex; align-items: center; gap: 6px; }
+.memory-round-stats > button { display: flex; align-items: center; gap: 7px; margin-left: auto; min-height: 44px; padding: 8px 12px; border: 1px solid #b9c7bc; border-radius: 10px; color: #294b40; background: #fffefa; font-size: 12px; }
+.memory-deck { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; max-width: 850px; margin: auto; }
+.memory-deck.count-6 { grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: 670px; }
+.memory-card { position: relative; display: flex; min-width: 0; min-height: 144px; padding: 16px 12px; flex-direction: column; gap: 5px; align-items: center; justify-content: center; border: 2px solid #6b90a0; border-radius: 17px; box-shadow: 0 5px 0 #436774; background: #4b7888; color: #fffbed; }
+.memory-card.face-down { background: repeating-linear-gradient(45deg, #4b7888 0 8px, #507e8d 8px 16px); }
+.memory-card.face-down > svg { color: #f4d27e; fill: #f4d27e; }
+.memory-card.face-down > span:last-child { font-size: 12px; font-weight: 700; }
+.memory-card.face-up { background: #fffefa; color: #20483d; border-color: #b7b89a; box-shadow: 0 4px 0 #d3d0b4; }
+.memory-card.matched { opacity: 1 !important; background: #eaf1de; border-color: #7c9f75; box-shadow: 0 3px 0 #a4b996 !important; }
+.memory-card-number { position: absolute; left: 11px; top: 8px; color: #f6edd0; font-size: 11px; }
+.memory-card-type { display: block; font-size: 10px; letter-spacing: .06em; color: #5e706a; }
+.memory-dynamic { font: italic 800 44px/1.2 Georgia, serif; }
+.memory-meaning { font-size: 19px; line-height: 1.5; text-wrap: balance; }
+.memory-sign-label { font-size: 12px; font-weight: 800; }
+.memory-found-check { position: absolute; right: 7px; top: 7px; color: #386e3c; }
+.memory-notice { min-height: 64px; padding: 18px 8px 12px; text-align: center; color: #315848; font-size: 15px; font-weight: 700; }
+.memory-retry { display: flex; margin: 0 auto; }
+.memory-clear { margin: 24px auto; padding: 28px; max-width: 700px; background: #fcf0c8; border: 2px solid #d6b566; border-radius: 22px; text-align: center; color: #644c18; }
+.memory-clear > svg { margin-bottom: 8px; }
+.memory-clear h2 { font-size: 26px; margin-bottom: 10px; }
+.memory-clear .game-stars { justify-content: center; }
+.memory-clear p { margin: 12px 0 20px; }
+.memory-footnote { margin-top: 24px !important; font-size: 12px; text-align: center; color: #5e706a; }
+
+@media (max-width: 650px) {
+  .memory-game { padding: 18px 18px 36px; }
+  .music-game-top { flex-wrap: wrap; margin-bottom: 20px; }
+  .music-game-top > .learn-secondary { padding: 10px 13px; }
+  .music-game-top > span { font-size: 12px; }
+  .music-game-top > strong { font-size: 15px; }
+  .memory-heading h1 { font-size: 29px; }
+  .memory-heading > p:last-child { font-size: 13px; }
+  .memory-sky { padding: 8px 14px 14px; }
+  .memory-constellation { height: 90px; }
+  .memory-sky-caption { flex-direction: column; gap: 3px; }
+  .memory-deck, .memory-deck.count-6 { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; }
+  .memory-card { min-height: 127px; padding: 11px 5px; border-radius: 13px; }
+  .memory-meaning { font-size: 15px; }
+  .memory-dynamic { font-size: 36px; }
+  .memory-sign-label { font-size: 10px; }
+  .memory-card-type { font-size: 9px; }
+  .memory-round-stats { gap: 12px; flex-wrap: wrap; font-size: 12px; }
+  .memory-round-stats > button { padding: 7px 9px; }
+  .memory-notice { font-size: 13px; }
+}

@@ -1,58 +1,41 @@
-import { ArrowRight, Check, Sparkles } from "lucide-react";
-import AppArtwork, { type AppArtworkName } from "../components/AppArtwork";
+import { useEffect, useRef } from "react";
+import { ArrowRight, BookOpen, Check, Star, Trophy } from "lucide-react";
+import AppArtwork from "../components/AppArtwork";
 import { LESSONS, type LessonId } from "./learningModel";
-import { NoteSymbol } from "./LearningScore";
+import AdventureMap from "./games/AdventureMap";
+import type { GameId, GameRecords } from "./games/gameProgress";
+import "./LearningArcade.css";
 
-const ARTWORK: Record<LessonId, AppArtworkName> = {
-  notes: "melody-stage", meter: "rhythm-stage", tempo: "tempo-fast", dynamics: "volume-on", symbols: "book"
-};
-
-export default function LearningHome({ completed, saved, onSelect, onCreate }: {
+export default function LearningHome({ completed, saved, onSelect, onCreate, records, onPlay, totalStars, totalScore }: {
   completed: LessonId[]; saved: boolean; onSelect: (id: LessonId) => void; onCreate: () => void;
+  records: GameRecords; onPlay: (id: GameId) => void; totalStars: number; totalScore: number;
 }) {
-  const next = LESSONS.find((lesson) => !completed.includes(lesson.id)) ?? LESSONS[0];
-  return <main className="learn-home" id="learn-main">
-    <section className="learn-hero">
-      <div className="learn-hero-copy"><span className="learn-eyebrow"><span className="learn-tiny-dot" /> 듣고 · 만지고 · 발견하는 음악</span>
-        <h1>소리로 배우는<br /><em>음악 놀이터</em></h1>
-        <p>2분음표는 얼마나 길까? mf는 무슨 뜻일까?<br />직접 들어 보고, 작은 게임으로 하나씩 알아가요.</p>
-        <button className="learn-primary" onClick={() => onSelect(next.id)}>
-          {completed.length ? "이어서 탐험하기" : "첫 번째 놀이터로"} <ArrowRight size={18} />
-        </button>
-        <span className="learn-hero-caption">처음이어도 괜찮아요. 정답보다 발견이 먼저!</span>
-      </div>
-      <div className="learn-hero-art" aria-hidden="true">
-        <div className="learn-staff-lines" />
-        <div className="learn-floating-note note-one"><NoteSymbol id="half" size={75} /><span>2박</span></div>
-        <div className="learn-floating-note note-two"><strong>mf</strong><span>조금 세게</span></div>
-        <AppArtwork name="melody-stage" size={270} className="learn-hero-image" />
-        <span className="learn-hero-sticker"><Sparkles size={17} /> 음악이랑 친해지는 시간</span>
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => { heading.current?.focus({ preventScroll: true }); }, []);
+  return <main className="arcade-home" id="learn-main">
+    <section className="arcade-intro">
+      <div><p className="game-kicker">MAEUM MELODY · MUSIC ADVENTURE</p><h1 ref={heading} tabIndex={-1}>리듬별 구조대</h1>
+        <p>음악이 멈춘 리듬별에 도움이 필요해요.<br />음표로 길을 만들고, 박자로 달리고, 기억으로 별을 밝혀요!</p></div>
+      <div className="arcade-player"><div className="arcade-player-avatar"><AppArtwork name="headphones" size={58} /></div>
+        <div><span>나의 구조대 기록</span><strong><Star size={18} fill="currentColor" /> {totalStars} <small>/ 9 별</small></strong><p><Trophy size={13} /> 최고 기록 합계 {totalScore.toLocaleString()}점</p></div>
       </div>
     </section>
-    <section className="learn-discoveries" aria-label="내 학습 기록">
-      <div><span className="learn-progress-icon"><Sparkles size={22} /></span><div><strong>나의 음악 발견</strong><span>{completed.length === LESSONS.length ? "모든 놀이터를 탐험했어요!" : "퀴즈를 마치고 발견 도장을 모아 보세요."}</span></div></div>
-      <div className="learn-progress-stamps" aria-label={`${LESSONS.length}개 중 ${completed.length}개 단원 완료`}>
-        {LESSONS.map((lesson, index) => <span key={lesson.id} className={completed.includes(lesson.id) ? "complete" : ""}
-          title={lesson.title}>{completed.includes(lesson.id) ? <Check size={19} aria-hidden="true" /> : index + 1}</span>)}
-        <strong>{completed.length}<span> / {LESSONS.length}</span></strong>
-      </div>
-    </section>
-    <section className="learn-lessons" aria-labelledby="learn-lessons-heading">
-      <div className="learn-section-heading"><div><p className="learn-eyebrow">작은 발견, 다섯 가지</p><h2 id="learn-lessons-heading">무엇부터 배워 볼까요?</h2></div><p>원하는 곳부터 시작해도 좋아요.</p></div>
-      <div className="learn-lesson-grid">
-        {LESSONS.map((lesson, index) => <button key={lesson.id} className={`learn-lesson-card theme-${lesson.id}`} onClick={() => onSelect(lesson.id)}>
-          <div className="learn-card-top"><span className="learn-card-number">0{index + 1}</span>
-            <span className="learn-card-kind">{completed.includes(lesson.id) ? <><Check size={14} /> 발견 완료</> : "체험 + 퀴즈"}</span></div>
-          <AppArtwork name={ARTWORK[lesson.id]} size={100} className="learn-card-art" />
-          <h3>{lesson.title}</h3><p>{lesson.description}</p>
-          <span className="learn-card-bottom">놀러 가기 <ArrowRight size={18} /></span>
+    <AdventureMap records={records} onPlay={onPlay} />
+    <section className="arcade-field-guide" aria-labelledby="learn-lessons-heading">
+      <div className="arcade-guide-heading"><div><p className="learn-eyebrow"><BookOpen size={15} /> 구조대의 음악 도감</p>
+        <h2 id="learn-lessons-heading">무엇부터 배워 볼까요?</h2></div><p>미션이 어려울 땐 여기서 연습해요.</p></div>
+      <div className="arcade-guide-links">
+        {LESSONS.map((lesson, index) => <button key={lesson.id} className={`learn-lesson-card theme-${lesson.id}`}
+          data-complete={completed.includes(lesson.id)} aria-label={`${lesson.title}${completed.includes(lesson.id) ? ", 도감 완료" : ""}`} onClick={() => onSelect(lesson.id)}>
+          <span>{completed.includes(lesson.id) ? <Check size={16} /> : `0${index + 1}`}</span><strong>{lesson.title}</strong><ArrowRight size={16} />
         </button>)}
       </div>
+      <span className="arcade-guide-caption">도감 퀴즈 {completed.length} / 5 완료 · 게임의 별과 따로 기록돼요</span>
     </section>
-    <section className="learn-create-strip"><AppArtwork name="lightbulb" size={56} />
-      <div><h2>배운 음악으로, 내 노래도 만들어 볼까요?</h2><p>직접 음표를 놓으며 리듬과 가락을 만들 수 있어요.</p></div>
+    <section className="learn-create-strip"><AppArtwork name="lightbulb" size={52} />
+      <div><h2>이번에는 내가 음악을 만들 차례!</h2><p>게임에서 만난 음표로 나만의 리듬과 가락을 만들어요.</p></div>
       <button className="learn-secondary" onClick={onCreate}>리듬·가락 만들기 <ArrowRight size={17} /></button>
     </section>
-    <p className="learn-storage-note" role="status">{saved ? "발견 도장은 이 브라우저에 저장돼요. 로그인 없이 배울 수 있어요." : "지금은 이 기기에 기록을 저장할 수 없어요. 화면을 떠나면 발견 도장이 사라질 수 있어요."}</p>
+    <p className="learn-storage-note" role="status">{saved ? "최고 점수와 별은 이 브라우저에 저장돼요. 로그인 없이 즐길 수 있어요." : "기록을 기기에 저장할 수 없어요. 지금 게임은 계속할 수 있지만 화면을 떠나면 새 기록이 사라질 수 있어요."}</p>
   </main>;
 }

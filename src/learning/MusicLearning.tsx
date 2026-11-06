@@ -10,26 +10,37 @@ import SymbolsLab from "./SymbolsLab";
 import { LESSONS, type LessonId } from "./learningModel";
 import { useLearningPlayback } from "./useLearningPlayback";
 import { useLearningProgress } from "./useLearningProgress";
+import MusicGameScreen from "./games/MusicGameScreen";
+import { useGameProgress, type GameId } from "./games/gameProgress";
 import "./MusicLearning.css";
 import "./LearningLabs.css";
 
 export default function MusicLearning({ onClose, onCreate }: { onClose: () => void; onCreate: () => void }) {
   const [lessonId, setLessonId] = useState<LessonId | null>(null);
+  const [gameId, setGameId] = useState<GameId | null>(null);
   const [tab, setTab] = useState<"explore" | "quiz">("explore");
   const titleRef = useRef<HTMLHeadingElement>(null);
   const audio = useLearningPlayback();
   const progress = useLearningProgress();
+  const games = useGameProgress();
   const lesson = LESSONS.find((item) => item.id === lessonId);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
     titleRef.current?.focus({ preventScroll: true });
-  }, [lessonId]);
+  }, [lessonId, gameId]);
 
   function select(id: LessonId | null) {
     audio.stop();
     setLessonId(id);
+    setGameId(null);
     setTab("explore");
+  }
+
+  function playGame(id: GameId) {
+    audio.stop();
+    setLessonId(null);
+    setGameId(id);
   }
 
   function changeTab(value: "explore" | "quiz") {
@@ -46,11 +57,14 @@ export default function MusicLearning({ onClose, onCreate }: { onClose: () => vo
   return <div className="music-learning">
     <a className="learn-skip" href="#learn-main">학습 내용으로 건너뛰기</a>
     <header className="learn-header"><div className="learn-header-inner">
-      <button className="learn-back" onClick={lesson ? () => select(null) : onClose}><ArrowLeft size={18} />{lesson ? "놀이터 목록" : "마음멜로디로"}</button>
+      <button className="learn-back" onClick={lesson || gameId ? () => select(null) : onClose}><ArrowLeft size={18} />{lesson || gameId ? "탐험 지도" : "마음멜로디로"}</button>
       <button className="learn-brand" onClick={() => select(null)} aria-label="음악 학습하기 처음으로"><BookOpen size={23} /><strong>음악 학습하기</strong></button>
-      <span className="learn-header-progress"><Sparkles size={17} /><strong>{progress.completed.length}</strong> / 5 발견</span>
+      <span className="learn-header-progress"><Sparkles size={17} /><strong>{games.totalStars}</strong> / 9 별</span>
     </div></header>
-    {!lesson ? <LearningHome completed={progress.completed} saved={progress.saved} onSelect={select} onCreate={onCreate} /> : (
+    {gameId ? <MusicGameScreen game={gameId} onExit={() => select(null)} onComplete={(result) => games.recordResult(gameId, result)} /> : !lesson ? (
+      <LearningHome completed={progress.completed} saved={games.saved} onSelect={select} onCreate={onCreate}
+        records={games.records} totalStars={games.totalStars} totalScore={games.totalScore} onPlay={playGame} />
+    ) : (
       <div className="learn-workspace">
         <nav className="learn-lesson-nav" aria-label="다섯 가지 음악 학습">
           <p className="learn-eyebrow">나의 탐험 지도</p>

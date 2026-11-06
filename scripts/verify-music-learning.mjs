@@ -240,7 +240,7 @@ try {
   stage = "opening-entry";
   await page.goto(baseUrl);
   await page.locator(".opening-learn").click();
-  await page.getByRole("heading", { name: /소리로 배우는/ }).waitFor();
+  await page.getByRole("heading", { name: "리듬별 구조대" }).waitFor();
   await layout("desktop-home");
   await verifyNotes();
   await verifyMeter();
@@ -249,7 +249,7 @@ try {
   await verifySymbols();
   stage = "mobile-layouts";
   await page.setViewportSize({ width: 375, height: 812 });
-  await page.getByRole("button", { name: "놀이터 목록", exact: true }).click();
+  await page.getByRole("button", { name: "탐험 지도", exact: true }).click();
   await layout("mobile-home");
   for (const id of Object.keys(lessonTitles)) {
     await selectLesson(id);
@@ -280,9 +280,9 @@ try {
   stage = "completion-persistence";
   await page.reload();
   await page.locator(".opening-learn").click();
-  await page.getByRole("heading", { name: /소리로 배우는/ }).waitFor();
-  await page.waitForFunction(() => document.querySelectorAll(".learn-progress-stamps > .complete").length === 5);
-  assert.equal(await page.locator(".learn-progress-stamps > .complete").count(), 5);
+  await page.getByRole("heading", { name: "리듬별 구조대" }).waitFor();
+  await page.waitForFunction(() => document.querySelectorAll(".learn-lesson-card[data-complete='true']").length === 5);
+  assert.equal(await page.locator(".learn-lesson-card[data-complete='true']").count(), 5);
   await shot("desktop-all-discoveries");
   report.checks.push("all five completion stamps survive full page reload");
   stage = "composer-menu-integration";
@@ -290,7 +290,7 @@ try {
   await page.locator(".opening-start").click();
   await page.getByRole("button", { name: "메뉴 열기", exact: true }).click();
   await page.getByRole("menuitem", { name: "음악 학습하기", exact: true }).click();
-  await page.getByRole("heading", { name: /소리로 배우는/ }).waitFor();
+  await page.getByRole("heading", { name: "리듬별 구조대" }).waitFor();
   await page.getByRole("button", { name: "마음멜로디로", exact: true }).click();
   await page.getByRole("button", { name: "메뉴 열기", exact: true }).waitFor();
   assert.equal(await page.locator(".opening-screen").count(), 0, "return preserves composer screen");
