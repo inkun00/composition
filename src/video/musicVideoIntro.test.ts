@@ -132,7 +132,7 @@ describe("전주 미리보기와 MP4의 공통 화면", () => {
     drawMusicVideoFrame(after.context, current, current.introSeconds, animated);
     expect(after.backgrounds[0]).toBe("#ffffff");
     expect(after.strokes).toEqual(["#123456"]);
-    expect(after.text.map((entry) => entry.value)).toEqual(["우리 노래", "별"]);
+    expect(after.text.map((entry) => entry.value)).toEqual(["별"]);
   });
 
   it("이전 수동 plan에서 본곡 첫 장면이 0초로 남아 있어도 전주에는 노출하지 않는다", () => {

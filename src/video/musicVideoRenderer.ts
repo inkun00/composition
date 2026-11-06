@@ -25,15 +25,9 @@ export function drawSceneElements(context: CanvasRenderingContext2D, scene: Musi
   context.restore();
 }
 
-function drawLyrics(context: CanvasRenderingContext2D, title: string, frame: LyricVideoFrame | undefined): void {
-  context.fillStyle = "rgba(15, 23, 42, 0.7)";
-  context.fillRect(0, 0, MUSIC_VIDEO_WIDTH, 66);
-  context.fillStyle = "#ffffff";
-  context.textAlign = "center";
-  context.textBaseline = "middle";
-  context.font = '600 28px "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
-  context.fillText(title, MUSIC_VIDEO_WIDTH / 2, 33, MUSIC_VIDEO_WIDTH - 80);
+function drawLyrics(context: CanvasRenderingContext2D, frame: LyricVideoFrame | undefined): void {
   if (!frame?.syllables.length) return;
+  context.textBaseline = "middle";
   context.fillStyle = "rgba(15, 23, 42, 0.8)";
   context.fillRect(0, MUSIC_VIDEO_HEIGHT - 104, MUSIC_VIDEO_WIDTH, 104);
   let size = 58;
@@ -46,6 +40,11 @@ function drawLyrics(context: CanvasRenderingContext2D, title: string, frame: Lyr
     if (total <= MUSIC_VIDEO_WIDTH - 100 || size <= 26) break;
     size -= 4;
   } while (size >= 26);
+  // Scale the already-fitted text so long lyrics also become exactly 30% smaller.
+  size = Math.round(size * 7) / 10;
+  context.font = `700 ${size}px "Malgun Gothic", "Apple SD Gothic Neo", sans-serif`;
+  widths = frame.syllables.map((syllable) => context.measureText(syllable).width);
+  total = widths.reduce((sum, width) => sum + width, 0) + (widths.length - 1) * 8;
   let x = (MUSIC_VIDEO_WIDTH - total) / 2;
   context.textAlign = "left";
   frame.syllables.forEach((syllable, index) => {
@@ -84,7 +83,7 @@ export function drawMusicVideoFrame(context: CanvasRenderingContext2D, plan: Mus
   }
   if (!introductory) {
     const lyric = plan.lyrics.frames.find((frame) => timeSeconds >= frame.startSeconds && timeSeconds < frame.endSeconds);
-    drawLyrics(context, plan.title, lyric);
+    drawLyrics(context, lyric);
   }
   context.restore();
 }
