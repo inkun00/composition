@@ -7,7 +7,7 @@ export const ACTIVITY_TITLE = "비상-6학년-3. 음악의 다양함-나도 작�
 export const TEXTBOOK_SONG_TITLE = "건강 비빔밥";
 export const TEXTBOOK_METER: Meter = { beats: 4, beatUnit: 4 };
 export const TEXTBOOK_PITCHES = [60, 62, 64, 65, 67, 69, 71, 72];
-export const TEXTBOOK_BOARD_URL = "https://www.clboard.co.kr/student/472039";
+export const TEXTBOOK_BOARD_URL = "https://www.clboard.co.kr/student/779870";
 export const TEXTBOOK_TEMPOS = [
   { bpm: 66, label: "느리게 · Lento" },
   { bpm: 76, label: "걷는 빠르기로 · Andante" },
