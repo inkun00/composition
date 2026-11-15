@@ -18,6 +18,20 @@
 .opening-learn strong { font-size: 16px; font-weight: 900; }
 .opening-learn small { color: #5b6859; font-size: 12px; font-weight: 500; line-height: 1.5; }
 
+.opening-actions > .opening-textbook {
+  grid-column: 1 / -1;
+  justify-content: flex-start;
+  min-height: 48px;
+  padding: 9px 17px;
+  border: 1px solid #c5bbb4;
+  background: #fffaf5;
+  color: #49352d;
+  font-weight: 850;
+}
+
+.opening-actions > .opening-textbook:hover { background: #f9eadf; border-color: #a48171; }
+.opening-textbook > img:last-child { margin-left: auto; }
+
 @media (max-width: 480px) {
   .opening-actions > .opening-learn { padding: 9px 14px; gap: 9px; }
   .opening-learn strong { font-size: 15px; }

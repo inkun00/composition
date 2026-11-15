@@ -1886,7 +1886,7 @@ export default function App({ initialDraft, initialRecoveryCandidates = [], allo
   return (
     <div className="app-shell">
       {showOpening && <OpeningScreen hasDraft={Boolean(resumableDraft)} onStart={startNewProject}
-        onContinue={() => setShowOpening(false)} onPractice={() => openMusicActivity("practice")} onLearn={() => openMusicActivity("learning")} />}
+        onContinue={() => setShowOpening(false)} onPractice={() => openMusicActivity("practice")} onLearn={() => openMusicActivity("learning")} onTextbook={() => openMusicActivity("textbook")} />}
       {!mobileRecordMode && <header className="topbar" inert={showOpening} aria-hidden={showOpening}>
         <div className="brand-menu-wrap">
           <a className="brand" href="#" aria-label="마음멜로디 홈">

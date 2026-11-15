@@ -1,4 +1,4 @@
-import { ArrowRight, Music2, WandSparkles } from "./AppArtworkIcons";
+import { ArrowRight, BookOpen, Music2, WandSparkles } from "./AppArtworkIcons";
 import AppArtwork from "./AppArtwork";
 import { publicAssetUrl } from "../platform/portable";
 import "../practice/PracticeMode.css";
@@ -11,9 +11,10 @@ type OpeningScreenProps = {
   onContinue: () => void;
   onPractice: () => void;
   onLearn: () => void;
+  onTextbook: () => void;
 };
 
-export default function OpeningScreen({ hasDraft, onStart, onContinue, onPractice, onLearn }: OpeningScreenProps) {
+export default function OpeningScreen({ hasDraft, onStart, onContinue, onPractice, onLearn, onTextbook }: OpeningScreenProps) {
   return (
     <section className="opening-screen opening-with-children" aria-label="마음멜로디 시작 화면">
       <picture className="opening-visual" aria-hidden="true">
@@ -43,6 +44,9 @@ export default function OpeningScreen({ hasDraft, onStart, onContinue, onPractic
             <AppArtwork name="book" size={68} />
             <span><strong>음악 학습하기</strong><small>음표·박자·악보 기호를 게임으로 배워요</small></span>
             <ArrowRight size={18} />
+          </button>
+          <button type="button" className="opening-textbook action-button" onClick={onTextbook}>
+            <BookOpen size={26} /> 교과서 활동하기 <ArrowRight size={18} />
           </button>
         </div>
         <small className="opening-status">{hasDraft ? "저장한 노래가 기다리고 있어요." : "오늘의 첫 노래를 시작해 볼까요?"}</small>
