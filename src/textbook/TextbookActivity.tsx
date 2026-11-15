@@ -103,7 +103,7 @@ export default function TextbookActivity({ onClose }: { onClose: () => void }) {
       <section className="textbook-section textbook-share" aria-labelledby="textbook-share-heading">
         <div className="textbook-section-title"><h2 id="textbook-share-heading">완성하고 공유하기</h2></div>
         <p>{!complete ? "뒤 네 마디를 각각 4박으로 채우고 음표를 넣으면 전곡을 들을 수 있어요."
-          : !readyToSave ? "작곡가 이름을 적으면 악보와 영상을 저장할 수 있어요." : "악보 PNG와 연주 MP4를 저장한 뒤 띵커벨 게시판에 첨부해 보세요."}</p>
+          : !readyToSave ? "작곡가 이름을 적으면 악보와 영상을 저장할 수 있어요." : "악보 PNG와 연주 MP4를 저장한 뒤 클래스보드에 첨부해 보세요."}</p>
         <div className="textbook-share-actions">
           <button type="button" className="textbook-main-action" data-testid="textbook-play-all"
             disabled={!complete || exporting || (playing && playback.preview !== "all")}
@@ -116,7 +116,7 @@ export default function TextbookActivity({ onClose }: { onClose: () => void }) {
           <button type="button" className="textbook-quiet-action" disabled={!readyToSave || playing || exporting}
             onClick={() => void files.save("mp4", measures, draft.creator, draft.bpm)}><Film size={17} /> 연주 MP4 저장</button>
           <a href={TEXTBOOK_BOARD_URL} target="_blank" rel="noopener noreferrer" className="textbook-quiet-action">
-            <ArrowUpRight size={17} /> <span>띵커벨 게시판 열기 <small>(새 탭)</small></span>
+            <ArrowUpRight size={17} /> <span>클래스보드 열기 <small>(새 탭)</small></span>
           </a>
         </div>
         {exporting && <div className="textbook-export-progress">
