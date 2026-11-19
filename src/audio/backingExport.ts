@@ -249,3 +249,26 @@ export async function renderOfflineBackingMp3(
   const { audioBuffer } = await renderOfflineBackingAudio(measures, instrumentId, bpm, accompaniment);
   return encodeAudioBufferToMp3(audioBuffer);
 }
+
+/** Composer performance: the selected melody instrument over the same backing. */
+export async function renderOfflinePerformanceAudio(
+  measures: readonly PlaybackMeasure[],
+  instrumentId: InstrumentId = "piano",
+  bpm = 96,
+  accompaniment?: AccompanimentOptions,
+  signal?: AbortSignal
+): Promise<RenderedBackingAudio> {
+  return renderOfflineBackingAudio(measures, instrumentId, bpm, accompaniment, signal, { includeMelody: true });
+}
+
+export async function renderOfflinePerformanceMp3(
+  measures: readonly PlaybackMeasure[],
+  instrumentId: InstrumentId = "piano",
+  bpm = 96,
+  accompaniment?: AccompanimentOptions,
+  onContext?: (context: AudioContext) => void
+): Promise<Blob | null> {
+  void onContext;
+  const { audioBuffer } = await renderOfflinePerformanceAudio(measures, instrumentId, bpm, accompaniment);
+  return encodeAudioBufferToMp3(audioBuffer);
+}

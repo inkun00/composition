@@ -22,6 +22,30 @@ async function savePng(name, dataUrl) {
   await writeFile(path.join(outputDir, name), Buffer.from(dataUrl.split(",")[1], "base64"));
 }
 
+async function openVideoSource() {
+  await page.getByTestId("export-lyrics-mp4").click();
+  const dialog = page.getByRole("dialog", { name: "가사 포함 영상", exact: true });
+  await dialog.waitFor();
+  assert.equal(await dialog.getByRole("button", { name: "반주 음악", exact: true }).getAttribute("data-testid"),
+    "composition-source-backing");
+  assert.equal(await dialog.getByRole("button", { name: "연주 음악", exact: true }).getAttribute("data-testid"),
+    "composition-source-performance");
+  return dialog;
+}
+
+async function loadFixture(draft) {
+  // Seed while the app is absent so its unload autosave cannot replace the
+  // verification fixture. Use the real durable storage path, including IDB.
+  const inertUrl = new URL("__composition-export-fixture", baseUrl).href;
+  await page.route(inertUrl, (route) => route.fulfill({ contentType: "text/html", body: "<!doctype html><title>Export verification fixture</title>" }), { times: 1 });
+  await page.goto(inertUrl);
+  await page.evaluate(async (fixture) => {
+    const { saveBrowserProjectDraft } = await import("/src/music/projectStorage.ts");
+    if (!await saveBrowserProjectDraft({ ...fixture, updatedAt: Date.now() })) throw new Error("Unable to save the verification fixture");
+  }, draft);
+  await page.goto(`${baseUrl}?start=new`);
+}
+
 async function exportButtonsLayout(viewport, name) {
   await page.setViewportSize(viewport);
   const mp3 = page.getByTestId("export-backing-mp3");
@@ -31,8 +55,13 @@ async function exportButtonsLayout(viewport, name) {
   assert.ok(audio && video, `${name}: both export buttons must be visible`);
   assert.ok(video.x >= 0 && video.x + video.width <= viewport.width + 1, `${name}: video button must fit`);
   assert.ok(audio.x >= 0 && audio.x + audio.width <= viewport.width + 1, `${name}: audio button must fit`);
-  assert.ok(Math.abs(audio.y - video.y) < 2, `${name}: MP4 must appear beside MP3`);
-  assert.ok(video.x > audio.x, `${name}: MP4 must follow MP3`);
+  const sameRow = Math.abs(audio.y - video.y) < 2;
+  if (viewport.width >= 700) {
+    assert.ok(sameRow && video.x > audio.x, `${name}: video must appear beside music on desktop`);
+  } else {
+    assert.ok(sameRow ? video.x > audio.x : video.y >= audio.y + audio.height - 1,
+      `${name}: video must follow music without overlapping on a phone`);
+  }
   const section = page.locator(".publish-action-group-files");
   await section.screenshot({ path: path.join(outputDir, `${name}-buttons.png`) });
   return { audio, video };
@@ -70,7 +99,7 @@ try {
   await page.goto(`${baseUrl}?start=new`);
   const seed = await page.evaluate(async () => {
     const { HARMONY_PRESETS } = await import("/src/music/harmonyPresets.ts");
-    const { DRAFT_STORAGE_KEY, isSavedDraft } = await import("/src/music/draft.ts");
+    const { isSavedDraft } = await import("/src/music/draft.ts");
     const syllables = ["햇살가득", "우리함께", "꿈을향해", "노래해요", "바람따라", "하늘높이", "다시만날", "친구안녕"];
     const chords = [["C"], ["F"], ["Dm"], ["G"], ["Am"], ["F"], ["G7"], ["C"]];
     const pitches = [[60, 62, 64, 67], [65, 67, 69, 65], [62, 64, 65, 69], [67, 69, 71, 67],
@@ -88,24 +117,43 @@ try {
       bpm: 160, lyrics: Array(8).fill(""), measures, showArrangement: true
     };
     if (!isSavedDraft(draft)) throw new Error("The video test must seed a valid student composition");
-    localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
-    return { title: draft.title, instrumentIds, bpm: draft.bpm, measureCount: measures.length,
+    return { draft, title: draft.title, instrumentIds, bpm: draft.bpm, measureCount: measures.length,
       introSeconds: .08 + 4 * 4 * 60 / draft.bpm, bodySeconds: measures.length * 4 * 60 / draft.bpm,
       totalSeconds: .08 + (4 + measures.length + 4) * 4 * 60 / draft.bpm + .8 };
   });
-  report.seed = seed;
-  await page.reload();
+  const { draft: fixture, ...seedSummary } = seed;
+  report.seed = seedSummary;
+  await loadFixture(fixture);
+  await page.locator("#composer-tab-arrange").click();
   await page.getByTestId("arrangement-section").waitFor();
+  await page.locator("#composer-tab-publish").click();
   await page.getByTestId("export-lyrics-mp4").waitFor();
-  assert.match(await page.getByTestId("export-lyrics-mp4").innerText(), /가사 포함 MP4/);
+  assert.match(await page.getByTestId("export-lyrics-mp4").innerText(), /가사 포함 영상/);
   report.desktop = await exportButtonsLayout({ width: 1440, height: 1080 }, "desktop");
   report.mobile = await exportButtonsLayout({ width: 390, height: 844 }, "mobile");
+  await page.setViewportSize({ width: 1440, height: 1080 });
+
+  const beforePicker = await page.evaluate(() => ({ ...window.compositionVideoAudit }));
+  const picker = await openVideoSource();
+  await picker.screenshot({ path: path.join(outputDir, "video-source-desktop.png") });
+  await page.keyboard.press("Escape");
+  await picker.waitFor({ state: "hidden" });
+  assert.deepEqual(await page.evaluate(() => ({ ...window.compositionVideoAudit })), beforePicker,
+    "Opening and dismissing the source picker must not start audio rendering");
+  await page.setViewportSize({ width: 390, height: 844 });
+  const mobilePicker = await openVideoSource();
+  const mobileBounds = await mobilePicker.boundingBox();
+  assert.ok(mobileBounds && mobileBounds.x >= 0 && mobileBounds.x + mobileBounds.width <= 391,
+    "The source picker must fit a phone viewport");
+  await mobilePicker.screenshot({ path: path.join(outputDir, "video-source-mobile.png") });
+  await page.keyboard.press("Escape");
+  await mobilePicker.waitFor({ state: "hidden" });
   await page.setViewportSize({ width: 1440, height: 1080 });
 
   const before = await page.evaluate(() => ({ ...window.compositionVideoAudit }));
   const started = Date.now();
   const downloadPromise = page.waitForEvent("download", { timeout: 180_000 });
-  await page.getByTestId("export-lyrics-mp4").click();
+  await (await openVideoSource()).getByRole("button", { name: "반주 음악", exact: true }).click();
   await page.waitForFunction(() => document.querySelector('[data-testid="export-lyrics-mp4"]')?.disabled);
   const progress = page.getByTestId("composition-video-progress");
   await progress.waitFor();
@@ -127,6 +175,7 @@ try {
   await page.waitForFunction(() => !document.querySelector('[data-testid="export-lyrics-mp4"]')?.disabled);
   const after = await page.evaluate(() => ({ ...window.compositionVideoAudit }));
   const encoded = await readFile(mp4Path);
+  assert.equal(download.suggestedFilename(), `${seed.title}-가사포함.mp4`, "Existing backing video filenames must stay compatible");
   assert.equal(encoded.subarray(4, 8).toString(), "ftyp", "The UI must download a real MP4");
   assert.ok(encoded.length > 100_000, "The file must include actual song audio");
   assert.equal(downloads.length, 1, "Repeated busy clicks must produce only one download");
@@ -244,6 +293,7 @@ try {
       const correlation = product / Math.sqrt(Math.max(1e-20, leftPower * rightPower));
       if (correlation > bestCorrelation) { bestCorrelation = correlation; bestLag = lag; }
     }
+    window.compositionVideoBackingPcm = { samples: decoded, sampleRate };
     input.dispose();
     return { duration, tracks: trackReport, frames: frameReports, framePngs,
       audio: { sampleRate, rms: Math.sqrt(totalSquare / sampleCount), peak,
@@ -271,8 +321,94 @@ try {
   assert.ok(media.audio.peak < 1 && media.audio.expectedBackingCorrelation > .96,
     "The MP4 audio must match the selected ensemble's backing score without clipping");
 
+  const performanceBefore = await page.evaluate(() => ({ ...window.compositionVideoAudit }));
+  const performanceDownloadPromise = page.waitForEvent("download", { timeout: 180_000 });
+  await (await openVideoSource()).getByRole("button", { name: "연주 음악", exact: true }).click();
+  const performanceDownload = await performanceDownloadPromise;
+  const performancePath = path.join(outputDir, "composition-performance-lyrics.mp4");
+  await performanceDownload.saveAs(performancePath);
+  await page.waitForFunction(() => !document.querySelector('[data-testid="export-lyrics-mp4"]')?.disabled);
+  const performanceAfter = await page.evaluate(() => ({ ...window.compositionVideoAudit }));
+  const performanceBytes = await readFile(performancePath);
+  assert.equal(performanceDownload.suggestedFilename(), `${seed.title}-연주음악-가사포함.mp4`);
+  assert.equal(performanceBytes.subarray(4, 8).toString(), "ftyp");
+  assert.equal(performanceAfter.offlineRenders - performanceBefore.offlineRenders, 1,
+    "A performance export must render melody and accompaniment together exactly once");
+  report.performanceMedia = await page.evaluate(async ({ base64, seed }) => {
+    const { ALL_FORMATS, AudioBufferSink, BlobSource, Input } = await import("/node_modules/.vite/deps/mediabunny.js");
+    const bytes = Uint8Array.from(atob(base64), (value) => value.charCodeAt(0));
+    const input = new Input({ formats: ALL_FORMATS, source: new BlobSource(new Blob([bytes], { type: "video/mp4" })) });
+    const videoTrack = await input.getPrimaryVideoTrack();
+    const audioTrack = await input.getPrimaryAudioTrack();
+    if (!videoTrack || !audioTrack) throw new Error("The performance MP4 needs real video and audio tracks");
+    const duration = await input.computeDuration();
+    const sampleRate = 44100;
+    const decoded = new Float32Array(Math.ceil(duration * sampleRate));
+    for await (const chunk of new AudioBufferSink(audioTrack).buffers()) {
+      if (chunk.buffer.sampleRate !== sampleRate) throw new Error("Unexpected performance AAC sample rate");
+      const samples = chunk.buffer.getChannelData(0);
+      const offset = Math.round(chunk.timestamp * sampleRate);
+      for (let index = 0; index < samples.length; index++) {
+        if (offset + index >= 0 && offset + index < decoded.length) decoded[offset + index] = samples[index];
+      }
+    }
+    const { DRAFT_STORAGE_KEY } = await import("/src/music/draft.ts");
+    const { findHarmonyPreset } = await import("/src/music/harmonyPresets.ts");
+    const { compositionFromDraft } = await import("/src/music/composerDraft.ts");
+    const { renderOfflineBackingAudio } = await import("/src/audio/backingExport.ts");
+    const draft = JSON.parse(localStorage.getItem(DRAFT_STORAGE_KEY));
+    const measures = compositionFromDraft(draft, findHarmonyPreset(draft.presetId)).map((bar, index) => ({
+      notes: bar.notes, harmony: bar.story, chords: bar.chords, effects: bar.effects, measureIndex: index
+    }));
+    const expected = await renderOfflineBackingAudio(measures, draft.instrumentId, draft.bpm, {
+      styleId: draft.accompanimentStyleId, instrumentIds: draft.accompanimentInstrumentIds,
+      trackMix: draft.accompanimentTrackMix, beatPattern: draft.beatPattern ?? [], beatVolume: draft.beatVolume ?? 100,
+      meter: draft.meter
+    }, undefined, { includeMelody: true });
+    const source = expected.audioBuffer.getChannelData(0);
+    const backing = window.compositionVideoBackingPcm.samples;
+    const from = Math.round(seed.introSeconds * sampleRate);
+    const to = Math.min(source.length, decoded.length, Math.round((seed.introSeconds + seed.bodySeconds) * sampleRate));
+    let bestCorrelation = -1;
+    let differenceSquare = 0;
+    let bodySquare = 0;
+    let peak = 0;
+    for (let index = from; index < to; index++) {
+      differenceSquare += (decoded[index] - (backing[index] ?? 0)) ** 2;
+      bodySquare += decoded[index] ** 2;
+      peak = Math.max(peak, Math.abs(decoded[index]));
+    }
+    for (let lag = -1100; lag <= 1100; lag++) {
+      let product = 0;
+      let leftPower = 0;
+      let rightPower = 0;
+      for (let index = from; index < to; index += 31) {
+        const target = index + lag;
+        if (target < 0 || target >= decoded.length) continue;
+        product += source[index] * decoded[target];
+        leftPower += source[index] ** 2;
+        rightPower += decoded[target] ** 2;
+      }
+      bestCorrelation = Math.max(bestCorrelation, product / Math.sqrt(Math.max(1e-20, leftPower * rightPower)));
+    }
+    const result = { duration, videoCodec: await videoTrack.getCodec(), audioCodec: await audioTrack.getCodec(),
+      expectedPerformanceCorrelation: bestCorrelation, bodyRms: Math.sqrt(bodySquare / (to - from)),
+      differenceFromBackingRms: Math.sqrt(differenceSquare / (to - from)), peak };
+    input.dispose();
+    return result;
+  }, { base64: performanceBytes.toString("base64"), seed });
+  assert.equal(report.performanceMedia.videoCodec, "avc");
+  assert.equal(report.performanceMedia.audioCodec, "aac");
+  assert.ok(Math.abs(report.performanceMedia.duration - seed.totalSeconds) < .1);
+  assert.ok(report.performanceMedia.expectedPerformanceCorrelation > .96,
+    "Performance video audio must match the actual melody-plus-ensemble PCM");
+  assert.ok(report.performanceMedia.differenceFromBackingRms > .0001,
+    "Performance video must contain a different audible signal from the backing-only video");
+  assert.ok(report.performanceMedia.bodyRms > .001 && report.performanceMedia.peak < 1);
+  report.performanceExport = { fileName: performanceDownload.suggestedFilename(), bytes: performanceBytes.length };
+
   const downloadsBeforeCancel = downloads.length;
-  await page.getByTestId("export-lyrics-mp4").click();
+  await (await openVideoSource()).getByRole("button", { name: "반주 음악", exact: true }).click();
   await page.getByTestId("cancel-composition-video").click();
   await page.waitForFunction(() => !document.querySelector('[data-testid="export-lyrics-mp4"]')?.disabled);
   assert.equal(downloads.length, downloadsBeforeCancel, "Cancel must release the job without downloading a partial MP4");
@@ -281,14 +417,15 @@ try {
   report.cancellation = { downloads: downloads.length, status: await cancelStatus.innerText(),
     buttonEnabled: await page.getByTestId("export-lyrics-mp4").isEnabled() };
 
-  await page.evaluate(async () => {
+  const emptyDraft = await page.evaluate(async () => {
     const { DRAFT_STORAGE_KEY } = await import("/src/music/draft.ts");
     const draft = JSON.parse(localStorage.getItem(DRAFT_STORAGE_KEY));
     draft.lyrics = draft.lyrics.map(() => "");
     draft.measures = draft.measures.map((bar) => ({ ...bar, notes: bar.notes.map((note) => ({ ...note, lyric: "" })) }));
-    localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+    return draft;
   });
-  await page.reload();
+  await loadFixture(emptyDraft);
+  await page.locator("#composer-tab-publish").click();
   const emptyButton = page.getByTestId("export-lyrics-mp4");
   await emptyButton.waitFor();
   const emptyCounters = await page.evaluate(() => ({ ...window.compositionVideoAudit }));
@@ -300,7 +437,7 @@ try {
     countersBefore: emptyCounters, countersAfter: await page.evaluate(() => ({ ...window.compositionVideoAudit })) };
   assert.equal(report.emptyLyrics.countersAfter.offlineRenders, emptyCounters.offlineRenders,
     "An empty-lyrics request should explain what to do before rendering any audio");
-  assert.equal(downloads.length, 1, "A composition with no lyrics must not download a video");
+  assert.equal(downloads.length, 2, "A composition with no lyrics must not download an additional video");
   assert.deepEqual(errors, [], "The full UI export must complete without browser errors");
   report.sampleUrls = [...sampleUrls];
   report.downloads = downloads;

@@ -69,3 +69,106 @@
 .publish-action-group-buttons.composition-file-export-buttons {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
+
+.composition-export-choice-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 160;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: rgb(23 45 42 / 55%);
+}
+
+.composition-export-choice-dialog {
+  width: min(480px, 100%);
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  padding: clamp(16px, 5vw, 26px);
+  border: 1px solid var(--refresh-line, #d9e4e1);
+  border-radius: var(--app-dialog-radius, 22px);
+  background: var(--refresh-paper, #fff);
+  color: var(--refresh-ink, #1c2024);
+  box-shadow: var(--app-dialog-shadow, 0 24px 80px rgb(13 40 37 / 22%));
+}
+
+.composition-export-choice-dialog header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.composition-export-choice-dialog h2 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.3;
+}
+
+.composition-export-choice-dialog p {
+  margin: 6px 0 20px;
+  color: var(--refresh-muted, #60646c);
+  line-height: 1.5;
+}
+
+.composition-export-choice-close {
+  display: grid;
+  place-items: center;
+  flex: 0 0 44px;
+  height: 44px;
+  padding: 6px;
+  border: 1px solid var(--refresh-line, #d9e4e1);
+  border-radius: 50%;
+  background: var(--refresh-background, #f3f8f7);
+  cursor: pointer;
+}
+
+.composition-export-choice-options {
+  display: grid;
+  gap: 10px;
+}
+
+.composition-export-choice-option {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 20px;
+  align-items: center;
+  gap: 12px;
+  min-height: 76px;
+  padding: 10px 12px;
+  border: 1px solid #9bcdd7;
+  border-radius: 14px;
+  background: var(--lab-cyan-soft, #eef8fb);
+  color: var(--lab-cyan-dark, #176977);
+  text-align: left;
+  cursor: pointer;
+}
+
+.composition-export-choice-option:hover {
+  border-color: var(--lab-cyan-dark, #176977);
+  background: #e1f4f3;
+}
+
+.composition-export-choice-dialog button:focus-visible {
+  outline: 2px solid #157b90;
+  outline-offset: 3px;
+}
+
+.composition-export-choice-option strong,
+.composition-export-choice-option > span > span {
+  display: block;
+}
+
+.composition-export-choice-option strong {
+  font-size: 18px;
+  line-height: 1.4;
+}
+
+.composition-export-choice-option > span > span {
+  margin-top: 3px;
+  color: var(--refresh-muted, #60646c);
+  font-size: 14px;
+  line-height: 1.45;
+  word-break: keep-all;
+}

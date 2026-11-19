@@ -22,8 +22,8 @@ function files(overrides: Partial<Parameters<typeof CompositionFileExports>[0]> 
   render(<CompositionFileExports media={media} complete busy={false} exportingPdf={false} onPdf={onPdf} {...overrides} />);
 }
 
-function button(testId: string) {
-  const result = host.querySelector<HTMLButtonElement>(`button[data-testid="${testId}"]`);
+function button(testId: string, within: ParentNode = host) {
+  const result = within.querySelector<HTMLButtonElement>(`button[data-testid="${testId}"]`);
   if (!result) throw new Error(`${testId} 버튼을 찾지 못했습니다.`);
   return result;
 }
@@ -34,7 +34,7 @@ beforeEach(() => {
   root = createRoot(host);
   onPdf = vi.fn();
   media = {
-    exporting: false, format: null, phase: "idle", progress: 0, status: "", hasLyrics: true,
+    exporting: false, format: null, mix: null, phase: "idle", progress: 0, status: "", hasLyrics: true,
     saveMp3: vi.fn(async () => undefined), saveMp4: vi.fn(async () => undefined), cancel: vi.fn()
   };
 });
@@ -46,23 +46,47 @@ afterEach(() => {
 });
 
 describe("악보·음악 파일 저장 버튼", () => {
-  it("MP3 옆에 정확한 MP4 이름을 표시하고 각 형식의 저장 요청을 구분한다", () => {
+  it("각 버튼은 음악을 고르는 창을 열고 고른 파일 형식과 음악만 저장한다", () => {
     files();
     const mp3 = button("export-backing-mp3");
     const mp4 = button("export-lyrics-mp4");
-    expect(mp3.textContent?.trim()).toBe("반주 음악 MP3");
-    expect(mp4.textContent?.trim()).toBe("가사 포함 MP4");
+    expect(mp3.textContent?.trim()).toBe("음악 저장");
+    expect(mp4.textContent?.trim()).toBe("가사 포함 영상");
     expect(mp3.nextElementSibling).toBe(mp4);
+    for (const [trigger, save] of [[mp3, media.saveMp3], [mp4, media.saveMp4]] as const) {
+      for (const mix of ["backing", "performance"] as const) {
+        const count = vi.mocked(save).mock.calls.length;
+        act(() => trigger.click());
+        expect(save).toHaveBeenCalledTimes(count);
+        const dialog = document.querySelector('[role="dialog"][aria-modal="true"]')!;
+        expect(document.getElementById(dialog.getAttribute("aria-labelledby")!)?.textContent).toBe(trigger.textContent?.trim());
+        expect(dialog.querySelectorAll(".composition-export-choice-option")).toHaveLength(2);
+        act(() => button(`composition-source-${mix}`, dialog).click());
+        expect(save).toHaveBeenCalledTimes(count + 1);
+        expect(save).toHaveBeenLastCalledWith(mix);
+        expect(document.querySelector(".composition-export-choice-dialog")).toBeNull();
+      }
+    }
     act(() => {
-      mp3.click();
-      mp4.click();
       button("export-pdf").click();
       button("export-pdf-with-accompaniment").click();
     });
-    expect(media.saveMp3).toHaveBeenCalledOnce();
-    expect(media.saveMp4).toHaveBeenCalledOnce();
     expect(onPdf.mock.calls).toEqual([[false], [true]]);
     expect(host.textContent).toContain("검은 배경에 가사");
+  });
+
+  it("Escape로 선택을 닫으면 저장하지 않고 연 버튼으로 초점이 돌아간다", async () => {
+    files();
+    const mp3 = button("export-backing-mp3");
+    mp3.focus();
+    act(() => mp3.click());
+    const dialog = document.querySelector(".composition-export-choice-dialog")!;
+    expect(dialog.contains(document.activeElement)).toBe(true);
+    act(() => document.activeElement?.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    expect(document.querySelector(".composition-export-choice-dialog")).toBeNull();
+    expect(document.activeElement).toBe(mp3);
+    expect(media.saveMp3).not.toHaveBeenCalled();
   });
 
   it("가사가 없을 때 MP4만 잠그고 버튼에 연결된 가사 입력 안내를 보여 준다", () => {
@@ -113,10 +137,10 @@ describe("가사 영상 내보내기 진행 창", () => {
     expect(host.textContent).toContain("저장했어요");
   });
 
-  it("기존 MP3 작업에는 영상 진행률이나 영상 취소 버튼을 표시하지 않는다", () => {
-    media = { ...media, exporting: true, format: "mp3", phase: "working", status: "반주를 만들고 있어요." };
+  it("연주 음악 MP3 작업에는 선택한 음악을 표시하고 영상 진행률·취소 버튼이 없다", () => {
+    media = { ...media, exporting: true, format: "mp3", mix: "performance", phase: "working", status: "연주 음악을 만들고 있어요." };
     render(<CompositionMediaExportDialog media={media} />);
-    expect(host.textContent).toContain("반주 파일 만드는 중");
+    expect(host.textContent).toContain("연주 음악 만드는 중");
     expect(host.querySelector("progress")).toBeNull();
     expect(host.querySelector('[data-testid="cancel-composition-video"]')).toBeNull();
   });

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { exportBackingCompositionMp3, exportBackingCompositionMp3Offline, type PlaybackMeasure } from "./player";
-import { renderOfflineBackingAudio } from "./backingExport";
+import { exportBackingCompositionMp3, exportBackingCompositionMp3Offline, exportPerformanceCompositionMp3,
+  type PlaybackMeasure } from "./player";
+import { renderOfflineBackingAudio, renderOfflinePerformanceAudio } from "./backingExport";
 import { releaseSampleContext, releaseSampleInstrument } from "./samplePlayer";
 
 const { loadSample, queueSample, encodeBuffer, flush } = vi.hoisted(() => ({
@@ -117,10 +118,11 @@ describe("오프라인 반주 MP3", () => {
   });
 
   it("그림 뮤직비디오는 선택한 가락 악기 샘플과 반주를 함께 넣고 전주와 후주는 반주로 둔다", async () => {
-    await renderOfflineBackingAudio(measures, "flute", 120, {
+    const result = await renderOfflinePerformanceAudio(measures, "flute", 120, {
       styleId: "folk", instrumentIds: ["acoustic_guitar_steel"]
-    }, undefined, { includeMelody: true });
+    });
 
+    expect(result.introSeconds).toBe(8.08);
     expect(loadSample.mock.calls.map((call) => call[2])).toEqual(["flute", "acoustic_guitar_steel"]);
     const melody = queueSample.mock.calls.filter((call) => call[0].id === "flute");
     expect(melody).toHaveLength(1);
@@ -129,6 +131,22 @@ describe("오프라인 반주 MP3", () => {
     expect(melody[0][4]).toBeLessThan(10.1);
     expect(queueSample.mock.calls.some((call) => call[0].id === "acoustic_guitar_steel")).toBe(true);
     expect(contexts[0].createOscillator).not.toHaveBeenCalled();
+    expect(releaseSampleContext).toHaveBeenCalledWith(contexts[0]);
+  });
+
+  it("연주 MP3는 마이크나 실시간 녹음 없이 가락과 반주를 함께 저장한다", async () => {
+    vi.stubGlobal("MediaRecorder", undefined);
+    const blob = await exportPerformanceCompositionMp3(measures, "flute", 120, {
+      styleId: "folk", instrumentIds: ["acoustic_guitar_steel"]
+    });
+
+    expect(blob?.type).toBe("audio/mpeg");
+    expect(blob?.size).toBeGreaterThan(0);
+    expect(new Set(queueSample.mock.calls.map((call) => call[0].id)))
+      .toEqual(new Set(["flute", "acoustic_guitar_steel"]));
+    expect(queueSample.mock.calls.filter((call) => call[0].id === "flute")).toHaveLength(1);
+    expect(contexts[0].startRendering).toHaveBeenCalledOnce();
+    expect(encodeBuffer).toHaveBeenCalled();
     expect(releaseSampleContext).toHaveBeenCalledWith(contexts[0]);
   });
 

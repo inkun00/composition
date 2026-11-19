@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { exportBackingCompositionMp3Offline, playComposition, practiceKaraokeComposition,
+import { exportBackingCompositionMp3Offline, exportPerformanceCompositionMp3, playComposition, practiceKaraokeComposition,
   recordKaraokeComposition, stopPlayback, type AccompanimentOptions, type PlaybackMeasure } from "./player";
 import * as performanceModule from "./accompanimentPerformance";
 import { karaokePreparationCache } from "./karaokePreparationCache";
@@ -198,5 +198,41 @@ describe("선택한 반주 악기의 편성 일관성", () => {
     const outputs = new Map(queueSample.mock.calls.map((call) => [call[0].id, call[2].gain.value]));
     expect(outputs.get("acoustic_bass")).toBeGreaterThan(0);
     expect([...outputs].filter(([id]) => id !== "acoustic_bass").every(([, gain]) => gain === 0)).toBe(true);
+  });
+
+  it("연주 MP3도 작곡 화면과 같은 가락·반주·드럼·효과음 및 트랙 믹스를 유지한다", async () => {
+    const measures = measuresFor(8).map((measure, index) => index === 0
+      ? { ...measure, effects: [{ id: "effect", effectId: "bell", offsetBeats: 1 }] } : measure);
+    const mix: AccompanimentOptions = { ...options,
+      beatVolume: 67,
+      beatPattern: [{ id: "beat", instrumentId: "kick", measureIndex: 0, offsetBeats: 0 }],
+      trackMix: { acoustic_bass: { volume: 48, muted: false },
+        acoustic_guitar_steel: { volume: 100, muted: true } } };
+    const songEnd = (4 + measures.length) * 2 + .06;
+    const score = () => queueSample.mock.calls.filter((call) => call[4] < songEnd).map((call) => ({
+      instrument: call[0].id, pitch: call[3], start: +call[4].toFixed(5),
+      duration: +call[5].toFixed(5), velocity: +call[6].toFixed(5)
+    }));
+    const drums = () => scheduleDrums.mock.calls.filter((call) => call[2] < songEnd).map((call) => call.slice(2));
+    const outputs = () => new Map(queueSample.mock.calls.filter((call) => tracks.includes(call[0].id))
+      .map((call) => [call[0].id, call[2].gain.value]));
+
+    await playComposition(measures, "oboe", 120, mix, true);
+    const expectedScore = score();
+    const expectedDrums = drums();
+    const expectedOutputs = outputs();
+    const expectedEffects = queueEffect.mock.calls.map((call) => call.slice(2));
+    await stopPlayback();
+    queueSample.mockClear();
+    queueEffect.mockClear();
+    scheduleDrums.mockClear();
+
+    expect((await exportPerformanceCompositionMp3(measures, "oboe", 120, mix))?.type).toBe("audio/mpeg");
+    expect(score()).toEqual(expectedScore);
+    expect(drums()).toEqual(expectedDrums);
+    expect(outputs()).toEqual(expectedOutputs);
+    expect(queueEffect.mock.calls.map((call) => call.slice(2))).toEqual(expectedEffects);
+    expect(queueSample.mock.calls.filter((call) => call[0].id === "oboe")).toHaveLength(32);
+    expect(expectedOutputs.get("acoustic_guitar_steel")).toBe(0);
   });
 });

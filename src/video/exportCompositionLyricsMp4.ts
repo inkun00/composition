@@ -5,7 +5,9 @@ import type { InstrumentId } from "../music/instruments";
 import { buildLyricVideoPlan } from "./lyricVideoPlan";
 import { exportLyricMp4 } from "./exportLyricMp4";
 
-/** Renders the same accompaniment as MP3, then encodes its original PCM with timed lyrics. */
+export type CompositionExportMix = "backing" | "performance";
+
+/** Encodes the selected instrumental mix's original PCM with the same timed lyrics. */
 export async function exportCompositionLyricsMp4(
   measures: readonly PlaybackMeasure[],
   instrumentId: InstrumentId = "piano",
@@ -13,7 +15,7 @@ export async function exportCompositionLyricsMp4(
   accompaniment?: AccompanimentOptions,
   onProgress: (percent: number) => void = () => undefined,
   signal?: AbortSignal,
-  options: Readonly<{ title?: string }> = {}
+  options: Readonly<{ title?: string; mix?: CompositionExportMix }> = {}
 ): Promise<Blob | null> {
   const checkAbort = () => {
     if (signal?.aborted) throw new DOMException("영상 만들기를 멈췄어요.", "AbortError");
@@ -25,9 +27,9 @@ export async function exportCompositionLyricsMp4(
 
   return runExclusiveAudioExport(async () => {
     onProgress(2);
-    const { audioBuffer, introSeconds } = await renderOfflineBackingAudio(
-      measures, instrumentId, bpm, accompaniment, signal
-    );
+    const { audioBuffer, introSeconds } = options.mix === "performance"
+      ? await renderOfflineBackingAudio(measures, instrumentId, bpm, accompaniment, signal, { includeMelody: true })
+      : await renderOfflineBackingAudio(measures, instrumentId, bpm, accompaniment, signal);
     checkAbort();
     onProgress(35);
     const plan = buildLyricVideoPlan(options.title ?? "", measures, bpm, introSeconds, audioBuffer.duration);

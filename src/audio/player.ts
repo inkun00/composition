@@ -1,4 +1,4 @@
-import { renderRealtimeBackingMp3, renderOfflineBackingMp3 } from "./backingExport";
+import { renderRealtimeBackingMp3, renderOfflineBackingMp3, renderOfflinePerformanceMp3 } from "./backingExport";
 import { renderMelodyPreview } from "./melodyPreview";
 import { renderCompositionPlayback, type CompositionPlaybackControl } from "./compositionPlayback";
 export type { CompositionPlaybackClock, CompositionPlaybackControl } from "./compositionPlayback";
@@ -230,4 +230,13 @@ export async function exportBackingCompositionMp3Offline(
   accompaniment?: AccompanimentOptions
 ): Promise<Blob | null> {
   return exportBacking(renderOfflineBackingMp3, measures, instrumentId, bpm, accompaniment);
+}
+
+export async function exportPerformanceCompositionMp3(
+  measures: readonly PlaybackMeasure[],
+  instrumentId: InstrumentId = "piano",
+  bpm = 96,
+  accompaniment?: AccompanimentOptions
+): Promise<Blob | null> {
+  return exportBacking(renderOfflinePerformanceMp3, measures, instrumentId, bpm, accompaniment);
 }

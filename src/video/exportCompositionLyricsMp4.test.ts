@@ -67,6 +67,45 @@ describe("작곡한 노래의 가사 포함 MP4", () => {
     expect(values.every((value, index) => index === 0 || value >= values[index - 1])).toBe(true);
   });
 
+  it("연주 모드에서는 선택한 가락 악기를 반주에 더하고 같은 전주 뒤에 가사를 맞춘다", async () => {
+    const controller = new AbortController();
+    const performanceAudio = { duration: 21.4 } as AudioBuffer;
+    renderAudio.mockResolvedValueOnce({ audioBuffer: performanceAudio, introSeconds: 8.08 });
+    const result = await exportCompositionLyricsMp4(measures, "flute", 120, accompaniment,
+      vi.fn(), controller.signal, { title: "우리의 연주", mix: "performance" });
+
+    expect(result).toBe(mp4);
+    expect(renderAudio).toHaveBeenCalledWith(measures, "flute", 120, accompaniment, controller.signal,
+      { includeMelody: true });
+    expect(encodeVideo.mock.calls[0][0]).toBe(performanceAudio);
+    const plan = encodeVideo.mock.calls[0][1] as LyricVideoPlan;
+    expect(plan.title).toBe("우리의 연주");
+    expect(plan.frames[0]).toMatchObject({ startSeconds: 0, endSeconds: 8.08, syllables: [] });
+    expect(plan.frames[1]).toMatchObject({ startSeconds: 8.08, endSeconds: 8.58, activeSyllable: 0 });
+    expect(plan.frames.at(-1)?.endSeconds).toBe(21.4);
+  });
+
+  it("연주를 저장한 뒤 반주를 선택하면 가락 없이 기존 반주 렌더로 돌아간다", async () => {
+    await exportCompositionLyricsMp4(measures, "flute", 120, accompaniment,
+      vi.fn(), undefined, { mix: "performance" });
+    await exportCompositionLyricsMp4(measures, "flute", 120, accompaniment,
+      vi.fn(), undefined, { mix: "backing" });
+    expect(renderAudio.mock.calls[0][5]).toEqual({ includeMelody: true });
+    expect(renderAudio.mock.calls[1]).toEqual([measures, "flute", 120, accompaniment, undefined]);
+  });
+
+  it("연주 오디오를 만드는 동안 취소하면 인코딩을 생략하고 반주 저장을 다시 허용한다", async () => {
+    const controller = new AbortController();
+    renderAudio.mockImplementationOnce(async () => {
+      controller.abort();
+      return { audioBuffer, introSeconds: 8.08 };
+    });
+    await expect(exportCompositionLyricsMp4(measures, "flute", 120, accompaniment,
+      vi.fn(), controller.signal, { mix: "performance" })).rejects.toMatchObject({ name: "AbortError" });
+    expect(encodeVideo).not.toHaveBeenCalled();
+    await expect(exportCompositionLyricsMp4(measures)).resolves.toBe(mp4);
+  });
+
   it("빈 가사와 쉼표에 적힌 가사만 있는 곡은 오디오 렌더 전에 안내한다", async () => {
     const invalid: readonly PlaybackMeasure[] = [{ harmony: "home", notes: [
       { id: "a", pitch: 60, duration: { numerator: 1, denominator: 1 }, lyric: "  " },

@@ -7,8 +7,8 @@ import type { AccompanimentOptions, PlaybackMeasure } from "../audio/accompanime
 import { rational } from "../music/rational";
 import { useCompositionMediaExport, type CompositionMediaExportController } from "./useCompositionMediaExport";
 
-const exporters = vi.hoisted(() => ({ mp3: vi.fn(), mp4: vi.fn() }));
-vi.mock("../audio/player", () => ({ exportBackingCompositionMp3: exporters.mp3 }));
+const exporters = vi.hoisted(() => ({ mp3: vi.fn(), performanceMp3: vi.fn(), mp4: vi.fn() }));
+vi.mock("../audio/player", () => ({ exportBackingCompositionMp3: exporters.mp3, exportPerformanceCompositionMp3: exporters.performanceMp3 }));
 vi.mock("../video/exportCompositionLyricsMp4", () => ({ exportCompositionLyricsMp4: exporters.mp4 }));
 
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -102,17 +102,35 @@ describe("작곡한 곡의 반주와 가사 영상 저장", () => {
     const args = exporters.mp4.mock.calls[0];
     expect(args.slice(0, 4)).toEqual([measures, "violin", 108, accompaniment]);
     expect(args[5]).toBeInstanceOf(AbortSignal);
-    expect(args[6]).toEqual({ title: "별/노래" });
+    expect(args[6]).toEqual({ title: "별/노래", mix: "backing" });
     act(() => args[4](57));
     expect(media.progress).toBe(57);
     await act(async () => { pending.resolve(new Blob(["video"], { type: "video/mp4" })); });
     expect(downloads).toEqual(["별_노래-가사포함.mp4"]);
     expect(media).toMatchObject({ phase: "done", progress: 100, exporting: true });
-    expect(onStatus).toHaveBeenLastCalledWith("가사 포함 MP4를 저장했어요.");
+    expect(onStatus).toHaveBeenLastCalledWith("반주 음악 가사 포함 MP4를 저장했어요.");
     await finish(job);
     expect(media).toMatchObject({ exporting: false, format: null, phase: "idle" });
     await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
     expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:composition-export");
+  });
+
+  it.each(["mp3", "mp4"] as const)("연주 음악 %s는 연주용 소리와 구분되는 파일명을 사용한다", async (format) => {
+    const pending = deferred<Blob>();
+    const exporter = format === "mp3" ? exporters.performanceMp3 : exporters.mp4;
+    exporter.mockReturnValue(pending.promise);
+    mount();
+    let job!: Promise<void>;
+    act(() => { job = format === "mp3" ? media.saveMp3("performance") : media.saveMp4("performance"); });
+    expect(media).toMatchObject({ exporting: true, format, mix: "performance" });
+    expect(exporter.mock.calls[0].slice(0, 4)).toEqual([measures, "violin", 108, accompaniment]);
+    expect(exporters.mp3).not.toHaveBeenCalled();
+    if (format === "mp4") expect(exporter.mock.calls[0][6]).toEqual({ title: "별/노래", mix: "performance" });
+    await act(async () => { pending.resolve(new Blob(["performance"])); });
+    expect(downloads).toEqual([format === "mp3" ? "별_노래-연주음악.mp3" : "별_노래-연주음악-가사포함.mp4"]);
+    expect(onStatus).toHaveBeenLastCalledWith(format === "mp3" ? "연주 음악 MP3를 저장했어요." : "연주 음악 가사 포함 MP4를 저장했어요.");
+    await finish(job);
+    expect(media.mix).toBeNull();
   });
 
   it("한 렌더 안에서 MP3와 MP4를 연속 눌러도 한 작업만 시작하고 기존 MP3 저장을 유지한다", async () => {
