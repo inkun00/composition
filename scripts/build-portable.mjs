@@ -103,6 +103,7 @@ async function copySupportingFiles() {
     [path.join(portableSources, "instructions.html"), "실행안내.html"],
     [path.join(portableSources, "README.txt"), "읽어주세요.txt"],
     [path.join(root, "public", "homr-helper.generated.mjs"), "homr-helper.generated.mjs"],
+    [path.join(root, "public", "third-party-music-video-licenses.txt"), "third-party-music-video-licenses.txt"],
     [path.join(root, "THIRD_PARTY_NOTICES.md"), "THIRD_PARTY_NOTICES.md"]
   ];
   for (const [source, name] of files) await cp(source, path.join(output, name));

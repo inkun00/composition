@@ -58,7 +58,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.videoSupported.mockResolvedValue(true);
   mocks.audioSupported.mockResolvedValue(true);
-  mocks.prepare.mockResolvedValue({ canvas: {}, draw: mocks.draw });
+  mocks.prepare.mockResolvedValue({ canvas: { width: 1280, height: 720 }, draw: mocks.draw });
   mocks.videoAdd.mockResolvedValue(undefined);
   mocks.audioAdd.mockResolvedValue(undefined);
   mocks.start.mockResolvedValue(undefined);
@@ -132,8 +132,8 @@ describe("리듬·가락 MP4 인코딩", () => {
   });
 
   it("지원되지 않는 코덱은 화면이나 출력 작업을 시작하지 않는다", async () => {
-    mocks.audioSupported.mockResolvedValue(false);
-    await expect(exportPracticeVideoMp4(rendered, input)).rejects.toThrow("MP4 만들기를 지원하지");
+    mocks.videoSupported.mockResolvedValue(false);
+    await expect(exportPracticeVideoMp4(rendered, input)).rejects.toThrow("H.264");
     expect(mocks.prepare).not.toHaveBeenCalled();
     expect(mocks.start).not.toHaveBeenCalled();
   });

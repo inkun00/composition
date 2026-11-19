@@ -1,8 +1,7 @@
-import {
-  AudioBufferSource, BufferTarget, CanvasSource, Mp4OutputFormat, Output, Quality,
-  canEncodeAudio, canEncodeVideo
-} from "mediabunny";
+import { AudioBufferSource, BufferTarget, Mp4OutputFormat, Output } from "mediabunny";
 import type { LyricVideoFrame, LyricVideoPlan } from "./lyricVideoPlan";
+import { resolveMp4Encoding } from "./mp4Encoding";
+import { createMp4FrameSource } from "./mp4FrameSource";
 
 const WIDTH = 1280;
 const HEIGHT = 720;
@@ -91,20 +90,10 @@ export async function exportLyricMp4(
     ? undefined : Math.max(1, Math.min(60, options.frameRate));
   const frames = renderFrames(plan, frameRate);
 
-  const videoQuality = new Quality({ bitrate: 1_200_000 });
-  const audioQuality = new Quality({ bitrate: 192_000 });
-  const [videoSupported, audioSupported] = await Promise.all([
-    canEncodeVideo("avc", { width: WIDTH, height: HEIGHT, frameRate: frameRate ?? 10, quality: videoQuality }),
-    canEncodeAudio("aac", {
-      numberOfChannels: Math.min(2, audioBuffer.numberOfChannels),
-      sampleRate: audioBuffer.sampleRate,
-      quality: audioQuality
-    })
-  ]);
+  const encoding = await resolveMp4Encoding({
+    width: WIDTH, height: HEIGHT, frameRate: frameRate ?? 10, videoBitrate: 1_200_000, audioBuffer, signal
+  });
   checkAbort();
-  if (!videoSupported || !audioSupported) {
-    throw new Error("이 브라우저는 MP4 만들기를 지원하지 않아요. 최신 크롬이나 엣지에서 다시 시도해 주세요.");
-  }
 
   const canvas = document.createElement("canvas");
   canvas.width = WIDTH;
@@ -113,8 +102,8 @@ export async function exportLyricMp4(
   if (!context) throw new Error("영상 화면을 만들 수 없어요.");
 
   const output = new Output({ format: new Mp4OutputFormat(), target: new BufferTarget() });
-  const video = new CanvasSource(canvas, { codec: "avc", quality: videoQuality });
-  const audio = new AudioBufferSource({ codec: "aac", quality: audioQuality });
+  const { video, addFrame } = createMp4FrameSource(canvas, encoding);
+  const audio = new AudioBufferSource(encoding.audioConfig);
   output.addVideoTrack(video);
   output.addAudioTrack(audio);
 
@@ -132,9 +121,8 @@ export async function exportLyricMp4(
       if (frame.startSeconds >= endSeconds) continue;
       if (options.drawFrame) options.drawFrame(context, frame, frame.startSeconds);
       else drawFrame(context, plan.title, frame);
-      await video.add(frame.startSeconds, endSeconds - frame.startSeconds, {
-        keyFrame: index === 0 || previousMeasure !== frame.measureIndex
-      });
+      await addFrame(frame.startSeconds, endSeconds - frame.startSeconds,
+        index === 0 || previousMeasure !== frame.measureIndex);
       previousMeasure = frame.measureIndex;
       onProgress(18 + Math.round(77 * (index + 1) / frames.length));
       if (index % 8 === 0) await new Promise<void>((resolve) => setTimeout(resolve, 0));

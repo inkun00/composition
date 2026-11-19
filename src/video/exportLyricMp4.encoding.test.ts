@@ -2,13 +2,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { exportLyricMp4 } from "./exportLyricMp4";
 import { buildLyricVideoPlan } from "./lyricVideoPlan";
 
-const { addAudio, addVideo, start, finalize, cancel, canEncodeAudio, canEncodeVideo } = vi.hoisted(() => ({
+const { addAudio, addVideo, videoSource, start, finalize, cancel, canEncodeAudio, canEncodeVideo } = vi.hoisted(() => ({
   addAudio: vi.fn(), addVideo: vi.fn(), start: vi.fn(), finalize: vi.fn(), cancel: vi.fn(),
-  canEncodeAudio: vi.fn(), canEncodeVideo: vi.fn()
+  canEncodeAudio: vi.fn(), canEncodeVideo: vi.fn(), videoSource: vi.fn()
 }));
 vi.mock("mediabunny", () => ({
   AudioBufferSource: class { add = addAudio; },
-  CanvasSource: class { add = addVideo; },
+  CanvasSource: class {
+    constructor(canvas: HTMLCanvasElement) { videoSource(canvas.width, canvas.height); }
+    add = addVideo;
+  },
   BufferTarget: class {},
   Mp4OutputFormat: class {},
   Quality: class {},
@@ -31,7 +34,7 @@ const plan = buildLyricVideoPlan("노래", [{ notes: [
   { id: "b", pitch: 62, lyric: "녕", duration: { numerator: 1, denominator: 1 } }
 ] }], 120, 1, 3);
 const context = {
-  fillRect: vi.fn(), fillText: vi.fn(), measureText: vi.fn(() => ({ width: 50 }))
+  fillRect: vi.fn(), fillText: vi.fn(), measureText: vi.fn(() => ({ width: 50 })), drawImage: vi.fn()
 };
 
 beforeEach(() => {
@@ -97,10 +100,25 @@ describe("가사 MP4 오디오 입력과 인코딩", () => {
     expect(drawFrame.mock.calls.map((call) => call[2])).toEqual(segments.map(([startSeconds]) => startSeconds));
   });
 
-  it("지원하지 않는 브라우저는 출력 생성을 시작하기 전에 안내한다", async () => {
-    canEncodeAudio.mockResolvedValueOnce(false);
-    await expect(exportLyricMp4(audioBuffer, plan, vi.fn())).rejects.toThrow("최신 크롬이나 엣지");
+  it("영상 인코더가 전혀 없으면 출력 생성을 시작하기 전에 원인을 안내한다", async () => {
+    canEncodeVideo.mockResolvedValue(false);
+    await expect(exportLyricMp4(audioBuffer, plan, vi.fn())).rejects.toThrow("H.264");
     expect(start).not.toHaveBeenCalled();
+  });
+
+  it("480p로 다시 시도해도 가사와 오디오의 시간표를 유지한다", async () => {
+    canEncodeVideo.mockImplementation(async (_codec, config) => config.height === 480);
+    const drawFrame = vi.fn();
+    const result = await exportLyricMp4(audioBuffer, plan, vi.fn(), undefined, { drawFrame });
+
+    expect(videoSource).toHaveBeenCalledExactlyOnceWith(854, 480);
+    expect(context.drawImage).toHaveBeenCalledTimes(plan.frames.length);
+    expect(context.drawImage.mock.calls[0][0]).toMatchObject({ width: 1280, height: 720 });
+    expect(addAudio).toHaveBeenCalledExactlyOnceWith(audioBuffer);
+    expect(addVideo.mock.calls.map(([start, duration]) => [start, duration])).toEqual([
+      [0, 1], [1, .5], [1.5, .5], [2, 1]
+    ]);
+    expect(result.type).toBe("video/mp4");
   });
 
   it("영상 생성 중 취소하면 미완성 출력을 정리한다", async () => {

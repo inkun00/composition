@@ -396,3 +396,12 @@ SOFTWARE.
 - VexFlow 5.0.0: existing music-notation renderer reused for the elementary music learning activities. MIT License. Source: https://github.com/vexflow/vexflow.
 - The installed package copyright and full license text are preserved verbatim in [music learning licenses](public/third-party-learning-licenses.txt), shipped at `/third-party-learning-licenses.txt`.
 - Tone.js, Phaser and Chrome Music Lab are research references only. Their code, images and audio assets are not included in this feature.
+
+## AAC encoding fallback
+
+- @mediabunny/aac-encoder 1.61.3: Copyright (c) 2026-present, Vanilagy and contributors. Mozilla Public License 2.0. Used unmodified to encode AAC-LC audio when a browser has no native AAC encoder.
+- Exact package source: https://registry.npmjs.org/@mediabunny/aac-encoder/-/aac-encoder-1.61.3.tgz. Tagged source: https://github.com/Vanilagy/mediabunny/tree/v1.61.3/packages/aac-encoder.
+- This software uses FFmpeg's libavcodec and libavutil AAC encoding code, compiled to WebAssembly, under the GNU Lesser General Public License version 2.1 or later. Credit: the FFmpeg developers and contributors. FFmpeg source: https://github.com/FFmpeg/FFmpeg; upstream license information: https://ffmpeg.org/legal.html.
+- The published build recipe is at https://github.com/Vanilagy/mediabunny/blob/v1.61.3/packages/aac-encoder/README.md#building-and-development. It includes the FFmpeg configure options and Emscripten bridge build. The recipe does not identify the FFmpeg source revision used for the upstream prebuilt WebAssembly; no revision is asserted here.
+- The app does not modify the package or its embedded WebAssembly. The AAC module is a separate dependency. Package source and build instructions are provided above for inspection, modification and rebuilding.
+- Complete MPL 2.0 and LGPL 2.1 texts are distributed at `/third-party-music-video-licenses.txt` on the hosted site. In portable archives, open `third-party-music-video-licenses.txt` beside this document.

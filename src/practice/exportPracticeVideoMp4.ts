@@ -1,7 +1,6 @@
-import {
-  AudioBufferSource, BufferTarget, CanvasSource, Mp4OutputFormat, Output, Quality,
-  canEncodeAudio, canEncodeVideo
-} from "mediabunny";
+import { AudioBufferSource, BufferTarget, Mp4OutputFormat, Output } from "mediabunny";
+import { resolveMp4Encoding } from "../video/mp4Encoding";
+import { createMp4FrameSource } from "../video/mp4FrameSource";
 import type { PracticeAudioInput, PracticeRenderedAudio } from "./practiceAudioTypes";
 import { PRACTICE_VIDEO_FPS, PRACTICE_VIDEO_HEIGHT, PRACTICE_VIDEO_WIDTH } from "./practiceVideoLayout";
 import { buildPracticeVideoPlan } from "./practiceVideoPlan";
@@ -22,29 +21,17 @@ export async function exportPracticeVideoMp4(
   checkAbort();
   const plan = buildPracticeVideoPlan(input, rendered);
   options.onProgress?.(2);
-  const videoQuality = new Quality({ bitrate: 1_800_000 });
-  const audioQuality = new Quality({ bitrate: 192_000 });
-  const [videoSupported, audioSupported] = await Promise.all([
-    canEncodeVideo("avc", {
-      width: PRACTICE_VIDEO_WIDTH, height: PRACTICE_VIDEO_HEIGHT,
-      frameRate: PRACTICE_VIDEO_FPS, quality: videoQuality
-    }),
-    canEncodeAudio("aac", {
-      numberOfChannels: Math.min(2, rendered.buffer.numberOfChannels),
-      sampleRate: rendered.buffer.sampleRate,
-      quality: audioQuality
-    })
-  ]);
+  const encoding = await resolveMp4Encoding({
+    width: PRACTICE_VIDEO_WIDTH, height: PRACTICE_VIDEO_HEIGHT,
+    frameRate: PRACTICE_VIDEO_FPS, videoBitrate: 1_800_000, audioBuffer: rendered.buffer, signal: options.signal
+  });
   checkAbort();
-  if (!videoSupported || !audioSupported) {
-    throw new Error("이 브라우저는 MP4 만들기를 지원하지 않아요. 최신 크롬이나 엣지에서 다시 시도해 주세요.");
-  }
   const renderer = await preparePracticeVideoRenderer(plan, input.videoMode ?? "bars");
   checkAbort();
   options.onProgress?.(8);
   const output = new Output({ format: new Mp4OutputFormat(), target: new BufferTarget() });
-  const video = new CanvasSource(renderer.canvas, { codec: "avc", quality: videoQuality });
-  const audio = new AudioBufferSource({ codec: "aac", quality: audioQuality });
+  const { video, addFrame } = createMp4FrameSource(renderer.canvas, encoding);
+  const audio = new AudioBufferSource(encoding.audioConfig);
   output.addVideoTrack(video);
   output.addAudioTrack(audio);
 
@@ -58,9 +45,8 @@ export async function exportPracticeVideoMp4(
     for (const [index, frame] of plan.frames.entries()) {
       checkAbort();
       renderer.draw(frame.startSeconds);
-      await video.add(frame.startSeconds, frame.endSeconds - frame.startSeconds, {
-        keyFrame: index === 0 || previousMeasure !== frame.measureIndex
-      });
+      await addFrame(frame.startSeconds, frame.endSeconds - frame.startSeconds,
+        index === 0 || previousMeasure !== frame.measureIndex);
       previousMeasure = frame.measureIndex;
       options.onProgress?.(18 + Math.round(77 * (index + 1) / plan.frames.length));
       if (index % 8 === 7) await new Promise<void>((resolve) => setTimeout(resolve, 0));
